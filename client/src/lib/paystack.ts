@@ -1,3 +1,22 @@
+/**
+ * Generate a cryptographically secure UUID v4 (from payments.md Tutorial 3)
+ * Uses browser crypto API without external dependencies
+ */
+export function generateUUID(): string {
+  const cryptoObj = window.crypto || (window as any).msCrypto;
+  const array = new Uint8Array(16);
+  cryptoObj.getRandomValues(array);
+  array[6] = (array[6] & 0x0f) | 0x40; // Version 4
+  array[8] = (array[8] & 0x3f) | 0x80; // Variant RFC4122
+
+  let uuid = '';
+  for (let i = 0; i < 16; i++) {
+    uuid += array[i].toString(16).padStart(2, '0');
+    if ([3, 5, 7, 9].includes(i)) uuid += '-';
+  }
+  return uuid;
+}
+
 export interface PaystackConfig {
   publicKey: string;
   email: string;
@@ -9,6 +28,13 @@ export interface PaystackConfig {
   phoneNumber?: string;
   channels?: string[];
   onSuccess: (reference: string) => void;
+  onClose?: () => void;
+}
+
+export interface PaystackAccessCodeConfig {
+  publicKey: string;
+  accessCode: string;
+  onSuccess: (response: PaystackResponse) => void;
   onClose?: () => void;
 }
 
@@ -63,8 +89,8 @@ function loadPaystackScript(): Promise<void> {
   });
 }
 
-// Helper: Open modal after script is loaded
-function openModal(publicKey: string, config: PaystackConfig): Promise<PaystackResponse> {
+// Helper: Open modal with inline config (legacy Tutorial 1 approach)
+function openInlineModal(publicKey: string, config: PaystackConfig): Promise<PaystackResponse> {
   return new Promise((resolve, reject) => {
     const PaystackPop = (window as any).PaystackPop;
     
@@ -80,10 +106,11 @@ function openModal(publicKey: string, config: PaystackConfig): Promise<PaystackR
     }
 
     try {
-      console.log('[Paystack] Setting up modal with:', {
+      console.log('[Paystack] Setting up inline modal with:', {
         key: publicKey.substring(0, 10) + '...',
         email: config.email,
         amount: amountInSubunits,
+        ref: config.reference,
       });
 
       const handler = PaystackPop.setup({
@@ -114,6 +141,39 @@ function openModal(publicKey: string, config: PaystackConfig): Promise<PaystackR
   });
 }
 
+// Helper: Resume transaction with access_code (Tutorial 2 recommended approach)
+function resumeWithAccessCode(config: PaystackAccessCodeConfig): Promise<PaystackResponse> {
+  return new Promise((resolve, reject) => {
+    const PaystackPop = (window as any).PaystackPop;
+    
+    if (!PaystackPop) {
+      reject(new Error('PaystackPop is not available'));
+      return;
+    }
+
+    try {
+      console.log('[Paystack] Resuming transaction with access_code:', config.accessCode.substring(0, 10) + '...');
+
+      const popup = new PaystackPop();
+      
+      popup.resumeTransaction(config.accessCode, {
+        onClose: () => {
+          config.onClose?.();
+          reject(new Error('Payment cancelled by user'));
+        },
+        onSuccess: (response: PaystackResponse) => {
+          config.onSuccess(response);
+          resolve(response);
+        },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to resume transaction';
+      console.error('[Paystack] Resume error:', message);
+      reject(new Error(message));
+    }
+  });
+}
+
 // Initialize Paystack script
 export function initializePaystack() {
   const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
@@ -126,7 +186,7 @@ export function initializePaystack() {
   return publicKey;
 }
 
-// Open Paystack payment modal
+// Open Paystack payment modal (inline, Legacy Tutorial 1)
 export function openPaystackModal(config: PaystackConfig) {
   // Use the passed public key, or fall back to environment
   const passedKey = config.publicKey?.trim();
@@ -157,6 +217,24 @@ export function openPaystackModal(config: PaystackConfig) {
   }
 
   // Load script and open modal
-  return loadPaystackScript().then(() => openModal(publicKey, config));
+  return loadPaystackScript().then(() => openInlineModal(publicKey, config));
+}
+
+// Resume Paystack transaction with access_code (Tutorial 2, recommended secure approach)
+export function resumePaystackTransaction(config: PaystackAccessCodeConfig) {
+  const publicKey = config.publicKey?.trim() || import.meta.env.VITE_PAYSTACK_PUBLIC_KEY?.trim();
+  
+  if (!publicKey) {
+    const error = 'Paystack public key is not configured. Set VITE_PAYSTACK_PUBLIC_KEY in .env.local';
+    console.error('[Paystack]', error);
+    throw new Error(error);
+  }
+
+  if (!config.accessCode) {
+    throw new Error('Access code is required to resume transaction');
+  }
+
+  // Load script and resume transaction
+  return loadPaystackScript().then(() => resumeWithAccessCode(config));
 }
 

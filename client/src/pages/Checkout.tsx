@@ -7,8 +7,9 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAuthModal } from '@/contexts/AuthModalContext';
-import { openPaystackModal } from '@/lib/paystack';
+import { openPaystackModal, resumePaystackTransaction, generateUUID } from '@/lib/paystack';
 import { readCartFromStorage } from '@/lib/cart';
+import { trpcClient } from '@/lib/trpc';
 import { useSupabaseCart } from '@/hooks/useSupabaseCart';
 import { supabase } from '@/lib/supabase';
 import { useSupabaseOrders, useSupabasePayments } from '@/hooks/useSupabaseOrders';
@@ -462,11 +463,13 @@ export default function Checkout() {
   const handlePaystackPayment = async () => {
     setIsProcessing(true);
     try {
-      const paymentReference = `order_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      // Tutorial 2: Generate unique reference (Tutorial 3 UUID approach)
+      const paymentReference = generateUUID();
 
-      console.log('[Checkout] Starting Paystack payment', {
+      console.log('[Checkout] Starting Paystack payment (Tutorial 2 - Server-initiated)', {
         email: formData.email,
         amountKES: total,
+        amountKobo: Math.round(total * 100),
         reference: paymentReference,
         selectedPayment,
         items: cartItems.map((item) => ({
@@ -476,21 +479,41 @@ export default function Checkout() {
         })),
       });
 
-      await openPaystackModal({
-        publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+      // Tutorial 2: Initialize transaction on server first
+      const initResponse = await trpcClient.paystack.transactions.initialize.mutate({
         email: formData.email,
-        amount: total,
+        amount: Math.round(total * 100), // Convert KES to Kobo
         reference: paymentReference,
+        currency: 'KES',
+        description: `Order from Modern E-commerce - ${cartItems.length} items`,
         metadata: {
           name: `${formData.firstName} ${formData.lastName}`.trim(),
           phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          country: formData.country,
+          items: cartItems.map((item) => ({
+            productId: item.product_id,
+            quantity: item.quantity,
+            price: item.price,
+          })),
         },
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phoneNumber: formData.phone,
-        channels: ['card'],
-        onSuccess: async (reference) => {
-          console.log('[Checkout] Paystack modal success', { reference });
+      });
+
+      console.log('[Checkout] Server returned access_code:', initResponse.data?.access_code?.substring(0, 10) + '...');
+
+      if (!initResponse.data?.access_code) {
+        throw new Error('Server failed to return access code');
+      }
+
+      // Tutorial 2: Resume transaction using access_code on client
+      await resumePaystackTransaction({
+        publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
+        accessCode: initResponse.data.access_code,
+        onSuccess: async (response) => {
+          console.log('[Checkout] Paystack payment completed', { reference: response.reference });
 
           const orderItems = cartItems.map((item) => ({
             product_id: item.product_id,
@@ -506,10 +529,10 @@ export default function Checkout() {
             return;
           }
 
-          const payment = await recordPayment(orderId, 'paystack', reference, total, 'success');
+          const payment = await recordPayment(orderId, 'paystack', paymentReference, total, 'success');
           console.log('[Checkout] Payment record result', { payment });
 
-          await handlePaymentSuccess('paystack', reference);
+          await handlePaymentSuccess('paystack', paymentReference);
         },
         onClose: () => {
           setIsProcessing(false);
@@ -518,8 +541,9 @@ export default function Checkout() {
       });
     } catch (error) {
       setIsProcessing(false);
-      toast.error('Payment failed. Please try again.');
-      console.error('Paystack error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Payment failed. Please try again.';
+      toast.error(errorMessage);
+      console.error('[Checkout] Paystack error:', error);
     }
   };
 

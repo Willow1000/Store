@@ -5,9 +5,13 @@ import { ENV } from "./env";
 import { createClient } from "@supabase/supabase-js";
 import * as db from "../db";
 
-// Create Supabase admin client for token verification
-const supabase = ENV.supabaseUrl && ENV.supabaseServiceKey 
-  ? createClient(ENV.supabaseUrl, ENV.supabaseServiceKey)
+// Create a Supabase client for token verification.
+// The anon key is sufficient for auth.getUser(token); prefer the service key when available.
+const supabase = ENV.supabaseUrl
+  ? createClient(
+      ENV.supabaseUrl,
+      ENV.supabaseServiceKey || ENV.supabaseAnonKey || ''
+    )
   : null;
 
 export type TrpcContext = {
