@@ -1,34 +1,61 @@
 import { useAuth } from '@/_core/hooks/useAuth';
-import { getLoginUrl } from '@/const';
-import { useEffect } from 'react';
+import { useAuthModal } from '@/contexts/AuthModalContext';
+import { useEffect, useRef } from 'react';
+import { useLocation } from 'wouter';
 import { User, Mail, Phone, MapPin, LogOut } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 
 export default function Account() {
-  const { user, isAuthenticated, logout } = useAuth();
-  const logoutMutation = trpc.auth.logout.useMutation();
+  const { user, isAuthenticated, sessionRestored, logout } = useAuth();
+  const { openAuthModal } = useAuthModal();
+  const authPromptedRef = useRef(false);
+  const [location] = useLocation();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      window.location.href = getLoginUrl();
+    if (!sessionRestored) return;
+    if (isAuthenticated) {
+      authPromptedRef.current = false;
+      return;
     }
-  }, [isAuthenticated]);
+    if (authPromptedRef.current) return;
+    authPromptedRef.current = true;
+    openAuthModal('login', undefined, { redirectTo: location });
+  }, [isAuthenticated, sessionRestored, location, openAuthModal]);
 
   const handleLogout = async () => {
-    await logoutMutation.mutateAsync();
-    logout();
-    toast.success('Logged out successfully');
-    window.location.href = '/';
+    try {
+      await logout();
+      toast.success('Logged out successfully');
+      window.location.href = '/';
+    } catch (error) {
+      console.error('[Account] Logout error:', error);
+      toast.error('Failed to logout');
+    }
   };
+
+  if (!sessionRestored) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+          <div className="space-y-4">
+            <div className="h-10 w-48 bg-muted rounded animate-pulse" />
+            <div className="grid gap-8 md:grid-cols-3">
+              <div className="h-80 rounded-lg bg-muted animate-pulse" />
+              <div className="md:col-span-2 h-80 rounded-lg bg-muted animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated || !user) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container py-12">
+    <div className="min-h-screen bg-background w-full overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <h1 className="mb-8 text-4xl font-bold">My Account</h1>
 
         <div className="grid gap-8 md:grid-cols-3">

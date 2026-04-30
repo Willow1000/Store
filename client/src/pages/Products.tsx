@@ -8,14 +8,24 @@ import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProductsPageSkeleton } from '@/components/skeletons/ProductsPageSkeleton';
 import { QuickViewModal } from '@/components/QuickViewModal';
-import { useProducts, useSearchProducts, useCategories } from '@/hooks/useSupabaseProducts';
+import { useProducts, useSearchProducts, useCategories, useProductsBySlug } from '@/hooks/useSupabaseProducts';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
+import { getHighResImageUrl } from '@/lib/images';
 
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'popular';
 
+const normalizeCategoryValue = (value: string) => value.trim().toLowerCase();
+
+const getCategoryFromUrl = () => {
+  if (typeof window === 'undefined') return '';
+
+  const params = new URLSearchParams(window.location.search);
+  return decodeURIComponent(params.get('category') || '');
+};
+
 export default function Products() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
@@ -29,18 +39,36 @@ export default function Products() {
   const { results: searchResults, isLoading: isSearching } = useSearchProducts(searchQuery);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
   const { categories, isLoading: categoriesLoading } = useCategories();
+  const { products: categoryProducts, isLoading: isCategoryLoading } = useProductsBySlug(categoryFilter);
+  const categoryQueryValue = normalizeCategoryValue(getCategoryFromUrl());
+
+  const updateCategoryInUrl = (nextCategory: string) => {
+    const [path, query = ''] = location.split('?');
+    const params = new URLSearchParams(query);
+
+    if (nextCategory) {
+      params.set('category', nextCategory);
+    } else {
+      params.delete('category');
+    }
+
+    const nextQuery = params.toString();
+    const nextUrl = nextQuery ? `${path}?${nextQuery}` : path;
+    navigate(nextUrl);
+  };
 
   // Get category from URL query parameter
   useEffect(() => {
-    const params = new URLSearchParams(location.split('?')[1] || '');
-    const categoryParam = params.get('category');
+    const categoryParam = getCategoryFromUrl();
     if (categoryParam) {
       setCategoryFilter(categoryParam);
+    } else {
+      setCategoryFilter('');
     }
   }, [location]);
 
-  // Use search results if query is not empty, otherwise use all products
-  const baseProducts = searchQuery ? searchResults : allProducts;
+  // Prefer server-filtered category results when a category is selected.
+  const baseProducts = searchQuery ? searchResults : categoryFilter ? categoryProducts : allProducts;
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
@@ -53,12 +81,21 @@ export default function Products() {
       // Get the category name from the selected slug
       let categoryMatch = true;
       if (categoryFilter) {
-        const selectedCategory = categories.find(c => c.slug === categoryFilter);
+        const normalizedFilter = categoryFilter.toLowerCase();
+        const selectedCategory = categories.find(
+          (c) =>
+            String(c.slug ?? '').toLowerCase() === normalizedFilter ||
+            String(c.name ?? '').toLowerCase() === normalizedFilter
+        );
         const selectedCategoryName = selectedCategory?.name;
+        const selectedCategorySlug = selectedCategory?.slug;
         
         // Support both category_name and category fields, compare with actual category name
-        const productCategory = p.category_name || p.category || '';
-        categoryMatch = selectedCategoryName && productCategory.toLowerCase() === selectedCategoryName.toLowerCase();
+        const productCategory = (p.category_name || '').toLowerCase();
+        categoryMatch =
+          productCategory === (selectedCategoryName || '').toLowerCase() ||
+          productCategory === (selectedCategorySlug || '').toLowerCase() ||
+          (!selectedCategory && productCategory === normalizedFilter);
       }
       
       return priceMatch && categoryMatch;
@@ -96,12 +133,16 @@ export default function Products() {
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
-  if (isLoading) {
+  const shouldShowPageSkeleton =
+    (isLoading && allProducts.length === 0) ||
+    (categoryFilter && isCategoryLoading && categoryProducts.length === 0);
+
+  if (shouldShowPageSkeleton) {
     return <ProductsPageSkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white w-full overflow-x-hidden">
       {/* Header */}
       <div className="border-b border-gray-200 py-6 md:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
@@ -109,10 +150,18 @@ export default function Products() {
             <div className="flex items-center gap-2 mb-3">
               <span className="text-sm text-gray-600">Viewing category:</span>
               <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
-                {categories.find(c => c.slug === categoryFilter)?.name || categoryFilter}
+                {categories.find(
+                  (c) =>
+                    String(c.slug ?? '').toLowerCase() === categoryFilter.toLowerCase() ||
+                    String(c.name ?? '').toLowerCase() === categoryFilter.toLowerCase()
+                )?.name || categoryFilter}
               </span>
               <button
-                onClick={() => setCategoryFilter('')}
+                onClick={() => {
+                  setCategoryFilter('');
+                  setCurrentPage(1);
+                  updateCategoryInUrl('');
+                }}
                 className="text-xs text-gray-500 hover:text-gray-700 ml-2"
               >
                 <X className="w-4 h-4 inline-block" />
@@ -151,8 +200,10 @@ export default function Products() {
                       value=""
                       checked={categoryFilter === ''}
                       onChange={(e) => {
-                        setCategoryFilter(e.target.value);
+                        const nextValue = e.target.value;
+                        setCategoryFilter(nextValue);
                         setCurrentPage(1);
+                        updateCategoryInUrl(nextValue);
                       }}
                       className="w-4 h-4 cursor-pointer"
                     />
@@ -163,29 +214,39 @@ export default function Products() {
                       <Skeleton key={i} className="h-7 w-24" />
                     ))
                   ) : categories.length > 0 ? (
-                    categories.map((cat) => (
-                      <label 
-                        key={cat.id} 
-                        className={`flex items-center cursor-pointer p-2 rounded transition-colors ${
-                          categoryFilter === cat.slug 
-                            ? 'bg-blue-100 text-blue-900' 
-                            : 'hover:bg-gray-100'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="category"
-                          value={cat.slug}
-                          checked={categoryFilter === cat.slug}
-                          onChange={(e) => {
-                            setCategoryFilter(e.target.value);
-                            setCurrentPage(1);
-                          }}
-                          className="w-4 h-4 cursor-pointer"
-                        />
-                        <span className="text-sm ml-2 font-medium">{cat.name}</span>
-                      </label>
-                    ))
+                    categories.map((cat) => {
+                      const categoryValue = String(cat.slug || cat.name || '');
+                      const normalizedCategoryValue = normalizeCategoryValue(categoryValue);
+                      const isSelected =
+                        categoryQueryValue === normalizedCategoryValue ||
+                        categoryQueryValue === normalizeCategoryValue(String(cat.name ?? ''));
+                      
+                      return (
+                        <label 
+                          key={cat.id} 
+                          className={`flex items-center cursor-pointer p-2 rounded transition-colors ${
+                            isSelected
+                              ? 'bg-blue-100 text-blue-900' 
+                              : 'hover:bg-gray-100'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="category"
+                            value={categoryValue}
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const nextValue = e.target.value;
+                              setCategoryFilter(nextValue);
+                              setCurrentPage(1);
+                              updateCategoryInUrl(nextValue);
+                            }}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                          <span className="text-sm ml-2 font-medium">{cat.name}</span>
+                        </label>
+                      );
+                    })
                   ) : (
                     <p className="text-xs text-gray-500 p-2">No categories available</p>
                   )}
@@ -295,9 +356,11 @@ export default function Products() {
                         <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden h-40 md:h-48 mb-3 flex items-center justify-center">
                           {product.cover_image_url ? (
                             <img
-                              src={product.cover_image_url}
+                              src={getHighResImageUrl(product.cover_image_url)}
                               alt={product.title}
-                              className="w-full h-full object-contain p-3 group-hover:scale-110 transition-transform duration-300"
+                              className="w-full h-full object-contain p-3"
+                              loading="lazy"
+                              decoding="async"
                               crossOrigin="anonymous"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';

@@ -1,7 +1,7 @@
 'use client';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Star, Heart, ShoppingCart, X } from 'lucide-react';
+import { Star, Heart, ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -10,6 +10,7 @@ import { useProductById } from '@/hooks/useSupabaseProducts';
 import { useSupabaseCart, useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAuthModal } from '@/contexts/AuthModalContext';
+import { getHighResImageUrl } from '@/lib/images';
 
 interface QuickViewModalProps {
   productId: string;
@@ -20,6 +21,7 @@ interface QuickViewModalProps {
 export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
+  const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
 
   const { user, isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthModal();
@@ -39,23 +41,49 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
   const isWishlisted = product?.id && wishedProductIds.has(product.id);
 
   const handleAddToCart = async () => {
+    console.log('[QuickViewModal] AddToCart clicked', {
+      isAuthenticated,
+      userId: user?.id,
+      productId: product?.id,
+      quantity,
+    });
+
     if (!isAuthenticated || !user?.id) {
+      console.warn('[QuickViewModal] AddToCart blocked: user not authenticated');
       onClose();
-      setTimeout(() => openAuthModal('login', 'cart'), 0);
+      setTimeout(() =>
+        openAuthModal('login', 'cart', {
+          type: 'cart',
+          productId: product?.id,
+          quantity,
+        }),
+      0);
       return;
     }
 
     if (!product?.id) {
+      console.error('[QuickViewModal] AddToCart blocked: missing product id');
       toast.error('Product information is missing');
       return;
     }
 
     try {
-      await addToCart(product.id, quantity);
+      console.log('[QuickViewModal] AddToCart sending mutation', {
+        productId: product.id,
+        quantity,
+      });
+      const added = await addToCart(product.id, quantity);
+      console.log('[QuickViewModal] AddToCart mutation completed', { added });
+      if (!added) {
+        console.error('[QuickViewModal] AddToCart failed: hook returned false');
+        toast.error('Failed to add to cart');
+        return;
+      }
       toast.success(`Added ${quantity} item(s) to cart!`);
       setQuantity(1);
       onClose();
     } catch (error) {
+      console.error('[QuickViewModal] AddToCart exception', error);
       toast.error('Failed to add to cart');
     }
   };
@@ -69,10 +97,18 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
 
     if (product?.id) {
       try {
-        await toggleWishlist(product.id);
-        toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist!');
+        setIsTogglingWishlist(true);
+        const wasWishlisted = wishedProductIds.has(product.id);
+        const updated = await toggleWishlist(product.id);
+        if (!updated) {
+          toast.error('Failed to toggle wishlist');
+          return;
+        }
+        toast.success(wasWishlisted ? 'Removed from wishlist' : 'Added to wishlist!');
       } catch (error) {
         toast.error('Failed to toggle wishlist');
+      } finally {
+        setIsTogglingWishlist(false);
       }
     }
   };
@@ -94,12 +130,6 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
             {/* Header */}
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl">{product.title}</DialogTitle>
-              <button
-                onClick={onClose}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
             {/* Image Gallery */}
@@ -107,10 +137,12 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
               {/* Main Image */}
               {currentImage ? (
                 <img
-                  src={currentImage.image_url}
+                  src={getHighResImageUrl(currentImage.image_url)}
                   alt={product.title}
                   className="w-full h-64 object-contain rounded-lg bg-gray-100"
                   crossOrigin="anonymous"
+                  loading="eager"
+                  decoding="async"
                 />
               ) : (
                 <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
@@ -130,10 +162,12 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                       }`}
                     >
                       <img
-                        src={img.image_url}
+                        src={getHighResImageUrl(img.image_url)}
                         alt={`${product.title} thumbnail ${idx}`}
                         className="w-full h-full object-contain bg-gray-100"
                         crossOrigin="anonymous"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </button>
                   ))}
@@ -163,7 +197,7 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
               </div>
 
               {/* Description */}
-              <p className="text-sm text-gray-700 line-clamp-3">{product.description || product.title}</p>
+              <p className="text-sm text-gray-700 line-clamp-3">{product.title}</p>
 
               {/* Quantity */}
               <div className="flex items-center gap-3">
@@ -195,6 +229,7 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
               <div className="flex gap-3">
                 <button
                   onClick={handleAddToCart}
+                  type="button"
                   className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium"
                 >
                   <ShoppingCart className="w-4 h-4" />
@@ -202,17 +237,20 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                 </button>
                 <button
                   onClick={handleWishlist}
+                  type="button"
+                  disabled={isTogglingWishlist}
                   className={`px-4 py-2 rounded-lg border-2 transition-colors ${
                     isWishlisted
                       ? 'border-blue-600 text-blue-600 bg-blue-50'
                       : 'border-gray-300 text-gray-600 hover:border-blue-600 hover:text-blue-600'
-                  }`}
+                  } ${isTogglingWishlist ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
                   <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
                 </button>
                 <Link href={`/product/${product.id}`}>
                   <a
                     onClick={onClose}
+                    type="button"
                     className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-center transition-colors"
                   >
                     View Details

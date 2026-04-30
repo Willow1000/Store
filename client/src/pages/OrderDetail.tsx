@@ -1,21 +1,41 @@
 import { useAuth } from '@/_core/hooks/useAuth';
-import { getLoginUrl } from '@/const';
-import { useEffect } from 'react';
+import { useAuthModal } from '@/contexts/AuthModalContext';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { ArrowLeft, Clock, CheckCircle, Truck, Package } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
 export default function OrderDetail({ params }: { params: { id: string } }) {
-  const { isAuthenticated } = useAuth();
-  const [, setLocation] = useLocation();
+  const { isAuthenticated, sessionRestored } = useAuth();
+  const { openAuthModal } = useAuthModal();
+  const authPromptedRef = useRef(false);
+  const [location, setLocation] = useLocation();
   const orderId = parseInt(params.id);
-  const { data: orders, isLoading } = trpc.orders.list.useQuery();
+  const { data: orders, isLoading } = trpc.orders.list.useQuery(undefined, {
+    enabled: sessionRestored && isAuthenticated,
+  });
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      window.location.href = getLoginUrl();
+    if (!sessionRestored) return;
+    if (isAuthenticated) {
+      authPromptedRef.current = false;
+      return;
     }
-  }, [isAuthenticated]);
+    if (authPromptedRef.current) return;
+    authPromptedRef.current = true;
+    openAuthModal('login', undefined, { redirectTo: location });
+  }, [isAuthenticated, sessionRestored, location, openAuthModal]);
+
+  if (!sessionRestored) {
+    return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 w-32 bg-muted rounded"></div>
+          <div className="h-64 w-full bg-muted rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return null;
@@ -23,7 +43,7 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
 
   if (isLoading) {
     return (
-      <div className="container py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <div className="animate-pulse space-y-4">
           <div className="h-10 w-32 bg-muted rounded"></div>
           <div className="h-64 w-full bg-muted rounded"></div>
@@ -36,7 +56,7 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
 
   if (!order) {
     return (
-      <div className="container py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <button
           onClick={() => setLocation('/orders')}
           className="mb-6 flex items-center gap-2 text-sm font-semibold hover:text-gray-600"
@@ -77,8 +97,8 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
   const shipping = 0; // Shipping already included in total
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container py-12">
+    <div className="min-h-screen bg-background w-full overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <button
           onClick={() => setLocation('/orders')}
           className="mb-6 flex items-center gap-2 text-sm font-semibold hover:text-gray-600"

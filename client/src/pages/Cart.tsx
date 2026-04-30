@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Trash2, Plus, Minus, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { readCartFromStorage } from '@/lib/cart';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { useAuthModal } from '@/contexts/AuthModalContext';
+import { useSupabaseCart } from '@/hooks/useSupabaseCart';
+import { getHighResImageUrl } from '@/lib/images';
+
+const t = (_key: string, fallback: string) => fallback;
 
 interface CartItem {
-  productIndex: number;
+  productIndex: string | number;
   title: string;
   price: string;
   image: string;
@@ -19,6 +26,16 @@ interface Product {
 }
 
 export default function Cart() {
+  const [, navigate] = useLocation();
+  const { user, isAuthenticated } = useAuth();
+  const { openAuthModal } = useAuthModal();
+  const {
+    items: supabaseCartItems,
+    isLoading: isSupabaseLoading,
+    updateQuantity: updateSupabaseQuantity,
+    removeFromCart: removeSupabaseItem,
+  } = useSupabaseCart(user?.id || null);
+
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,41 +60,74 @@ export default function Cart() {
 
   // Load cart items from localStorage
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      try {
-        const items = JSON.parse(savedCart);
-        setCartItems(items);
-      } catch (e) {
-        console.error('Failed to parse cart:', e);
-      }
+    if (isAuthenticated) {
+      setIsLoading(false);
+      return;
     }
-    setIsLoading(false);
-  }, []);
 
-  const updateCartQuantity = (productIndex: number, newQuantity: number) => {
+    const savedCart = localStorage.getItem('cart');
+    const items = readCartFromStorage(savedCart);
+    setCartItems(items);
+    setIsLoading(false);
+  }, [isAuthenticated]);
+
+  const effectiveCartItems: CartItem[] = isAuthenticated
+    ? supabaseCartItems.map((item) => ({
+        productIndex: item.product_id,
+        title: item.product?.title || 'Product',
+        price: `KES ${Number(item.product?.price || 0).toFixed(2)}`,
+        image: item.product?.cover_image_url || '',
+        quantity: item.quantity,
+      }))
+    : cartItems;
+
+  const persistLocalCart = (updatedCart: CartItem[]) => {
+    setCartItems(updatedCart);
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    window.dispatchEvent(new Event('cartUpdated'));
+  };
+
+  const updateCartQuantity = async (productIndex: string | number, newQuantity: number) => {
+    if (isAuthenticated) {
+      const item = supabaseCartItems.find((cartItem) => String(cartItem.product_id) === String(productIndex));
+      if (!item?.id) {
+        toast.error(t('cart.itemNotFound', 'Cart item not found'));
+        return;
+      }
+      await updateSupabaseQuantity(item.id, newQuantity);
+      return;
+    }
+
     if (newQuantity <= 0) {
-      removeFromCart(productIndex);
+      await removeFromCart(productIndex);
       return;
     }
 
     const updatedCart = cartItems.map(item =>
       item.productIndex === productIndex ? { ...item, quantity: newQuantity } : item
     );
-    setCartItems(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    toast.success('Cart updated!');
+    persistLocalCart(updatedCart);
+    toast.success(t('cart.updated', 'Cart updated!'));
   };
 
-  const removeFromCart = (productIndex: number) => {
+  const removeFromCart = async (productIndex: string | number) => {
+    if (isAuthenticated) {
+      const item = supabaseCartItems.find((cartItem) => String(cartItem.product_id) === String(productIndex));
+      if (!item?.id) {
+        toast.error(t('cart.itemNotFound', 'Cart item not found'));
+        return;
+      }
+      await removeSupabaseItem(item.id);
+      return;
+    }
+
     const updatedCart = cartItems.filter(item => item.productIndex !== productIndex);
-    setCartItems(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    toast.success('Item removed from cart!');
+    persistLocalCart(updatedCart);
+    toast.success(t('cart.itemRemoved', 'Item removed from cart!'));
   };
 
   // Calculate totals
-  const subtotal = cartItems.reduce((sum, item) => {
+  const subtotal = effectiveCartItems.reduce((sum, item) => {
     const price = parseFloat(item.price.replace(/[^\d.]/g, '') || '0');
     return sum + (price * item.quantity);
   }, 0);
@@ -86,9 +136,9 @@ export default function Cart() {
   const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
 
-  if (isLoading) {
+  if (isLoading || (isAuthenticated && isSupabaseLoading)) {
     return (
-      <div className="container py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <div className="grid gap-8 md:grid-cols-3">
           <div className="md:col-span-2 space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -101,15 +151,15 @@ export default function Cart() {
     );
   }
 
-  if (cartItems.length === 0) {
+  if (effectiveCartItems.length === 0) {
     return (
-      <div className="container px-4 sm:px-6 md:px-8 py-12 md:py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-secondary py-12 sm:py-16">
-          <p className="mb-4 text-lg sm:text-xl font-semibold text-gray-900">Your cart is empty</p>
-          <p className="mb-8 text-sm sm:text-base text-gray-600 text-center max-w-sm">Start shopping to add items to your cart</p>
+          <p className="mb-4 text-lg sm:text-xl font-semibold text-gray-900">{t('cart.empty', 'Your cart is empty')}</p>
+          <p className="mb-8 text-sm sm:text-base text-gray-600 text-center max-w-sm">{t('cart.startShopping', 'Start shopping to add items to your cart')}</p>
           <Link href="/products">
             <a className="inline-flex items-center gap-2 px-6 py-3 sm:py-3.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base">
-              Continue Shopping
+              {t('header.browseProducts', 'Browse Products')}
               <ArrowRight size={18} />
             </a>
           </Link>
@@ -119,21 +169,21 @@ export default function Cart() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <div className="container px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
-        <h1 className="mb-6 sm:mb-8 text-3xl sm:text-4xl font-bold text-gray-900">Shopping Cart</h1>
+        <h1 className="mb-6 sm:mb-8 text-3xl sm:text-4xl font-bold text-gray-900">{t('common.cart', 'Shopping Cart')}</h1>
 
         <div className="grid gap-6 md:gap-8 md:grid-cols-3">
           {/* Cart Items */}
           <div className="md:col-span-2">
             <div className="space-y-4">
-              {cartItems.map((item) => (
+              {effectiveCartItems.map((item) => (
                 <div key={item.productIndex} className="flex gap-4 rounded-lg border border-border bg-white p-4">
                   {/* Product Image */}
                   <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-secondary">
                     {item.image ? (
                       <img
-                        src={item.image}
+                        src={getHighResImageUrl(item.image)}
                         alt={item.title}
                         className="h-full w-full object-contain p-2"
                         crossOrigin="anonymous"
@@ -154,7 +204,7 @@ export default function Cart() {
                       <a className="font-semibold hover:text-blue-600 line-clamp-2">{item.title}</a>
                     </Link>
                     <p className="mb-3 text-sm text-gray-600">
-                      ${parseFloat(item.price.replace(/[^\d.]/g, '') || '0').toFixed(2)}
+                      KES {parseFloat(item.price.replace(/[^\d.]/g, '') || '0').toFixed(2)}
                     </p>
 
                     {/* Quantity Controls */}
@@ -180,7 +230,7 @@ export default function Cart() {
                   {/* Price & Remove */}
                   <div className="flex flex-col items-end justify-between">
                     <p className="font-bold text-sm sm:text-base">
-                      ${(parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity).toFixed(2)}
+                      KES {(parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity).toFixed(2)}
                     </p>
                     <button
                       onClick={() => removeFromCart(item.productIndex)}
@@ -197,55 +247,63 @@ export default function Cart() {
             {/* Continue Shopping */}
             <Link href="/products">
               <a className="mt-6 inline-flex items-center gap-2 text-sm font-semibold hover:text-gray-600">
-                ← Continue Shopping
+                ← {t('cart.continueShopping', 'Continue Shopping')}
               </a>
             </Link>
           </div>
 
           {/* Order Summary */}
           <div className="rounded-lg border border-border bg-white p-4 sm:p-6 h-fit">
-            <h2 className="mb-4 sm:mb-6 text-lg sm:text-xl font-bold">Order Summary</h2>
+            <h2 className="mb-4 sm:mb-6 text-lg sm:text-xl font-bold">{t('checkout.orderSummary', 'Order Summary')}</h2>
 
             <div className="space-y-3 sm:space-y-4 border-b border-border pb-4">
               <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-600">Subtotal</span>
-                <span className="font-semibold">${subtotal.toFixed(2)}</span>
+                <span className="text-gray-600">{t('checkout.subtotal', 'Subtotal')}</span>
+                <span className="font-semibold">KES {subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-600">Shipping</span>
+                <span className="text-gray-600">{t('checkout.shipping', 'Shipping')}</span>
                 <span className="font-semibold">
-                  {shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}
+                  {shipping === 0 ? t('checkout.free', 'FREE') : `KES ${shipping.toFixed(2)}`}
                 </span>
               </div>
               <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-600">Tax (8%)</span>
-                <span className="font-semibold">${tax.toFixed(2)}</span>
+                <span className="text-gray-600">{t('checkout.tax', 'Tax')} (8%)</span>
+                <span className="font-semibold">KES {tax.toFixed(2)}</span>
               </div>
             </div>
 
             <div className="my-4 flex justify-between">
-              <span className="font-bold text-base sm:text-lg">Total</span>
-              <span className="text-xl sm:text-2xl font-bold">${total.toFixed(2)}</span>
+              <span className="font-bold text-base sm:text-lg">{t('checkout.total', 'Total')}</span>
+              <span className="text-xl sm:text-2xl font-bold">KES {total.toFixed(2)}</span>
             </div>
 
             {shipping > 0 && (
               <p className="mb-4 text-xs text-gray-600">
-                Free shipping on orders over $50
+                {t('checkout.freeShippingNotice', 'Free shipping on orders over KES 50')}
               </p>
             )}
 
             <button
               onClick={() => {
-                toast.success('Proceeding to checkout...');
+                if (!isAuthenticated) {
+                  openAuthModal('login', 'checkout', {
+                    type: 'checkout',
+                    redirectTo: '/checkout',
+                  });
+                  toast.error(t('checkout.signInToCheckout', 'Please sign in to checkout'));
+                  return;
+                }
+                navigate('/checkout');
               }}
               className="w-full py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base"
             >
-              Proceed to Checkout
+              {t('checkout.proceedToCheckout', 'Proceed to Checkout')}
             </button>
 
             <Link href="/products">
               <a className="mt-3 w-full inline-block text-center py-2.5 sm:py-3 rounded-lg border border-border bg-background font-semibold hover:bg-secondary transition-colors text-sm sm:text-base">
-                Continue Shopping
+                {t('cart.continueShopping', 'Continue Shopping')}
               </a>
             </Link>
           </div>

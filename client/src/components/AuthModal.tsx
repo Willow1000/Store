@@ -6,10 +6,13 @@ import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { useLocation } from 'wouter';
+import { executePendingAuthAction, getPendingAuthAction } from '@/lib/authPendingAction';
 
 export default function AuthModal() {
   const { isOpen, mode, actionType, closeAuthModal, setMode } = useAuthModal();
   const { refresh } = useAuth();
+  const [, navigate] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -29,13 +32,17 @@ export default function AuthModal() {
 
   if (!isOpen) return null;
 
+  const oauthRedirectUrl =
+    import.meta.env.VITE_SUPABASE_OAUTH_REDIRECT_URL ||
+    `${window.location.origin}/auth/callback`;
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: oauthRedirectUrl,
         },
       });
       if (error) {
@@ -92,12 +99,23 @@ export default function AuthModal() {
       if (error) {
         toast.error(error.message);
       } else if (data.user) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) {
+          toast.error('Login session not found. Please try again.');
+          return;
+        }
+
         // Sync user to backend
         await syncUserToBackend(data.user.id, data.user.email || '', data.user.user_metadata?.name);
         
         // Wait a moment for backend to process, then refresh auth state
         await new Promise(resolve => setTimeout(resolve, 500));
         refresh();
+
+        const hadPendingAction = Boolean(getPendingAuthAction());
+        if (hadPendingAction) {
+          await executePendingAuthAction(data.user.id, navigate);
+        }
         
         toast.success('Signed in successfully!');
         closeAuthModal();
@@ -139,12 +157,23 @@ export default function AuthModal() {
       if (error) {
         toast.error(error.message);
       } else if (data.user) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) {
+          toast.error('Signup session not found. Please verify and sign in again.');
+          return;
+        }
+
         // Sync user to backend immediately (even before email verification)
         await syncUserToBackend(data.user.id, data.user.email || '', signupData.name);
         
         // Wait a moment for backend to process, then refresh auth state
         await new Promise(resolve => setTimeout(resolve, 500));
         refresh();
+
+        const hadPendingAction = Boolean(getPendingAuthAction());
+        if (hadPendingAction) {
+          await executePendingAuthAction(data.user.id, navigate);
+        }
         
         toast.success('Account created! Please check your email to verify.');
         closeAuthModal();

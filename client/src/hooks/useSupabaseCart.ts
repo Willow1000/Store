@@ -8,6 +8,42 @@ export function useSupabaseCart(userId: string | null) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const ensureProfile = useCallback(async () => {
+    if (!userId) return false;
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) {
+      console.error('Unable to resolve authenticated user for profile sync:', userError);
+      return false;
+    }
+
+    const authUser = userData.user;
+    const email = authUser.email || `${userId}@placeholder.local`;
+    const fullName =
+      authUser.user_metadata?.name ||
+      authUser.user_metadata?.full_name ||
+      null;
+
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: userId,
+          email,
+          full_name: fullName,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
+
+    if (profileError) {
+      console.error('Failed to ensure profile exists:', profileError);
+      return false;
+    }
+
+    return true;
+  }, [userId]);
+
   // Fetch cart items
   const fetchCart = useCallback(async () => {
     if (!userId) {
@@ -19,6 +55,12 @@ export function useSupabaseCart(userId: string | null) {
       setIsLoading(true);
       setError(null);
 
+      const profileReady = await ensureProfile();
+      if (!profileReady) {
+        setItems([]);
+        return;
+      }
+
       const { data, error: supabaseError } = await supabase
         .from('cart_items')
         .select('*, product:products(*)')
@@ -26,7 +68,19 @@ export function useSupabaseCart(userId: string | null) {
 
       if (supabaseError) throw supabaseError;
 
-      setItems(data as CartItem[]);
+      const cartData = data as CartItem[];
+      setItems(cartData);
+
+      // Keep local cart snapshot in sync for header/cart badge consumers.
+      const localCart = cartData.map((item) => ({
+        productIndex: Number(item.product_id),
+        title: item.product?.title || 'Product',
+        price: String(item.product?.price ?? 0),
+        image: item.product?.cover_image_url || '',
+        quantity: Math.max(1, Number(item.quantity) || 1),
+      }));
+      localStorage.setItem('cart', JSON.stringify(localCart));
+      window.dispatchEvent(new Event('cartUpdated'));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch cart';
       setError(message);
@@ -34,7 +88,7 @@ export function useSupabaseCart(userId: string | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, [userId, ensureProfile]);
 
   // Add to cart
   const addToCart = useCallback(
@@ -45,19 +99,39 @@ export function useSupabaseCart(userId: string | null) {
       }
 
       try {
-        const { data, error: supabaseError } = await supabase
+        const profileReady = await ensureProfile();
+        if (!profileReady) {
+          toast.error('Unable to create your profile. Please try again.');
+          return false;
+        }
+
+        const nextQuantity = Math.max(1, quantity);
+
+        const { data: existingItem, error: existingError } = await supabase
           .from('cart_items')
-          .upsert(
-            {
+          .select('id, quantity')
+          .eq('user_id', userId)
+          .eq('product_id', productId)
+          .maybeSingle();
+
+        if (existingError) throw existingError;
+
+        if (existingItem?.id) {
+          const { error: updateError } = await supabase
+            .from('cart_items')
+            .update({ quantity: (existingItem.quantity || 0) + nextQuantity })
+            .eq('id', existingItem.id);
+          if (updateError) throw updateError;
+        } else {
+          const { error: insertError } = await supabase
+            .from('cart_items')
+            .insert({
               user_id: userId,
               product_id: productId,
-              quantity,
-            },
-            { onConflict: 'user_id,product_id' }
-          )
-          .select();
-
-        if (supabaseError) throw supabaseError;
+              quantity: nextQuantity,
+            });
+          if (insertError) throw insertError;
+        }
 
         toast.success('Added to cart');
         await fetchCart();
@@ -69,7 +143,7 @@ export function useSupabaseCart(userId: string | null) {
         return false;
       }
     },
-    [userId, fetchCart]
+    [userId, fetchCart, ensureProfile]
   );
 
   // Update quantity

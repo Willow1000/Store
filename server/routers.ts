@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getProducts, getProductById, getFeaturedProducts, getUserCart, addToCart, getUserOrders, createOrder, getCategories, createNotification, getUserNotifications, getUserWishlist, addToWishlist, removeFromWishlist, upsertUser } from "./db";
+import { createBankTransferCharge, createPaystackOrder, fetchPaystackOrder, fetchPaystackProductOrders, listPaystackOrders, validatePaystackOrder, verifyTransaction, initializeTransaction, chargeAuthorization, checkAuthorization, requestReauthorization, viewTransactionTimeline, getTransactionTotals, exportTransactions, fetchTransaction } from "./paystack";
 
 export const appRouter = router({
   system: systemRouter,
@@ -11,7 +12,8 @@ export const appRouter = router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      // clearCookie will automatically expire the cookie, no maxAge needed
+      ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
       return {
         success: true,
       } as const;
@@ -100,6 +102,128 @@ export const appRouter = router({
         paystackPaymentId: z.string().optional(),
       }))
       .mutation(({ ctx, input }) => createOrder(ctx.user.id, input as any))
+  }),
+
+  // Paystack procedures
+  paystack: router({
+    transactions: router({
+      initialize: protectedProcedure
+        .input(z.object({
+          email: z.string().email(),
+          amount: z.number().int().positive(),
+          reference: z.string().optional(),
+          currency: z.string().optional(),
+          description: z.string().optional(),
+          metadata: z.record(z.string(), z.unknown()).optional(),
+          plan: z.string().optional(),
+          subaccount: z.string().optional(),
+          transaction_charge: z.number().optional(),
+          bearer: z.enum(['account', 'subaccount']).optional(),
+          invoice_limit: z.number().int().optional(),
+        }))
+        .mutation(({ input }) => initializeTransaction(input)),
+      verify: protectedProcedure
+        .input(z.string().min(1))
+        .query(({ input }) => verifyTransaction(input)),
+      fetch: protectedProcedure
+        .input(z.number().int().positive())
+        .query(({ input }) => fetchTransaction(input)),
+      timeline: protectedProcedure
+        .input(z.union([z.string(), z.number().int().positive()]))
+        .query(({ input }) => viewTransactionTimeline(input)),
+      totals: protectedProcedure
+        .input(z.object({
+          from: z.string().optional(),
+          to: z.string().optional(),
+        }).optional())
+        .query(({ input }) => getTransactionTotals(input ?? {})),
+      export: protectedProcedure
+        .input(z.object({
+          from: z.string().optional(),
+          to: z.string().optional(),
+          settled: z.boolean().optional(),
+          payment_page: z.number().int().optional(),
+          customer: z.number().int().optional(),
+          currency: z.string().optional(),
+          settlement: z.number().int().optional(),
+          amount: z.number().optional(),
+          status: z.string().optional(),
+        }).optional())
+        .query(({ input }) => exportTransactions(input ?? {})),
+      chargeAuthorization: protectedProcedure
+        .input(z.object({
+          authorization_code: z.string().min(1),
+          email: z.string().email(),
+          amount: z.number().int().positive(),
+          reference: z.string().optional(),
+          plan: z.string().optional(),
+          currency: z.string().optional(),
+          metadata: z.record(z.string(), z.unknown()).optional(),
+          subaccount: z.string().optional(),
+          transaction_charge: z.number().optional(),
+          bearer: z.enum(['account', 'subaccount']).optional(),
+          invoice_limit: z.number().int().optional(),
+        }))
+        .mutation(({ input }) => chargeAuthorization(input)),
+      checkAuthorization: protectedProcedure
+        .input(z.object({
+          authorization_code: z.string().min(1),
+          email: z.string().email(),
+          amount: z.number().int().positive(),
+          currency: z.string().optional(),
+        }))
+        .mutation(({ input }) => checkAuthorization(input)),
+      requestReauthorization: protectedProcedure
+        .input(z.object({
+          authorization_code: z.string().min(1),
+          email: z.string().email(),
+          amount: z.number().int().positive(),
+          reference: z.string().optional(),
+          currency: z.string().optional(),
+          metadata: z.record(z.string(), z.unknown()).optional(),
+        }))
+        .mutation(({ input }) => requestReauthorization(input)),
+    }),
+    charges: router({
+      createBankTransfer: protectedProcedure
+        .input(z.object({
+          email: z.string().email(),
+          amountKES: z.number().positive(),
+          expiryMinutes: z.number().int().positive().max(1440).optional(),
+        }))
+        .mutation(({ input }) => createBankTransferCharge(input.email, input.amountKES, input.expiryMinutes)),
+    }),
+    orders: router({
+      create: protectedProcedure
+        .input(z.object({
+          customer: z.union([z.string().min(1), z.number().int().positive()]),
+          lineItems: z.array(z.object({
+            product: z.number().int().positive(),
+            quantity: z.number().int().positive(),
+          })).min(1),
+        }))
+        .mutation(({ input }) => createPaystackOrder({
+          customer: input.customer,
+          line_items: input.lineItems,
+        })),
+      list: protectedProcedure
+        .input(z.object({
+          perPage: z.number().int().positive().max(100).optional(),
+          page: z.number().int().positive().optional(),
+          from: z.string().optional(),
+          to: z.string().optional(),
+        }).optional())
+        .query(({ input }) => listPaystackOrders(input ?? {})),
+      get: protectedProcedure
+        .input(z.number().int().positive())
+        .query(({ input }) => fetchPaystackOrder(input)),
+      product: protectedProcedure
+        .input(z.number().int().positive())
+        .query(({ input }) => fetchPaystackProductOrders(input)),
+      validate: protectedProcedure
+        .input(z.string().min(1))
+        .query(({ input }) => validatePaystackOrder(input)),
+    }),
   }),
 
   // Notification procedures

@@ -1,29 +1,32 @@
 import { useAuth } from '@/_core/hooks/useAuth';
-import { getLoginUrl } from '@/const';
-import { useEffect } from 'react';
+import { useAuthModal } from '@/contexts/AuthModalContext';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
-import { Package, Clock, CheckCircle, Truck } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { Package, Clock, CheckCircle, Truck, XCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
 
 export default function Orders() {
-  const { isAuthenticated } = useAuth();
-  const [, setLocation] = useLocation();
-  const { data: orders, isLoading } = trpc.orders.list.useQuery();
+  const { user, isAuthenticated, sessionRestored, loading } = useAuth();
+  const { openAuthModal } = useAuthModal();
+  const authPromptedRef = useRef(false);
+  const [location, setLocation] = useLocation();
+  const { orders, isLoading, error } = useSupabaseOrders(user?.id ?? null);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      window.location.href = getLoginUrl();
+    if (!sessionRestored || loading) return;
+    if (isAuthenticated) {
+      authPromptedRef.current = false;
+      return;
     }
-  }, [isAuthenticated]);
+    if (authPromptedRef.current) return;
+    authPromptedRef.current = true;
+    openAuthModal('login', undefined, { redirectTo: location });
+  }, [isAuthenticated, sessionRestored, loading, location, openAuthModal]);
 
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  if (isLoading) {
+  if (!sessionRestored || loading) {
     return (
-      <div className="container py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
             <Skeleton key={i} className="h-24 w-full rounded-lg" />
@@ -33,11 +36,40 @@ export default function Orders() {
     );
   }
 
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+        <h1 className="mb-8 text-4xl font-bold">My Orders</h1>
+        <div className="flex flex-col items-center justify-center rounded-lg border border-red-200 bg-red-50 py-12">
+          <XCircle size={48} className="mb-4 text-red-500" />
+          <p className="mb-2 text-lg font-semibold text-red-700">Unable to load orders</p>
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   const ordersList = orders || [];
 
   if (ordersList.length === 0) {
     return (
-      <div className="container py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <h1 className="mb-8 text-4xl font-bold">My Orders</h1>
         <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-secondary py-12">
           <Package size={48} className="mb-4 text-gray-400" />
@@ -49,8 +81,8 @@ export default function Orders() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container py-12">
+    <div className="min-h-screen bg-background w-full overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <h1 className="mb-8 text-4xl font-bold">My Orders</h1>
 
         <div className="space-y-4">
@@ -59,17 +91,17 @@ export default function Orders() {
               <div className="mb-4 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
                 <div>
                   <p className="text-sm text-gray-600">Order Number</p>
-                  <p className="font-semibold">{order.orderNumber}</p>
+                  <p className="font-semibold">#{order.id}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Order Date</p>
                   <p className="font-semibold">
-                    {new Date(order.createdAt).toLocaleDateString()}
+                    {new Date(order.created_at).toLocaleDateString()}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Total</p>
-                  <p className="text-2xl font-bold">${order.total}</p>
+                  <p className="text-2xl font-bold">{order.currency} {Number(order.total_amount).toFixed(2)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {order.status === 'pending' && (
@@ -78,16 +110,22 @@ export default function Orders() {
                       <span className="text-sm font-semibold text-yellow-600">Pending</span>
                     </>
                   )}
-                  {order.status === 'confirmed' && (
+                  {order.status === 'completed' && (
                     <>
                       <CheckCircle size={20} className="text-green-600" />
-                      <span className="text-sm font-semibold text-green-600">Confirmed</span>
+                      <span className="text-sm font-semibold text-green-600">Completed</span>
                     </>
                   )}
-                  {order.status === 'shipped' && (
+                  {order.status === 'failed' && (
+                    <>
+                      <XCircle size={20} className="text-red-600" />
+                      <span className="text-sm font-semibold text-red-600">Failed</span>
+                    </>
+                  )}
+                  {order.status === 'refunded' && (
                     <>
                       <Truck size={20} className="text-blue-600" />
-                      <span className="text-sm font-semibold text-blue-600">Shipped</span>
+                      <span className="text-sm font-semibold text-blue-600">Refunded</span>
                     </>
                   )}
                 </div>

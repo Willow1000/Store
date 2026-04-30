@@ -47,9 +47,9 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <AuthModal />
-            <div className="flex min-h-screen flex-col bg-background">
+            <div className="flex min-h-screen flex-col bg-background w-full overflow-x-hidden">
               <Header />
-              <main className="flex-1">
+              <main className="flex-1 w-full overflow-x-hidden pt-16 lg:pt-28">
                 <Router />
               </main>
               <Footer />

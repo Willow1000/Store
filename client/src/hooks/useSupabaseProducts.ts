@@ -3,14 +3,40 @@ import { supabase } from '@/lib/supabase';
 import { Product, ProductImage } from '@/types/supabase';
 import { toast } from 'sonner';
 
+const PRODUCTS_CACHE_KEY = 'products_cache_v1';
+const CATEGORIES_CACHE_KEY = 'categories_cache_v1';
+
+function readCachedArray<T>(key: string): T[] {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedArray<T>(key: string, value: T[]) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Ignore storage quota/availability issues and keep runtime data.
+  }
+}
+
 export function useProducts(page = 1, limit = 20) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>(() => readCachedArray<Product>(PRODUCTS_CACHE_KEY));
+  const [isLoading, setIsLoading] = useState(() => readCachedArray<Product>(PRODUCTS_CACHE_KEY).length === 0);
   const [error, setError] = useState<string | null>(null);
 
   const fetchProducts = useCallback(async (limit = 20, offset = 0) => {
     try {
-      setIsLoading(true);
+      setIsLoading(products.length === 0);
       setError(null);
 
       const { data, error: supabaseError } = await supabase
@@ -21,7 +47,9 @@ export function useProducts(page = 1, limit = 20) {
 
       if (supabaseError) throw supabaseError;
 
-      setProducts(data as Product[]);
+      const fetchedProducts = data as Product[];
+      setProducts(fetchedProducts);
+      writeCachedArray(PRODUCTS_CACHE_KEY, fetchedProducts);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch products';
       setError(message);
@@ -29,7 +57,7 @@ export function useProducts(page = 1, limit = 20) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [products.length]);
 
   useEffect(() => {
     const offset = (page - 1) * limit;
@@ -192,24 +220,27 @@ export interface Category {
 }
 
 export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>(() => readCachedArray<Category>(CATEGORIES_CACHE_KEY));
+  const [isLoading, setIsLoading] = useState(() => readCachedArray<Category>(CATEGORIES_CACHE_KEY).length === 0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchCategories() {
       try {
-        setIsLoading(true);
+        setIsLoading(categories.length === 0);
         setError(null);
 
         const { data, error: supabaseError } = await supabase
           .from('categories')
-          .select('*')
+          .select('id,name,slug,description,icon,image_url,created_at')
           .order('name', { ascending: true });
 
         if (supabaseError) throw supabaseError;
 
-        setCategories(data as Category[]);
+        console.log('[useCategories] Fetched categories:', data);
+        const fetchedCategories = data as Category[];
+        setCategories(fetchedCategories);
+        writeCachedArray(CATEGORIES_CACHE_KEY, fetchedCategories);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to fetch categories';
         setError(message);
@@ -220,7 +251,7 @@ export function useCategories() {
     }
 
     fetchCategories();
-  }, []);
+  }, [categories.length]);
 
   return { categories, isLoading, error };
 }
@@ -241,20 +272,20 @@ export function useProductsBySlug(categorySlug: string) {
         setIsLoading(true);
         setError(null);
 
-        // First, get the category by slug to get its ID
+        // First, get the category by slug to get its name
         const { data: categoryData, error: categoryError } = await supabase
           .from('categories')
-          .select('id')
+          .select('name')
           .eq('slug', categorySlug)
           .single();
 
         if (categoryError) throw categoryError;
 
-        // Then fetch products by category ID
+        // Then fetch products by category_name
         const { data, error: supabaseError } = await supabase
           .from('products')
           .select('*')
-          .eq('category_id', categoryData.id)
+          .eq('category_name', categoryData.name)
           .order('created_at', { ascending: false });
 
         if (supabaseError) throw supabaseError;

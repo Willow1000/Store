@@ -25,8 +25,8 @@ export default function Search() {
   }, [allProducts, query]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container py-8">
+    <div className="min-h-screen bg-background w-full overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8">
         <h1 className="mb-2 text-4xl font-bold">Search Results</h1>
         <p className="mb-8 text-gray-600">
           {query ? `Results for "${query}"` : 'Enter a search term'}

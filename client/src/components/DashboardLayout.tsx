@@ -19,7 +19,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { getLoginUrl } from "@/const";
+import { useAuthModal } from "@/contexts/AuthModalContext";
 import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -46,17 +46,19 @@ export default function DashboardLayout({
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
-  const { loading, user } = useAuth();
+  const { loading, user, isAuthenticated, sessionRestored } = useAuth();
+  const { openAuthModal } = useAuthModal();
+  const [location] = useLocation();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
-  if (loading) {
+  if (loading || !sessionRestored) {
     return <DashboardLayoutSkeleton />
   }
 
-  if (!user) {
+  if (!user || !isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
@@ -70,7 +72,7 @@ export default function DashboardLayout({
           </div>
           <Button
             onClick={() => {
-              window.location.href = getLoginUrl();
+              openAuthModal('login', undefined, { redirectTo: location });
             }}
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"

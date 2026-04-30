@@ -9,6 +9,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useState, useEffect } from 'react';
+import { getHighResImageUrl } from '@/lib/images';
 
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
@@ -51,7 +52,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
       {/* Your Recently Viewed Items Section */}
       {recentlyViewedProducts.length > 0 && (
         <div className="bg-white border-b">
@@ -79,9 +80,11 @@ export default function Home() {
                       {/* Image Container */}
                       <div className="relative w-full pt-[100%] bg-white group-hover:opacity-75 transition-opacity">
                         <img
-                          src={product.cover_image_url || ''}
+                          src={getHighResImageUrl(product.cover_image_url)}
                           alt={product.title}
                           className="absolute inset-0 w-full h-full object-contain p-6"
+                          loading="lazy"
+                          decoding="async"
                           crossOrigin="anonymous"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
@@ -132,10 +135,10 @@ export default function Home() {
                         {/* Price Section */}
                         <div className="mt-4 flex items-baseline space-x-2">
                           <span className="text-2xl font-bold text-gray-900">
-                            ${parseFloat(String(product.price)).toFixed(2)}
+                            KES {parseFloat(String(product.price)).toFixed(2)}
                           </span>
                           <span className="text-sm text-gray-500 line-through">
-                            ${originalPrice}
+                            KES {originalPrice}
                           </span>
                         </div>
 
@@ -186,9 +189,11 @@ export default function Home() {
                       {/* Image Container */}
                       <div className="relative w-full pt-[100%] bg-white group-hover:opacity-75 transition-opacity">
                         <img
-                          src={product.cover_image_url || ''}
+                          src={getHighResImageUrl(product.cover_image_url)}
                           alt={product.title}
                           className="absolute inset-0 w-full h-full object-contain p-6"
+                          loading="lazy"
+                          decoding="async"
                           crossOrigin="anonymous"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
@@ -238,10 +243,10 @@ export default function Home() {
                         {/* Price Section */}
                         <div className="mt-4 flex items-baseline space-x-2">
                           <span className="text-2xl font-bold text-gray-900">
-                            ${parseFloat(String(product.price)).toFixed(2)}
+                            KES {parseFloat(String(product.price)).toFixed(2)}
                           </span>
                           <span className="text-sm text-gray-500 line-through">
-                            ${originalPrice}
+                            KES {originalPrice}
                           </span>
                         </div>
 
@@ -274,8 +279,8 @@ export default function Home() {
       </div>
 
       {/* Shop by Category Section */}
-      <div className="py-12 px-4 md:px-8 bg-white">
-        <div className="max-w-7xl mx-auto">
+      <div className="bg-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Shop by Category</h2>
             <Link href="/products">
@@ -293,32 +298,37 @@ export default function Home() {
               ))
             ) : categories.length > 0 ? (
               categories.map((cat) => (
-                <Link key={cat.id} href={`/products?category=${cat.slug}`}>
-                  <a className="group relative h-40 overflow-hidden rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 flex flex-col items-center justify-center hover:shadow-lg hover:scale-105 transition-all duration-300">
-                    {/* Icon */}
-                    {cat.image_url ? (
+                <Link key={cat.id} href={`/products?category=${encodeURIComponent(cat.slug || cat.name || '')}`}>
+                  <div className="group relative h-40 overflow-hidden rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
+                    {/* Fallback visual layer (shown when image is missing or fails) */}
+                    <div className="absolute inset-0 flex items-center justify-center text-5xl leading-none text-white/90">
+                      {cat.icon || '📦'}
+                    </div>
+
+                    {cat.image_url && (
                       <img
-                        src={cat.image_url}
+                        src={getHighResImageUrl(cat.image_url)}
                         alt={cat.name}
-                        className="mb-3 h-16 w-16 rounded-md object-cover group-hover:scale-110 transition-transform"
+                        className="absolute inset-0 h-full w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                         }}
                       />
-                    ) : (
-                      <div className="mb-3 text-5xl group-hover:scale-110 transition-transform">
-                        {cat.icon || '📦'}
-                      </div>
                     )}
-                    <p className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors text-sm text-center px-2 line-clamp-2">
+
+                    {/* Text contrast overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                    <p className="absolute bottom-2 left-2 right-2 font-semibold text-white text-sm text-center line-clamp-2">
                       {cat.name}
                     </p>
-                  </a>
+                  </div>
                 </Link>
               ))
             ) : (
               <div className="col-span-full py-12 text-center">
-                <p className="text-gray-500 text-lg">No categories available</p>
+                <p className="text-gray-500 text-lg">No categories available ({categories.length} categories loaded)</p>
               </div>
             )}
           </div>

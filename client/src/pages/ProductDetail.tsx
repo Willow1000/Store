@@ -8,6 +8,7 @@ import { useProductById, useProducts } from '@/hooks/useSupabaseProducts';
 import { useSupabaseCart, useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useState, useEffect } from 'react';
+import { getHighResImageUrl } from '@/lib/images';
 
 export default function ProductDetail() {
   const [, params] = useRoute('/product/:id');
@@ -41,40 +42,88 @@ export default function ProductDetail() {
   });
 
   const handleAddToCart = async () => {
+    console.log('[ProductDetail] AddToCart clicked', {
+      isAuthenticated,
+      userId: user?.id,
+      productId: product?.id,
+      quantity,
+    });
+
     if (!isAuthenticated || !user?.id) {
-      openAuthModal('login', 'cart');
+      console.warn('[ProductDetail] AddToCart blocked: user not authenticated');
+      openAuthModal('login', 'cart', {
+        type: 'cart',
+        productId: product?.id,
+        quantity,
+      });
       return;
     }
 
     if (!product?.id) {
+      console.error('[ProductDetail] AddToCart blocked: missing product id');
       toast.error('Product information is missing');
       return;
     }
 
     try {
-      await addToCart(product.id, quantity);
+      console.log('[ProductDetail] AddToCart sending mutation', {
+        productId: product.id,
+        quantity,
+      });
+      const added = await addToCart(product.id, quantity);
+      console.log('[ProductDetail] AddToCart mutation completed', { added });
+      if (!added) {
+        console.error('[ProductDetail] AddToCart failed: hook returned false');
+        toast.error('Failed to add to cart');
+        return;
+      }
       toast.success(`Added ${quantity} item(s) to cart!`);
       setQuantity(1);
     } catch (error) {
+      console.error('[ProductDetail] AddToCart exception', error);
       toast.error('Failed to add to cart');
     }
   };
 
   const handleBuyNow = async () => {
+    console.log('[ProductDetail] QuickCheckout clicked', {
+      isAuthenticated,
+      userId: user?.id,
+      productId: product?.id,
+      quantity,
+    });
+
     if (!isAuthenticated || !user?.id) {
-      openAuthModal('login', 'checkout');
+      console.warn('[ProductDetail] QuickCheckout blocked: user not authenticated');
+      openAuthModal('login', 'checkout', {
+        type: 'checkout',
+        productId: product?.id,
+        quantity,
+      });
       return;
     }
 
     try {
       if (!product?.id) {
+        console.error('[ProductDetail] QuickCheckout blocked: missing product id');
         toast.error('Product information is missing');
         return;
       }
       
-      await addToCart(product.id, quantity);
+      console.log('[ProductDetail] QuickCheckout adding item before redirect', {
+        productId: product.id,
+        quantity,
+      });
+      const added = await addToCart(product.id, quantity);
+      console.log('[ProductDetail] QuickCheckout add result', { added });
+      if (!added) {
+        toast.error('Failed to add to cart for checkout');
+        return;
+      }
+      console.log('[ProductDetail] QuickCheckout navigating to /checkout');
       navigate('/checkout');
     } catch (error) {
+      console.error('[ProductDetail] QuickCheckout exception', error);
       toast.error('Failed to proceed to checkout');
     }
   };
@@ -111,7 +160,7 @@ export default function ProductDetail() {
 
   if (!productId) {
     return (
-      <div className="container py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <p className="text-gray-600">Product not found</p>
       </div>
     );
@@ -123,7 +172,7 @@ export default function ProductDetail() {
 
   if (!product) {
     return (
-      <div className="container py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <p className="text-gray-600">Product not found</p>
       </div>
     );
@@ -142,27 +191,27 @@ export default function ProductDetail() {
     .slice(0, 6);
 
   return (
-    <main role="main" className="bg-white min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main role="main" className="bg-white min-h-screen w-full overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         {/* Product Detail Grid */}
-        <div className="lg:grid lg:grid-cols-2 lg:gap-x-8 lg:items-start">
+        <div className="lg:grid lg:grid-cols-2 lg:gap-x-20 xl:gap-x-24 lg:items-start">
           {/* LEFT COLUMN - Image Gallery */}
-          <div className="flex flex-col-reverse">
-            {/* Thumbnail Gallery */}
+          <div className="flex flex-row sm:flex-col-reverse gap-3 sm:gap-0">
+            {/* Thumbnail Gallery - Vertical on mobile, below on sm+ */}
             {allImages && allImages.length > 1 && (
-              <div className="hidden mt-6 w-full max-w-2xl mx-auto sm:block lg:max-w-none">
-                <div className="grid grid-cols-4 gap-4">
+              <div className="w-16 sm:w-full sm:mt-6 flex flex-col sm:flex-row max-w-2xl sm:mx-auto lg:max-w-none">
+                <div className="flex flex-col sm:grid sm:grid-cols-4 gap-2 sm:gap-4 w-full">
                   {allImages.slice(0, 4).map((img, idx) => (
                     <button
                       key={img.id || idx}
                       onClick={() => setSelectedImage(idx)}
-                      className={`relative h-24 rounded-md flex items-center justify-center cursor-pointer hover:bg-gray-50 ${
+                      className={`relative h-16 sm:h-24 w-16 sm:w-full rounded-md flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-all flex-shrink-0 ${
                         selectedImage === idx ? 'ring-2 ring-blue-500 bg-white' : 'bg-white border'
                       }`}
                     >
                       <span className="absolute inset-0 rounded-md overflow-hidden">
                         <img
-                          src={img.image_url}
+                          src={getHighResImageUrl(img.image_url)}
                           alt={`Product image ${idx + 1}`}
                           className="w-full h-full object-center object-contain"
                           crossOrigin="anonymous"
@@ -175,17 +224,17 @@ export default function ProductDetail() {
             )}
 
             {/* Main Image */}
-            <div className="w-full">
+            <div className="flex-1 sm:w-full">
               <div className="bg-white rounded-lg overflow-hidden shadow-lg border">
                 {allImages && allImages.length > 0 && allImages[selectedImage] ? (
                   <img
                     key={`main-${selectedImage}`}
-                    src={allImages[selectedImage].image_url}
+                    src={getHighResImageUrl(allImages[selectedImage].image_url)}
                     alt={`${product.title}`}
                     fetchPriority="high"
                     loading="eager"
-                    className="w-full h-full object-center object-contain p-4 min-h-[400px]"
-                    style={{ imageRendering: 'high-quality' }}
+                    className="w-full h-full object-center object-contain p-4 min-h-[300px] sm:min-h-[400px]"
+                    style={{ imageRendering: 'auto' }}
                     crossOrigin="anonymous"
                     onError={(e) => {
                       e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%23f5f5f5" width="400" height="400"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16" fill="%23999"%3EImage not available%3C/text%3E%3C/svg%3E';
@@ -206,7 +255,7 @@ export default function ProductDetail() {
             {/* Price */}
             <div className="mt-3">
               <p className="text-3xl text-gray-900 font-bold">
-                ${parseFloat(String(product.price)).toFixed(2)} 
+                KES {parseFloat(String(product.price)).toFixed(2)} 
                 <span className="text-sm font-normal text-gray-500"> (Estimated Price)</span>
               </p>
             </div>
@@ -307,7 +356,7 @@ export default function ProductDetail() {
                     <a className="group relative bg-white border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                       <div className="w-full bg-gray-200 group-hover:opacity-75 h-48">
                         <img
-                          src={p.cover_image_url || ''}
+                          src={getHighResImageUrl(p.cover_image_url || '')}
                           alt={p.title}
                           className="w-full h-full object-center object-contain p-4"
                           crossOrigin="anonymous"
@@ -323,7 +372,7 @@ export default function ProductDetail() {
                         </h3>
                         <p className="mt-1 text-xs text-gray-500 capitalize">{p.condition || 'New'}</p>
                         <p className="mt-2 text-lg font-bold text-gray-900">
-                          ${parseFloat(String(p.price)).toFixed(2)}
+                          KES {parseFloat(String(p.price)).toFixed(2)}
                         </p>
                       </div>
                     </a>

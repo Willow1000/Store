@@ -39,7 +39,11 @@ export function useSupabaseOrders(userId: string | null) {
 
   // Create order
   const createOrder = useCallback(
-    async (totalAmount: number, items: { product_id: string; quantity: number; price: number }[]) => {
+    async (
+      totalAmount: number,
+      items: { product_id: string; quantity: number; price: number }[],
+      currency: string = 'KES'
+    ) => {
       if (!userId) {
         toast.error('Please sign in to place an order');
         return null;
@@ -52,6 +56,7 @@ export function useSupabaseOrders(userId: string | null) {
           .insert({
             user_id: userId,
             total_amount: totalAmount,
+            currency,
             status: 'pending',
           })
           .select()

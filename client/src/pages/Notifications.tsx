@@ -1,27 +1,38 @@
 import { useAuth } from '@/_core/hooks/useAuth';
-import { getLoginUrl } from '@/const';
-import { useEffect } from 'react';
+import { useAuthModal } from '@/contexts/AuthModalContext';
+import { useEffect, useRef } from 'react';
+import { useLocation } from 'wouter';
 import { Bell, CheckCircle, AlertCircle, Package, Trash2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Notifications() {
-  const { isAuthenticated } = useAuth();
-  const { data: notifications, isLoading } = trpc.notifications.list.useQuery();
+  const { isAuthenticated, sessionRestored } = useAuth();
+  const { openAuthModal } = useAuthModal();
+  const authPromptedRef = useRef(false);
+  const [location] = useLocation();
+  const { data: notifications, isLoading } = trpc.notifications.list.useQuery(undefined, {
+    enabled: sessionRestored && isAuthenticated,
+  });
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      window.location.href = getLoginUrl();
+    if (!sessionRestored) return;
+    if (isAuthenticated) {
+      authPromptedRef.current = false;
+      return;
     }
-  }, [isAuthenticated]);
+    if (authPromptedRef.current) return;
+    authPromptedRef.current = true;
+    openAuthModal('login', undefined, { redirectTo: location });
+  }, [isAuthenticated, sessionRestored, location, openAuthModal]);
 
-  if (!isAuthenticated) {
+  if (!sessionRestored) {
     return null;
   }
 
   if (isLoading) {
     return (
-      <div className="container py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
             <Skeleton key={i} className="h-20 w-full rounded-lg" />
@@ -35,7 +46,7 @@ export default function Notifications() {
 
   if (notificationsList.length === 0) {
     return (
-      <div className="container py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <h1 className="mb-8 text-4xl font-bold">Notifications</h1>
         <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-secondary py-12">
           <Bell size={48} className="mb-4 text-gray-400" />
@@ -62,8 +73,8 @@ export default function Notifications() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container py-12">
+    <div className="min-h-screen bg-background w-full overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <h1 className="mb-8 text-4xl font-bold">Notifications</h1>
 
         <div className="space-y-4">

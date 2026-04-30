@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { executePendingAuthAction, getPendingAuthAction } from '@/lib/authPendingAction';
 
 export default function AuthCallback() {
   const [, navigate] = useLocation();
@@ -52,10 +53,16 @@ export default function AuthCallback() {
         }
 
         toast.success(`Welcome, ${user.user_metadata?.name || user.email}!`);
+
+        const handledPendingAction = getPendingAuthAction()
+          ? await executePendingAuthAction(user.id, navigate)
+          : false;
         
         // Redirect to home immediately
         setIsProcessing(false);
-        navigate('/');
+        if (!handledPendingAction) {
+          navigate('/');
+        }
       } catch (error) {
         console.error('Callback error:', error);
         toast.error('Authentication failed. Please try again.');
@@ -68,7 +75,7 @@ export default function AuthCallback() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-screen flex items-center justify-center bg-background w-full overflow-x-hidden">
       <div className="text-center">
         <div className="mb-4 flex justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
