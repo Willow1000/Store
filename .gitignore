@@ -113,3 +113,10 @@ temp/
 client/public/__manus__/version.json
 
 .env*
+node_modules
+dist
+build
+
+.claude/
+*.md
+plugins/
