@@ -22,19 +22,13 @@ export interface PaystackConfig {
   email: string;
   amount: number;
   reference?: string;
+  description?: string;
   metadata?: Record<string, unknown>;
   firstName?: string;
   lastName?: string;
   phoneNumber?: string;
   channels?: string[];
   onSuccess: (reference: string) => void;
-  onClose?: () => void;
-}
-
-export interface PaystackAccessCodeConfig {
-  publicKey: string;
-  accessCode: string;
-  onSuccess: (response: PaystackResponse) => void;
   onClose?: () => void;
 }
 
@@ -118,6 +112,7 @@ function openInlineModal(publicKey: string, config: PaystackConfig): Promise<Pay
         email: config.email,
         amount: amountInSubunits,
         ref: config.reference,
+        description: config.description,
         metadata: config.metadata,
         firstName: config.firstName || '',
         lastName: config.lastName || '',
@@ -136,39 +131,6 @@ function openInlineModal(publicKey: string, config: PaystackConfig): Promise<Pay
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Paystack setup failed';
       console.error('[Paystack] Setup error:', message);
-      reject(new Error(message));
-    }
-  });
-}
-
-// Helper: Resume transaction with access_code (Tutorial 2 recommended approach)
-function resumeWithAccessCode(config: PaystackAccessCodeConfig): Promise<PaystackResponse> {
-  return new Promise((resolve, reject) => {
-    const PaystackPop = (window as any).PaystackPop;
-    
-    if (!PaystackPop) {
-      reject(new Error('PaystackPop is not available'));
-      return;
-    }
-
-    try {
-      console.log('[Paystack] Resuming transaction with access_code:', config.accessCode.substring(0, 10) + '...');
-
-      const popup = new PaystackPop();
-      
-      popup.resumeTransaction(config.accessCode, {
-        onClose: () => {
-          config.onClose?.();
-          reject(new Error('Payment cancelled by user'));
-        },
-        onSuccess: (response: PaystackResponse) => {
-          config.onSuccess(response);
-          resolve(response);
-        },
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to resume transaction';
-      console.error('[Paystack] Resume error:', message);
       reject(new Error(message));
     }
   });
@@ -220,21 +182,5 @@ export function openPaystackModal(config: PaystackConfig) {
   return loadPaystackScript().then(() => openInlineModal(publicKey, config));
 }
 
-// Resume Paystack transaction with access_code (Tutorial 2, recommended secure approach)
-export function resumePaystackTransaction(config: PaystackAccessCodeConfig) {
-  const publicKey = config.publicKey?.trim() || import.meta.env.VITE_PAYSTACK_PUBLIC_KEY?.trim();
-  
-  if (!publicKey) {
-    const error = 'Paystack public key is not configured. Set VITE_PAYSTACK_PUBLIC_KEY in .env.local';
-    console.error('[Paystack]', error);
-    throw new Error(error);
-  }
-
-  if (!config.accessCode) {
-    throw new Error('Access code is required to resume transaction');
-  }
-
-  // Load script and resume transaction
-  return loadPaystackScript().then(() => resumeWithAccessCode(config));
-}
+// Access-code resume flow intentionally removed.
 

@@ -39,6 +39,8 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
 
   const currentImage = allImages[selectedImageIdx];
   const isWishlisted = product?.id && wishedProductIds.has(product.id);
+  const stock = Number(product?.stock ?? 0);
+  const isOutOfStock = stock === 0;
 
   const handleAddToCart = async () => {
     console.log('[QuickViewModal] AddToCart clicked', {
@@ -181,6 +183,9 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
               <div>
                 <p className="text-2xl font-bold text-gray-900">${parseFloat(String(product.price)).toFixed(2)}</p>
                 <p className="text-sm text-gray-600 mt-1">Condition: {product.condition || 'Good'}</p>
+                <p className={`mt-2 inline-block px-3 py-1 rounded text-xs font-semibold ${isOutOfStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                  {isOutOfStock ? 'Out of stock' : `${stock} in stock`}
+                </p>
               </div>
 
               {/* Rating */}
@@ -230,6 +235,7 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                 <button
                   onClick={handleAddToCart}
                   type="button"
+                  disabled={isOutOfStock}
                   className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium"
                 >
                   <ShoppingCart className="w-4 h-4" />

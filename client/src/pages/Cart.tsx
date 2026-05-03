@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Trash2, Plus, Minus, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -7,11 +7,13 @@ import { readCartFromStorage } from '@/lib/cart';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useSupabaseCart } from '@/hooks/useSupabaseCart';
+import { useProducts } from '@/hooks/useSupabaseProducts';
 import { getHighResImageUrl } from '@/lib/images';
 
 const t = (_key: string, fallback: string) => fallback;
 
 interface CartItem {
+  productId?: string;
   productIndex: string | number;
   title: string;
   price: string;
@@ -19,11 +21,13 @@ interface CartItem {
   quantity: number;
 }
 
-interface Product {
+type ProductLookup = {
+  id: string;
   title: string;
-  price: string;
-  image_urls: string[];
-}
+  price: number;
+  cover_image_url: string;
+  stock?: number | null;
+};
 
 export default function Cart() {
   const [, navigate] = useLocation();
@@ -35,28 +39,10 @@ export default function Cart() {
     updateQuantity: updateSupabaseQuantity,
     removeFromCart: removeSupabaseItem,
   } = useSupabaseCart(user?.id || null);
+  const { products: dbProducts } = useProducts(1, 500);
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Load products from JSON
-  useEffect(() => {
-    fetch('/data/products.json')
-      .then(res => res.json())
-      .then(data => {
-        const allProducts: Product[] = [];
-        if (typeof data === 'object' && !Array.isArray(data)) {
-          for (const items of Object.values(data)) {
-            if (Array.isArray(items)) {
-              allProducts.push(...items);
-            }
-          }
-        }
-        setProducts(allProducts);
-      })
-      .catch(err => console.error('Failed to load products:', err));
-  }, []);
 
   // Load cart items from localStorage
   useEffect(() => {
@@ -74,12 +60,29 @@ export default function Cart() {
   const effectiveCartItems: CartItem[] = isAuthenticated
     ? supabaseCartItems.map((item) => ({
         productIndex: item.product_id,
+        productId: item.product_id,
         title: item.product?.title || 'Product',
-        price: `KES ${Number(item.product?.price || 0).toFixed(2)}`,
+        price: `$ ${Number(item.product?.price || 0).toFixed(2)}`,
         image: item.product?.cover_image_url || '',
         quantity: item.quantity,
       }))
     : cartItems;
+
+  const productsById = useMemo(() => {
+    return new Map((dbProducts as ProductLookup[]).map((product) => [product.id, product]));
+  }, [dbProducts]);
+
+  const resolveProduct = (item: CartItem) => {
+    const byId = item.productId ? productsById.get(item.productId) : undefined;
+    if (byId) return byId;
+
+    const legacyIndex = typeof item.productIndex === 'number' ? item.productIndex : Number(item.productIndex);
+    if (Number.isFinite(legacyIndex) && legacyIndex >= 0) {
+      return dbProducts[legacyIndex] as ProductLookup | undefined;
+    }
+
+    return undefined;
+  };
 
   const persistLocalCart = (updatedCart: CartItem[]) => {
     setCartItems(updatedCart);
@@ -151,6 +154,15 @@ export default function Cart() {
     );
   }
 
+  const enrichedCartItems = effectiveCartItems.map((item) => {
+    const product = resolveProduct(item);
+    return {
+      ...item,
+      productId: item.productId || product?.id,
+      stock: product?.stock ?? null,
+    };
+  });
+
   if (effectiveCartItems.length === 0) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
@@ -177,8 +189,8 @@ export default function Cart() {
           {/* Cart Items */}
           <div className="md:col-span-2">
             <div className="space-y-4">
-              {effectiveCartItems.map((item) => (
-                <div key={item.productIndex} className="flex gap-4 rounded-lg border border-border bg-white p-4">
+              {enrichedCartItems.map((item) => (
+                <div key={item.productId || item.productIndex} className="flex gap-4 rounded-lg border border-border bg-white p-4">
                   {/* Product Image */}
                   <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-secondary">
                     {item.image ? (
@@ -200,11 +212,18 @@ export default function Cart() {
 
                   {/* Product Info */}
                   <div className="flex-1">
-                    <Link href={`/product/${item.productIndex}`}>
+                    <Link href={`/product/${item.productId || item.productIndex}`}>
                       <a className="font-semibold hover:text-blue-600 line-clamp-2">{item.title}</a>
                     </Link>
                     <p className="mb-3 text-sm text-gray-600">
-                      KES {parseFloat(item.price.replace(/[^\d.]/g, '') || '0').toFixed(2)}
+                      ${parseFloat(item.price.replace(/[^\d.]/g, '') || '0').toFixed(2)}
+                    </p>
+                    <p className={`mb-3 text-xs font-semibold ${item.stock === 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                      {item.stock === 0
+                        ? 'Out of stock'
+                        : item.stock != null
+                          ? `${item.stock} in stock`
+                          : 'Stock information unavailable'}
                     </p>
 
                     {/* Quantity Controls */}
@@ -219,7 +238,8 @@ export default function Cart() {
                       <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
                       <button
                         onClick={() => updateCartQuantity(item.productIndex, item.quantity + 1)}
-                        className="rounded-md border border-border px-3 py-2 hover:bg-secondary transition-colors min-h-10 min-w-10 flex items-center justify-center"
+                        disabled={item.stock === 0}
+                        className="rounded-md border border-border px-3 py-2 hover:bg-secondary transition-colors min-h-10 min-w-10 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                         aria-label="Increase quantity"
                       >
                         <Plus size={16} />
@@ -230,7 +250,7 @@ export default function Cart() {
                   {/* Price & Remove */}
                   <div className="flex flex-col items-end justify-between">
                     <p className="font-bold text-sm sm:text-base">
-                      KES {(parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity).toFixed(2)}
+                      ${(parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity).toFixed(2)}
                     </p>
                     <button
                       onClick={() => removeFromCart(item.productIndex)}
@@ -259,28 +279,28 @@ export default function Cart() {
             <div className="space-y-3 sm:space-y-4 border-b border-border pb-4">
               <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-gray-600">{t('checkout.subtotal', 'Subtotal')}</span>
-                <span className="font-semibold">KES {subtotal.toFixed(2)}</span>
+                <span className="font-semibold">{`$${subtotal.toFixed(2)}`}</span>
               </div>
               <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-gray-600">{t('checkout.shipping', 'Shipping')}</span>
                 <span className="font-semibold">
-                  {shipping === 0 ? t('checkout.free', 'FREE') : `KES ${shipping.toFixed(2)}`}
+                  {shipping === 0 ? t('checkout.free', 'FREE') : `$${shipping.toFixed(2)}`}
                 </span>
               </div>
               <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-gray-600">{t('checkout.tax', 'Tax')} (8%)</span>
-                <span className="font-semibold">KES {tax.toFixed(2)}</span>
+                <span className="font-semibold">{`$${tax.toFixed(2)}`}</span>
               </div>
             </div>
 
             <div className="my-4 flex justify-between">
               <span className="font-bold text-base sm:text-lg">{t('checkout.total', 'Total')}</span>
-              <span className="text-xl sm:text-2xl font-bold">KES {total.toFixed(2)}</span>
+              <span className="text-xl sm:text-2xl font-bold">{`$${total.toFixed(2)}`}</span>
             </div>
 
             {shipping > 0 && (
               <p className="mb-4 text-xs text-gray-600">
-                {t('checkout.freeShippingNotice', 'Free shipping on orders over KES 50')}
+                {t('checkout.freeShippingNotice', 'Free shipping on orders over $50')}
               </p>
             )}
 

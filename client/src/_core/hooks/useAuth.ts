@@ -102,8 +102,9 @@ export function useAuth(options?: UseAuthOptions) {
             // Clear auth data but preserve checkout progress and pending actions
             localStorage.removeItem('manus-runtime-user-info');
             localStorage.removeItem('supabase.auth.token');
-            clearPendingAuthAction();
-            window.dispatchEvent(new Event('cartUpdated'));
+              localStorage.removeItem('cart');
+              clearPendingAuthAction();
+              window.dispatchEvent(new Event('cartUpdated'));
           } catch (storageError) {
             console.warn('[useAuth] Failed to clear browser storage on sign out', storageError);
           }

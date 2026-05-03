@@ -3,8 +3,8 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { getProducts, getProductById, getFeaturedProducts, getUserCart, addToCart, getUserOrders, createOrder, getCategories, createNotification, getUserNotifications, getUserWishlist, addToWishlist, removeFromWishlist, upsertUser } from "./db";
-import { initializeTransaction } from "./paystack";
+import { getProducts, getProductById, getFeaturedProducts, getNewArrivals, getDeals, getTrendingProducts, getUserCart, addToCart, getUserOrders, createOrder, getCategories, createNotification, getUserNotifications, getUserWishlist, addToWishlist, removeFromWishlist, upsertUser } from "./db";
+import { initializeTransaction, verifyTransaction } from "./paystack";
 
 export const appRouter = router({
   system: systemRouter,
@@ -55,6 +55,18 @@ export const appRouter = router({
     featured: publicProcedure
       .input(z.object({ limit: z.number().default(8) }))
       .query(({ input }) => getFeaturedProducts(input.limit)),
+    
+    newArrivals: publicProcedure
+      .input(z.object({ limit: z.number().default(30) }))
+      .query(({ input }) => getNewArrivals(input.limit)),
+    
+    deals: publicProcedure
+      .input(z.object({ limit: z.number().default(20) }))
+      .query(({ input }) => getDeals(input.limit)),
+    
+    trending: publicProcedure
+      .input(z.object({ limit: z.number().default(20) }))
+      .query(({ input }) => getTrendingProducts(input.limit)),
   }),
 
   // Category procedures
@@ -107,7 +119,7 @@ export const appRouter = router({
   // Paystack procedures
   paystack: router({
     transactions: router({
-      initialize: protectedProcedure
+      initialize: publicProcedure
         .input(z.object({
           email: z.string().email(),
           amount: z.number().int().positive(),
@@ -117,6 +129,9 @@ export const appRouter = router({
           metadata: z.record(z.string(), z.unknown()).optional(),
         }))
         .mutation(({ input }) => initializeTransaction(input)),
+      verify: publicProcedure
+        .input(z.object({ reference: z.string() }))
+        .query(({ input }) => verifyTransaction(input.reference)),
     }),
   }),
 

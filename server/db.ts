@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, cartItems, orders, notifications, categories, products, productVariants, InsertOrder, InsertNotification, wishlistItems } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -107,6 +107,34 @@ export async function getFeaturedProducts(limit = 8) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(products).where(eq(products.featured, true)).limit(limit);
+}
+
+export async function getNewArrivals(limit = 30) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(products).orderBy(desc(products.createdAt)).limit(limit);
+}
+
+export async function getDeals(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  // Products with discount column filled, ordered by freeShipping and discount percentage
+  return db.select().from(products)
+    .where(sql`${products.discount} IS NOT NULL`)
+    .orderBy(sql`${products.freeShipping} DESC, (${products.discount} - ${products.price}) / ${products.discount} DESC`)
+    .limit(limit);
+}
+
+export async function getTrendingProducts(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  // Healthy mix: recent products (newer weighted favorably) + good ratings + deals
+  return db.select().from(products)
+    .orderBy(
+      sql`(CAST(${products.rating} AS DECIMAL(5, 2)) * 2) DESC`,
+      desc(products.createdAt)
+    )
+    .limit(limit);
 }
 
 // Cart queries

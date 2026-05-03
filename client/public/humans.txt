@@ -1,0 +1,97 @@
+# ModernMart Humans.txt - About This Site
+# humanstxt.org
+
+## INFO
+
+Site Name: ModernMart
+Site URL: https://modernmart.manus.space
+Description: Premium e-commerce marketplace with verified sellers and quality products
+
+## TECHNOLOGY COLOPHON
+
+### Framework
+- Frontend: React 19 with TypeScript  
+- Backend: Node.js with tRPC
+- Database: MySQL with Drizzle ORM
+- Styling: Tailwind CSS
+
+### APIs & Integrations
+- Payment: Paystack & Stripe
+- Authentication: OAuth 2.0
+- Maps: Google Maps API
+- LLM: Manus AI Platform
+- Voice: OpenAI Whisper
+
+### Hosting & CDN
+- Frontend: Vite-powered SPA
+- Backend: Node.js server
+- Database: MySQL 
+- Analytics: Umami (optional)
+
+### Standards & Best Practices
+- Semantic HTML5
+- Mobile-first design
+- Schema.org structured data (JSON-LD)
+- WCAG 2.1 Level AA accessibility
+- Core Web Vitals optimized
+- Progressive Web App (PWA) ready
+- Server-side rendering capable
+- SEO-optimized sitemap generation
+
+## TEAM
+
+### Project Leadership
+- Name: ModernMart Team
+- Organization: ModernMart
+- Email: support@modernmart.manus.space
+
+### Development
+- Frontend Team: React specialists
+- Backend Team: Node.js/tRPC developers  
+- DevOps: Infrastructure management
+
+## CREDITS
+
+### Open Source Libraries
+- React - UI framework
+- Tailwind CSS - Styling
+- Drizzle ORM - Database
+- tRPC - API protocol
+- Vite - Build tool
+- Wouter - Router
+- Sonner - Toast notifications
+- Lucide - Icons
+
+### Services
+- Manus AI - AI platform
+- Paystack - Payments (Africa)
+- Stripe - Payments (Global)
+- Google - Maps, Analytics
+- OpenAI - Whisper integration
+
+## SEO & DISCOVERABILITY
+
+ModernMart is optimized for:
+- Search engine crawlers (Google, Bing, Yandex, Baidu)
+- LLM indexing (GPTBot, Claude, Cohere, PaLM)
+- Semantic web standards (Schema.org)
+- Social media sharing (Open Graph, Twitter Cards)
+- Accessibility standards (SLAM, WAI-ARIA)
+
+### Structured Data Schemas
+- Organization
+- WebSite with SearchAction
+- LocalBusiness
+- Product (with ratings, pricing, availability)
+- BreadcrumbList
+- FAQPage (for product Q&A)
+- Article (for blog/help content)
+
+## LAST UPDATED
+
+Generated dynamically from /humans.txt on the server
+Site Last Modified: 2026-04-30
+
+---
+
+For more information about this human-friendly initiative, visit humanstxt.org

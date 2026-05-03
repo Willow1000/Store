@@ -33,6 +33,7 @@ export default function Products() {
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
+  const [dealsOnly, setDealsOnly] = useState(false);
 
   const { user } = useAuth();
   const { products: allProducts, isLoading } = useProducts(1, 300);
@@ -41,6 +42,19 @@ export default function Products() {
   const { categories, isLoading: categoriesLoading } = useCategories();
   const { products: categoryProducts, isLoading: isCategoryLoading } = useProductsBySlug(categoryFilter);
   const categoryQueryValue = normalizeCategoryValue(getCategoryFromUrl());
+
+  const selectedCategory = useMemo(() => {
+    if (!categoryFilter) return null;
+    const normalizedFilter = normalizeCategoryValue(categoryFilter);
+    return categories.find(
+      (c) =>
+        normalizeCategoryValue(String(c.slug ?? '')) === normalizedFilter ||
+        normalizeCategoryValue(String(c.name ?? '')) === normalizedFilter
+    ) || null;
+  }, [categories, categoryFilter]);
+
+  const selectedCategoryName = normalizeCategoryValue(String(selectedCategory?.name ?? ''));
+  const selectedCategorySlug = normalizeCategoryValue(String(selectedCategory?.slug ?? ''));
 
   const updateCategoryInUrl = (nextCategory: string) => {
     const [path, query = ''] = location.split('?');
@@ -81,24 +95,21 @@ export default function Products() {
       // Get the category name from the selected slug
       let categoryMatch = true;
       if (categoryFilter) {
-        const normalizedFilter = categoryFilter.toLowerCase();
-        const selectedCategory = categories.find(
-          (c) =>
-            String(c.slug ?? '').toLowerCase() === normalizedFilter ||
-            String(c.name ?? '').toLowerCase() === normalizedFilter
-        );
-        const selectedCategoryName = selectedCategory?.name;
-        const selectedCategorySlug = selectedCategory?.slug;
-        
         // Support both category_name and category fields, compare with actual category name
         const productCategory = (p.category_name || '').toLowerCase();
         categoryMatch =
-          productCategory === (selectedCategoryName || '').toLowerCase() ||
-          productCategory === (selectedCategorySlug || '').toLowerCase() ||
-          (!selectedCategory && productCategory === normalizedFilter);
+          productCategory === selectedCategoryName ||
+          productCategory === selectedCategorySlug ||
+          (!selectedCategory && productCategory === normalizeCategoryValue(categoryFilter));
+      }
+
+      // Deals filter - product has discount field
+      let dealsMatch = true;
+      if (dealsOnly) {
+        dealsMatch = p.discount !== null && p.discount !== undefined;
       }
       
-      return priceMatch && categoryMatch;
+      return priceMatch && categoryMatch && dealsMatch;
     });
 
     // Sort
@@ -127,7 +138,7 @@ export default function Products() {
     }
 
     return filtered;
-  }, [baseProducts, sortBy, priceRange, categoryFilter, categories]);
+  }, [baseProducts, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly]);
 
   const itemsPerPage = 12;
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -294,6 +305,23 @@ export default function Products() {
                 </div>
               </div>
 
+              {/* Deals Filter */}
+              <div className="mb-6">
+                <h3 className="font-bold text-sm mb-3">Special Offers</h3>
+                <label className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={dealsOnly}
+                    onChange={(e) => {
+                      setDealsOnly(e.target.checked);
+                      setCurrentPage(1);
+                    }}
+                    className="w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-sm ml-2 font-medium">Deals Only</span>
+                </label>
+              </div>
+
               {/* Sort Options */}
               <div>
                 <h3 className="font-bold text-sm mb-3">Sort By</h3>
@@ -350,6 +378,9 @@ export default function Products() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-4">
                 {paginatedProducts.map((product, idx) => {
                   const price = parseFloat(String(product.price));
+                  const discount = product.discount ? parseFloat(String(product.discount)) : null;
+                  const discountPercentage = discount ? Math.round(((discount - price) / discount) * 100) : 0;
+                  const stock = Number(product.stock ?? 0);
                   return (
                     <Link key={product.id} href={`/product/${product.id}`}>
                       <div className="group cursor-pointer">
@@ -369,6 +400,14 @@ export default function Products() {
                           ) : (
                             <div className="text-gray-400 text-center text-sm">No image available</div>
                           )}
+                          {discount && (
+                            <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
+                              -{discountPercentage}%
+                            </div>
+                          )}
+                          <div className={`absolute bottom-2 left-2 px-2 py-1 rounded text-xs font-bold ${stock === 0 ? 'bg-red-600 text-white' : 'bg-white/90 text-gray-800'}`}>
+                            {stock === 0 ? 'Out of stock' : `${stock} in stock`}
+                          </div>
                           <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={(e) => {
@@ -391,7 +430,15 @@ export default function Products() {
                           </div>
                         </div>
                         <h3 className="text-xs md:text-sm font-medium line-clamp-2 group-hover:text-blue-600">{product.title}</h3>
-                        <p className="text-gray-900 font-bold text-xs md:text-sm">${price.toFixed(2)}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-gray-900 font-bold text-xs md:text-sm">${price.toFixed(2)}</p>
+                          {discount && (
+                            <p className="text-gray-500 line-through text-xs">${discount.toFixed(2)}</p>
+                          )}
+                        </div>
+                        <p className={`mt-1 text-xs font-semibold ${stock === 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                          {stock === 0 ? 'Out of stock' : `${stock} in stock`}
+                        </p>
                       </div>
                     </Link>
                   );

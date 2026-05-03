@@ -1,4 +1,5 @@
 export interface LocalCartItem {
+  productId?: string;
   productIndex: number;
   title: string;
   price: string;
@@ -15,10 +16,12 @@ function normalizeItem(raw: unknown): LocalCartItem | null {
   if (!raw || typeof raw !== 'object') return null;
 
   const item = raw as Record<string, unknown>;
+  const productId = typeof item.productId === 'string' ? item.productId : '';
   const productIndex = toNumber(item.productIndex, -1);
-  if (productIndex < 0) return null;
+  if (!productId && productIndex < 0) return null;
 
   return {
+    productId: productId || undefined,
     productIndex,
     title: String(item.title ?? ''),
     price: String(item.price ?? '0'),

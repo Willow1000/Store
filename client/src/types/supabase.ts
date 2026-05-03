@@ -32,6 +32,7 @@ export type Product = {
   cover_image_url: string;
   brand: string | null;
   model: string | null;
+  stock: number | null;
   item_specifics: Record<string, any> | null;
   created_at: string;
 };

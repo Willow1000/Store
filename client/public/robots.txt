@@ -1,37 +1,88 @@
-# Allow all search engines to crawl the site
+# ModernMart Robots.txt - Comprehensive SEO & LLM Discoverability
+# This file optimizes crawling for search engines and AI models
+
 User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /admin/
-Disallow: /checkout/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
 Disallow: /*.json$
 Disallow: /*?*sort=
 Disallow: /*?*filter=
+Disallow: /*?*page=
+Disallow: *?utm_source=
+Disallow: *?utm_medium=
+Disallow: *?utm_campaign=
+Disallow: *?ref=
+Disallow: *?fbclid=
+Disallow: *?gclid=
+Crawl-delay: 0
+Request-rate: 30/1s
 
-# Specific rules for Google
+# Google Bot - Relaxed crawling rules
 User-agent: Googlebot
 Allow: /
 Crawl-delay: 0
+Request-rate: 50/1s
 
-# Specific rules for Bing
+# Bing Bot
 User-agent: Bingbot
 Allow: /
 Crawl-delay: 1
+Request-rate: 30/1s
 
-# Specific rules for ChatGPT/GPTBot
-User-agent: GPTBot
+# DuckDuckGo Bot
+User-agent: DuckDuckBot
 Allow: /
 Crawl-delay: 1
 
-# Specific rules for other AI crawlers
+# Yandex Bot
+User-agent: YandexBot
+Allow: /
+Crawl-delay: 1
+
+# Baidu Bot
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 1
+
+# LLM/AI Crawlers - Comprehensive access for better LLM indexing
+User-agent: GPTBot
+Allow: /
+Crawl-delay: 0
+
 User-agent: CCBot
 Allow: /
+Crawl-delay: 0
 
 User-agent: anthropic-ai
 Allow: /
+Crawl-delay: 0
 
 User-agent: Claude-Web
 Allow: /
+Crawl-delay: 0
 
-# Sitemap location
+User-agent: facebookexternalhit
+Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 1
+
+User-agent: AltaVista
+Allow: /
+Crawl-delay: 0.5
+
+# Block low-quality bots
+User-agent: MJ12bot
+User-agent: SemrushBot
+User-agent: DotBot
+Disallow: /
+
+# Sitemaps for comprehensive indexing
 Sitemap: https://modernmart.manus.space/sitemap.xml
+Sitemap: https://modernmart.manus.space/sitemap-products.xml

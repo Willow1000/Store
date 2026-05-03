@@ -70,6 +70,19 @@ async function ensureProfile(userId: string) {
 async function upsertCartItem(userId: string, productId: string, quantity: number) {
   const nextQuantity = Math.max(1, quantity);
 
+  const { data: productData, error: productError } = await supabase
+    .from('products')
+    .select('id, stock')
+    .eq('id', productId)
+    .maybeSingle();
+
+  if (productError) throw productError;
+
+  const availableStock = Number(productData?.stock ?? 0);
+  if (availableStock <= 0) {
+    throw new Error('This item is out of stock');
+  }
+
   const { data: existingItem, error: existingError } = await supabase
     .from('cart_items')
     .select('id, quantity')
@@ -78,6 +91,11 @@ async function upsertCartItem(userId: string, productId: string, quantity: numbe
     .maybeSingle();
 
   if (existingError) throw existingError;
+
+  const currentQuantity = Number(existingItem?.quantity || 0);
+  if (currentQuantity + nextQuantity > availableStock) {
+    throw new Error(`Only ${availableStock} item${availableStock === 1 ? '' : 's'} in stock`);
+  }
 
   if (existingItem?.id) {
     const { error: updateError } = await supabase

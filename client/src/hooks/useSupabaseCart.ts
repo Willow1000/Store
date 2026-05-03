@@ -73,7 +73,8 @@ export function useSupabaseCart(userId: string | null) {
 
       // Keep local cart snapshot in sync for header/cart badge consumers.
       const localCart = cartData.map((item) => ({
-        productIndex: Number(item.product_id),
+        productId: item.product_id,
+        productIndex: Number.NaN,
         title: item.product?.title || 'Product',
         price: String(item.product?.price ?? 0),
         image: item.product?.cover_image_url || '',
@@ -107,6 +108,20 @@ export function useSupabaseCart(userId: string | null) {
 
         const nextQuantity = Math.max(1, quantity);
 
+        const { data: productData, error: productError } = await supabase
+          .from('products')
+          .select('id, stock, title')
+          .eq('id', productId)
+          .maybeSingle();
+
+        if (productError) throw productError;
+
+        const availableStock = Number(productData?.stock ?? 0);
+        if (availableStock <= 0) {
+          toast.error('This item is out of stock');
+          return false;
+        }
+
         const { data: existingItem, error: existingError } = await supabase
           .from('cart_items')
           .select('id, quantity')
@@ -115,6 +130,12 @@ export function useSupabaseCart(userId: string | null) {
           .maybeSingle();
 
         if (existingError) throw existingError;
+
+        const currentQuantity = Number(existingItem?.quantity || 0);
+        if (currentQuantity + nextQuantity > availableStock) {
+          toast.error(`Only ${availableStock} item${availableStock === 1 ? '' : 's'} in stock`);
+          return false;
+        }
 
         if (existingItem?.id) {
           const { error: updateError } = await supabase

@@ -1,3 +1,9 @@
+import fs from 'fs';
+import dotenv from 'dotenv';
+
+const dotenvPath = process.env.DOTENV_CONFIG_PATH || (fs.existsSync('.env.local') ? '.env.local' : '.env');
+dotenv.config({ path: dotenvPath });
+
 export const ENV = {
   appId: process.env.VITE_APP_ID ?? "",
   cookieSecret: process.env.JWT_SECRET ?? "",

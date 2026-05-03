@@ -62,6 +62,7 @@ export const products = mysqlTable("products", {
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   originalPrice: decimal("originalPrice", { precision: 10, scale: 2 }),
+  discount: decimal("discount", { precision: 10, scale: 2 }),
   categoryId: int("categoryId").notNull(),
   sellerId: int("sellerId").notNull(),
   condition: mysqlEnum("condition", ["new", "like-new", "good", "fair", "used"]).default("new"),
@@ -70,6 +71,7 @@ export const products = mysqlTable("products", {
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
   totalReviews: int("totalReviews").default(0),
   featured: boolean("featured").default(false),
+  freeShipping: boolean("freeShipping").default(false),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

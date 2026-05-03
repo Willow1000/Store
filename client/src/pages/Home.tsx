@@ -36,10 +36,20 @@ export default function Home() {
     .filter(Boolean)
     .slice(0, 8);
 
-  // Calculate discount percentage (demo: fixed 30-56% for variety)
-  const getDiscount = (price: number | string, index: number) => {
-    const discounts = [56, 46, 35, 48, 52, 42, 38, 50, 44, 36, 54, 40];
-    return discounts[index % discounts.length];
+  // Filter deals: products with free shipping OR price > 250 OR has discount
+  const dealsProducts = products?.filter((p) => {
+    const price = parseFloat(String(p.price));
+    const hasDiscount = p.discount !== null && p.discount !== undefined;
+    return p.freeShipping === true || price > 250 || hasDiscount;
+  }) || [];
+
+  // Calculate actual discount percentage from discount field
+  const getDiscountPercentage = (price: number | string, discount: number | null | undefined) => {
+    if (!discount) return null;
+    const currentPrice = parseFloat(String(price));
+    const discountPrice = parseFloat(String(discount));
+    if (discountPrice <= currentPrice) return null;
+    return Math.round(((discountPrice - currentPrice) / discountPrice) * 100);
   };
 
   const getOriginalPrice = (price: number | string, discount: number) => {
@@ -70,9 +80,9 @@ export default function Home() {
             <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {recentlyViewedProducts.map((product, idx) => {
                 if (!product) return null;
-                const discount = getDiscount(product.price, idx);
-                const originalPrice = getOriginalPrice(product.price, discount);
+                const discountPercentage = getDiscountPercentage(product.price, product.discount);
                 const isWished = product.id && wishedProductIds.has(product.id);
+                const stock = Number(product.stock ?? 0);
 
                 return (
                   <Link key={product.id} href={`/product/${product.id}`}>
@@ -90,9 +100,13 @@ export default function Home() {
                             e.currentTarget.style.display = 'none';
                           }}
                         />
-                        {/* Discount Badge */}
-                        <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
-                          {discount}% OFF
+                        {discountPercentage && (
+                          <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                            -{discountPercentage}%
+                          </div>
+                        )}
+                        <div className={`absolute bottom-3 left-3 px-2 py-1 rounded text-xs font-bold ${stock === 0 ? 'bg-red-600 text-white' : 'bg-white/90 text-gray-800'}`}>
+                          {stock === 0 ? 'Out of stock' : `${stock} in stock`}
                         </div>
                         {/* Wishlist Button */}
                         <button
@@ -135,13 +149,14 @@ export default function Home() {
                         {/* Price Section */}
                         <div className="mt-4 flex items-baseline space-x-2">
                           <span className="text-2xl font-bold text-gray-900">
-                            KES {parseFloat(String(product.price)).toFixed(2)}
+                            ${parseFloat(String(product.price)).toFixed(2)}
                           </span>
-                          <span className="text-sm text-gray-500 line-through">
-                            KES {originalPrice}
-                          </span>
+                          {product.discount && (
+                            <span className="text-sm text-gray-500 line-through">
+                              ${parseFloat(String(product.discount)).toFixed(2)}
+                            </span>
+                          )}
                         </div>
-
                         {/* Shipping Info */}
                         <p className="mt-1 text-xs text-green-600 font-medium">Free shipping</p>
 
@@ -164,7 +179,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="mb-10">
             <h1 className="text-3xl font-extrabold text-gray-900">Today's Deals</h1>
-            <p className="mt-2 text-lg text-gray-600">All with free shipping</p>
+            <p className="mt-2 text-lg text-gray-600">Discounted items, free shipping on select products & premium items over $250</p>
           </div>
 
           {/* Products Grid */}
@@ -178,10 +193,11 @@ export default function Home() {
                 </div>
               ))
             ) : (
-              products?.slice(0, 12).map((product, idx) => {
-                const discount = getDiscount(product.price, idx);
-                const originalPrice = getOriginalPrice(product.price, discount);
+              dealsProducts?.slice(0, 12).map((product, idx) => {
+                const discountPercentage = getDiscountPercentage(product.price, product.discount);
+                const originalPrice = product.discount ? parseFloat(String(product.discount)).toFixed(2) : null;
                 const isWished = product.id && wishedProductIds.has(product.id);
+                const stock = Number(product.stock ?? 0);
 
                 return (
                   <Link key={product.id} href={`/product/${product.id}`}>
@@ -200,8 +216,13 @@ export default function Home() {
                           }}
                         />
                         {/* Discount Badge */}
-                        <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
-                          {discount}% OFF
+                        {discountPercentage && (
+                          <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                            -{discountPercentage}%
+                          </div>
+                        )}
+                        <div className={`absolute bottom-3 left-3 px-2 py-1 rounded text-xs font-bold ${stock === 0 ? 'bg-red-600 text-white' : 'bg-white/90 text-gray-800'}`}>
+                          {stock === 0 ? 'Out of stock' : `${stock} in stock`}
                         </div>
                         {/* Wishlist Button */}
                         <button
@@ -243,11 +264,13 @@ export default function Home() {
                         {/* Price Section */}
                         <div className="mt-4 flex items-baseline space-x-2">
                           <span className="text-2xl font-bold text-gray-900">
-                            KES {parseFloat(String(product.price)).toFixed(2)}
+                            ${parseFloat(String(product.price)).toFixed(2)}
                           </span>
-                          <span className="text-sm text-gray-500 line-through">
-                            KES {originalPrice}
-                          </span>
+                          {originalPrice && (
+                            <span className="text-sm text-gray-500 line-through">
+                              ${originalPrice}
+                            </span>
+                          )}
                         </div>
 
                         {/* Shipping Info */}

@@ -179,6 +179,10 @@ export default function ProductDetail() {
   }
 
   const currentPrice = product.price;
+  const discountPrice = product.discount ? parseFloat(String(product.discount)) : null;
+  const discountPercentage = discountPrice ? Math.round(((discountPrice - currentPrice) / discountPrice) * 100) : 0;
+  const stock = Number(product.stock ?? 0);
+  const isOutOfStock = stock === 0;
   const isWishlisted = product.id && wishedProductIds.has(product.id);
 
   // Get similar products from the same category (max 6)
@@ -254,10 +258,25 @@ export default function ProductDetail() {
 
             {/* Price */}
             <div className="mt-3">
-              <p className="text-3xl text-gray-900 font-bold">
-                KES {parseFloat(String(product.price)).toFixed(2)} 
-                <span className="text-sm font-normal text-gray-500"> (Estimated Price)</span>
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-3xl text-gray-900 font-bold">
+                  ${parseFloat(String(product.price)).toFixed(2)}
+                </p>
+                {discountPrice && (
+                  <p className="text-2xl text-gray-500 line-through">
+                    ${discountPrice.toFixed(2)}
+                  </p>
+                )}
+              </div>
+              {discountPrice && (
+                <div className="mt-2 inline-block bg-red-100 text-red-800 px-3 py-1 rounded text-sm font-semibold">
+                  Save {discountPercentage}%
+                </div>
+              )}
+              <div className={`mt-2 inline-block px-3 py-1 rounded text-sm font-semibold ${isOutOfStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                {isOutOfStock ? 'Out of stock' : `${stock} in stock`}
+              </div>
+              <span className="text-sm font-normal text-gray-500 block mt-2"> (Estimated Price)</span>
             </div>
 
             {/* Rating */}
@@ -296,11 +315,16 @@ export default function ProductDetail() {
                   </li>
                   <li className="bg-white px-4 py-3 border rounded-md shadow-sm">
                     <span className="block text-xs text-gray-500 uppercase">Stock Status</span>
-                    <span className="block text-sm font-bold text-green-600">In Stock</span>
+                    <span className={`block text-sm font-bold ${isOutOfStock ? 'text-red-600' : 'text-green-600'}`}>
+                      {isOutOfStock ? 'Out of stock' : 'In Stock'}
+                    </span>
+                    <span className="block text-xs text-gray-500 mt-1">
+                      {isOutOfStock ? '0 available' : `${stock} available`}
+                    </span>
                   </li>
                   <li className="bg-white px-4 py-3 border rounded-md shadow-sm">
                     <span className="block text-xs text-gray-500 uppercase">Availability</span>
-                    <span className="block text-sm font-bold">Ready to Ship</span>
+                    <span className="block text-sm font-bold">{isOutOfStock ? 'Unavailable' : 'Ready to Ship'}</span>
                   </li>
                 </ul>
               </div>
@@ -311,6 +335,7 @@ export default function ProductDetail() {
               {/* Quick Purchase Button */}
               <button
                 onClick={handleBuyNow}
+                disabled={isOutOfStock}
                 className="w-full bg-green-600 border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
               >
                 Quick Purchase - Checkout Now
@@ -320,6 +345,7 @@ export default function ProductDetail() {
               <div className="flex space-x-4">
                 <button
                   onClick={handleAddToCart}
+                  disabled={isOutOfStock}
                   className="flex-1 bg-blue-600 border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
@@ -372,7 +398,7 @@ export default function ProductDetail() {
                         </h3>
                         <p className="mt-1 text-xs text-gray-500 capitalize">{p.condition || 'New'}</p>
                         <p className="mt-2 text-lg font-bold text-gray-900">
-                          KES {parseFloat(String(p.price)).toFixed(2)}
+                          ${parseFloat(String(p.price)).toFixed(2)}
                         </p>
                       </div>
                     </a>

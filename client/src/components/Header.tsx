@@ -80,18 +80,20 @@ export default function Header() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-          {/* Cart Icon */}
-          <Link href="/cart">
-            <a className="relative flex items-center gap-1 sm:gap-2 text-sm font-medium hover:text-gray-600">
-              <ShoppingCart size={20} className="sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">{t('common.cart', 'Cart')}</span>
-              {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartCount}
-                </span>
-              )}
-            </a>
-          </Link>
+          {/* Cart Icon - Only show if authenticated */}
+          {isAuthenticated && (
+            <Link href="/cart">
+              <a className="relative flex items-center gap-1 sm:gap-2 text-sm font-medium hover:text-gray-600">
+                <ShoppingCart size={20} className="sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">{t('common.cart', 'Cart')}</span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </a>
+            </Link>
+          )}
 
           {/* User Menu */}
           {isAuthenticated && user ? (
@@ -159,40 +161,7 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="relative z-10 border-t border-gray-200 bg-gray-50 lg:hidden w-full">
-          <nav className="w-full px-3 sm:px-4 md:px-6 lg:px-8 flex flex-col gap-4 py-4 mx-auto max-w-full lg:max-w-7xl lg:mx-auto">
-            <Link href="/products">
-              <a className="text-sm font-medium hover:text-gray-600">{t('header.browseProducts', 'Browse Products')}</a>
-            </Link>
-            <Link href="/deals">
-              <a className="text-sm font-medium hover:text-gray-600">{t('header.deals', 'Deals')}</a>
-            </Link>
-            <Link href="/new">
-              <a className="text-sm font-medium hover:text-gray-600">{t('header.newArrivals', 'New Arrivals')}</a>
-            </Link>
-          </nav>
-        </div>
-      )}
 
-      {/* Category Navigation - Desktop */}
-      <nav className="relative z-0 hidden border-t border-gray-200 bg-gray-50 lg:block w-full">
-        <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 flex gap-2 sm:gap-8 py-3 text-xs sm:text-sm font-medium mx-auto max-w-full lg:max-w-7xl lg:mx-auto">
-          <Link href="/products">
-            <a className="px-1 sm:px-2 hover:text-gray-600 whitespace-nowrap">{t('header.browseAll', 'Browse All')}</a>
-          </Link>
-          <Link href="/deals">
-            <a className="px-1 sm:px-2 hover:text-gray-600 whitespace-nowrap">{t('header.deals', 'Deals')}</a>
-          </Link>
-          <Link href="/new">
-            <a className="px-1 sm:px-2 hover:text-gray-600 whitespace-nowrap">{t('header.newArrivals', 'New Arrivals')}</a>
-          </Link>
-          <Link href="/trending">
-            <a className="px-1 sm:px-2 hover:text-gray-600 whitespace-nowrap">{t('header.trending', 'Trending')}</a>
-          </Link>
-        </div>
-      </nav>
     </header>
   );
 }

@@ -7,13 +7,13 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAuthModal } from '@/contexts/AuthModalContext';
-import { openPaystackModal, resumePaystackTransaction, generateUUID } from '@/lib/paystack';
+import { generateUUID } from '@/lib/paystack';
 import { readCartFromStorage } from '@/lib/cart';
 import { trpcClient } from '@/lib/trpc';
 import { useSupabaseCart } from '@/hooks/useSupabaseCart';
 import { supabase } from '@/lib/supabase';
-import { useSupabaseOrders, useSupabasePayments } from '@/hooks/useSupabaseOrders';
 import { getHighResImageUrl } from '@/lib/images';
+import { calculateShipping } from '@shared/shipping';
 
 const t = (_key: string, fallback: string) => fallback;
 
@@ -132,8 +132,6 @@ export default function Checkout() {
   const { user, isAuthenticated, loading: authLoading, sessionRestored } = useAuth();
   const { openAuthModal } = useAuthModal();
   const { items: supabaseCartItems, clearCart: clearSupabaseCart } = useSupabaseCart(user?.id || null);
-  const { createOrder } = useSupabaseOrders(user?.id || null);
-  const { recordPayment } = useSupabasePayments();
 
   // Require authentication for checkout
   useEffect(() => {
@@ -230,7 +228,7 @@ export default function Checkout() {
       const mapped = supabaseCartItems.map((item) => ({
         product_id: item.product_id,
         title: item.product?.title || 'Product',
-        price: `KES ${Number(item.product?.price || 0).toFixed(2)}`,
+        price: `$ ${Number(item.product?.price || 0).toFixed(2)}`,
         image: item.product?.cover_image_url || '',
         quantity: item.quantity,
       }));
@@ -240,7 +238,7 @@ export default function Checkout() {
 
     const savedCart = localStorage.getItem('cart');
     const items = readCartFromStorage(savedCart).map((item) => ({
-      product_id: String(item.productIndex),
+      product_id: item.productId || String(item.productIndex),
       title: item.title,
       price: item.price,
       image: item.image,
@@ -311,7 +309,7 @@ export default function Checkout() {
     }
   }, [formData.state, formData.country]);
 
-  // Calculate totals (all amounts in KES, rounded to 2 decimal places)
+  // Calculate totals (all amounts in USD, rounded to 2 decimal places)
   const subtotal = Math.round(
     cartItems.reduce((sum, item) => {
       const price = parseFloat(item.price.replace(/[^\d.]/g, '') || '0');
@@ -319,7 +317,7 @@ export default function Checkout() {
     }, 0) * 100
   ) / 100;
 
-  const shipping = subtotal > 50 ? 0 : 10;
+  const shipping = calculateShipping(subtotal);
   const tax = Math.round(subtotal * 0.1 * 100) / 100; // Tax rounded to 2 decimal places
   const total = Math.round((subtotal + shipping + tax) * 100) / 100; // Ensure final total is precise
 
@@ -468,8 +466,8 @@ export default function Checkout() {
 
       console.log('[Checkout] Starting Paystack payment (Tutorial 2 - Server-initiated)', {
         email: formData.email,
-        amountKES: total,
-        amountKobo: Math.round(total * 100),
+        amountUSD: total,
+        amountCents: Math.round(total * 100),
         reference: paymentReference,
         selectedPayment,
         items: cartItems.map((item) => ({
@@ -482,9 +480,9 @@ export default function Checkout() {
       // Tutorial 2: Initialize transaction on server first
       const initResponse = await trpcClient.paystack.transactions.initialize.mutate({
         email: formData.email,
-        amount: Math.round(total * 100), // Convert KES to Kobo
+        amount: import.meta.env.PROD ? Math.round(total * 100) : 100, // Test: 1 USD (100 cents), Prod: Convert USD to cents
         reference: paymentReference,
-        currency: 'KES',
+        currency: 'USD',
         description: `Order from Modern E-commerce - ${cartItems.length} items`,
         metadata: {
           name: `${formData.firstName} ${formData.lastName}`.trim(),
@@ -502,43 +500,15 @@ export default function Checkout() {
         },
       });
 
-      console.log('[Checkout] Server returned access_code:', initResponse.data?.access_code?.substring(0, 10) + '...');
+      console.log('[Checkout] Server returned authorization_url:', initResponse.data?.authorization_url);
 
-      if (!initResponse.data?.access_code) {
-        throw new Error('Server failed to return access code');
+      if (!initResponse.data?.authorization_url) {
+        throw new Error('Server failed to return authorization URL');
       }
 
-      // Tutorial 2: Resume transaction using access_code on client
-      await resumePaystackTransaction({
-        publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
-        accessCode: initResponse.data.access_code,
-        onSuccess: async (response) => {
-          console.log('[Checkout] Paystack payment completed', { reference: response.reference });
-
-          const orderItems = cartItems.map((item) => ({
-            product_id: item.product_id,
-            quantity: item.quantity,
-            price: parseFloat(item.price.replace(/[^\d.]/g, '') || '0'),
-          }));
-
-          const orderId = await createOrder(total, orderItems, 'KES');
-          console.log('[Checkout] Order creation result', { orderId });
-
-          if (!orderId) {
-            toast.error('Payment succeeded, but order creation failed. Please contact support.');
-            return;
-          }
-
-          const payment = await recordPayment(orderId, 'paystack', paymentReference, total, 'success');
-          console.log('[Checkout] Payment record result', { payment });
-
-          await handlePaymentSuccess('paystack', paymentReference);
-        },
-        onClose: () => {
-          setIsProcessing(false);
-          toast.error('Payment cancelled');
-        },
-      });
+      // Redirect to Paystack checkout page; the backend callback will verify and create the order.
+      window.location.href = initResponse.data.authorization_url;
+      return;
     } catch (error) {
       setIsProcessing(false);
       const errorMessage = error instanceof Error ? error.message : 'Payment failed. Please try again.';
@@ -1027,7 +997,7 @@ export default function Checkout() {
                             <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
                           </div>
                           <p className="font-semibold text-gray-900">
-                            KES {(parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity).toFixed(2)}
+                            ${(parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity).toFixed(2)}
                           </p>
                         </div>
                       ))}
@@ -1048,7 +1018,7 @@ export default function Checkout() {
                     disabled={isProcessing}
                     className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 text-sm sm:text-base"
                   >
-                    {isProcessing ? t('checkout.processing', 'Processing...') : `${t('checkout.payNow', 'Pay Now')} KES ${total.toFixed(2)}`}
+                    {isProcessing ? t('checkout.processing', 'Processing...') : `${t('checkout.payNow', 'Pay Now')} $${total.toFixed(2)}`}
                   </button>
                 </div>
               </div>
@@ -1079,7 +1049,7 @@ export default function Checkout() {
                         <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
                         <p className="text-xs text-gray-600 mt-1">×{item.quantity}</p>
                         <p className="text-sm font-semibold text-gray-900 mt-1">
-                          KES {(parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity).toFixed(2)}
+                          ${(parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -1091,17 +1061,17 @@ export default function Checkout() {
               <div className="space-y-4 mb-8 pb-8 border-b border-gray-200">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">{t('checkout.subtotal', 'Subtotal')}</span>
-                  <span className="font-medium text-gray-900">KES {subtotal.toFixed(2)}</span>
+                  <span className="font-medium text-gray-900">{`$${subtotal.toFixed(2)}`}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">{t('checkout.shipping', 'Shipping')}</span>
                   <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-medium text-gray-900'}>
-                    {shipping === 0 ? t('checkout.free', 'FREE') : `KES ${shipping.toFixed(2)}`}
+                    {shipping === 0 ? t('checkout.free', 'FREE') : `$${shipping.toFixed(2)}`}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">{t('checkout.tax', 'Tax')}</span>
-                  <span className="font-medium text-gray-900">KES {tax.toFixed(2)}</span>
+                  <span className="font-medium text-gray-900">{`$${tax.toFixed(2)}`}</span>
                 </div>
               </div>
 
@@ -1109,7 +1079,7 @@ export default function Checkout() {
               <div className="mb-8">
                 <div className="flex justify-between items-baseline">
                   <span className="text-gray-600">{t('checkout.total', 'Total')}</span>
-                  <span className="text-3xl font-bold text-black">KES {total.toFixed(2)}</span>
+                  <span className="text-3xl font-bold text-black">{`$${total.toFixed(2)}`}</span>
                 </div>
               </div>
 
@@ -1117,7 +1087,7 @@ export default function Checkout() {
               <div className="space-y-3 text-sm text-gray-700">
                 <div className="flex gap-3 items-start">
                   <Check size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                  <span>{t('checkout.freeShipping', 'Free shipping on orders over KES 50')}</span>
+                  <span>{t('checkout.freeShipping', 'Free shipping on orders over $50')}</span>
                 </div>
                 <div className="flex gap-3 items-start">
                   <Check size={18} className="text-green-600 flex-shrink-0 mt-0.5" />

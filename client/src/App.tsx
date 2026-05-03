@@ -18,6 +18,14 @@ import Orders from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
 import Search from "./pages/Search";
 import AuthCallback from "./pages/AuthCallback";
+import Help from "./pages/Help";
+import Contact from "./pages/Contact";
+import Shipping from "./pages/Shipping";
+import Returns from "./pages/Returns";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Cookies from "./pages/Cookies";
+import Accessibility from "./pages/Accessibility";
 
 function Router() {
   return (
@@ -32,6 +40,14 @@ function Router() {
       <Route path={"/orders"} component={Orders} />
       <Route path={"/orders/:id"} component={OrderDetail} />
       <Route path={"/search"} component={Search} />
+      <Route path={"/help"} component={Help} />
+      <Route path={"/contact"} component={Contact} />
+      <Route path={"/shipping"} component={Shipping} />
+      <Route path={"/returns"} component={Returns} />
+      <Route path={"/privacy"} component={Privacy} />
+      <Route path={"/terms"} component={Terms} />
+      <Route path={"/cookies"} component={Cookies} />
+      <Route path={"/accessibility"} component={Accessibility} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
