@@ -37,7 +37,7 @@ export default function Account() {
   if (!sessionRestored) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
           <div className="space-y-4">
             <div className="h-10 w-48 bg-muted rounded animate-pulse" />
             <div className="grid gap-8 md:grid-cols-3">
@@ -56,7 +56,7 @@ export default function Account() {
 
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
         <h1 className="mb-8 text-4xl font-bold">My Account</h1>
 
         <div className="grid gap-8 md:grid-cols-3">

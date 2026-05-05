@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { HomePageSkeleton } from '@/components/skeletons/HomePageSkeleton';
 import { QuickViewModal } from '@/components/QuickViewModal';
 import { SEOHead } from '@/components/SEOHead';
+import { HeroSlideshow } from '@/components/HeroSlideshow';
 import { toast } from 'sonner';
 import { useProducts, useCategories } from '@/hooks/useSupabaseProducts';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -71,11 +72,14 @@ export default function Home() {
         canonical="https://motorvault.com"
       />
       <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
-      {/* Your Recently Viewed Items Section */}
+        {/* Hero Slideshow */}
+        <HeroSlideshow />
+
+        {/* Your Recently Viewed Items Section */}
       {recentlyViewedProducts.length > 0 && (
         <div className="bg-white border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="flex items-center justify-between mb-8">
+          <div className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-3xl font-extrabold text-gray-900">Your Recently Viewed</h2>
               <Link href="/products">
                 <a className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
@@ -184,8 +188,8 @@ export default function Home() {
         </div>
       )}
       <div className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="mb-10">
+        <div className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
+          <div className="mb-6">
             <h1 className="text-3xl font-extrabold text-gray-900">Today's Deals</h1>
             <p className="mt-2 text-lg text-gray-600">Discounted items, free shipping on select products & premium items over $250</p>
           </div>
@@ -310,9 +314,9 @@ export default function Home() {
       </div>
 
       {/* Shop by Category Section */}
-      <div className="bg-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <div className="flex items-center justify-between mb-8">
+      <div className="bg-white py-6">
+        <div className="max-w-screen-xl mx-auto px-2 sm:px-3 md:px-4">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Shop by Category</h2>
             <Link href="/products">
               <a className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">

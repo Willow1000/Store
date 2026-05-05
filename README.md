@@ -58,15 +58,17 @@ pnpm test
 - `server/paystack.ts` — Paystack helpers and webhook verification.
 
 ## Environment variables
-Create a `.env` or set environment variables required by both client and server. Common ones used in this repo:
+Create a `.env.local` file with browser-exposed values prefixed by `VITE_` and server-only values left unprefixed. The canonical names used by the code are:
 
-- `VITE_SUPABASE_URL` — Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` — Supabase anon public key (frontend)
-- `VITE_RECAPTCHA_SITE_KEY` — Google reCAPTCHA v2 site key for the visible checkbox widgets
-- `SUPABASE_SERVICE_KEY` — Supabase service role key (server)
-- `VITE_OAUTH_PORTAL_URL`, `VITE_APP_ID`, `VITE_SUPABASE_OAUTH_REDIRECT_URL` — OAuth portal and redirect config
-- `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY` — Paystack credentials
-- `COOKIE_SECRET` — used by SDK session signing
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — Supabase project URL and anon key for the client
+- `VITE_APP_ID`, `VITE_OAUTH_PORTAL_URL`, `VITE_SUPABASE_OAUTH_REDIRECT_URL` — OAuth portal and redirect config for the client. Keep the redirect value path-only when possible, for example `/api/oauth/callback`.
+- `VITE_RECAPTCHA_SITE_KEY`, `VITE_PAYSTACK_PUBLIC_KEY` — client-facing widget keys
+- `VITE_FRONTEND_FORGE_API_URL`, `VITE_FRONTEND_FORGE_API_KEY` — browser-accessible proxy credentials used by the map and client-side helpers
+- `VITE_GA_ID` — Google Analytics measurement ID if analytics is enabled
+- `DATABASE_URL`, `JWT_SECRET`, `OAUTH_SERVER_URL`, `OWNER_OPEN_ID` — server runtime auth and database settings
+- `BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY`, `SUPABASE_SERVICE_KEY`, `PAYSTACK_SECRET_KEY`, `STRIPE_SECRET_KEY` — server-side service credentials
+
+`COOKIE_SECRET` and `PAYSTACK_PUBLIC_KEY` are accepted as backward-compatible aliases, but `JWT_SECRET` and `VITE_PAYSTACK_PUBLIC_KEY` are the preferred names.
 
 ## Sessions & expiry
 - The custom SDK session cookie and token creation use `SESSION_DURATION_MS` (72 hours) defined in `shared/const.ts`.

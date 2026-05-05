@@ -35,9 +35,19 @@ export default function AuthModal() {
 
   if (!isOpen) return null;
 
-  const oauthRedirectUrl =
-    import.meta.env.VITE_SUPABASE_OAUTH_REDIRECT_URL ||
-    `${window.location.origin}/auth/callback`;
+  const oauthRedirectUrl = (() => {
+    const configuredRedirect = import.meta.env.VITE_SUPABASE_OAUTH_REDIRECT_URL?.trim();
+
+    if (!configuredRedirect) {
+      return `${window.location.origin}/api/oauth/callback`;
+    }
+
+    if (/^https?:\/\//i.test(configuredRedirect)) {
+      return configuredRedirect;
+    }
+
+    return new URL(configuredRedirect.startsWith("/") ? configuredRedirect : `/${configuredRedirect}`, window.location.origin).href;
+  })();
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -229,7 +239,7 @@ export default function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -237,7 +247,7 @@ export default function AuthModal() {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 flex flex-col">
+      <div className="relative w-full max-w-md max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-visible animate-in fade-in zoom-in-95 duration-300 flex flex-col">
         {/* Close Button */}
         <button
           onClick={closeAuthModal}

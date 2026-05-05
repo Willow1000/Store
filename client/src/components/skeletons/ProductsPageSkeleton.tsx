@@ -5,13 +5,13 @@ export function ProductsPageSkeleton() {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="border-b border-gray-200 py-6 md:py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6">
           <Skeleton className="h-10 w-48 mb-4" />
           <Skeleton className="h-5 w-96" />
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar Filters Skeleton */}
           <div className="lg:col-span-1 hidden lg:block">

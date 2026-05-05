@@ -28,7 +28,7 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
 
   if (!sessionRestored) {
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+        <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <div className="animate-pulse space-y-4">
           <div className="h-10 w-32 bg-muted rounded"></div>
           <div className="h-64 w-full bg-muted rounded"></div>
@@ -43,7 +43,7 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <div className="animate-pulse space-y-4">
           <div className="h-10 w-32 bg-muted rounded"></div>
           <div className="h-64 w-full bg-muted rounded"></div>
@@ -56,7 +56,7 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
 
   if (!order) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <button
           onClick={() => setLocation('/orders')}
           className="mb-6 flex items-center gap-2 text-sm font-semibold hover:text-gray-600"
@@ -98,7 +98,7 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <button
           onClick={() => setLocation('/orders')}
           className="mb-6 flex items-center gap-2 text-sm font-semibold hover:text-gray-600"

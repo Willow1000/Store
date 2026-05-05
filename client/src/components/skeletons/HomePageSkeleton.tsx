@@ -5,7 +5,7 @@ export function HomePageSkeleton() {
     <div className="min-h-screen bg-gray-50">
       {/* Recently Viewed Section Skeleton */}
       <div className="bg-white border-b py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="flex items-center justify-between mb-8">
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-5 w-24" />
@@ -26,7 +26,7 @@ export function HomePageSkeleton() {
 
       {/* Today's Deals Section Skeleton */}
       <div className="bg-white py-12 border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="mb-8">
             <Skeleton className="h-10 w-40 mb-2" />
             <Skeleton className="h-4 w-60" />
@@ -51,7 +51,7 @@ export function HomePageSkeleton() {
 
       {/* Categories Section Skeleton */}
       <div className="bg-white py-12 border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 lg:px-6">
           <Skeleton className="h-8 w-40 mb-8" />
 
           {/* Categories Grid */}

@@ -84,6 +84,14 @@ const faqItems: FAQItem[] = [
     answer: 'If your part arrives damaged, contact us immediately with photos of the damage and packaging. We\'ll file a claim with the shipping company and either replace the part or issue a refund. Damaged parts should not be installed.',
   },
 
+  // After-Sale Services
+  {
+    id: 'sale-1',
+    category: 'Returns & Warranty',
+    question: 'Do you offer after-sale services?',
+    answer: 'Yes. We offer after-sale support that can include professional inspection and repair coordination for eligible products. If you need help after your purchase, contact our support team with your order details and we\'ll guide you through the available service options.',
+  },
+
   // Returns & Warranty
   {
     id: 'return-1',
@@ -176,7 +184,7 @@ export default function FAQ() {
         canonical="https://motorvault.com/faq"
       />
       <div className="min-h-screen bg-background pt-6">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">
         {/* Header */}
         <div className="mb-12">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4">Frequently Asked Questions</h1>

@@ -202,7 +202,7 @@ export default function Products() {
     <div className="min-h-screen bg-white w-full overflow-x-hidden">
       {/* Header */}
       <div className="border-b border-gray-200 py-6 md:py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+        <div className="w-full max-w-full mx-auto px-2 sm:px-3 md:px-4 lg:px-2">
           {categoryFilter && (
             <div className="flex items-center gap-2 mb-3">
               <span className="text-sm text-gray-600">Viewing category:</span>
@@ -230,8 +230,8 @@ export default function Products() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           {/* Sidebar Filters */}
           <div className={`lg:col-span-1 ${showFilters ? 'block' : 'hidden lg:block'}`}>
             <div className="bg-gray-50 p-6 rounded-lg sticky top-4">
@@ -378,8 +378,8 @@ export default function Products() {
               <div className="mb-6">
                 <h3 className="font-bold text-sm mb-3">Condition</h3>
                 <div className="space-y-2">
-                  {['new', 'like-new', 'good', 'fair', 'used'].map((condition) => {
-                    const hasProducts = allProducts && allProducts.some(p => p.condition === condition);
+                  {['New', 'Very Good', 'Good', 'Used'].map((condition) => {
+                    const hasProducts = allProducts && allProducts.some(p => (p.condition || '').toLowerCase() === condition.toLowerCase());
                     return (
                       <label 
                         key={condition}
@@ -401,7 +401,7 @@ export default function Products() {
                           disabled={!hasProducts}
                           className="w-4 h-4 cursor-pointer"
                         />
-                        <span className="text-sm ml-2 capitalize">{condition}</span>
+                        <span className="text-sm ml-2">{condition}</span>
                       </label>
                     );
                   })}
@@ -502,7 +502,7 @@ export default function Products() {
           </div>
 
           {/* Products Grid */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-4">
             {/* Mobile Filter Button */}
             <button
               onClick={() => setShowFilters(true)}
@@ -534,7 +534,7 @@ export default function Products() {
 
             {/* Products Grid */}
             {paginatedProducts.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-4">
                 {paginatedProducts.map((product, idx) => {
                   const price = parseFloat(String(product.price));
                   const discount = product.discount ? parseFloat(String(product.discount)) : null;

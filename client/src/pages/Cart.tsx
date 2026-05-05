@@ -142,7 +142,7 @@ export default function Cart() {
 
   if (isLoading || (isAuthenticated && isSupabaseLoading)) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+          <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <div className="grid gap-8 md:grid-cols-3">
           <div className="md:col-span-2 space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -166,7 +166,7 @@ export default function Cart() {
 
   if (effectiveCartItems.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+          <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-secondary py-12 sm:py-16">
           <p className="mb-4 text-lg sm:text-xl font-semibold text-gray-900">{t('cart.empty', 'Your cart is empty')}</p>
           <p className="mb-8 text-sm sm:text-base text-gray-600 text-center max-w-sm">{t('cart.startShopping', 'Start shopping to add items to your cart')}</p>

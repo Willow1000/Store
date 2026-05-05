@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
+import { useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthModalProvider } from "./contexts/AuthModalContext";
@@ -58,6 +59,9 @@ function Router() {
 }
 
 function App() {
+  const [location] = useLocation();
+  const isHomePage = location === '/';
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
@@ -67,7 +71,7 @@ function App() {
             <AuthModal />
             <div className="flex min-h-screen flex-col bg-background w-full overflow-x-hidden">
               <Header />
-              <main className="flex-1 w-full overflow-x-hidden pt-16 lg:pt-28">
+              <main className={`flex-1 w-full overflow-x-hidden ${isHomePage ? 'pt-0' : 'pt-16 lg:pt-28'}`}>
                 <Router />
               </main>
               <Footer />

@@ -32,7 +32,7 @@ export default function Notifications() {
 
   if (isLoading) {
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+        <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
             <Skeleton key={i} className="h-20 w-full rounded-lg" />
@@ -46,7 +46,7 @@ export default function Notifications() {
 
   if (notificationsList.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <h1 className="mb-8 text-4xl font-bold">Notifications</h1>
         <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-secondary py-12">
           <Bell size={48} className="mb-4 text-gray-400" />
@@ -74,7 +74,7 @@ export default function Notifications() {
 
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <h1 className="mb-8 text-4xl font-bold">Notifications</h1>
 
         <div className="space-y-4">

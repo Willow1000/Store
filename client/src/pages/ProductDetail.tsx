@@ -168,7 +168,7 @@ export default function ProductDetail() {
 
   if (!productId) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
         <p className="text-gray-600">Product not found</p>
       </div>
     );
@@ -180,7 +180,7 @@ export default function ProductDetail() {
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
         <div className="text-center">
           <p className="text-red-600 font-semibold mb-4">{error}</p>
           <button
@@ -196,7 +196,7 @@ export default function ProductDetail() {
 
   if (!product) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
         <p className="text-gray-600">Product not found</p>
       </div>
     );
@@ -230,7 +230,7 @@ export default function ProductDetail() {
 
   return (
     <main role="main" className="bg-white min-h-screen w-full overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
         {/* Product Detail Grid */}
         <div className="lg:grid lg:grid-cols-2 lg:gap-x-20 xl:gap-x-24 lg:items-start">
           {/* LEFT COLUMN - Image Gallery */}
@@ -378,6 +378,24 @@ export default function ProductDetail() {
               >
                 ← Continue Shopping
               </button>
+
+              {/* Out of Stock Message */}
+              {isOutOfStock && (
+                <div className="mt-8 bg-red-50 border-l-4 border-red-600 p-4 rounded">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-red-800">
+                        This item is currently out of stock. Please <a href={`/contact?subject=${encodeURIComponent(`Out of Stock Inquiry - ${product?.title}`)}&message=${encodeURIComponent(`I am interested in the product "${product?.title}" which is currently out of stock. Please let me know when it will be available again.`)}`} className="underline hover:text-red-900 font-bold">contact support</a> for availability information.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -520,22 +538,6 @@ export default function ProductDetail() {
           </div>
 
           {/* Out of Stock Alert Section */}
-          {isOutOfStock && (
-            <div className="mt-8 bg-red-50 border-l-4 border-red-600 p-4 rounded">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-red-800">
-                    This item is currently out of stock. Please <a href={`/contact?subject=${encodeURIComponent(`Out of Stock Inquiry - ${product?.title}`)}&message=${encodeURIComponent(`I am interested in the product "${product?.title}" which is currently out of stock. Please let me know when it will be available again.`)}`} className="underline hover:text-red-900 font-bold">contact support</a> for availability information.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Similar Items Section */}

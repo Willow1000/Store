@@ -577,7 +577,7 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-white w-full overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
+      <div className="max-w-screen-xl mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-12 lg:py-16">
         {/* Header */}
         <div className="mb-6 sm:mb-8 md:mb-12 px-0">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 sm:mb-3 text-black">{t('checkout.secureCheckout', 'Secure Checkout')}</h1>

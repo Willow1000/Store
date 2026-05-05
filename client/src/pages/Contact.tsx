@@ -178,7 +178,7 @@ export default function Contact() {
         canonical="https://motorvault.com/contact"
       />
       <div className="min-h-screen bg-background pt-6">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">
         <h1 className="text-4xl font-bold mb-8">Contact Us</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">

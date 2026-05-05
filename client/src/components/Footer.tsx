@@ -6,7 +6,7 @@ const t = (_key: string, fallback: string) => fallback;
 export default function Footer() {
   return (
     <footer className="border-t border-border bg-black text-white w-full overflow-x-hidden">
-      <div className="w-full px-4 sm:px-6 md:px-8 py-8 sm:py-12 md:py-16 mx-auto max-w-full lg:max-w-7xl lg:mx-auto">
+      <div className="w-full px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-16 mx-auto max-w-full lg:max-w-screen-xl lg:mx-auto">
         <div className="grid gap-6 sm:gap-8 grid-cols-2 md:grid-cols-4">
           {/* About */}
           <div>
