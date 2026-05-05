@@ -6,49 +6,52 @@
 export const SEO_CONFIG = {
   // Site Identity
   site: {
-    name: 'ModernMart',
-    url: 'https://modernmart.manus.space',
-    description: 'Premium e-commerce marketplace with verified sellers and quality products',
-    logo: 'https://modernmart.manus.space/logo.png',
+    name: 'MotorVault',
+    url: 'https://motorvault.com',
+    description: 'Premium automotive parts marketplace. Shop OEM and aftermarket auto parts from trusted sources globally. Quality guaranteed with fast shipping.',
+    logo: 'https://motorvault.com/motorvault_horizontal.svg',
     language: 'en',
     locale: 'en_US',
   },
 
   // Contact Information
   contact: {
-    email: 'support@modernmart.manus.space',
-    phone: '+1-555-000-0000', // Add real phone
+    email: 'support@motorvault.com',
+    phone: '+1-800-MOTORVAULT',
     address: {
-      street: '123 Commerce Street', // Update with real address
-      city: 'San Francisco',
-      state: 'CA',
-      zipCode: '94105',
+      street: 'Motor Commerce Center',
+      city: 'Multiple Locations',
+      state: 'USA',
+      zipCode: '00000',
       country: 'US',
     },
+    operatingRegions: ['United States', 'Switzerland', 'Poland', 'Finland', 'United Arab Emirates'],
     social: {
-      facebook: 'https://www.facebook.com/modernmart',
-      twitter: 'https://www.twitter.com/modernmart',
-      instagram: 'https://www.instagram.com/modernmart',
-      linkedin: 'https://www.linkedin.com/company/modernmart',
+      facebook: 'https://www.facebook.com/motorvault',
+      twitter: 'https://www.twitter.com/motorvault',
+      instagram: 'https://www.instagram.com/motorvault',
+      linkedin: 'https://www.linkedin.com/company/motorvault',
     },
   },
 
   // SEO Defaults
   defaults: {
-    title: 'ModernMart - Premium Products from Verified Sellers',
-    description: 'Discover thousands of premium products from verified sellers. Quality guaranteed, fast shipping, and secure checkout on every purchase.',
+    title: 'MotorVault - Buy Automotive Parts & Accessories | OEM & Aftermarket',
+    description: 'Shop thousands of automotive parts and accessories at MotorVault. Quality OEM and aftermarket parts from trusted sources worldwide. Fast shipping, verified sellers, secure checkout.',
     keywords: [
-      'online marketplace',
-      'e-commerce',
-      'shopping',
-      'products',
-      'buy online',
+      'automotive parts',
+      'car parts',
+      'OEM parts',
+      'aftermarket parts',
+      'auto accessories',
+      'buy car parts online',
       'verified sellers',
-      'secure checkout',
       'fast shipping',
+      'secure checkout',
+      'motor parts marketplace',
     ],
-    ogImage: 'https://modernmart.manus.space/og-image.png',
-    twitterHandle: '@modernmart',
+    ogImage: 'https://motorvault.com/og-image.png',
+    twitterHandle: '@motorvault',
   },
 
   // Sitemap Configuration
@@ -106,10 +109,10 @@ export const SEO_CONFIG = {
     // Organization defaults
     organization: {
       '@type': 'Organization',
-      name: 'ModernMart',
+      name: 'MotorVault',
       url: 'https://modernmart.manus.space',
-      logo: 'https://modernmart.manus.space/logo.png',
-      description: 'Premium e-commerce marketplace',
+      logo: 'https://modernmart.manus.space/motorvault_horizontal.svg',
+      description: 'Premium motor products marketplace',
     },
     // LocalBusiness settings
     localBusiness: {

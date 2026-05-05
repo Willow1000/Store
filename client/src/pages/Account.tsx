@@ -2,6 +2,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
+import { SEOHead } from '@/components/SEOHead';
 import { User, Mail, Phone, MapPin, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 

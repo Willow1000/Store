@@ -1,6 +1,15 @@
+import { SEOHead } from '@/components/SEOHead';
+
 export default function Privacy() {
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <>
+      <SEOHead
+        title="Privacy Policy - MotorVault"
+        description="MotorVault Privacy Policy. Learn how we collect, use, and protect your personal data. Your privacy is important to us."
+        keywords={['privacy policy', 'data protection', 'personal information', 'privacy']}
+        canonical="https://motorvault.com/privacy"
+      />
+      <div className="min-h-screen bg-background pt-6">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-4xl font-bold mb-8">Privacy Policy</h1>
         <p className="text-gray-600 mb-8">Last updated: April 30, 2026</p>
@@ -8,7 +17,7 @@ export default function Privacy() {
         <div className="space-y-8">
           <section>
             <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
-            <p className="text-gray-600">ModernMart ("we," "us," or "our") operates the modernmart.manus.space website. This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our Service and the choices you have associated with that data.</p>
+            <p className="text-gray-600">MotorVault ("we," "us," or "our") operates the motorvault.com website. This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our Service and the choices you have associated with that data.</p>
           </section>
 
           <section>
@@ -55,6 +64,7 @@ export default function Privacy() {
           </section>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

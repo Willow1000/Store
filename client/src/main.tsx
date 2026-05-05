@@ -55,7 +55,7 @@ const trpcClient = trpc.createClient({
           if (session?.access_token) {
             const headers = new Headers(init?.headers);
             headers.set('Authorization', `Bearer ${session.access_token}`);
-            console.log('[tRPC] Adding Authorization header with Supabase token');
+
             return globalThis.fetch(input, {
               ...(init ?? {}),
               credentials: "include",

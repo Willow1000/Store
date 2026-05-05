@@ -37,10 +37,10 @@ interface SEOHeadProps {
 }
 
 export function SEOHead({
-  title = 'ModernMart - Premium Products from Verified Sellers',
-  description = 'Discover thousands of premium products from verified sellers. Quality guaranteed, fast shipping, and secure checkout on every purchase.',
+  title = 'MotorVault - Premium Motor Products from Verified Sellers',
+  description = 'Discover thousands of premium motor products from verified sellers. Quality guaranteed, fast shipping, and secure checkout on every purchase.',
   canonical,
-  ogImage = 'https://modernmart.manus.space/og-image.png',
+  ogImage = 'https://motorvault.com/og-image.png',
   ogType = 'website',
   keywords = [],
   productData,

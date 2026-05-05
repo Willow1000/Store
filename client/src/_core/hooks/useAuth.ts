@@ -68,19 +68,27 @@ export function useAuth(options?: UseAuthOptions) {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          console.error('Error getting Supabase session:', error);
+          console.error('[useAuth] Error getting Supabase session:', error);
         }
         if (isMounted) {
           setSupabaseSession(session);
-          setSessionRestored(true);
           setIsSessionLoading(false);
+          // Only mark session as restored AFTER we have the session state
+          setTimeout(() => {
+            if (isMounted) {
+              setSessionRestored(true);
+            }
+          }, 0);
         }
-        await expireIfNeeded(session);
+        // Check session expiry after restoring it
+        if (session) {
+          await expireIfNeeded(session);
+        }
       } catch (error) {
-        console.error('Error in getSession:', error);
+        console.error('[useAuth] Error in getSession:', error);
         if (isMounted) {
-          setSessionRestored(true);
           setIsSessionLoading(false);
+          setSessionRestored(true);
         }
       }
     };
@@ -90,7 +98,7 @@ export function useAuth(options?: UseAuthOptions) {
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[useAuth] Auth state changed:', event);
+
         if (isMounted) {
           setSupabaseSession(session);
           setIsSessionLoading(false);

@@ -1,6 +1,15 @@
+import { SEOHead } from '@/components/SEOHead';
+
 export default function Accessibility() {
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <>
+      <SEOHead
+        title="Accessibility Statement - MotorVault"
+        description="MotorVault Accessibility Statement. We're committed to making our website accessible to all users."
+        keywords={['accessibility', 'WCAG', 'inclusive design', 'accessibility statement']}
+        canonical="https://motorvault.com/accessibility"
+      />
+      <div className="min-h-screen bg-background pt-6">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-4xl font-bold mb-8">Accessibility Statement</h1>
         <p className="text-gray-600 mb-8">Last updated: April 30, 2026</p>
@@ -8,7 +17,7 @@ export default function Accessibility() {
         <div className="space-y-8">
           <section>
             <h2 className="text-2xl font-semibold mb-4">Our Commitment to Accessibility</h2>
-            <p className="text-gray-600">ModernMart is committed to ensuring that our website is accessible to all people, including those with disabilities. We actively work to increase the accessibility and usability of our website and strive to conform with accepted accessibility standards and guidelines.</p>
+            <p className="text-gray-600">MotorVault is committed to ensuring that our website is accessible to all people, including those with disabilities. We actively work to increase the accessibility and usability of our website and strive to conform with accepted accessibility standards and guidelines.</p>
           </section>
 
           <section>
@@ -49,7 +58,7 @@ export default function Accessibility() {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">Third-Party Content</h2>
-            <p className="text-gray-600">ModernMart does not control third-party websites that may be linked from our site. We recommend checking the accessibility statement of those websites to understand their accessibility measures.</p>
+            <p className="text-gray-600">MotorVault does not control third-party websites that may be linked from our site. We recommend checking the accessibility statement of those websites to understand their accessibility measures.</p>
           </section>
 
           <section>
@@ -69,6 +78,7 @@ export default function Accessibility() {
           </section>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,6 +1,15 @@
+import { SEOHead } from '@/components/SEOHead';
+
 export default function Shipping() {
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <>
+      <SEOHead
+        title="Shipping Information - MotorVault"
+        description="MotorVault shipping information. Learn about shipping rates, delivery times, and our logistics partners."
+        keywords={['shipping', 'delivery', 'shipping costs', 'delivery times']}
+        canonical="https://motorvault.com/shipping"
+      />
+      <div className="min-h-screen bg-background pt-20\">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-4xl font-bold mb-8">Shipping Information</h1>
         
@@ -59,6 +68,7 @@ export default function Shipping() {
           </section>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

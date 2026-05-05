@@ -1,6 +1,15 @@
+import { SEOHead } from '@/components/SEOHead';
+
 export default function Returns() {
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <>
+      <SEOHead
+        title="Returns & Refunds - MotorVault"
+        description="MotorVault Returns & Refunds policy. Learn about our 30-day return policy, refund process, and warranty information."
+        keywords={['returns', 'refunds', 'return policy', 'warranty']}
+        canonical="https://motorvault.com/returns"
+      />
+      <div className="min-h-screen bg-background pt-20">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-4xl font-bold mb-8">Returns & Refunds</h1>
         
@@ -59,6 +68,7 @@ export default function Returns() {
           </section>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

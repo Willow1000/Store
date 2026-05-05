@@ -1,13 +1,22 @@
+import { SEOHead } from '@/components/SEOHead';
+
 export default function Help() {
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <>
+      <SEOHead
+        title="Help Center - MotorVault Support"
+        description="Get help with MotorVault. Learn about creating accounts, searching products, payments, orders, and more."
+        keywords={['help center', 'support', 'FAQ', 'customer support', 'how to']}
+        canonical="https://motorvault.com/help"
+      />
+      <div className="min-h-screen bg-background pt-6">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-4xl font-bold mb-8">Help Center</h1>
         
         <div className="space-y-8">
           <section>
             <h2 className="text-2xl font-semibold mb-4">Getting Started</h2>
-            <p className="text-gray-600 mb-4">Welcome to ModernMart! Here you'll find answers to common questions about shopping, account management, and more.</p>
+            <p className="text-gray-600 mb-4">Welcome to MotorVault! Here you'll find answers to common questions about shopping, account management, and more.</p>
           </section>
 
           <section>
@@ -36,6 +45,7 @@ export default function Help() {
           </section>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

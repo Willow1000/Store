@@ -6,6 +6,7 @@ import { ShoppingCart, Menu, X, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { toast } from 'sonner';
+import { BrandLogo } from '@/components/BrandLogo';
 import { readCartFromStorage } from '@/lib/cart';
 
 const t = (_key: string, fallback: string) => fallback;
@@ -46,7 +47,7 @@ export default function Header() {
       window.removeEventListener('cartUpdated', updateCartCount);
       window.removeEventListener('storage', updateCartCount);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -67,15 +68,12 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-[2147483647] border-b border-gray-200 bg-white shadow-sm w-full">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-gray-200 bg-white shadow-sm w-full">
       {/* Top Navigation */}
       <div className="relative z-20 w-full px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-4 mx-auto max-w-full lg:max-w-7xl lg:mx-auto">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-1 sm:gap-2 font-bold text-lg sm:text-xl text-black hover:opacity-80 transition-opacity flex-shrink-0">
-          <div className="flex h-8 sm:h-10 w-8 sm:w-10 items-center justify-center rounded-lg bg-black text-white text-sm sm:text-base">
-            M
-          </div>
-          <span className="hidden sm:inline">ModernMart</span>
+        <Link href="/" className="flex items-center hover:opacity-85 transition-opacity flex-shrink-0" aria-label="MotorVault home">
+          <BrandLogo className="h-8 sm:h-10 w-auto max-w-[180px]" />
         </Link>
 
         {/* Right Actions */}
@@ -97,7 +95,7 @@ export default function Header() {
 
           {/* User Menu */}
           {isAuthenticated && user ? (
-            <div className="relative z-[2147483647]" ref={accountMenuRef}>
+            <div className="relative z-[60]" ref={accountMenuRef}>
               <button
                 onClick={() => setIsAccountMenuOpen((prev) => !prev)}
                 className="flex items-center gap-1 sm:gap-2 rounded-md border border-gray-300 px-2 sm:px-3 py-2 text-xs sm:text-sm hover:bg-gray-100"
@@ -107,7 +105,7 @@ export default function Header() {
                 <User size={16} />
                 <span className="hidden sm:inline">{user.name || t('header.account', 'Account')}</span>
               </button>
-              <div className={`absolute right-0 mt-2 w-40 sm:w-48 rounded-lg border border-gray-200 bg-white shadow-lg z-[2147483647] ${isAccountMenuOpen ? 'block' : 'hidden'}`}>
+              <div className={`absolute right-0 mt-2 w-40 sm:w-48 rounded-lg border border-gray-200 bg-white shadow-lg z-[60] ${isAccountMenuOpen ? 'block' : 'hidden'}`}>
                 <Link href="/account">
                   <a
                     onClick={() => setIsAccountMenuOpen(false)}
@@ -161,6 +159,54 @@ export default function Header() {
         </div>
       </div>
 
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="lg:hidden border-t border-gray-200 bg-white">
+          <div className="px-3 sm:px-4 py-4 space-y-3">
+            <Link href="/">
+              <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                Home
+              </a>
+            </Link>
+            <Link href="/products">
+              <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                Products
+              </a>
+            </Link>
+            {isAuthenticated && (
+              <>
+                <Link href="/cart">
+                  <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                    Cart {cartCount > 0 && `(${cartCount})`}
+                  </a>
+                </Link>
+                <Link href="/orders">
+                  <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                    My Orders
+                  </a>
+                </Link>
+              </>
+            )}
+            <Link href="/contact">
+              <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                Contact
+              </a>
+            </Link>
+            <div className="border-t border-gray-200 pt-3">
+              <Link href="/help">
+                <a className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                  Help
+                </a>
+              </Link>
+              <Link href="/faq">
+                <a className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                  FAQ
+                </a>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
     </header>
   );

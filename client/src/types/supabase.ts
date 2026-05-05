@@ -21,6 +21,21 @@ export type Category = {
   created_at: string;
 };
 
+export type Brand = {
+  id: number;
+  name: string;
+  image_url: string | null;
+  created_at: string;
+};
+
+export type Model = {
+  id: number;
+  name: string | null;
+  year: number | null;
+  specs: string | null;
+  created_at: string;
+};
+
 export type Product = {
   id: string;
   title: string;
@@ -28,13 +43,17 @@ export type Product = {
   category_name: string;
   owner_id: string | null;
   price: number;
+  original_price?: number;
   condition: string;
   cover_image_url: string;
   brand: string | null;
   model: string | null;
   stock: number | null;
+  discount: number | null;
+  part_number: string | null;
   item_specifics: Record<string, any> | null;
   created_at: string;
+  brand_details?: Brand;
 };
 
 export type ProductImage = {

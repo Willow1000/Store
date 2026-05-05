@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Trash2, Plus, Minus, ArrowRight } from 'lucide-react';
+import { SEOHead } from '@/components/SEOHead';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { readCartFromStorage } from '@/lib/cart';

@@ -1,0 +1,13 @@
+<svg width="600" height="150" viewBox="0 0 600 150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <symbol id="icon" viewBox="0 0 200 200">
+      <path d="M 187.51 78.99 L 187.51 121.01 L 163.20 115.17 L 164.20 110.17 L 176.74 147.02 L 147.02 176.74 L 133.96 155.42 L 138.21 152.59 L 121.01 187.51 L 78.99 187.51 L 84.83 163.20 L 89.83 164.20 L 52.98 176.74 L 23.26 147.02 L 44.58 133.96 L 47.41 138.21 L 12.49 121.01 L 12.49 78.99 L 36.80 84.83 L 35.80 89.83 L 23.26 52.98 L 52.98 23.26 L 66.04 44.58 L 61.79 47.41 L 78.99 12.49 L 121.01 12.49 L 115.17 36.80 L 110.17 35.80 L 147.02 23.26 L 176.74 52.98 L 155.42 66.04 L 152.59 61.79 Z" fill="black" />
+      <path d="M 77.50 72.50 L 122.50 72.50 L 122.50 100.00 C 122.50 122.00 100.00 127.50 100.00 127.50 C 100.00 127.50 77.50 122.00 77.50 100.00 Z" fill="white" />
+      <rect x="93" y="92" width="14" height="12" rx="1" fill="black" />
+      <path d="M 95 92 L 95 88 C 95 85 97 83 100 83 C 103 83 105 85 105 88 L 105 92" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" />
+      <circle cx="100" cy="98" r="1.5" fill="white" />
+    </symbol>
+  </defs>
+  <use href="#icon" x="20" y="25" width="100" height="100" />
+  <text x="140" y="92" font-family="Arial, sans-serif" font-weight="800" font-size="52" letter-spacing="0.05em" fill="black">MOTOR<tspan font-weight="300">VAULT</tspan></text>
+</svg>

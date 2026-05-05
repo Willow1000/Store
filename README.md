@@ -62,6 +62,7 @@ Create a `.env` or set environment variables required by both client and server.
 
 - `VITE_SUPABASE_URL` — Supabase project URL
 - `VITE_SUPABASE_ANON_KEY` — Supabase anon public key (frontend)
+- `VITE_RECAPTCHA_SITE_KEY` — Google reCAPTCHA v2 site key for the visible checkbox widgets
 - `SUPABASE_SERVICE_KEY` — Supabase service role key (server)
 - `VITE_OAUTH_PORTAL_URL`, `VITE_APP_ID`, `VITE_SUPABASE_OAUTH_REDIRECT_URL` — OAuth portal and redirect config
 - `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY` — Paystack credentials

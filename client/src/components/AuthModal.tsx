@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
 import { executePendingAuthAction, getPendingAuthAction } from '@/lib/authPendingAction';
+import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
 
 export default function AuthModal() {
   const { isOpen, mode, actionType, closeAuthModal, setMode } = useAuthModal();
@@ -15,6 +16,8 @@ export default function AuthModal() {
   const [, navigate] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loginCaptchaToken, setLoginCaptchaToken] = useState<string | null>(null);
+  const [signupCaptchaToken, setSignupCaptchaToken] = useState<string | null>(null);
 
   const [loginData, setLoginData] = useState({
     email: '',
@@ -89,6 +92,11 @@ export default function AuthModal() {
       return;
     }
 
+    if (!loginCaptchaToken) {
+      toast.error('Please complete the reCAPTCHA before signing in.');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -114,12 +122,20 @@ export default function AuthModal() {
 
         const hadPendingAction = Boolean(getPendingAuthAction());
         if (hadPendingAction) {
-          await executePendingAuthAction(data.user.id, navigate);
+          try {
+            await executePendingAuthAction(data.user.id, navigate);
+          } catch (pendingActionError) {
+            const message = pendingActionError instanceof Error
+              ? pendingActionError.message
+              : 'The product is out of stock.';
+            toast.error(message);
+          }
         }
         
         toast.success('Signed in successfully!');
         closeAuthModal();
         setLoginData({ email: '', password: '' });
+        setLoginCaptchaToken(null);
       }
     } catch (error) {
       toast.error('Login failed. Please try again.');
@@ -132,6 +148,11 @@ export default function AuthModal() {
     e.preventDefault();
     if (!signupData.email || !signupData.password || !signupData.name) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    if (!signupCaptchaToken) {
+      toast.error('Please complete the reCAPTCHA before creating an account.');
       return;
     }
 
@@ -172,7 +193,14 @@ export default function AuthModal() {
 
         const hadPendingAction = Boolean(getPendingAuthAction());
         if (hadPendingAction) {
-          await executePendingAuthAction(data.user.id, navigate);
+          try {
+            await executePendingAuthAction(data.user.id, navigate);
+          } catch (pendingActionError) {
+            const message = pendingActionError instanceof Error
+              ? pendingActionError.message
+              : 'The product is out of stock.';
+            toast.error(message);
+          }
         }
         
         toast.success('Account created! Please check your email to verify.');
@@ -185,6 +213,7 @@ export default function AuthModal() {
           phone: '',
           address: '',
         });
+        setSignupCaptchaToken(null);
       }
     } catch (error) {
       toast.error('Signup failed. Please try again.');
@@ -200,7 +229,7 @@ export default function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -255,10 +284,11 @@ export default function AuthModal() {
 
           {/* Google OAuth Button - Priority */}
           <button
-            disabled={isLoading}
+            disabled={isLoading || (mode === 'login' ? !loginCaptchaToken : !signupCaptchaToken)}
             type="button"
-            className="w-full flex items-center justify-center gap-2 md:gap-3 border border-gray-300 hover:border-gray-400 rounded-lg py-2.5 md:py-3 font-medium text-xs md:text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+            className="w-full flex items-center justify-center gap-2 md:gap-3 border border-gray-300 hover:border-gray-400 hover:disabled:border-gray-300 rounded-lg py-2.5 md:py-3 font-medium text-xs md:text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
             onClick={handleGoogleSignIn}
+            title={mode === 'login' ? (!loginCaptchaToken ? 'Please complete the security check first' : '') : (!signupCaptchaToken ? 'Please complete the security check first' : '')}
           >
             <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24">
               <path fill="#EA4335" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -321,11 +351,18 @@ export default function AuthModal() {
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !loginCaptchaToken}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 md:py-2.5 rounded-lg text-sm md:text-base transition-all duration-200 mt-4 md:mt-6"
+                title={!loginCaptchaToken ? 'Please complete the security check first' : ''}
               >
-                {isLoading ? 'Signing In...' : 'Sign In'}
+                {isLoading ? 'Signing In...' : !loginCaptchaToken ? 'Complete security check to sign in' : 'Sign In'}
               </button>
+
+              <RecaptchaCheckbox
+                onChange={setLoginCaptchaToken}
+                className="rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 sm:px-4 py-3 sm:py-4 mt-4"
+                helperText={!loginCaptchaToken ? 'Please complete this security check to continue' : ''}
+              />
 
               <p className="text-center text-xs md:text-sm text-gray-600 mt-3">
                 Forgot your password?{' '}
@@ -444,11 +481,18 @@ export default function AuthModal() {
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !signupCaptchaToken}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 md:py-2.5 rounded-lg text-sm md:text-base transition-all duration-200 mt-4 md:mt-6"
+                title={!signupCaptchaToken ? 'Please complete the security check first' : ''}
               >
-                {isLoading ? 'Creating Account...' : 'Create Account'}
+                {isLoading ? 'Creating Account...' : !signupCaptchaToken ? 'Complete security check to sign up' : 'Create Account'}
               </button>
+
+              <RecaptchaCheckbox
+                onChange={setSignupCaptchaToken}
+                className="rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 sm:px-4 py-3 sm:py-4 mt-4"
+                helperText={!signupCaptchaToken ? 'Please complete this security check to continue' : ''}
+              />
 
               <p className="text-center text-xs md:text-xs text-gray-600 mt-3">
                 By signing up, you agree to our Terms of Service and Privacy Policy

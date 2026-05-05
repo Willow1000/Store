@@ -1,4 +1,5 @@
 import { Link } from 'wouter';
+import { BrandLogo } from './BrandLogo';
 
 const t = (_key: string, fallback: string) => fallback;
 
@@ -9,9 +10,9 @@ export default function Footer() {
         <div className="grid gap-6 sm:gap-8 grid-cols-2 md:grid-cols-4">
           {/* About */}
           <div>
-            <h3 className="mb-3 sm:mb-4 text-base sm:text-lg font-bold">ModernMart</h3>
+            <BrandLogo variant="dark" className="mb-3 sm:mb-4 h-10 sm:h-12 w-auto max-w-[220px]" />
             <p className="text-xs sm:text-sm text-gray-400">
-              {t('footer.about', 'Your trusted marketplace for quality products and seamless shopping experience.')}
+              {t('footer.about', 'Your ultimate destination for premium automotive and motor parts. Fast shipping, authentic products, and expert support for all your vehicle needs.')}
             </p>
           </div>
 
@@ -34,6 +35,11 @@ export default function Footer() {
               <li>
                 <Link href="/help">
                   <a className="hover:text-white transition-colors">{t('footer.helpCenter', 'Help Center')}</a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/faq">
+                  <a className="hover:text-white transition-colors">{t('footer.faq', 'FAQ')}</a>
                 </Link>
               </li>
               <li>
@@ -87,7 +93,7 @@ export default function Footer() {
 
         {/* Bottom */}
         <div className="flex flex-col items-center justify-between gap-4 text-xs sm:text-sm text-gray-400 md:flex-row">
-          <p>&copy; 2026 ModernMart. {t('footer.allRightsReserved', 'All rights reserved.')} </p>
+          <p>&copy; 2026 MotorVault. {t('footer.allRightsReserved', 'All rights reserved.')} </p>
           <div className="flex gap-4 sm:gap-6">
             <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Twitter</a>
             <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Facebook</a>

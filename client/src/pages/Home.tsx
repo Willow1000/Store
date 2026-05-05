@@ -3,6 +3,7 @@ import { ChevronRight, Heart, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { HomePageSkeleton } from '@/components/skeletons/HomePageSkeleton';
 import { QuickViewModal } from '@/components/QuickViewModal';
+import { SEOHead } from '@/components/SEOHead';
 import { toast } from 'sonner';
 import { useProducts, useCategories } from '@/hooks/useSupabaseProducts';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -62,7 +63,14 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
+    <>
+      <SEOHead
+        title="MotorVault - Buy Automotive Parts Online | OEM & Aftermarket"
+        description="Shop automotive parts from MotorVault. Wide selection of OEM and aftermarket parts. Free shipping over $50. Quality guaranteed. Shop now!"
+        keywords={['automobile parts', 'car parts', 'auto parts', 'aftermarket parts', 'OEM parts', 'motor parts online']}
+        canonical="https://motorvault.com"
+      />
+      <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
       {/* Your Recently Viewed Items Section */}
       {recentlyViewedProducts.length > 0 && (
         <div className="bg-white border-b">
@@ -77,7 +85,7 @@ export default function Home() {
             </div>
 
             {/* Recently Viewed Grid */}
-            <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5">
               {recentlyViewedProducts.map((product, idx) => {
                 if (!product) return null;
                 const discountPercentage = getDiscountPercentage(product.price, product.discount);
@@ -101,11 +109,11 @@ export default function Home() {
                           }}
                         />
                         {discountPercentage && (
-                          <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-red-600 text-white text-xs sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
                             -{discountPercentage}%
                           </div>
                         )}
-                        <div className={`absolute bottom-3 left-3 px-2 py-1 rounded text-xs font-bold ${stock === 0 ? 'bg-red-600 text-white' : 'bg-white/90 text-gray-800'}`}>
+                        <div className={`absolute bottom-2 sm:bottom-3 left-2 sm:left-3 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-bold ${stock === 0 ? 'bg-red-600 text-white' : 'bg-white/90 text-gray-800'}`}>
                           {stock === 0 ? 'Out of stock' : `${stock} in stock`}
                         </div>
                         {/* Wishlist Button */}
@@ -140,29 +148,29 @@ export default function Home() {
                       </div>
 
                       {/* Product Info */}
-                      <div className="p-5 flex flex-col flex-grow">
+                      <div className="p-3 sm:p-4 md:p-5 flex flex-col flex-grow">
                         {/* Title */}
-                        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 min-h-[40px]">
+                        <h3 className="text-xs sm:text-sm md:text-base font-semibold text-gray-900 line-clamp-2 min-h-[30px] sm:min-h-[40px]">
                           {product.title}
                         </h3>
 
                         {/* Price Section */}
-                        <div className="mt-4 flex items-baseline space-x-2">
-                          <span className="text-2xl font-bold text-gray-900">
+                        <div className="mt-2 sm:mt-4 flex items-baseline space-x-1 sm:space-x-2">
+                          <span className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">
                             ${parseFloat(String(product.price)).toFixed(2)}
                           </span>
                           {product.discount && (
-                            <span className="text-sm text-gray-500 line-through">
+                            <span className="text-xs sm:text-sm text-gray-500 line-through">
                               ${parseFloat(String(product.discount)).toFixed(2)}
                             </span>
                           )}
                         </div>
                         {/* Shipping Info */}
-                        <p className="mt-1 text-xs text-green-600 font-medium">Free shipping</p>
+                        <p className="mt-1 text-xs sm:text-xs md:text-sm text-green-600 font-medium">Free shipping</p>
 
                         {/* View Deal Button */}
-                        <div className="mt-auto pt-4">
-                          <button className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors">
+                        <div className="mt-auto pt-2 sm:pt-4">
+                          <button className="w-full bg-blue-600 text-white py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm hover:bg-blue-700 transition-colors">
                             View Deal
                           </button>
                         </div>
@@ -183,7 +191,7 @@ export default function Home() {
           </div>
 
           {/* Products Grid */}
-          <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5">
             {isLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="space-y-4">
@@ -217,11 +225,11 @@ export default function Home() {
                         />
                         {/* Discount Badge */}
                         {discountPercentage && (
-                          <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-red-600 text-white text-xs sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
                             -{discountPercentage}%
                           </div>
                         )}
-                        <div className={`absolute bottom-3 left-3 px-2 py-1 rounded text-xs font-bold ${stock === 0 ? 'bg-red-600 text-white' : 'bg-white/90 text-gray-800'}`}>
+                        <div className={`absolute bottom-2 sm:bottom-3 left-2 sm:left-3 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-bold ${stock === 0 ? 'bg-red-600 text-white' : 'bg-white/90 text-gray-800'}`}>
                           {stock === 0 ? 'Out of stock' : `${stock} in stock`}
                         </div>
                         {/* Wishlist Button */}
@@ -255,30 +263,30 @@ export default function Home() {
                       </div>
 
                       {/* Product Info */}
-                      <div className="p-5 flex flex-col flex-grow">
+                      <div className="p-3 sm:p-4 md:p-5 flex flex-col flex-grow">
                         {/* Title */}
-                        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 min-h-[40px]">
+                        <h3 className="text-xs sm:text-sm md:text-base font-semibold text-gray-900 line-clamp-2 min-h-[30px] sm:min-h-[40px]">
                           {product.title}
                         </h3>
 
                         {/* Price Section */}
-                        <div className="mt-4 flex items-baseline space-x-2">
-                          <span className="text-2xl font-bold text-gray-900">
+                        <div className="mt-2 sm:mt-4 flex items-baseline space-x-1 sm:space-x-2">
+                          <span className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">
                             ${parseFloat(String(product.price)).toFixed(2)}
                           </span>
                           {originalPrice && (
-                            <span className="text-sm text-gray-500 line-through">
+                            <span className="text-xs sm:text-sm text-gray-500 line-through">
                               ${originalPrice}
                             </span>
                           )}
                         </div>
 
                         {/* Shipping Info */}
-                        <p className="mt-1 text-xs text-green-600 font-medium">Free shipping</p>
+                        <p className="mt-1 text-xs sm:text-xs md:text-sm text-green-600 font-medium">Free shipping</p>
 
                         {/* View Deal Button */}
-                        <div className="mt-auto pt-4">
-                          <button className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors">
+                        <div className="mt-auto pt-2 sm:pt-4">
+                          <button className="w-full bg-blue-600 text-white py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm hover:bg-blue-700 transition-colors">
                             View Deal
                           </button>
                         </div>
@@ -365,6 +373,7 @@ export default function Home() {
           onClose={() => setQuickViewProductId(null)}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

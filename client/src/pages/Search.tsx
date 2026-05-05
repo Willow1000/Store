@@ -1,6 +1,7 @@
 import { useLocation } from 'wouter';
 import { useMemo } from 'react';
 import { Link } from 'wouter';
+import { SEOHead } from '@/components/SEOHead';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
 

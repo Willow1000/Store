@@ -29,7 +29,7 @@ export async function createContext(
   try {
     user = await sdk.authenticateRequest(opts.req);
     if (user) {
-      console.log('[Auth] User authenticated via SDK session cookie');
+
       return {
         req: opts.req,
         res: opts.res,
@@ -46,7 +46,7 @@ export async function createContext(
     const authHeader = opts.req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
-      console.log('[Auth] Attempting Supabase token verification');
+
       
       if (supabase) {
         // Verify the Supabase token and get user info
@@ -55,13 +55,13 @@ export async function createContext(
         if (error) {
           console.debug('[Auth] Supabase token verification failed:', error.message);
         } else if (supabaseUser?.id) {
-          console.log('[Auth] Supabase token verified for user:', supabaseUser.id);
+
           
           // Look up user in our database by Supabase user ID
           const dbUser = await db.getUserByOpenId(supabaseUser.id);
           
           if (dbUser) {
-            console.log('[Auth] User found in database:', dbUser.id);
+
             return {
               req: opts.req,
               res: opts.res,
@@ -71,7 +71,7 @@ export async function createContext(
           
           // If user doesn't exist in DB, create them
           try {
-            console.log('[Auth] Creating new user in database for Supabase user:', supabaseUser.id);
+
             await db.upsertUser({
               openId: supabaseUser.id,
               email: supabaseUser.email,
@@ -81,7 +81,7 @@ export async function createContext(
             });
             const newUser = await db.getUserByOpenId(supabaseUser.id);
             if (newUser) {
-              console.log('[Auth] New user created successfully:', newUser.id);
+
               return {
                 req: opts.req,
                 res: opts.res,

@@ -43,12 +43,10 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
   const isOutOfStock = stock === 0;
 
   const handleAddToCart = async () => {
-    console.log('[QuickViewModal] AddToCart clicked', {
-      isAuthenticated,
-      userId: user?.id,
-      productId: product?.id,
-      quantity,
-    });
+    if (isOutOfStock) {
+      toast.error('This item is out of stock. Please contact support for more information.');
+      return;
+    }
 
     if (!isAuthenticated || !user?.id) {
       console.warn('[QuickViewModal] AddToCart blocked: user not authenticated');
@@ -70,14 +68,8 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
     }
 
     try {
-      console.log('[QuickViewModal] AddToCart sending mutation', {
-        productId: product.id,
-        quantity,
-      });
       const added = await addToCart(product.id, quantity);
-      console.log('[QuickViewModal] AddToCart mutation completed', { added });
       if (!added) {
-        console.error('[QuickViewModal] AddToCart failed: hook returned false');
         toast.error('Failed to add to cart');
         return;
       }
@@ -230,17 +222,37 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                 </div>
               </div>
 
+              {/* Out of Stock Alert */}
+              {isOutOfStock && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-700 font-semibold text-sm mb-2">This item is currently out of stock</p>
+                  <p className="text-red-600 text-sm mb-3">
+                    Please <a href={`/contact?subject=${encodeURIComponent(`Out of Stock Inquiry - ${product?.title}`)}&message=${encodeURIComponent(`I am interested in the product "${product?.title}" which is currently out of stock. Please let me know when it will be available again.`)}`} className="underline hover:text-red-700 font-medium">contact support</a> for information about when this item will be back in stock.
+                  </p>
+                </div>
+              )}
+
               {/* Buttons */}
               <div className="flex gap-3">
-                <button
-                  onClick={handleAddToCart}
-                  type="button"
-                  disabled={isOutOfStock}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  Add to Cart
-                </button>
+                {isOutOfStock ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="flex-1 bg-gray-400 text-white py-2 rounded-lg cursor-not-allowed flex items-center justify-center gap-2 font-medium"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    Out of Stock
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleAddToCart}
+                    type="button"
+                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    Add to Cart
+                  </button>
+                )}
                 <button
                   onClick={handleWishlist}
                   type="button"

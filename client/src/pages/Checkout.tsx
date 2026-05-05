@@ -5,6 +5,7 @@ import {
   CreditCard, Apple, Globe, Eye, EyeOff
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SEOHead } from '@/components/SEOHead';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { generateUUID } from '@/lib/paystack';
@@ -464,19 +465,6 @@ export default function Checkout() {
       // Tutorial 2: Generate unique reference (Tutorial 3 UUID approach)
       const paymentReference = generateUUID();
 
-      console.log('[Checkout] Starting Paystack payment (Tutorial 2 - Server-initiated)', {
-        email: formData.email,
-        amountUSD: total,
-        amountCents: Math.round(total * 100),
-        reference: paymentReference,
-        selectedPayment,
-        items: cartItems.map((item) => ({
-          productId: item.product_id,
-          quantity: item.quantity,
-          price: item.price,
-        })),
-      });
-
       // Tutorial 2: Initialize transaction on server first
       const initResponse = await trpcClient.paystack.transactions.initialize.mutate({
         email: formData.email,
@@ -500,7 +488,7 @@ export default function Checkout() {
         },
       });
 
-      console.log('[Checkout] Server returned authorization_url:', initResponse.data?.authorization_url);
+
 
       if (!initResponse.data?.authorization_url) {
         throw new Error('Server failed to return authorization URL');
@@ -764,32 +752,6 @@ export default function Checkout() {
 
                   <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
                     <div>
-                      <label className="block text-sm font-semibold text-black mb-3">{t('checkout.city', 'City')} *</label>
-                      <select
-                        name="city"
-                        value={formData.city}
-                        onChange={handleShippingChange}
-                        className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white ${
-                          formErrors.city
-                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                            : 'border-gray-300 focus:border-black focus:ring-black'
-                        }`}
-                        required
-                      >
-                        <option value="">{t('checkout.selectCity', 'Select city')}</option>
-                        {getCityOptions(formData.country, formData.state).map((city) => (
-                          <option key={city} value={city}>
-                            {city}
-                          </option>
-                        ))}
-                      </select>
-                      {formErrors.city && (
-                        <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
-                          <AlertCircle size={14} /> {formErrors.city}
-                        </p>
-                      )}
-                    </div>
-                    <div>
                       <label className="block text-sm font-semibold text-black mb-3">{getStateLabel(formData.country)} *</label>
                       <select
                         name="state"
@@ -812,6 +774,32 @@ export default function Checkout() {
                       {formErrors.state && (
                         <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
                           <AlertCircle size={14} /> {formErrors.state}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-black mb-3">{t('checkout.city', 'City')} *</label>
+                      <select
+                        name="city"
+                        value={formData.city}
+                        onChange={handleShippingChange}
+                        className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white ${
+                          formErrors.city
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                            : 'border-gray-300 focus:border-black focus:ring-black'
+                        }`}
+                        required
+                      >
+                        <option value="">{t('checkout.selectCity', 'Select city')}</option>
+                        {getCityOptions(formData.country, formData.state).map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </select>
+                      {formErrors.city && (
+                        <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
+                          <AlertCircle size={14} /> {formErrors.city}
                         </p>
                       )}
                     </div>

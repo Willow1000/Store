@@ -5,13 +5,16 @@ import { useLocation } from 'wouter';
 import { Link } from 'wouter';
 import { Filter, X, Star, Heart, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { SEOHead } from '@/components/SEOHead';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProductsPageSkeleton } from '@/components/skeletons/ProductsPageSkeleton';
 import { QuickViewModal } from '@/components/QuickViewModal';
 import { useProducts, useSearchProducts, useCategories, useProductsBySlug } from '@/hooks/useSupabaseProducts';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
+import { useAuthModal } from '@/contexts/AuthModalContext';
 import { getHighResImageUrl } from '@/lib/images';
+import { getBrandSuggestions, getModelSuggestions } from '@/lib/productSearch';
 
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'popular';
 
@@ -28,14 +31,19 @@ export default function Products() {
   const [location, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [brandFilter, setBrandFilter] = useState<string[]>([]);
+  const [modelFilter, setModelFilter] = useState<string[]>([]);
+  const [conditionFilter, setConditionFilter] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [priceRange, setPriceRange] = useState([0, 10000]);
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
   const [dealsOnly, setDealsOnly] = useState(false);
+  const [inStockOnly, setInStockOnly] = useState(false);
 
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { openAuthModal } = useAuthModal();
   const { products: allProducts, isLoading } = useProducts(1, 300);
   const { results: searchResults, isLoading: isSearching } = useSearchProducts(searchQuery);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
@@ -103,13 +111,51 @@ export default function Products() {
           (!selectedCategory && productCategory === normalizeCategoryValue(categoryFilter));
       }
 
+      // Brand filter
+      let brandMatch = true;
+      if (brandFilter.length > 0) {
+        brandMatch = brandFilter.some(
+          b => (p.brand || '').toLowerCase() === b.toLowerCase()
+        );
+      }
+
+      // Model filter
+      let modelMatch = true;
+      if (modelFilter.length > 0) {
+        modelMatch = modelFilter.some(
+          m => (p.model || '').toLowerCase() === m.toLowerCase()
+        );
+      }
+
+      // Condition filter
+      let conditionMatch = true;
+      if (conditionFilter.length > 0) {
+        conditionMatch = conditionFilter.some(
+          c => (p.condition || '').toLowerCase() === c.toLowerCase()
+        );
+      }
+
+      // In stock filter
+      let stockMatch = true;
+      if (inStockOnly) {
+        stockMatch = p.stock > 0;
+      }
+
       // Deals filter - product has discount field
       let dealsMatch = true;
       if (dealsOnly) {
-        dealsMatch = p.discount !== null && p.discount !== undefined;
+        dealsMatch = p.discount !== null && p.discount !== undefined && p.discount > 0;
       }
       
-      return priceMatch && categoryMatch && dealsMatch;
+      return (
+        priceMatch && 
+        categoryMatch && 
+        brandMatch && 
+        modelMatch && 
+        conditionMatch && 
+        stockMatch && 
+        dealsMatch
+      );
     });
 
     // Sort
@@ -138,7 +184,7 @@ export default function Products() {
     }
 
     return filtered;
-  }, [baseProducts, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly]);
+  }, [baseProducts, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly, brandFilter, modelFilter, conditionFilter, inStockOnly]);
 
   const itemsPerPage = 12;
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -264,7 +310,120 @@ export default function Products() {
                 </div>
               </div>
 
-              {/* Price Range Filter */}
+              {/* Brand Filter */}
+              <div className="mb-6">
+                <h3 className="font-bold text-sm mb-3">Brand</h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {allProducts && allProducts.length > 0 ? (
+                    Array.from(new Set(allProducts.map(p => p.brand).filter(Boolean))).map((brand) => (
+                      <label 
+                        key={brand}
+                        className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={brandFilter.includes(brand as string)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setBrandFilter([...brandFilter, brand as string]);
+                            } else {
+                              setBrandFilter(brandFilter.filter(b => b !== brand));
+                            }
+                            setCurrentPage(1);
+                          }}
+                          className="w-4 h-4 cursor-pointer"
+                        />
+                        <span className="text-sm ml-2">{brand}</span>
+                      </label>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-500 p-2">No brands available</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Model Filter */}
+              <div className="mb-6">
+                <h3 className="font-bold text-sm mb-3">Model</h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {allProducts && allProducts.length > 0 ? (
+                    Array.from(new Set(allProducts.map(p => p.model).filter(Boolean))).map((model) => (
+                      <label 
+                        key={model}
+                        className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={modelFilter.includes(model as string)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setModelFilter([...modelFilter, model as string]);
+                            } else {
+                              setModelFilter(modelFilter.filter(m => m !== model));
+                            }
+                            setCurrentPage(1);
+                          }}
+                          className="w-4 h-4 cursor-pointer"
+                        />
+                        <span className="text-sm ml-2">{model}</span>
+                      </label>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-500 p-2">No models available</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Condition Filter */}
+              <div className="mb-6">
+                <h3 className="font-bold text-sm mb-3">Condition</h3>
+                <div className="space-y-2">
+                  {['new', 'like-new', 'good', 'fair', 'used'].map((condition) => {
+                    const hasProducts = allProducts && allProducts.some(p => p.condition === condition);
+                    return (
+                      <label 
+                        key={condition}
+                        className={`flex items-center cursor-pointer p-2 rounded transition-colors ${
+                          hasProducts ? 'hover:bg-gray-100' : 'opacity-50 cursor-not-allowed'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={conditionFilter.includes(condition)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setConditionFilter([...conditionFilter, condition]);
+                            } else {
+                              setConditionFilter(conditionFilter.filter(c => c !== condition));
+                            }
+                            setCurrentPage(1);
+                          }}
+                          disabled={!hasProducts}
+                          className="w-4 h-4 cursor-pointer"
+                        />
+                        <span className="text-sm ml-2 capitalize">{condition}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* In Stock Filter */}
+              <div className="mb-6">
+                <h3 className="font-bold text-sm mb-3">Availability</h3>
+                <label className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={inStockOnly}
+                    onChange={(e) => {
+                      setInStockOnly(e.target.checked);
+                      setCurrentPage(1);
+                    }}
+                    className="w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-sm ml-2 font-medium">In Stock Only</span>
+                </label>
+              </div>
               <div className="mb-6">
                 <h3 className="font-bold text-sm mb-3">Price Range</h3>
                 <div className="space-y-2">
@@ -410,13 +569,30 @@ export default function Products() {
                           </div>
                           <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.preventDefault();
-                                toast.success('Added to wishlist!');
+
+                                if (!isAuthenticated || !user?.id) {
+                                  openAuthModal('login', 'wishlist', {
+                                    type: 'wishlist',
+                                    productId: product.id,
+                                  });
+                                  return;
+                                }
+
+                                try {
+                                  await toggleWishlist(product.id);
+                                } catch (error) {
+                                  console.error('Failed to toggle wishlist from products page:', error);
+                                }
                               }}
                               className="bg-white p-2 rounded-full hover:bg-gray-100 shadow"
+                              aria-label={wishedProductIds.has(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
                             >
-                              <Heart className="w-4 h-4 text-gray-600" />
+                              <Heart
+                                className={`w-4 h-4 ${wishedProductIds.has(product.id) ? 'text-red-500' : 'text-gray-600'}`}
+                                fill={wishedProductIds.has(product.id) ? 'currentColor' : 'none'}
+                              />
                             </button>
                             <button
                               onClick={(e) => {

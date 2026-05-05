@@ -31,7 +31,7 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
       '@type': 'ListItem',
       position: index + 1,
       name: item.label,
-      item: new URL(item.href, typeof window !== 'undefined' ? window.location.origin : 'https://modernmart.manus.space').href,
+      item: new URL(item.href, typeof window !== 'undefined' ? window.location.origin : 'https://motorvault.com').href,
     })),
   };
 

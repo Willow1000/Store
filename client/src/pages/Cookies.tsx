@@ -1,6 +1,15 @@
+import { SEOHead } from '@/components/SEOHead';
+
 export default function Cookies() {
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <>
+      <SEOHead
+        title="Cookie Policy - MotorVault"
+        description="MotorVault Cookie Policy. Information about how we use cookies and similar technologies on our website."
+        keywords={['cookie policy', 'cookies', 'tracking', 'web analytics']}
+        canonical="https://motorvault.com/cookies"
+      />
+      <div className="min-h-screen bg-background pt-6">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-4xl font-bold mb-8">Cookie Policy</h1>
         <p className="text-gray-600 mb-8">Last updated: April 30, 2026</p>
@@ -13,7 +22,7 @@ export default function Cookies() {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">2. How We Use Cookies</h2>
-            <p className="text-gray-600 mb-4">ModernMart uses cookies for the following purposes:</p>
+            <p className="text-gray-600 mb-4">MotorVault uses cookies for the following purposes:</p>
             <ul className="list-disc list-inside text-gray-600 space-y-2">
               <li><strong>Authentication:</strong> To keep you logged in and secure</li>
               <li><strong>Preferences:</strong> To remember your settings and choices</li>
@@ -58,6 +67,7 @@ export default function Cookies() {
           </section>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

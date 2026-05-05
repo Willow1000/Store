@@ -55,7 +55,13 @@ export default function AuthCallback() {
         toast.success(`Welcome, ${user.user_metadata?.name || user.email}!`);
 
         const handledPendingAction = getPendingAuthAction()
-          ? await executePendingAuthAction(user.id, navigate)
+          ? await executePendingAuthAction(user.id, navigate).catch((pendingActionError) => {
+              const message = pendingActionError instanceof Error
+                ? pendingActionError.message
+                : 'The product is out of stock.';
+              toast.error(message);
+              return false;
+            })
           : false;
         
         // Redirect to home immediately
