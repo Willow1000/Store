@@ -15,7 +15,23 @@ export function registerOAuthRoutes(app: Express) {
     const state = getQueryParam(req, "state");
 
     if (!code || !state) {
-      res.status(400).json({ error: "code and state are required" });
+      // If no code/state present, this may be an implicit/fragment OAuth response
+      // (e.g. `#access_token=...`). The fragment isn't sent to the server, so
+      // return an HTML page that forwards the fragment to the client-side
+      // callback route where the SPA (and Supabase client) can parse it.
+      const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>
+        <script>
+          try {
+            const hash = window.location.hash || '';
+            // Replace location to client-side auth callback preserving the fragment
+            window.location.replace('/auth/callback' + hash);
+          } catch (e) {
+            // Fallback: show simple instructions
+            document.body.innerText = 'Authentication callback received. Please return to the app.';
+          }
+        </script>
+      </body></html>`;
+      res.status(200).setHeader('Content-Type', 'text/html; charset=utf-8').send(html);
       return;
     }
 

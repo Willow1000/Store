@@ -36,7 +36,7 @@ export default function Home() {
   const recentlyViewedProducts = recentlyViewedIds
     .map(id => products?.find(p => p.id === id))
     .filter(Boolean)
-    .slice(0, 8);
+    .slice(0, 5);
 
   // Filter deals: products with free shipping OR price > 250 OR has discount
   const dealsProducts = products?.filter((p) => {
@@ -205,7 +205,7 @@ export default function Home() {
                 </div>
               ))
             ) : (
-              dealsProducts?.slice(0, 12).map((product, idx) => {
+              dealsProducts?.slice(0, 5).map((product, idx) => {
                 const discountPercentage = getDiscountPercentage(product.price, product.discount);
                 const originalPrice = product.discount ? parseFloat(String(product.discount)).toFixed(2) : null;
                 const isWished = product.id && wishedProductIds.has(product.id);
