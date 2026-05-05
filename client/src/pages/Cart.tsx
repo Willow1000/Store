@@ -142,14 +142,44 @@ export default function Cart() {
 
   if (isLoading || (isAuthenticated && isSupabaseLoading)) {
     return (
-          <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
-        <div className="grid gap-8 md:grid-cols-3">
-          <div className="md:col-span-2 space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-24 w-full rounded-lg" />
-            ))}
+      <div className="min-h-screen bg-background w-full overflow-x-hidden">
+        <div className="container px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12 space-y-6">
+          <Skeleton className="h-10 w-56" />
+          <div className="grid gap-6 md:gap-8 md:grid-cols-3">
+            <div className="md:col-span-2 space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex gap-4 rounded-lg border border-border bg-white p-4">
+                  <Skeleton className="h-24 w-24 rounded-lg bg-gray-100 flex-shrink-0" />
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-5 w-11/12" />
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-20" />
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-10 w-10 rounded-md" />
+                      <Skeleton className="h-4 w-8" />
+                      <Skeleton className="h-10 w-10 rounded-md" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end justify-between">
+                    <Skeleton className="h-5 w-20" />
+                    <Skeleton className="h-10 w-10 rounded-md" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-4 rounded-lg border border-border bg-white p-5">
+              <Skeleton className="h-6 w-32" />
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+              <Skeleton className="h-12 w-full rounded-lg" />
+              <Skeleton className="h-12 w-full rounded-lg" />
+              <Skeleton className="h-10 w-40 rounded-lg" />
+            </div>
           </div>
-          <Skeleton className="h-64 w-full rounded-lg" />
         </div>
       </div>
     );

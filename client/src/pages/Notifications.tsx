@@ -32,11 +32,25 @@ export default function Notifications() {
 
   if (isLoading) {
     return (
-        <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-lg" />
-          ))}
+      <div className="min-h-screen bg-background w-full overflow-x-hidden">
+        <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12 space-y-6">
+          <Skeleton className="h-10 w-48" />
+          <div className="space-y-4">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-4 rounded-lg border border-border p-4 bg-white"
+              >
+                <Skeleton className="mt-1 h-5 w-5 rounded-full flex-shrink-0" />
+                <div className="flex-1 space-y-3">
+                  <Skeleton className="h-5 w-2/3" />
+                  <Skeleton className="h-4 w-11/12" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+                <Skeleton className="h-9 w-9 rounded-md flex-shrink-0" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

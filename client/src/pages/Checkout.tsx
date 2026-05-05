@@ -468,7 +468,7 @@ export default function Checkout() {
       // Tutorial 2: Initialize transaction on server first
       const initResponse = await trpcClient.paystack.transactions.initialize.mutate({
         email: formData.email,
-        amount: import.meta.env.PROD ? Math.round(total * 100) : 100, // Test: 1 USD (100 cents), Prod: Convert USD to cents
+        amount: Math.round(total * 100), // Convert USD total to cents
         reference: paymentReference,
         currency: 'USD',
         description: `Order from Modern E-commerce - ${cartItems.length} items`,
