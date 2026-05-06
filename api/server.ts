@@ -3,42 +3,52 @@ import express from "express";
 let app: any = null;
 let initError: any = null;
 
-// Attempt to load the app with fallback
-(async () => {
-  try {
-    // Primary: Try to import from TypeScript source (works in development)
-    try {
-      const { createApp } = await import("../server/_core/app");
-      app = createApp();
-      console.log("[API] App loaded from source");
-    } catch (sourceErr: any) {
-      // Source import failed (expected on Vercel where server/_core is not deployed)
-      // Try bundled version instead
-      console.log("[API] Source import failed, trying bundled version...");
-      const bundled = await import("../dist/index.js");
-      
-      if (typeof bundled.createApp === 'function') {
-        app = bundled.createApp();
-        console.log("[API] App loaded from bundled dist/index.js");
-      } else {
-        throw new Error(`Bundled module missing createApp export: ${Object.keys(bundled)}`);
-      }
-    }
-  } catch (err: any) {
-    initError = err;
-    console.error("[API] Failed to initialize app:", err?.message || String(err));
-    console.error("[API] Stack:", err?.stack);
-    
-    // Create fallback app that returns JSON errors
-    app = express();
-    app.use(express.json());
-    app.all("*", (_req, res) => {
-      res.status(500).json({
-        error: "Failed to initialize server",
-        message: initError?.message || "Unknown error",
-      });
-    });
+// Try to load createApp from the bundled server
+try {
+  // Dynamic import of the bundled server module
+  // This will work on Vercel where dist/index.js exists
+  // On local dev, it may fail if dist isn't built yet
+  const bundled = await import("../dist/index.js");
+  
+  if (typeof bundled?.createApp === "function") {
+    app = bundled.createApp();
+    console.log("[API] ✓ Loaded createApp from dist/index.js (bundle)");
+  } else {
+    throw new Error(`Bundle exports: ${Object.keys(bundled || {}).join(", ")}`);
   }
-})();
+} catch (bundleErr: any) {
+  // Fallback for local development
+  console.warn("[API] Bundle import failed, trying source...");
+  try {
+    const source = await import("../server/_core/app.ts");
+    const createApp = source.createApp || source.default;
+    if (typeof createApp === "function") {
+      app = createApp();
+      console.log("[API] ✓ Loaded from source (development mode)");
+    } else {
+      throw new Error("No createApp export in source");
+    }
+  } catch (sourceErr: any) {
+    initError = sourceErr;
+    console.error("[API] ✗ Failed to load app");
+    console.error("[API]   Bundle error:", bundleErr?.message);
+    console.error("[API]   Source error:", sourceErr?.message);
+  }
+}
+
+// If initialization failed, use error handler
+if (!app) {
+  console.error("[API] Creating fallback error handler");
+  app = express();
+  app.use(express.json());
+  
+  app.all("*", (_req: any, res: any) => {
+    console.error(`[API] Handler error: ${_req.method} ${_req.url}`);
+    res.status(500).json({
+      error: "Server initialization failed",
+      message: initError?.message || "Unknown error",
+    });
+  });
+}
 
 export default app;
