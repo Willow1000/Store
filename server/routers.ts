@@ -1,4 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
+import { TRPCError } from '@trpc/server';
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -138,12 +139,20 @@ export const appRouter = router({
           description: z.string().optional(),
           metadata: z.record(z.string(), z.unknown()).optional(),
         }))
-        .mutation(({ input, ctx }) => {
+        .mutation(async ({ input, ctx }) => {
           const requestOrigin = getRequestOrigin(ctx.req);
-          return initializeTransaction({
-            ...input,
-            callback_url: process.env.PAYSTACK_CALLBACK_URL || (requestOrigin ? `${requestOrigin}/payment/callback` : undefined),
-          });
+          try {
+            return await initializeTransaction({
+              ...input,
+              callback_url: process.env.PAYSTACK_CALLBACK_URL || (requestOrigin ? `${requestOrigin}/payment/callback` : undefined),
+            });
+          } catch (err: any) {
+            console.error('[tRPC] initializeTransaction error:', err);
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: err instanceof Error ? err.message : String(err),
+            });
+          }
         }),
       verify: publicProcedure
         .input(z.object({ reference: z.string() }))
