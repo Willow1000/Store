@@ -1,54 +1,55 @@
-import express from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 
-let app: any = null;
-let initError: any = null;
+const handler = express();
 
-// Try to load createApp from the bundled server
-try {
-  // Dynamic import of the bundled server module
-  // This will work on Vercel where dist/index.js exists
-  // On local dev, it may fail if dist isn't built yet
-  const bundled = await import("../dist/index.js");
-  
-  if (typeof bundled?.createApp === "function") {
-    app = bundled.createApp();
-    console.log("[API] ✓ Loaded createApp from dist/index.js (bundle)");
-  } else {
-    throw new Error(`Bundle exports: ${Object.keys(bundled || {}).join(", ")}`);
-  }
-} catch (bundleErr: any) {
-  // Fallback for local development
-  console.warn("[API] Bundle import failed, trying source...");
+handler.use(express.json({ limit: "50mb" }));
+handler.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// Middleware to load and delegate to the actual app
+handler.use(async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const source = await import("../server/_core/app.ts");
-    const createApp = source.createApp || source.default;
-    if (typeof createApp === "function") {
-      app = createApp();
-      console.log("[API] ✓ Loaded from source (development mode)");
-    } else {
-      throw new Error("No createApp export in source");
+    // Try to load the bundled createApp function
+    // The dist/index.js gets bundled and included in the function package via vercel.json
+    const bundled = await import("../dist/index.js");
+    const { createApp } = bundled as any;
+
+    if (typeof createApp !== "function") {
+      console.error(
+        "[API] Bundled module missing createApp:",
+        Object.keys(bundled || {})
+      );
+      throw new Error(
+        `Invalid bundled module${
+          bundled ? `: ${Object.keys(bundled).join(", ")}` : ""
+        }`
+      );
     }
-  } catch (sourceErr: any) {
-    initError = sourceErr;
-    console.error("[API] ✗ Failed to load app");
-    console.error("[API]   Bundle error:", bundleErr?.message);
-    console.error("[API]   Source error:", sourceErr?.message);
-  }
-}
 
-// If initialization failed, use error handler
-if (!app) {
-  console.error("[API] Creating fallback error handler");
-  app = express();
-  app.use(express.json());
-  
-  app.all("*", (_req: any, res: any) => {
-    console.error(`[API] Handler error: ${_req.method} ${_req.url}`);
-    res.status(500).json({
-      error: "Server initialization failed",
-      message: initError?.message || "Unknown error",
+    // Create the actual app and delegate the request
+    const app = createApp();
+    return app(req, res, next);
+  } catch (error: any) {
+    // Fallback for development: try loading from source
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        console.warn("[API] Bundled import failed, trying source...");
+        const source = await import("../server/_core/app");
+        const { createApp } = source as any;
+        const app = createApp();
+        return app(req, res, next);
+      } catch (sourceError: any) {
+        console.error("[API] Source import also failed:", sourceError?.message);
+      }
+    }
+
+    // Error: couldn't load server
+    console.error("[API] Failed to initialize server:", error?.message);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: "Failed to initialize server module",
+      ...(process.env.NODE_ENV === "development" && { details: error?.message }),
     });
-  });
-}
+  }
+});
 
-export default app;
+export default handler;
