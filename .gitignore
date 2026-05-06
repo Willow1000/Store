@@ -117,4 +117,5 @@ node_modules
 dist
 build
 
+var.txt
 claude
