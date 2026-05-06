@@ -8,6 +8,16 @@ import { verifyTransaction, initializeTransaction } from "../paystack";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
 
+function getRequestOrigin(req: express.Request): string | null {
+  const forwardedProto = req.header('x-forwarded-proto')?.split(',')[0]?.trim();
+  const forwardedHost = req.header('x-forwarded-host')?.split(',')[0]?.trim();
+  const protocol = forwardedProto || req.protocol;
+  const host = forwardedHost || req.header('host');
+
+  if (!protocol || !host) return null;
+  return `${protocol}://${host}`;
+}
+
 const supabaseAdmin = ENV.supabaseUrl && (ENV.supabaseServiceKey || ENV.supabaseAnonKey)
   ? createSupabaseClient(ENV.supabaseUrl, ENV.supabaseServiceKey || ENV.supabaseAnonKey || '')
   : null;
@@ -23,7 +33,7 @@ export function createApp() {
   registerOAuthRoutes(app);
 
   // Paystack redirect callback: verify reference and create order for authenticated user
-  app.get('/payment/callback', async (req, res) => {
+  app.get('/payment/callback', async (req: express.Request, res: express.Response) => {
     const reference = String(req.query.reference ?? req.query.reference ?? '');
     if (!reference) {
       return res.status(400).send('Missing reference');
@@ -142,7 +152,7 @@ export function createApp() {
   });
 
   // POST /initialize-payment - simple Express endpoint for initializing Paystack transactions
-  app.post('/initialize-payment', async (req, res) => {
+  app.post('/initialize-payment', async (req: express.Request, res: express.Response) => {
     const { email, amount } = req.body ?? {};
 
     if (!email || !amount) {
@@ -150,12 +160,13 @@ export function createApp() {
     }
 
     try {
+      const requestOrigin = getRequestOrigin(req);
       // initializeTransaction expects amount in base units (e.g., 500 for 500.00), it will convert to kobo
       const paymentData = await initializeTransaction({
         email: String(email),
         amount: Number(amount),
-        callback_url: process.env.PAYSTACK_CALLBACK_URL || 'http://localhost:3000/payment/callback',
-      } as any);
+        callback_url: process.env.PAYSTACK_CALLBACK_URL || (requestOrigin ? `${requestOrigin}/payment/callback` : undefined),
+      });
 
       return res.status(200).json(paymentData);
     } catch (error: any) {

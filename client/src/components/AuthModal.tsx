@@ -37,16 +37,32 @@ export default function AuthModal() {
 
   const oauthRedirectUrl = (() => {
     const configuredRedirect = import.meta.env.VITE_SUPABASE_OAUTH_REDIRECT_URL?.trim();
+    const runtimeOrigin = window.location.origin;
 
     if (!configuredRedirect) {
-      return `${window.location.origin}/api/oauth/callback`;
+      return `${runtimeOrigin}/api/oauth/callback`;
     }
 
     if (/^https?:\/\//i.test(configuredRedirect)) {
-      return configuredRedirect;
+      try {
+        const configuredUrl = new URL(configuredRedirect);
+        const configuredHost = configuredUrl.hostname.toLowerCase();
+        const localhostHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+
+        // Keep path/query/hash from config, but avoid pinning production redirects to localhost.
+        if (localhostHosts.has(configuredHost)) {
+          const runtimeUrl = new URL(runtimeOrigin);
+          configuredUrl.protocol = runtimeUrl.protocol;
+          configuredUrl.host = runtimeUrl.host;
+        }
+
+        return configuredUrl.href;
+      } catch {
+        return `${runtimeOrigin}/api/oauth/callback`;
+      }
     }
 
-    return new URL(configuredRedirect.startsWith("/") ? configuredRedirect : `/${configuredRedirect}`, window.location.origin).href;
+    return new URL(configuredRedirect.startsWith("/") ? configuredRedirect : `/${configuredRedirect}`, runtimeOrigin).href;
   })();
 
   const handleGoogleSignIn = async () => {

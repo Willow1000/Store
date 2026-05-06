@@ -6,6 +6,16 @@ import { z } from "zod";
 import { getProducts, getProductById, getFeaturedProducts, getNewArrivals, getDeals, getTrendingProducts, getUserCart, addToCart, getUserOrders, createOrder, getCategories, createNotification, getUserNotifications, getUserWishlist, addToWishlist, removeFromWishlist, upsertUser } from "./db";
 import { initializeTransaction, verifyTransaction } from "./paystack";
 
+function getRequestOrigin(req: { header: (name: string) => string | undefined; protocol?: string }): string | null {
+  const forwardedProto = req.header('x-forwarded-proto')?.split(',')[0]?.trim();
+  const forwardedHost = req.header('x-forwarded-host')?.split(',')[0]?.trim();
+  const protocol = forwardedProto || req.protocol;
+  const host = forwardedHost || req.header('host');
+
+  if (!protocol || !host) return null;
+  return `${protocol}://${host}`;
+}
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -128,7 +138,13 @@ export const appRouter = router({
           description: z.string().optional(),
           metadata: z.record(z.string(), z.unknown()).optional(),
         }))
-        .mutation(({ input }) => initializeTransaction(input)),
+        .mutation(({ input, ctx }) => {
+          const requestOrigin = getRequestOrigin(ctx.req);
+          return initializeTransaction({
+            ...input,
+            callback_url: process.env.PAYSTACK_CALLBACK_URL || (requestOrigin ? `${requestOrigin}/payment/callback` : undefined),
+          });
+        }),
       verify: publicProcedure
         .input(z.object({ reference: z.string() }))
         .query(({ input }) => verifyTransaction(input.reference)),

@@ -14,6 +14,7 @@ interface PaystackInitializeTransactionPayload {
   currency?: string;
   description?: string;
   metadata?: Record<string, unknown>;
+  callback_url?: string;
 }
 
 interface PaystackInitializeResponse {
@@ -85,7 +86,7 @@ export async function initializeTransaction(
       email: payload.email,
       amount: payload.amount,
       reference,
-      callback_url: process.env.PAYSTACK_CALLBACK_URL || undefined,
+      callback_url: payload.callback_url || process.env.PAYSTACK_CALLBACK_URL || undefined,
       ...(payload.currency ? { currency: payload.currency } : {}),
       ...(payload.description ? { description: payload.description } : {}),
       ...(payload.metadata ? { metadata: payload.metadata } : {}),
