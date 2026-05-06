@@ -71,7 +71,7 @@ function App() {
             <AuthModal />
             <div className="flex min-h-screen flex-col bg-background w-full overflow-x-hidden">
               <Header />
-              <main className={`flex-1 w-full overflow-x-hidden ${isHomePage ? 'pt-0' : 'pt-16 lg:pt-28'}`}>
+              <main className={`flex-1 w-full overflow-x-hidden ${isHomePage ? '' : 'pt-0'}`}>
                 <Router />
               </main>
               <Footer />
