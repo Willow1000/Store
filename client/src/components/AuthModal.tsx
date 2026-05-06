@@ -41,41 +41,26 @@ export default function AuthModal() {
     const runtimeOrigin = window.location.origin;
     const defaultCallbackPath = '/auth/callback';
 
-    const baseOrigin = (() => {
-      if (!configuredAppUrl) return runtimeOrigin;
-      try {
-        return new URL(configuredAppUrl).origin;
-      } catch {
-        return runtimeOrigin;
-      }
-    })();
-
-    if (!configuredRedirect) {
-      return `${baseOrigin}${defaultCallbackPath}`;
+    // If a full redirect URL is configured, use it as-is
+    if (configuredRedirect && /^https?:\/\//i.test(configuredRedirect)) {
+      return configuredRedirect;
     }
 
-    if (/^https?:\/\//i.test(configuredRedirect)) {
+    // Determine base origin for relative redirects
+    let baseOrigin = runtimeOrigin;
+    if (configuredAppUrl) {
       try {
-        const configuredUrl = new URL(configuredRedirect);
-        const baseUrl = new URL(baseOrigin);
-        const configuredPath = configuredUrl.pathname === '/' ? defaultCallbackPath : configuredUrl.pathname;
-
-        // Always use the current origin and keep only path/query/hash from configured values.
-        return new URL(
-          `${configuredPath}${configuredUrl.search}${configuredUrl.hash}`,
-          `${baseUrl.protocol}//${baseUrl.host}`,
-        ).href;
+        baseOrigin = new URL(configuredAppUrl).origin;
       } catch {
-        return `${baseOrigin}${defaultCallbackPath}`;
+        baseOrigin = runtimeOrigin;
       }
     }
 
-    const resolvedRelative = new URL(configuredRedirect.startsWith('/') ? configuredRedirect : `/${configuredRedirect}`, baseOrigin);
-    if (resolvedRelative.pathname === '/') {
-      return `${baseOrigin}${defaultCallbackPath}`;
-    }
-
-    return resolvedRelative.href;
+    // Use configured relative redirect or fall back to default callback path
+    const redirectPath = configuredRedirect || defaultCallbackPath;
+    const fullPath = redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`;
+    
+    return `${baseOrigin}${fullPath}`;
   })();
 
   const handleGoogleSignIn = async () => {
