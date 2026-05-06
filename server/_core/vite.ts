@@ -3,42 +3,34 @@ import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
-// Dynamic imports to avoid loading vite/esbuild/tailwind at module evaluation time
-// import { createServer as createViteServer } from "vite";
-// import viteConfig from "../../vite.config";
 
 export async function setupVite(app: Express, server: Server) {
   // Guard: This should NEVER be called in production (e.g., on Vercel)
   if (process.env.NODE_ENV !== "development") {
-    console.warn("[Vite] setupVite called in non-development mode, aborting");
+    console.warn("[Vite] setupVite called in non-development mode, skipping vite setup");
     return;
   }
 
   console.log("[Vite] Setting up Vite dev server in development mode");
   
-  // Dynamically import vite and config only when this function is called (development mode)
-  // This prevents vite/tailwindcss/native modules from being loaded in production
   try {
+    // Only import vite/config if we're actually in development
     const viteModule = await import("vite");
-    const configModule = await import("../../vite.config.js");
-    
     const { createServer: createViteServer } = viteModule;
-    const viteConfig = configModule.default;
     
-    console.log("[Vite] Vite and config loaded successfully");
-
-    const serverOptions = {
-      middlewareMode: true,
-      hmr: { server },
-      allowedHosts: true as const,
+    // Minimal config without Tailwind/heavy plugins
+    const viteConfig = {
+      root: path.resolve(import.meta.dirname, "../.."),
+      server: {
+        middlewareMode: true,
+        hmr: { server },
+        allowedHosts: true as const,
+      },
+      appType: "custom",
     };
 
-    const vite = await createViteServer({
-      ...viteConfig,
-      configFile: false,
-      server: serverOptions,
-      appType: "custom",
-    });
+    const vite = await createViteServer(viteConfig);
+    console.log("[Vite] Vite server created successfully");
 
     app.use(vite.middlewares);
     app.use("*", async (req, res, next) => {
@@ -67,6 +59,7 @@ export async function setupVite(app: Express, server: Server) {
     });
   } catch (err: any) {
     console.error("[Vite] Failed to set up Vite:", err?.message);
+    // In dev, we want to see the error
     throw err;
   }
 }
