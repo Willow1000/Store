@@ -3,6 +3,9 @@ import net from "net";
 import { serveStatic, setupVite } from "./vite";
 import { createApp } from "./app";
 
+// Export createApp for Vercel serverless functions
+export { createApp };
+
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();
