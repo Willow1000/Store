@@ -30,8 +30,10 @@ async function startServer() {
   const server = createServer(app);
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
+    console.log("[Server] Development mode - setting up Vite");
     await setupVite(app, server);
   } else {
+    console.log("[Server] Production mode - using static files");
     serveStatic(app);
   }
 
@@ -47,4 +49,5 @@ async function startServer() {
   });
 }
 
+console.log("[Server] Starting server with NODE_ENV=", process.env.NODE_ENV);
 startServer().catch(console.error);

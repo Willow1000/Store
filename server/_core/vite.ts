@@ -3,15 +3,16 @@ import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
-// Dynamic import to avoid loading vite/esbuild during bundling
+// Dynamic imports to avoid loading vite/esbuild/tailwind at module evaluation time
 // import { createServer as createViteServer } from "vite";
 // import viteConfig from "../../vite.config";
 
 export async function setupVite(app: Express, server: Server) {
-  // Dynamically import vite only when needed (development mode)
+  // Dynamically import vite and config only when this function is called (development mode)
   const { createServer: createViteServer } = await import("vite");
-  const viteConfig = (await import("../../vite.config.js")).default;
-  
+  const viteConfigModule = await import("../../vite.config.js");
+  const viteConfig = viteConfigModule.default;
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
