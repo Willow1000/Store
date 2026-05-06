@@ -1,5 +1,4 @@
 import { COOKIE_NAME } from "@shared/const";
-import { TRPCError } from '@trpc/server';
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -147,10 +146,10 @@ export const appRouter = router({
               callback_url: process.env.PAYSTACK_CALLBACK_URL || (requestOrigin ? `${requestOrigin}/payment/callback` : undefined),
             });
           } catch (err: any) {
-            console.error('[tRPC] initializeTransaction error:', err);
-            throw new TRPCError({
-              code: 'INTERNAL_SERVER_ERROR',
-              message: err instanceof Error ? err.message : String(err),
+            console.error("[Paystack Initialize] Error:", err && (err.message || String(err)));
+            throw new TRPCError4({
+              code: "INTERNAL_SERVER_ERROR",
+              message: err instanceof Error ? err.message : "Paystack initialization failed",
             });
           }
         }),

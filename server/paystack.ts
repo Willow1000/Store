@@ -48,16 +48,7 @@ async function paystackRequest<T>(path: string, init: RequestInit = {}): Promise
     },
   });
 
-  let data: any;
-  try {
-    data = await response.json();
-  } catch (parseErr) {
-    const textBody = await response.text().catch(() => '<unable to read body>');
-    throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: `Paystack returned non-JSON response (status ${response.status}): ${String(textBody).slice(0,200)}`,
-    });
-  }
+  const data = await response.json();
 
   if (!response.ok) {
     throw new TRPCError({
