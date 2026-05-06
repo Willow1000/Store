@@ -10,25 +10,38 @@ handler.use(async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Try to load the bundled createApp function
     // The dist/index.js gets bundled and included in the function package via vercel.json
+    console.log("[API] Loading bundled module from dist/index.js...");
+    
     const bundled = await import("../dist/index.js");
+    console.log("[API] Bundled module loaded, exports:", Object.keys(bundled || {}));
+    
     const { createApp } = bundled as any;
 
     if (typeof createApp !== "function") {
-      console.error(
-        "[API] Bundled module missing createApp:",
-        Object.keys(bundled || {})
-      );
+      const exported = Object.keys(bundled || {});
+      console.error("[API] createApp is not a function, got:", typeof createApp, "exports:", exported);
       throw new Error(
-        `Invalid bundled module${
-          bundled ? `: ${Object.keys(bundled).join(", ")}` : ""
+        `Invalid createApp ${
+          exported.length > 0 ? `(available: ${exported.join(", ")})` : "(module has no exports)"
         }`
       );
     }
 
+    console.log("[API] Calling createApp()...");
     // Create the actual app and delegate the request
     const app = createApp();
+    console.log("[API] App created, type:", typeof app, "is function:", typeof app === "function");
+    
+    if (typeof app !== "function") {
+      throw new Error(`createApp() returned ${typeof app}, expected function`);
+    }
+    
+    console.log("[API] Delegating request to app...");
     return app(req, res, next);
   } catch (error: any) {
+    console.error("[API] Error in middleware:", error?.message || String(error));
+    console.error("[API] Error details:", error);
+    
     // Fallback for development: try loading from source
     if (process.env.NODE_ENV !== "production") {
       try {
@@ -43,11 +56,12 @@ handler.use(async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Error: couldn't load server
-    console.error("[API] Failed to initialize server:", error?.message);
     return res.status(500).json({
-      error: "Internal Server Error",
-      message: "Failed to initialize server module",
-      ...(process.env.NODE_ENV === "development" && { details: error?.message }),
+      error: "Failed to initialize server",
+      message: error?.message || "Unknown error",
+      ...(process.env.NODE_ENV !== "production" && { 
+        stack: error?.stack?.split("\n").slice(0, 3).join("\n")
+      }),
     });
   }
 });
