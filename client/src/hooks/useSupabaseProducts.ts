@@ -136,8 +136,7 @@ export function useProductById(productId: string) {
                   url: String(item?.url || ''),
                   category_name: String(item?.category || 'General'),
                   owner_id: null,
-                  price: Number(String(item?.price || '0').replace(/[^
-\d.]/g, '') || 0),
+                  price: Number(String(item?.price || '0').replace(/[^\d.]/g, '') || 0),
                   original_price: undefined,
                   condition: 'used',
                   cover_image_url: String(item?.image_urls?.[0] || ''),
