@@ -50,7 +50,7 @@ export function createApp() {
       const status = (verification.data as any).status;
       if (status !== 'success') {
         console.warn('[Paystack] Transaction not successful:', reference, status);
-        return res.redirect(`/payment/failed?reference=${encodeURIComponent(reference)}`);
+        return res.redirect(`/checkout?payment=failed&reference=${encodeURIComponent(reference)}`);
       }
 
       // Try to authenticate the user via SDK session cookie
@@ -144,7 +144,7 @@ export function createApp() {
       }
 
       // Redirect to a success page (client can show order details by reference)
-      return res.redirect(`/payment/success?reference=${encodeURIComponent(reference)}`);
+      return res.redirect(`/checkout?payment=success&reference=${encodeURIComponent(reference)}`);
     } catch (err) {
       console.error('[Payment Callback] Verification error:', err);
       return res.status(500).send('Payment verification failed');

@@ -114,9 +114,63 @@ export function useProductById(productId: string) {
             .from('products')
             .select('*')
             .eq('id', productId)
-            .single();
+            .maybeSingle();
 
           if (productError) throw productError;
+
+          if (!productData) {
+            // Legacy fallback for numeric product routes that originated from older JSON catalog links.
+            const numericId = Number(productId);
+            if (Number.isFinite(numericId) && numericId > 0) {
+              const res = await fetch('/data/products.json');
+              if (!res.ok) {
+                throw new Error('Product not found');
+              }
+
+              const json = await res.json();
+              const flattened = Object.values(json as Record<string, any[]>)
+                .flat()
+                .map((item: any, idx: number) => ({
+                  id: String(idx + 1),
+                  title: String(item?.title || 'Product'),
+                  url: String(item?.url || ''),
+                  category_name: String(item?.category || 'General'),
+                  owner_id: null,
+                  price: Number(String(item?.price || '0').replace(/[^
+\d.]/g, '') || 0),
+                  original_price: undefined,
+                  condition: 'used',
+                  cover_image_url: String(item?.image_urls?.[0] || ''),
+                  brand: null,
+                  model: null,
+                  stock: 1,
+                  discount: null,
+                  part_number: null,
+                  item_specifics: null,
+                  created_at: new Date().toISOString(),
+                }));
+
+              const fallbackProduct = flattened[numericId - 1] as Product | undefined;
+              if (!fallbackProduct) {
+                throw new Error('Product not found');
+              }
+
+              setProduct(fallbackProduct);
+              setImages(
+                (json && Object.values(json as Record<string, any[]>).flat()[numericId - 1]?.image_urls || []).map(
+                  (url: string, i: number) => ({
+                    id: `legacy-${numericId}-${i}`,
+                    product_id: fallbackProduct.id,
+                    image_url: url,
+                    created_at: new Date().toISOString(),
+                  })
+                ) as ProductImage[]
+              );
+              return;
+            }
+
+            throw new Error('Product not found');
+          }
           
           console.log('[useProductById] Product fetched:', {
             id: productData?.id,

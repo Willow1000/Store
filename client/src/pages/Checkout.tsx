@@ -16,6 +16,27 @@ import { supabase } from '@/lib/supabase';
 import { getHighResImageUrl } from '@/lib/images';
 import { calculateShipping } from '@shared/shipping';
 
+const CHECKOUT_CART_SNAPSHOT_KEY = 'checkout-cart-snapshot-v1';
+
+function readCheckoutSnapshot(): CartItem[] {
+  try {
+    const raw = localStorage.getItem(CHECKOUT_CART_SNAPSHOT_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCheckoutSnapshot(items: CartItem[]) {
+  try {
+    localStorage.setItem(CHECKOUT_CART_SNAPSHOT_KEY, JSON.stringify(items));
+  } catch {
+    // Ignore storage issues and continue with in-memory checkout state.
+  }
+}
+
 const t = (_key: string, fallback: string) => fallback;
 
 type StateOption = {
@@ -132,7 +153,11 @@ export default function Checkout() {
   const [, navigate] = useLocation();
   const { user, isAuthenticated, loading: authLoading, sessionRestored } = useAuth();
   const { openAuthModal } = useAuthModal();
-  const { items: supabaseCartItems, clearCart: clearSupabaseCart } = useSupabaseCart(user?.id || null);
+  const {
+    items: supabaseCartItems,
+    isLoading: supabaseCartLoading,
+    clearCart: clearSupabaseCart,
+  } = useSupabaseCart(user?.id || null);
 
   // Require authentication for checkout
   useEffect(() => {
@@ -186,6 +211,25 @@ export default function Checkout() {
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const paymentState = params.get('payment');
+    const reference = params.get('reference');
+
+    if (paymentState === 'failed') {
+      toast.error(reference ? `Payment failed for reference ${reference}` : 'Payment failed');
+      setStep('review');
+      return;
+    }
+
+    if (paymentState === 'success') {
+      toast.success('Payment completed successfully');
+      navigate('/orders');
+    }
+  }, [navigate]);
+
   // Persist formData to localStorage
   useEffect(() => {
     try {
@@ -233,7 +277,17 @@ export default function Checkout() {
         image: item.product?.cover_image_url || '',
         quantity: item.quantity,
       }));
-      setCartItems(mapped);
+
+      if (mapped.length > 0) {
+        setCartItems(mapped);
+        writeCheckoutSnapshot(mapped);
+        return;
+      }
+
+      // If checkout returns from a failed/abandoned payment before cart hydration,
+      // keep showing the last known cart snapshot instead of dropping total to 0.00.
+      const snapshot = readCheckoutSnapshot();
+      setCartItems(snapshot);
       return;
     }
 
@@ -246,6 +300,7 @@ export default function Checkout() {
       quantity: item.quantity,
     }));
     setCartItems(items);
+    writeCheckoutSnapshot(items);
   }, [isAuthenticated, supabaseCartItems]);
 
   // Keep shipping form synced when user becomes available after refresh.
@@ -462,6 +517,8 @@ export default function Checkout() {
   const handlePaystackPayment = async () => {
     setIsProcessing(true);
     try {
+      writeCheckoutSnapshot(cartItems);
+
       // Tutorial 2: Generate unique reference (Tutorial 3 UUID approach)
       const paymentReference = generateUUID();
 
@@ -537,6 +594,11 @@ export default function Checkout() {
   };
 
   const handlePayment = async () => {
+    if (cartItems.length === 0 || total <= 0) {
+      toast.error('Your cart is empty. Please add items before checkout.');
+      return;
+    }
+
     if (!validateShipping()) {
       return;
     }
@@ -556,6 +618,57 @@ export default function Checkout() {
 
   if (!isAuthenticated && !sessionRestored) {
     return null; // Show nothing while session is being restored
+  }
+
+  if (authLoading || (isAuthenticated && supabaseCartLoading && cartItems.length === 0)) {
+    return (
+      <div className="min-h-screen bg-white w-full overflow-x-hidden">
+        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-12 lg:py-16 animate-pulse">
+          <div className="mb-8">
+            <div className="h-10 w-64 bg-gray-200 rounded mb-3" />
+            <div className="h-4 w-72 bg-gray-100 rounded" />
+          </div>
+
+          <div className="grid gap-6 sm:gap-8 grid-cols-1 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-4">
+              <div className="h-24 bg-gray-100 rounded border border-gray-200" />
+              <div className="bg-white border border-gray-200 rounded p-6 space-y-4">
+                <div className="h-7 w-48 bg-gray-200 rounded" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="h-11 bg-gray-100 rounded" />
+                  <div className="h-11 bg-gray-100 rounded" />
+                </div>
+                <div className="h-11 bg-gray-100 rounded" />
+                <div className="h-11 bg-gray-100 rounded" />
+                <div className="h-11 bg-gray-100 rounded" />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="h-11 bg-gray-100 rounded" />
+                  <div className="h-11 bg-gray-100 rounded" />
+                  <div className="h-11 bg-gray-100 rounded" />
+                </div>
+                <div className="h-12 bg-gray-200 rounded" />
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded p-6 space-y-4 h-fit">
+              <div className="h-6 w-36 bg-gray-200 rounded" />
+              <div className="space-y-3">
+                <div className="h-16 bg-gray-100 rounded" />
+                <div className="h-16 bg-gray-100 rounded" />
+              </div>
+              <div className="h-px bg-gray-200" />
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-100 rounded" />
+                <div className="h-4 bg-gray-100 rounded" />
+                <div className="h-4 bg-gray-100 rounded" />
+              </div>
+              <div className="h-px bg-gray-200" />
+              <div className="h-8 w-32 bg-gray-200 rounded" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
