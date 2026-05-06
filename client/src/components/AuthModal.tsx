@@ -46,17 +46,13 @@ export default function AuthModal() {
     if (/^https?:\/\//i.test(configuredRedirect)) {
       try {
         const configuredUrl = new URL(configuredRedirect);
-        const configuredHost = configuredUrl.hostname.toLowerCase();
-        const localhostHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+        const runtimeUrl = new URL(runtimeOrigin);
 
-        // Keep path/query/hash from config, but avoid pinning production redirects to localhost.
-        if (localhostHosts.has(configuredHost)) {
-          const runtimeUrl = new URL(runtimeOrigin);
-          configuredUrl.protocol = runtimeUrl.protocol;
-          configuredUrl.host = runtimeUrl.host;
-        }
-
-        return configuredUrl.href;
+        // Always use the current origin and keep only path/query/hash from configured values.
+        return new URL(
+          `${configuredUrl.pathname}${configuredUrl.search}${configuredUrl.hash}`,
+          `${runtimeUrl.protocol}//${runtimeUrl.host}`,
+        ).href;
       } catch {
         return `${runtimeOrigin}/api/oauth/callback`;
       }
