@@ -37,28 +37,45 @@ export default function AuthModal() {
 
   const oauthRedirectUrl = (() => {
     const configuredRedirect = import.meta.env.VITE_SUPABASE_OAUTH_REDIRECT_URL?.trim();
+    const configuredAppUrl = import.meta.env.VITE_APP_URL?.trim();
     const runtimeOrigin = window.location.origin;
+    const defaultCallbackPath = '/auth/callback';
+
+    const baseOrigin = (() => {
+      if (!configuredAppUrl) return runtimeOrigin;
+      try {
+        return new URL(configuredAppUrl).origin;
+      } catch {
+        return runtimeOrigin;
+      }
+    })();
 
     if (!configuredRedirect) {
-      return `${runtimeOrigin}/api/oauth/callback`;
+      return `${baseOrigin}${defaultCallbackPath}`;
     }
 
     if (/^https?:\/\//i.test(configuredRedirect)) {
       try {
         const configuredUrl = new URL(configuredRedirect);
-        const runtimeUrl = new URL(runtimeOrigin);
+        const baseUrl = new URL(baseOrigin);
+        const configuredPath = configuredUrl.pathname === '/' ? defaultCallbackPath : configuredUrl.pathname;
 
         // Always use the current origin and keep only path/query/hash from configured values.
         return new URL(
-          `${configuredUrl.pathname}${configuredUrl.search}${configuredUrl.hash}`,
-          `${runtimeUrl.protocol}//${runtimeUrl.host}`,
+          `${configuredPath}${configuredUrl.search}${configuredUrl.hash}`,
+          `${baseUrl.protocol}//${baseUrl.host}`,
         ).href;
       } catch {
-        return `${runtimeOrigin}/api/oauth/callback`;
+        return `${baseOrigin}${defaultCallbackPath}`;
       }
     }
 
-    return new URL(configuredRedirect.startsWith("/") ? configuredRedirect : `/${configuredRedirect}`, runtimeOrigin).href;
+    const resolvedRelative = new URL(configuredRedirect.startsWith('/') ? configuredRedirect : `/${configuredRedirect}`, baseOrigin);
+    if (resolvedRelative.pathname === '/') {
+      return `${baseOrigin}${defaultCallbackPath}`;
+    }
+
+    return resolvedRelative.href;
   })();
 
   const handleGoogleSignIn = async () => {
