@@ -76,6 +76,19 @@ export default function Header() {
           <BrandLogo className="h-8 sm:h-10 w-auto max-w-[180px]" />
         </Link>
 
+        {/* Desktop Navigation */}
+        <div className="hidden lg:flex items-center gap-8 flex-1 justify-center mx-4">
+          <Link href="/products">
+            <a className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Products</a>
+          </Link>
+          <Link href="/about">
+            <a className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">About</a>
+          </Link>
+          <Link href="/contact">
+            <a className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Contact</a>
+          </Link>
+        </div>
+
         {/* Right Actions */}
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           {/* Cart Icon - Only show if authenticated */}
@@ -187,6 +200,11 @@ export default function Header() {
                 </Link>
               </>
             )}
+            <Link href="/about">
+              <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                About
+              </a>
+            </Link>
             <Link href="/contact">
               <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
                 Contact

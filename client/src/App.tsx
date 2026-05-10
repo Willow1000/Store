@@ -26,6 +26,7 @@ import Returns from "./pages/Returns";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Cookies from "./pages/Cookies";
+import About from "./pages/About";
 import Accessibility from "./pages/Accessibility";
 import FAQ from "./pages/FAQ";
 
@@ -36,6 +37,7 @@ function Router() {
       <Route path={"/auth/callback"} component={AuthCallback} />
       <Route path={"/products"} component={Products} />
       <Route path={"/product/:id"} component={ProductDetail} />
+      <Route path={"/about"} component={About} />
       <Route path={"/cart"} component={Cart} />
       <Route path={"/checkout"} component={Checkout} />
       <Route path={"/account"} component={Account} />
