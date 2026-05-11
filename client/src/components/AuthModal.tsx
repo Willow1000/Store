@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Mail, Lock, User as UserIcon, Phone, MapPin, Eye, EyeOff } from 'lucide-react';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -18,6 +18,17 @@ export default function AuthModal() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginCaptchaToken, setLoginCaptchaToken] = useState<string | null>(null);
   const [signupCaptchaToken, setSignupCaptchaToken] = useState<string | null>(null);
+  const [lastSignupAttemptEmail, setLastSignupAttemptEmail] = useState<string>('');
+  const [signupCooldown, setSignupCooldown] = useState<number>(0);
+
+  // Cooldown timer effect
+  useEffect(() => {
+    if (signupCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setSignupCooldown(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [signupCooldown]);
 
   const [loginData, setLoginData] = useState({
     email: '',
@@ -185,6 +196,12 @@ export default function AuthModal() {
       return;
     }
 
+    // Check if same email is being retried too quickly (cooldown)
+    if (lastSignupAttemptEmail === signupData.email && signupCooldown > 0) {
+      toast.error(`Please wait ${signupCooldown} seconds before trying again with this email.`);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -200,7 +217,18 @@ export default function AuthModal() {
       });
 
       if (error) {
-        toast.error(error.message);
+        // Check for specific rate limiting error
+        if (error.message?.toLowerCase().includes('email limit')) {
+          setLastSignupAttemptEmail(signupData.email);
+          setSignupCooldown(30); // 30 second cooldown
+          toast.error('Too many signup attempts for this email. Please try again in 30 seconds, or use a different email address.');
+        } else if (error.message?.toLowerCase().includes('already registered')) {
+          toast.error('This email is already registered. Please sign in instead.');
+          setMode('login');
+          setLoginData({ email: signupData.email, password: '' });
+        } else {
+          toast.error(error.message || 'Signup failed. Please try again.');
+        }
       } else if (data.user) {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData?.user) {
@@ -238,6 +266,8 @@ export default function AuthModal() {
           address: '',
         });
         setSignupCaptchaToken(null);
+        setLastSignupAttemptEmail('');
+        setSignupCooldown(0);
       }
     } catch (error) {
       toast.error('Signup failed. Please try again.');
@@ -505,11 +535,11 @@ export default function AuthModal() {
 
               <button
                 type="submit"
-                disabled={isLoading || !signupCaptchaToken}
+                disabled={isLoading || !signupCaptchaToken || signupCooldown > 0}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 md:py-2.5 rounded-lg text-sm md:text-base transition-all duration-200 mt-4 md:mt-6"
-                title={!signupCaptchaToken ? 'Please complete the security check first' : ''}
+                title={!signupCaptchaToken ? 'Please complete the security check first' : (signupCooldown > 0 ? `Please wait ${signupCooldown}s before trying again` : '')}
               >
-                {isLoading ? 'Creating Account...' : !signupCaptchaToken ? 'Complete security check to sign up' : 'Create Account'}
+                {isLoading ? 'Creating Account...' : !signupCaptchaToken ? 'Complete security check to sign up' : (signupCooldown > 0 ? `Try again in ${signupCooldown}s` : 'Create Account')}
               </button>
 
               <RecaptchaCheckbox
@@ -521,6 +551,13 @@ export default function AuthModal() {
               <p className="text-center text-xs md:text-xs text-gray-600 mt-3">
                 By signing up, you agree to our Terms of Service and Privacy Policy
               </p>
+
+              {signupCooldown > 0 && (
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                  <p className="font-semibold">Rate limited for this email</p>
+                  <p>Too many signup attempts detected. Wait {signupCooldown} seconds before retrying, or try a different email address.</p>
+                </div>
+              )}
             </form>
           )}
 

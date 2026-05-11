@@ -1,4 +1,5 @@
 import { SEOHead } from '@/components/SEOHead';
+import { AboutHeroSlideshow } from '@/components/AboutHeroSlideshow';
 import { Link } from 'wouter';
 import { ArrowRight, Truck, Shield, Users, Zap } from 'lucide-react';
 
@@ -12,13 +13,8 @@ export default function About() {
       />
       
       <div className="min-h-screen bg-white">
-        {/* Hero Section */}
-        <section className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-12 sm:py-16 md:py-20 lg:py-24 px-3 sm:px-4 md:px-6">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6">About MotorVault</h1>
-            <p className="text-lg sm:text-xl text-gray-300 mb-8">Your trusted partner for quality automotive parts and accessories worldwide</p>
-          </div>
-        </section>
+        {/* Hero Section with Image Carousel */}
+        <AboutHeroSlideshow />
 
         {/* Main Content */}
         <section className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 py-12 sm:py-16 md:py-20">

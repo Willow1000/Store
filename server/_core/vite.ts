@@ -16,18 +16,21 @@ export async function setupVite(app: Express, server: Server) {
   try {
     // Only import vite/config if we're actually in development
     const viteModule = await import("vite");
-    const { createServer: createViteServer } = viteModule;
+    const { createServer: createViteServer, mergeConfig } = viteModule;
     
-    // Minimal config without Tailwind/heavy plugins
-    const viteConfig = {
-      root: path.resolve(import.meta.dirname, "../.."),
+    // Load the main vite config
+    const mainViteConfig = (await import("../../vite.config.ts")).default;
+    
+    // Create middleware-specific config
+    const middlewareConfig = {
       server: {
         middlewareMode: true,
         hmr: { server },
-        allowedHosts: true as const,
       },
-      appType: "custom",
     };
+    
+    // Merge the main config with middleware overrides
+    const viteConfig = mergeConfig(mainViteConfig, middlewareConfig, false);
 
     const vite = await createViteServer(viteConfig);
     console.log("[Vite] Vite server created successfully");
