@@ -117,7 +117,7 @@ export function useAuth(options?: UseAuthOptions) {
             console.warn('[useAuth] Failed to clear browser storage on sign out', storageError);
           }
         } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          if (event === 'SIGNED_IN') {
+          if (event === 'SIGNED_IN' && !getSessionStartedAt()) {
             setSessionStartedAt(Date.now());
           }
 

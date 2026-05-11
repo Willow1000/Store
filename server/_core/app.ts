@@ -1,12 +1,12 @@
 import express, { type Express } from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { registerOAuthRoutes } from "./oauth";
 import { verifyTransaction, initializeTransaction } from "../paystack";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
+import { getDb, createOrder, createPayment } from "../db";
 
 function getRequestOrigin(req: express.Request): string | null {
   const forwardedProto = req.header('x-forwarded-proto')?.split(',')[0]?.trim();
@@ -17,10 +17,6 @@ function getRequestOrigin(req: express.Request): string | null {
   if (!protocol || !host) return null;
   return `${protocol}://${host}`;
 }
-
-const supabaseAdmin = ENV.supabaseUrl && (ENV.supabaseServiceKey || ENV.supabaseAnonKey)
-  ? createSupabaseClient(ENV.supabaseUrl, ENV.supabaseServiceKey || ENV.supabaseAnonKey || '')
-  : null;
 
 export function createApp() {
   const app = express();
@@ -59,88 +55,82 @@ export function createApp() {
         const user = await sdk.authenticateRequest(req as any);
         if (user && (user as any).id) userId = (user as any).id;
       } catch (authErr) {
-        console.warn('[Payment Callback] User not authenticated via SDK session, skipping order creation');
+        console.warn('[Payment Callback] User not authenticated via SDK session');
       }
 
-      // Insert order into Supabase orders table (user_id optional)
+      if (!userId) {
+        console.error('[Payment Callback] Cannot create order without authenticated user');
+        return res.redirect(`/checkout?payment=needs_auth&reference=${encodeURIComponent(reference)}`);
+      }
+
+      const paystackData = verification.data as any;
+      const amountCents = paystackData.amount as number;
+      const totalAmount = Number((amountCents / 100).toFixed(2));
+
+      let paymentId: string | null = null;
+      let orderId: number | null = null;
+
+      // STEP 1: Record payment details FIRST
       try {
-        const amountKobo = (verification.data as any).amount as number;
-        const totalAmount = (amountKobo / 100).toFixed(2);
-        const orderRow: any = {
-          user_id: null,
-          total_amount: totalAmount,
-          currency: (verification.data as any).currency || 'USD',
+        const paymentRecord = await createPayment(0, userId, {
+          provider: 'paystack',
+          reference: paystackData.reference,
+          amount: totalAmount as any,
+          currency: paystackData.currency || 'USD',
+          status: paystackData.status,
+          channel: paystackData.channel || 'card',
+          gatewayResponse: paystackData.gateway_response,
+          authorizationCode: paystackData.authorization?.authorization_code,
+          cardBin: paystackData.authorization?.bin,
+          cardLast4: paystackData.authorization?.last4,
+          cardBrand: paystackData.authorization?.brand,
+          bank: paystackData.authorization?.bank,
+          ipAddress: paystackData.ip_address,
+          metadata: paystackData.metadata ? JSON.stringify(paystackData.metadata) : null,
+          fees: (paystackData.fees ? Number(paystackData.fees) / 100 : 0) as any,
+          paidAt: paystackData.paid_at ? new Date(paystackData.paid_at) : null,
+        });
+
+        console.log('[Payment Callback] Payment recorded successfully:', { 
+          reference: paystackData.reference, 
+          provider: 'paystack', 
+          status: paystackData.status,
+          amount: totalAmount 
+        });
+        
+      } catch (paymentErr) {
+        console.error('[Payment Callback] Failed to record payment:', paymentErr);
+        return res.status(500).send('Payment verified but failed to record payment details');
+      }
+
+      // STEP 2: Create order AFTER payment is recorded
+      try {
+        const orderNumber = `PKS-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        
+        const result = await createOrder(userId, {
+          orderNumber,
           status: 'confirmed',
-          created_at: new Date().toISOString(),
-        };
+          subtotal: String(totalAmount),
+          shippingCost: '0',
+          tax: '0',
+          total: String(totalAmount),
+          paymentMethod: 'paystack',
+          paystackPaymentId: paystackData.reference,
+          shippingAddress: null,
+          billingAddress: null,
+          trackingNumber: null,
+        });
 
-        // If SDK-authenticated user exists, attempt to map to a Supabase profile id
-        if (userId && supabaseAdmin) {
-          // The SDK user id may not match Supabase profile id; try to find a profile by email from verification
-          const email = (verification.data as any).customer?.email;
-          if (email) {
-            const { data: profiles } = await supabaseAdmin.from('profiles').select('id').eq('email', email).limit(1);
-            if (profiles && (profiles as any).length > 0) {
-              orderRow.user_id = (profiles as any)[0].id;
-            }
-          }
-        }
-
-        if (supabaseAdmin) {
-          // Insert order and return its id
-          const { data: insertedOrders, error: insertErr } = await supabaseAdmin
-            .from('orders')
-            .insert(orderRow)
-            .select('id')
-            .maybeSingle();
-
-          if (insertErr) {
-            console.error('[Payment Callback] Failed to insert order into Supabase:', insertErr.message);
-            return res.status(500).send('Payment verified but failed to record order');
-          }
-
-          const orderId = insertedOrders?.id;
-
-          // If we could resolve a profile user, read their cart and persist order_items
-          if (orderRow.user_id && orderId) {
-            try {
-              const { data: cartItems, error: cartErr } = await supabaseAdmin
-                .from('cart_items')
-                .select('id, product_id, quantity, product:products(*)')
-                .eq('user_id', orderRow.user_id);
-
-              if (cartErr) {
-                console.warn('[Payment Callback] Failed to fetch cart items:', cartErr.message);
-              } else if (Array.isArray(cartItems) && cartItems.length > 0) {
-                const itemsToInsert = (cartItems as any[]).map((ci) => ({
-                  order_id: orderId,
-                  product_id: ci.product_id,
-                  quantity: ci.quantity || 1,
-                  price: String((ci.product && ci.product.price) ?? 0),
-                  created_at: new Date().toISOString(),
-                }));
-
-                const { error: oiErr } = await supabaseAdmin.from('order_items').insert(itemsToInsert);
-                if (oiErr) {
-                  console.error('[Payment Callback] Failed to insert order_items:', oiErr.message);
-                } else {
-                  // Clear user's cart
-                  const { error: clearErr } = await supabaseAdmin.from('cart_items').delete().eq('user_id', orderRow.user_id);
-                  if (clearErr) {
-                    console.warn('[Payment Callback] Failed to clear cart for user:', clearErr.message);
-                  }
-                }
-              }
-            } catch (cartErr) {
-              console.error('[Payment Callback] Error persisting order items:', cartErr);
-            }
-          }
-        } else {
-          console.warn('[Payment Callback] Supabase admin client not configured; skipping order insert');
-        }
-      } catch (dbErr) {
-        console.error('[Payment Callback] Failed to create order in Supabase:', dbErr);
-        return res.status(500).send('Payment verified but failed to create order');
+        console.log('[Payment Callback] Order created successfully:', { 
+          userId, 
+          orderNumber, 
+          totalAmount, 
+          reference: paystackData.reference
+        });
+        
+      } catch (orderErr) {
+        console.error('[Payment Callback] Failed to create order:', orderErr);
+        return res.status(500).send('Payment recorded but failed to create order');
       }
 
       // Redirect to a success page (client can show order details by reference)

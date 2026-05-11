@@ -171,6 +171,34 @@ export const notifications = mysqlTable("notifications", {
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
 
+// Payments Table - Records all payment transactions from Paystack/Stripe/etc
+export const payments = mysqlTable("payments", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull(),
+  userId: int("userId").notNull(),
+  provider: varchar("provider", { length: 50 }).notNull(), // 'paystack', 'stripe', 'mpesa', 'paypal'
+  reference: varchar("reference", { length: 255 }).notNull().unique(), // Paystack reference or Stripe intent ID
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Amount in currency smallest unit
+  currency: varchar("currency", { length: 3 }).notNull().default('USD'), // Currency code
+  status: varchar("status", { length: 50 }).notNull(), // 'success', 'pending', 'failed'
+  channel: varchar("channel", { length: 50 }), // 'card', 'bank_transfer', 'ussd', 'mobile_money'
+  gatewayResponse: text("gatewayResponse"), // Raw response from payment gateway
+  authorizationCode: varchar("authorizationCode", { length: 255 }), // Auth code from card/bank
+  cardBin: varchar("cardBin", { length: 10 }), // Card BIN for analytics
+  cardLast4: varchar("cardLast4", { length: 4 }), // Last 4 digits of card
+  cardBrand: varchar("cardBrand", { length: 50 }), // visa, mastercard, etc
+  bank: varchar("bank", { length: 255 }), // Bank name for bank transfers
+  ipAddress: varchar("ipAddress", { length: 45 }), // IP address of payer
+  metadata: json("metadata"), // Custom metadata stored with transaction
+  fees: decimal("fees", { precision: 10, scale: 2 }), // Processing fees
+  paidAt: timestamp("paidAt"), // When payment was confirmed
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = typeof payments.$inferInsert;
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   seller: one(sellers, {

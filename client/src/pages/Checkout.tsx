@@ -143,10 +143,11 @@ interface FormData {
 }
 
 interface PaymentMethod {
-  id: 'visa' | 'mastercard' | 'applePay';
+  id: 'visa' | 'mastercard' | 'applePay' | 'googlePay';
   name: string;
   icon: React.ReactNode;
   description: string;
+  disabled?: boolean;
 }
 
 export default function Checkout() {
@@ -183,7 +184,7 @@ export default function Checkout() {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   
-  const [selectedPayment, setSelectedPayment] = useState<'visa' | 'mastercard' | 'applePay'>('visa');
+  const [selectedPayment, setSelectedPayment] = useState<'visa' | 'mastercard' | 'applePay' | 'googlePay'>('visa');
 
   const [formData, setFormData] = useState<FormData>(() => {
     try {
@@ -374,27 +375,34 @@ export default function Checkout() {
   ) / 100;
 
   const shipping = calculateShipping(subtotal);
-  const tax = Math.round(subtotal * 0.1 * 100) / 100; // Tax rounded to 2 decimal places
-  const total = Math.round((subtotal + shipping + tax) * 100) / 100; // Ensure final total is precise
+  const total = Math.round((subtotal + shipping) * 100) / 100; // Ensure final total is precise
 
   const paymentMethods: PaymentMethod[] = [
     {
       id: 'visa',
       name: 'Visa',
-      icon: <img src="https://www.svgrepo.com/show/76111/visa-pay-logo.svg" alt="Visa" className="w-8 h-8 object-contain" />,
+      icon: <img src="https://www.svgrepo.com/show/76111/visa-pay-logo.svg" alt="Visa logo" className="w-8 h-8 object-contain" onError={(e) => { e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%221a1f71%22 width=%2248%22 height=%2248%22/%3E%3Ctext x=%2724%22 y=%2726%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2218%22 font-weight=%22bold%22%3EV%3C/text%3E%3C/svg%3E'; }} />,
       description: 'Pay securely with your Visa card through Paystack'
     },
     {
       id: 'mastercard',
       name: 'Mastercard',
-      icon: <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSXnXkBmw2uSAI7UPnfI8ZWleOP_9jguz46rQ&s" alt="Mastercard" className="w-8 h-8 object-contain" />,
+      icon: <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSXnXkBmw2uSAI7UPnfI8ZWleOP_9jguz46rQ&s" alt="Mastercard logo" className="w-8 h-8 object-contain" onError={(e) => { e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%22ff5f00%22 width=%2224%22 height=%2248%22/%3E%3Crect fill=%22d2001d%22 x=%2724%22 width=%2224%22 height=%2248%22/%3E%3C/svg%3E'; }} />,
       description: 'Pay securely with your Mastercard through Paystack'
     },
     {
       id: 'applePay',
       name: 'Apple Pay',
-      icon: <img src="https://cdn-icons-png.flaticon.com/512/5968/5968500.png" alt="Apple Pay" className="w-8 h-8 object-contain" />,
-      description: 'Use Apple Pay on supported devices through Paystack'
+      icon: <img src="https://cdn-icons-png.flaticon.com/512/5968/5968500.png" alt="Apple Pay logo" className="w-8 h-8 object-contain" onError={(e) => { e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%22000000%22 width=%2248%22 height=%2248%22/%3E%3Ctext x=%2224%22 y=%2726%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2218%22 font-weight=%22bold%22%3E%26%23xf179;%3C/text%3E%3C/svg%3E'; }} />,
+      description: 'Coming soon to your region',
+      disabled: true
+    },
+    {
+      id: 'googlePay',
+      name: 'Google Pay',
+      icon: <iframe src="https://assets.pinterest.com/ext/embed.html?id=333547916170433736" height="241" width="345" frameBorder="0" scrolling="no" title="Google Pay logo"></iframe>,
+      description: 'Coming soon to your region',
+      disabled: true
     }
   ];
 
@@ -610,7 +618,6 @@ export default function Checkout() {
     switch (selectedPayment) {
       case 'visa':
       case 'mastercard':
-      case 'applePay':
         await handleCardPayment();
         break;
     }
@@ -1000,19 +1007,32 @@ export default function Checkout() {
                       <button
                         key={method.id}
                         onClick={() => {
+                          if (method.disabled) {
+                            toast.info('Coming soon to your region');
+                            return;
+                          }
                           setSelectedPayment(method.id);
                         }}
+                        disabled={method.disabled}
                         className={`p-4 sm:p-6 rounded border transition-all text-left ${
-                          selectedPayment === method.id
+                          method.disabled 
+                            ? 'border-gray-200 bg-gray-50 text-gray-500 opacity-60 cursor-not-allowed'
+                            : selectedPayment === method.id
                             ? 'border-black bg-black text-white'
                             : 'border-gray-300 hover:border-gray-400 bg-white text-black'
                         }`}
                       >
-                        <div className={`flex items-center gap-3 mb-2 ${selectedPayment === method.id ? 'opacity-100' : 'opacity-70'}`}>
+                        <div className={`flex items-center gap-3 mb-2 ${selectedPayment === method.id && !method.disabled ? 'opacity-100' : 'opacity-70'}`}>
                           {method.icon}
                           <h3 className="font-bold">{method.name}</h3>
                         </div>
-                        <p className={`text-sm ${selectedPayment === method.id ? 'text-gray-100' : 'text-gray-600'}`}>
+                        <p className={`text-sm ${
+                          selectedPayment === method.id && !method.disabled
+                            ? 'text-gray-100' 
+                            : method.disabled
+                            ? 'text-gray-500'
+                            : 'text-gray-600'
+                        }`}>
                           {method.description}
                         </p>
                       </button>
@@ -1138,13 +1158,20 @@ export default function Checkout() {
                 ) : (
                   cartItems.map((item, idx) => (
                     <div key={idx} className="flex gap-3">
-                      {item.image && (
+                      {item.image ? (
                         <img
                           src={getHighResImageUrl(item.image)}
                           alt={item.title}
                           className="h-16 w-16 rounded object-contain bg-gray-100 flex-shrink-0"
                           crossOrigin="anonymous"
+                          onError={(e) => { e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%2220%22%3ENo image%3C/text%3E%3C/svg%3E'; }}
                         />
+                      ) : (
+                        <div className="h-16 w-16 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
@@ -1169,10 +1196,6 @@ export default function Checkout() {
                   <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-medium text-gray-900'}>
                     {shipping === 0 ? t('checkout.free', 'FREE') : `$${shipping.toFixed(2)}`}
                   </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">{t('checkout.tax', 'Tax')}</span>
-                  <span className="font-medium text-gray-900">{`$${tax.toFixed(2)}`}</span>
                 </div>
               </div>
 

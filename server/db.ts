@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, cartItems, orders, notifications, categories, products, productVariants, InsertOrder, InsertNotification, wishlistItems } from "../drizzle/schema";
+import { InsertUser, users, cartItems, orders, notifications, categories, products, productVariants, InsertOrder, InsertNotification, wishlistItems, payments, InsertPayment } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -192,12 +192,25 @@ export async function getUserOrders(userId: number) {
   return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
 }
 
-export async function createOrder(userId: number, data: InsertOrder) {
+export async function createOrder(userId: number, data: Omit<InsertOrder, 'userId'>) {
   const db = await getDb();
   if (!db) return null;
   
   const result = await db.insert(orders).values({
     ...data,
+    userId,
+  });
+  return result;
+}
+
+// Payment queries
+export async function createPayment(orderId: number, userId: number, data: Omit<InsertPayment, 'orderId' | 'userId'>) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.insert(payments).values({
+    ...data,
+    orderId,
     userId,
   });
   return result;
