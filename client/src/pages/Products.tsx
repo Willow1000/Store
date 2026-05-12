@@ -35,16 +35,15 @@ export default function Products() {
   const [modelFilter, setModelFilter] = useState<string[]>([]);
   const [conditionFilter, setConditionFilter] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [priceRange, setPriceRange] = useState([0, 10000]);
+  const [priceRange, setPriceRange] = useState([0, 20000]);
   const [showFilters, setShowFilters] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
   const [dealsOnly, setDealsOnly] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(false);
 
   const { user, isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthModal();
-  const { products: allProducts, isLoading } = useProducts(1, 300);
+  const { products: allProducts, isLoading } = useProducts(1, -1);
   const { results: searchResults, isLoading: isSearching } = useSearchProducts(searchQuery);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
   const { categories, isLoading: categoriesLoading } = useCategories();
@@ -60,6 +59,12 @@ export default function Products() {
         normalizeCategoryValue(String(c.name ?? '')) === normalizedFilter
     ) || null;
   }, [categories, categoryFilter]);
+
+  // Debug: Log all products fetched
+  useEffect(() => {
+    console.log('[Products Page] All products loaded:', allProducts?.length || 0);
+    console.log('[Products Page] All products data:', allProducts);
+  }, [allProducts]);
 
   const selectedCategoryName = normalizeCategoryValue(String(selectedCategory?.name ?? ''));
   const selectedCategorySlug = normalizeCategoryValue(String(selectedCategory?.slug ?? ''));
@@ -91,14 +96,17 @@ export default function Products() {
 
   // Prefer server-filtered category results when a category is selected.
   const baseProducts = searchQuery ? searchResults : categoryFilter ? categoryProducts : allProducts;
+  console.log('[Products Page] Base products (after filtering logic):', baseProducts?.length || 0, baseProducts);
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
     if (!baseProducts) return [];
 
     let filtered = baseProducts.filter((p) => {
-      const price = parseFloat(String(p.price));
-      const priceMatch = price >= priceRange[0] && price <= priceRange[1];
+      const price = p.price !== null && p.price !== undefined 
+        ? parseFloat(String(p.price))
+        : null;
+      const priceMatch = price !== null && !isNaN(price) && price >= priceRange[0] && price <= priceRange[1];
       
       // Get the category name from the selected slug
       let categoryMatch = true;
@@ -138,7 +146,7 @@ export default function Products() {
       // In stock filter
       let stockMatch = true;
       if (inStockOnly) {
-        stockMatch = p.stock > 0;
+        stockMatch = (p.stock || 0) > 0;
       }
 
       // Deals filter - product has discount field
@@ -186,9 +194,8 @@ export default function Products() {
     return filtered;
   }, [baseProducts, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly, brandFilter, modelFilter, conditionFilter, inStockOnly]);
 
-  const itemsPerPage = 12;
-  const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  // Display all products without pagination
+  const allDisplayedProducts = filteredProducts;
 
   const shouldShowPageSkeleton =
     (isLoading && allProducts.length === 0) ||
@@ -216,7 +223,6 @@ export default function Products() {
               <button
                 onClick={() => {
                   setCategoryFilter('');
-                  setCurrentPage(1);
                   updateCategoryInUrl('');
                 }}
                 className="text-xs text-gray-500 hover:text-gray-700 ml-2"
@@ -259,7 +265,6 @@ export default function Products() {
                       onChange={(e) => {
                         const nextValue = e.target.value;
                         setCategoryFilter(nextValue);
-                        setCurrentPage(1);
                         updateCategoryInUrl(nextValue);
                       }}
                       className="w-4 h-4 cursor-pointer"
@@ -274,9 +279,10 @@ export default function Products() {
                     categories.map((cat) => {
                       const categoryValue = String(cat.slug || cat.name || '');
                       const normalizedCategoryValue = normalizeCategoryValue(categoryValue);
+                      const normalizedCategoryFilter = normalizeCategoryValue(categoryFilter);
                       const isSelected =
-                        categoryQueryValue === normalizedCategoryValue ||
-                        categoryQueryValue === normalizeCategoryValue(String(cat.name ?? ''));
+                        normalizedCategoryFilter === normalizedCategoryValue ||
+                        normalizedCategoryFilter === normalizeCategoryValue(String(cat.name ?? ''));
                       
                       return (
                         <label 
@@ -295,7 +301,6 @@ export default function Products() {
                             onChange={(e) => {
                               const nextValue = e.target.value;
                               setCategoryFilter(nextValue);
-                              setCurrentPage(1);
                               updateCategoryInUrl(nextValue);
                             }}
                             className="w-4 h-4 cursor-pointer"
@@ -329,7 +334,6 @@ export default function Products() {
                             } else {
                               setBrandFilter(brandFilter.filter(b => b !== brand));
                             }
-                            setCurrentPage(1);
                           }}
                           className="w-4 h-4 cursor-pointer"
                         />
@@ -361,7 +365,6 @@ export default function Products() {
                             } else {
                               setModelFilter(modelFilter.filter(m => m !== model));
                             }
-                            setCurrentPage(1);
                           }}
                           className="w-4 h-4 cursor-pointer"
                         />
@@ -396,7 +399,6 @@ export default function Products() {
                             } else {
                               setConditionFilter(conditionFilter.filter(c => c !== condition));
                             }
-                            setCurrentPage(1);
                           }}
                           disabled={!hasProducts}
                           className="w-4 h-4 cursor-pointer"
@@ -417,7 +419,6 @@ export default function Products() {
                     checked={inStockOnly}
                     onChange={(e) => {
                       setInStockOnly(e.target.checked);
-                      setCurrentPage(1);
                     }}
                     className="w-4 h-4 cursor-pointer"
                   />
@@ -432,13 +433,12 @@ export default function Products() {
                     <input
                       type="range"
                       min="0"
-                      max="10000"
+                      max="20000"
                       value={priceRange[0]}
                       onChange={(e) => {
                         const newMin = parseInt(e.target.value);
                         if (newMin <= priceRange[1]) {
                           setPriceRange([newMin, priceRange[1]]);
-                          setCurrentPage(1);
                         }
                       }}
                       className="w-full"
@@ -449,13 +449,12 @@ export default function Products() {
                     <input
                       type="range"
                       min="0"
-                      max="10000"
+                      max="20000"
                       value={priceRange[1]}
                       onChange={(e) => {
                         const newMax = parseInt(e.target.value);
                         if (newMax >= priceRange[0]) {
                           setPriceRange([priceRange[0], newMax]);
-                          setCurrentPage(1);
                         }
                       }}
                       className="w-full"
@@ -473,7 +472,6 @@ export default function Products() {
                     checked={dealsOnly}
                     onChange={(e) => {
                       setDealsOnly(e.target.checked);
-                      setCurrentPage(1);
                     }}
                     className="w-4 h-4 cursor-pointer"
                   />
@@ -488,7 +486,6 @@ export default function Products() {
                   value={sortBy}
                   onChange={(e) => {
                     setSortBy(e.target.value as SortOption);
-                    setCurrentPage(1);
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
                 >
@@ -520,7 +517,6 @@ export default function Products() {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setCurrentPage(1);
                 }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -528,15 +524,16 @@ export default function Products() {
 
             {/* Products Count */}
             <div className="mb-4 text-sm text-gray-600">
-              Showing {paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to{' '}
-              {Math.min(currentPage * itemsPerPage, filteredProducts.length)} of {filteredProducts.length} products
+              Showing {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
             </div>
 
             {/* Products Grid */}
-            {paginatedProducts.length > 0 ? (
+            {allDisplayedProducts.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-4">
-                {paginatedProducts.map((product, idx) => {
-                  const price = parseFloat(String(product.price));
+                {allDisplayedProducts.map((product, idx) => {
+                  const price = product.price !== null && product.price !== undefined 
+                    ? parseFloat(String(product.price))
+                    : 0;
                   const discount = product.discount ? parseFloat(String(product.discount)) : null;
                   const discountPercentage = discount ? Math.round(((discount - price) / discount) * 100) : 0;
                   const stock = Number(product.stock ?? 0);
@@ -626,80 +623,7 @@ export default function Products() {
               </div>
             )}
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-2">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Previous
-                </button>
-                {/* Mobile: Show limited pages */}
-                <div className="md:hidden flex gap-1 flex-wrap justify-center">
-                  {currentPage > 1 && (
-                    <button
-                      onClick={() => setCurrentPage(1)}
-                      className="px-2 py-2 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                    >
-                      1
-                    </button>
-                  )}
-                  {currentPage > 2 && <span className="px-1 py-2 text-xs">...</span>}
-                  {currentPage > 1 && (
-                    <button
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      className="px-2 py-2 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                    >
-                      {currentPage - 1}
-                    </button>
-                  )}
-                  <button className="px-2 py-2 text-xs bg-blue-600 text-white rounded">
-                    {currentPage}
-                  </button>
-                  {currentPage < totalPages && (
-                    <button
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      className="px-2 py-2 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                    >
-                      {currentPage + 1}
-                    </button>
-                  )}
-                  {currentPage < totalPages - 1 && <span className="px-1 py-2 text-xs">...</span>}
-                  {currentPage < totalPages && (
-                    <button
-                      onClick={() => setCurrentPage(totalPages)}
-                      className="px-2 py-2 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                    >
-                      {totalPages}
-                    </button>
-                  )}
-                </div>
-                
-                {/* Desktop: Show all pages */}
-                <div className="hidden md:flex gap-2">
-                  {Array.from({ length: totalPages }).map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`px-3 py-2 rounded ${
-                        currentPage === i + 1 ? 'bg-blue-600 text-white' : 'border border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-4 py-2 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Next
-                </button>
-              </div>
-            )}
+
           </div>
         </div>
       </div>

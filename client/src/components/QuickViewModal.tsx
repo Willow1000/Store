@@ -196,6 +196,55 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
               {/* Description */}
               <p className="text-sm text-gray-700 line-clamp-3">{product.title}</p>
 
+              {/* Key Specifications */}
+              <div className="space-y-2">
+                {product.category_name && (
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium text-gray-900">Category:</span> {product.category_name}
+                  </p>
+                )}
+                {product.brand && (
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium text-gray-900">Brand:</span> {product.brand}
+                  </p>
+                )}
+                {product.model && (
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium text-gray-900">Model:</span> {product.model}
+                  </p>
+                )}
+                {product.part_number && (
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium text-gray-900">Part Number:</span> <code className="bg-gray-100 px-2 py-1 rounded text-xs">{product.part_number}</code>
+                  </p>
+                )}
+              </div>
+
+              {/* Item Specifics */}
+              {product.item_specifics && (
+                <div className="border-t pt-3">
+                  <p className="text-sm font-semibold text-gray-900 mb-2">Details:</p>
+                  <div className="bg-gray-50 rounded p-3 max-h-48 overflow-y-auto">
+                    {typeof product.item_specifics === 'string' ? (
+                      <p className="text-xs text-gray-700 whitespace-pre-wrap break-words">{product.item_specifics}</p>
+                    ) : typeof product.item_specifics === 'object' && Object.keys(product.item_specifics).length > 0 ? (
+                      <div className="space-y-1">
+                        {Object.entries(product.item_specifics).map(([key, value]) => (
+                          (value !== null && value !== undefined && value !== '') && (
+                            <div key={key} className="text-xs">
+                              <span className="font-medium text-gray-700">{key.replace(/_/g, ' ')}:</span>
+                              <span className="text-gray-600 ml-1">
+                                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                              </span>
+                            </div>
+                          )
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+
               {/* Quantity */}
               <div className="flex items-center gap-3">
                 <label className="text-sm font-medium text-gray-900">Quantity:</label>

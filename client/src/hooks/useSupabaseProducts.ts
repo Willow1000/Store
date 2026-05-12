@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getHighResImageUrl } from '@/lib/images';
 import { Product, ProductImage } from '@/types/supabase';
 import { toast } from 'sonner';
 import { searchProducts, filterProducts, sortProducts } from '@/lib/productSearch';
 
-const PRODUCTS_CACHE_KEY = 'products_cache_v1';
-const CATEGORIES_CACHE_KEY = 'categories_cache_v1';
+const PRODUCTS_CACHE_KEY = 'products_cache_v2';
+const CATEGORIES_CACHE_KEY = 'categories_cache_v2';
 
 function readCachedArray<T>(key: string): T[] {
   if (typeof window === 'undefined') return [];
@@ -37,6 +38,7 @@ export function useProducts(page = 1, limit = 20) {
 
   const fetchProducts = useCallback(async (limit = 20, offset = 0) => {
     try {
+      console.log('[useProducts] Starting fetch - limit:', limit, 'offset:', offset);
       setIsLoading(products.length === 0);
       setError(null);
 
@@ -50,30 +52,109 @@ export function useProducts(page = 1, limit = 20) {
 
       // Race between the actual fetch and the timeout
       const fetchPromise = (async () => {
-        const { data, error: supabaseError } = await supabase
+        let query = supabase
           .from('products')
           .select('*')
-          .order('created_at', { ascending: false })
-          .range(offset, offset + limit - 1);
+          .order('created_at', { ascending: false });
 
+        // If limit is -1, fetch all products (no range). Otherwise use range for pagination.
+        if (limit === -1) {
+          const { data, error: supabaseError } = await query.limit(1000);
+          if (supabaseError) throw supabaseError;
+          return (data || []) as Product[];
+        }
+
+        const { data, error: supabaseError } = await query.range(offset, offset + limit - 1);
         if (supabaseError) throw supabaseError;
         return data as Product[];
       })();
 
       const fetchedProducts = await Promise.race([fetchPromise, timeoutPromise]) as Product[];
-      setProducts(fetchedProducts);
-      writeCachedArray(PRODUCTS_CACHE_KEY, fetchedProducts);
+
+      console.log('[useProducts] Fetched products from database:', fetchedProducts?.length || 0, 'products');
+      console.log('[useProducts] Product data:', fetchedProducts);
+
+      // Normalize cover image URLs so webp and storage paths resolve correctly
+      const normalized = (fetchedProducts || []).map((p) => ({
+        ...p,
+        cover_image_url: getHighResImageUrl(p?.cover_image_url || ''),
+      }));
+
+      console.log('[useProducts] Normalized products:', normalized);
+      setProducts(normalized);
+      writeCachedArray(PRODUCTS_CACHE_KEY, normalized);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch products';
       setError(message);
-      console.error('Error fetching products:', err);
+      console.error('[useProducts] Error fetching products:', err);
     } finally {
       setIsLoading(false);
     }
   }, [products.length]);
 
+  // Realtime subscription: update products list when DB changes occur
   useEffect(() => {
-    const offset = (page - 1) * limit;
+    try {
+      const channel = supabase
+        .channel('public:products')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+          try {
+            const record = payload?.new || payload?.old;
+            if (!record) return;
+
+            const normalizedRecord: Product = {
+              ...record,
+              cover_image_url: getHighResImageUrl((record as any).cover_image_url || ''),
+            } as Product;
+
+            setProducts((prev) => {
+              if (!prev) return [normalizedRecord];
+
+              switch (payload.eventType) {
+                case 'INSERT':
+                case 'UPDATE': {
+                  // Replace existing or add new at front for newest-first ordering
+                  const idx = prev.findIndex((p) => String(p.id) === String(normalizedRecord.id));
+                  if (idx === -1) {
+                    const next = [normalizedRecord, ...prev];
+                    writeCachedArray(PRODUCTS_CACHE_KEY, next);
+                    return next;
+                  }
+                  const next = prev.slice();
+                  next[idx] = { ...next[idx], ...normalizedRecord };
+                  writeCachedArray(PRODUCTS_CACHE_KEY, next);
+                  return next;
+                }
+                case 'DELETE': {
+                  const next = prev.filter((p) => String(p.id) !== String(record.id));
+                  writeCachedArray(PRODUCTS_CACHE_KEY, next);
+                  return next;
+                }
+                default:
+                  return prev;
+              }
+            });
+          } catch (err) {
+            console.error('Realtime products handler error:', err);
+          }
+        })
+        .subscribe();
+
+      return () => {
+        try {
+          channel.unsubscribe();
+        } catch (e) {
+          // ignore
+        }
+      };
+    } catch (err) {
+      // subscription failure shouldn't break app
+      console.warn('Failed to subscribe to products realtime updates', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    const offset = limit === -1 ? 0 : (page - 1) * limit;
     fetchProducts(limit, offset);
   }, [fetchProducts, page, limit]);
 
@@ -202,7 +283,13 @@ export function useProductById(productId: string) {
             }
           }
           
-          setProduct(productWithBrand);
+          // Normalize product cover image
+          const normalizedProduct = {
+            ...productWithBrand,
+            cover_image_url: getHighResImageUrl(productWithBrand?.cover_image_url || ''),
+          } as Product;
+
+          setProduct(normalizedProduct);
 
           // Fetch product images
           const { data: imagesData, error: imagesError } = await supabase
@@ -211,13 +298,19 @@ export function useProductById(productId: string) {
             .eq('product_id', productId);
 
           if (imagesError) throw imagesError;
-          
+
           console.log('[useProductById] Product images fetched:', {
             count: imagesData?.length,
             urls: imagesData?.map(img => img.image_url)
           });
-          
-          setImages(imagesData as ProductImage[]);
+
+          // Normalize image URLs
+          const normalizedImages = (imagesData || []).map((img: any) => ({
+            ...img,
+            image_url: getHighResImageUrl(img.image_url),
+          })) as ProductImage[];
+
+          setImages(normalizedImages);
         })();
 
         // Wait for whichever completes first (fetch or timeout)
@@ -261,7 +354,8 @@ export function useProductsByCategory(categoryName: string) {
             .from('products')
             .select('*')
             .eq('category_name', categoryName)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .limit(1000);
 
           if (supabaseError) throw supabaseError;
           return data as Product[];
@@ -467,7 +561,8 @@ export function useProductsBySlug(categorySlug: string) {
             .from('products')
             .select('*')
             .eq('category_name', categoryData.name)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .limit(1000);
 
           if (supabaseError) throw supabaseError;
           return data as Product[];

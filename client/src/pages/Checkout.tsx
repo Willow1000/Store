@@ -143,7 +143,7 @@ interface FormData {
 }
 
 interface PaymentMethod {
-  id: 'visa' | 'mastercard' | 'applePay' | 'googlePay';
+  id: 'visa' | 'mastercard' | 'applePay';
   name: string;
   icon: React.ReactNode;
   description: string;
@@ -184,7 +184,7 @@ export default function Checkout() {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   
-  const [selectedPayment, setSelectedPayment] = useState<'visa' | 'mastercard' | 'applePay' | 'googlePay'>('visa');
+  const [selectedPayment, setSelectedPayment] = useState<'visa' | 'mastercard' | 'applePay'>('visa');
 
   const [formData, setFormData] = useState<FormData>(() => {
     try {
@@ -394,13 +394,6 @@ export default function Checkout() {
       id: 'applePay',
       name: 'Apple Pay',
       icon: <img src="https://cdn-icons-png.flaticon.com/512/5968/5968500.png" alt="Apple Pay logo" className="w-8 h-8 object-contain" onError={(e) => { e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%22000000%22 width=%2248%22 height=%2248%22/%3E%3Ctext x=%2224%22 y=%2726%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2218%22 font-weight=%22bold%22%3E%26%23xf179;%3C/text%3E%3C/svg%3E'; }} />,
-      description: 'Coming soon to your region',
-      disabled: true
-    },
-    {
-      id: 'googlePay',
-      name: 'Google Pay',
-      icon: <iframe src="https://assets.pinterest.com/ext/embed.html?id=333547916170433736" height="241" width="345" frameBorder="0" scrolling="no" title="Google Pay logo"></iframe>,
       description: 'Coming soon to your region',
       disabled: true
     }

@@ -466,22 +466,28 @@ export default function ProductDetail() {
           </div>
 
           {/* Item Specifics / Additional Details */}
-          {product.item_specifics && typeof product.item_specifics === 'object' && Object.keys(product.item_specifics).length > 0 && (
+          {product.item_specifics && (
             <div className="mt-8 border-t border-gray-200 pt-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-6">Additional Details</h3>
               <div className="bg-gray-50 rounded-lg p-6">
-                <dl className="space-y-4">
-                  {Object.entries(product.item_specifics).map(([key, value]) => (
-                    value !== null && value !== undefined && value !== '' && (
-                      <div key={key} className="flex justify-between py-2 border-b border-gray-200 last:border-0">
-                        <dt className="text-sm font-medium text-gray-700 capitalize">{key.replace(/_/g, ' ')}:</dt>
-                        <dd className="text-sm font-semibold text-gray-900">
-                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                        </dd>
-                      </div>
-                    )
-                  ))}
-                </dl>
+                {typeof product.item_specifics === 'string' ? (
+                  <div className="prose prose-sm max-w-none">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{product.item_specifics}</p>
+                  </div>
+                ) : typeof product.item_specifics === 'object' && Object.keys(product.item_specifics).length > 0 ? (
+                  <dl className="space-y-4">
+                    {Object.entries(product.item_specifics).map(([key, value]) => (
+                      value !== null && value !== undefined && value !== '' && (
+                        <div key={key} className="flex justify-between py-2 border-b border-gray-200 last:border-0">
+                          <dt className="text-sm font-medium text-gray-700 capitalize">{key.replace(/_/g, ' ')}:</dt>
+                          <dd className="text-sm font-semibold text-gray-900">
+                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                          </dd>
+                        </div>
+                      )
+                    ))}
+                  </dl>
+                ) : null}
               </div>
             </div>
           )}

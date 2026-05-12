@@ -40,23 +40,31 @@ export default function Home() {
 
   // Filter deals: products with free shipping OR price > 250 OR has discount
   const dealsProducts = products?.filter((p) => {
-    const price = parseFloat(String(p.price));
+    const price = p.price !== null && p.price !== undefined 
+      ? parseFloat(String(p.price))
+      : 0;
     const hasDiscount = p.discount !== null && p.discount !== undefined;
     return p.freeShipping === true || price > 250 || hasDiscount;
   }) || [];
 
-  // Calculate actual discount percentage from discount field
   const getDiscountPercentage = (price: number | string, discount: number | null | undefined) => {
     if (!discount) return null;
-    const currentPrice = parseFloat(String(price));
+    const currentPrice = price !== null && price !== undefined ? parseFloat(String(price)) : 0;
     const discountPrice = parseFloat(String(discount));
-    if (discountPrice <= currentPrice) return null;
+    if (isNaN(currentPrice) || isNaN(discountPrice) || discountPrice <= currentPrice) return null;
     return Math.round(((discountPrice - currentPrice) / discountPrice) * 100);
   };
 
   const getOriginalPrice = (price: number | string, discount: number) => {
-    const numPrice = parseFloat(String(price));
+    const numPrice = price !== null && price !== undefined ? parseFloat(String(price)) : 0;
+    if (isNaN(numPrice)) return '0.00';
     return (numPrice / (1 - discount / 100)).toFixed(2);
+  };
+
+  const formatPrice = (price: number | string | null | undefined) => {
+    if (price === null || price === undefined) return '0.00';
+    const num = parseFloat(String(price));
+    return isNaN(num) ? '0.00' : num.toFixed(2);
   };
 
   if (isLoading || categoriesLoading) {
@@ -161,11 +169,11 @@ export default function Home() {
                         {/* Price Section */}
                         <div className="mt-2 sm:mt-4 flex items-baseline space-x-1 sm:space-x-2">
                           <span className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">
-                            ${parseFloat(String(product.price)).toFixed(2)}
+                            ${formatPrice(product.price)}
                           </span>
                           {product.discount && (
                             <span className="text-xs sm:text-sm text-gray-500 line-through">
-                              ${parseFloat(String(product.discount)).toFixed(2)}
+                              ${formatPrice(product.discount)}
                             </span>
                           )}
                         </div>
