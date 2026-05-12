@@ -1,13 +1,13 @@
 /**
  * Calculate shipping cost based on subtotal
- * Free delivery for orders > $250 USD
- * Otherwise 10% of the subtotal
+ * Free shipping for orders >= $1500 USD
+ * Otherwise 5% of the subtotal
  */
 export function calculateShipping(subtotal: number): number {
-  if (subtotal > 250) {
+  if (subtotal >= 1500) {
     return 0;
   }
-  return Number((subtotal * 0.1).toFixed(2));
+  return Number((subtotal * 0.05).toFixed(2));
 }
 
 /**

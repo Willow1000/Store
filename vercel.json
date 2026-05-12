@@ -6,6 +6,14 @@
       "includeFiles": "dist/**"
     }
   },
+  "headers": [
+    {
+      "source": "./.well-known/(.*)",
+      "headers": [
+        { "key": "Content-Type", "value": "application/text" }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -18,6 +26,10 @@
     {
       "source": "/initialize-payment",
       "destination": "/api/server"
+    },
+    {
+      "source": "/.well-known",
+      "destination": "/.well-known/apple-developer-merchantid-domain-association"
     },
     {
       "source": "/.well-known/(.*)",

@@ -6,6 +6,7 @@ dotenv.config({ path: dotenvPath });
 
 export const ENV = {
   appId: process.env.VITE_APP_ID ?? process.env.APP_ID ?? "",
+  siteUrl: process.env.VITE_SITE_URL ?? process.env.SITE_URL ?? process.env.VITE_APP_URL ?? process.env.APP_URL ?? "",
   cookieSecret: process.env.JWT_SECRET ?? process.env.COOKIE_SECRET ?? process.env.SESSION_SECRET ?? "",
   databaseUrl: process.env.DATABASE_URL ?? "",
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",

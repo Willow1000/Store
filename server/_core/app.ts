@@ -1,4 +1,7 @@
 import express, { type Express } from "express";
+import fs from "fs";
+import path from "path";
+import { createClient } from "@supabase/supabase-js";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
@@ -6,7 +9,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { verifyTransaction, initializeTransaction } from "../paystack";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
-import { getDb, createOrder, createPayment } from "../db";
+import { getDb, createOrder, createPayment, getProducts } from "../db";
 
 function getRequestOrigin(req: express.Request): string | null {
   const forwardedProto = req.header('x-forwarded-proto')?.split(',')[0]?.trim();
@@ -18,12 +21,119 @@ function getRequestOrigin(req: express.Request): string | null {
   return `${protocol}://${host}`;
 }
 
+function getFeedOrigin(req: express.Request): string {
+  const configuredOrigin = ENV.siteUrl?.trim();
+  if (configuredOrigin) {
+    return configuredOrigin.replace(/\/$/, '');
+  }
+
+  return (getRequestOrigin(req) || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+}
+
+type FeedProduct = {
+  id?: string | number;
+  title?: string | null;
+  name?: string | null;
+  description?: string | null;
+  short_description?: string | null;
+  price?: string | number | null;
+  stock?: string | number | null;
+  url?: string | null;
+  cover_image_url?: string | null;
+  image_url?: string | null;
+  created_at?: string | null;
+  images?: unknown;
+};
+
+function escapeXml(value: unknown): string {
+  return String(value ?? '').replace(/[&<>'"]/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&apos;',
+    '"': '&quot;',
+  }[character] || character));
+}
+
+function resolveUrl(value: unknown, origin: string): string {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return raw.startsWith('/') ? `${origin}${raw}` : `${origin}/${raw}`;
+}
+
+function normalizePrice(value: unknown): string {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return '';
+  return `${amount % 1 === 0 ? amount.toFixed(0) : amount.toFixed(2)} USD`;
+}
+
+function getAppleMerchantAssociationPath(): string {
+  const candidates = [
+    path.resolve(import.meta.dirname, "../../client/public/.well-known/apple-developer-merchantid-domain-association"),
+    path.resolve(process.cwd(), "client/public/.well-known/apple-developer-merchantid-domain-association"),
+    path.resolve(process.cwd(), "dist/public/.well-known/apple-developer-merchantid-domain-association"),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return candidates[0];
+}
+
+async function getFeedProducts(): Promise<FeedProduct[]> {
+  if (ENV.supabaseUrl) {
+    const supabase = createClient(
+      ENV.supabaseUrl,
+      ENV.supabaseServiceKey || ENV.supabaseAnonKey || ''
+    );
+
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id,title,name,description,short_description,price,stock,url,cover_image_url,image_url,created_at,images')
+        .order('created_at', { ascending: false })
+        .limit(1000);
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data as FeedProduct[];
+      }
+
+      if (error) {
+        console.warn('[Feed] Supabase product lookup failed:', error.message);
+      }
+    } catch (error) {
+      console.warn('[Feed] Supabase feed lookup failed:', error);
+    }
+  }
+
+  const products = (await getProducts(1000, 0)) || [];
+  return products as FeedProduct[];
+}
+
 export function createApp() {
   const app = express();
 
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  app.get('/.well-known', (_req, res) => {
+    const associationPath = getAppleMerchantAssociationPath();
+
+    try {
+      const association = fs.readFileSync(associationPath, 'utf-8');
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      return res.status(200).send(association);
+    } catch (error) {
+      console.error('[Apple Merchant] Failed to read association file:', error);
+      return res.status(500).send('Failed to load association file');
+    }
+  });
 
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
@@ -159,6 +269,46 @@ export function createApp() {
       createContext,
     })
   );
+
+  // Product feed for external crawlers (e.g., Facebook/Commerce Manager)
+  app.get('/feed.xml', async (req: express.Request, res: express.Response) => {
+    try {
+      const origin = getFeedOrigin(req);
+      const products = await getFeedProducts();
+
+      const items = products
+        .map((p: FeedProduct) => {
+          const id = p.id ?? '';
+          const title = escapeXml(p.title || p.name || '');
+          const description = escapeXml(p.description || p.short_description || '');
+          const price = normalizePrice(p.price);
+          const link = resolveUrl(p.url || `/product/${id}`, origin);
+          const imageSource = p.cover_image_url || p.image_url || (Array.isArray(p.images) ? p.images[0] : null);
+          const image = resolveUrl(imageSource || '/images/placeholder.png', origin);
+          const availability = (p.stock !== undefined && Number(p.stock) > 0) ? 'in stock' : 'out of stock';
+
+          return `    <item>
+      <g:id>${escapeXml(id)}</g:id>
+      <g:title>${title}</g:title>
+      <g:description>${description}</g:description>
+      <g:price>${escapeXml(price)}</g:price>
+      <g:link>${escapeXml(link)}</g:link>
+      <g:image_link>${escapeXml(image)}</g:image_link>
+      <g:availability>${escapeXml(availability)}</g:availability>
+    </item>`;
+        })
+        .join('\n');
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss xmlns:g="http://google.com" version="2.0">\n  <channel>\n    <title>MotorVault Product Feed</title>\n    <link>${escapeXml(origin)}</link>\n${items}\n  </channel>\n</rss>`;
+
+      res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      return res.status(200).send(xml);
+    } catch (err) {
+      console.error('[Feed] Error generating feed:', err);
+      return res.status(500).send('Failed to generate feed');
+    }
+  });
 
   return app;
 }

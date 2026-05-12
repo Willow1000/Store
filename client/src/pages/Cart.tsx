@@ -10,6 +10,7 @@ import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useSupabaseCart } from '@/hooks/useSupabaseCart';
 import { useProducts } from '@/hooks/useSupabaseProducts';
 import { getHighResImageUrl } from '@/lib/images';
+import { calculateShipping } from '@shared/shipping';
 
 const t = (_key: string, fallback: string) => fallback;
 
@@ -136,9 +137,9 @@ export default function Cart() {
     return sum + (price * item.quantity);
   }, 0);
 
-  const shipping = subtotal > 50 ? 0 : 9.99;
-  const tax = subtotal * 0.08;
-  const total = subtotal + shipping + tax;
+  const shipping = calculateShipping(subtotal);
+  const vat = subtotal * 0.08;
+  const total = subtotal + shipping + vat;
 
   if (isLoading || (isAuthenticated && isSupabaseLoading)) {
     return (
@@ -319,8 +320,8 @@ export default function Cart() {
                 </span>
               </div>
               <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-600">{t('checkout.tax', 'Tax')} (8%)</span>
-                <span className="font-semibold">{`$${tax.toFixed(2)}`}</span>
+                <span className="text-gray-600">{t('checkout.vat', 'V.A.T')} (8%)</span>
+                <span className="font-semibold">{`$${vat.toFixed(2)}`}</span>
               </div>
             </div>
 
@@ -331,7 +332,7 @@ export default function Cart() {
 
             {shipping > 0 && (
               <p className="mb-4 text-xs text-gray-600">
-                {t('checkout.freeShippingNotice', 'Free shipping on orders over $50')}
+                {t('checkout.freeShippingNotice', 'Shipping fee is 5% for orders under $1,500')}
               </p>
             )}
 
