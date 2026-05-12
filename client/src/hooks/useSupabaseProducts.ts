@@ -38,7 +38,6 @@ export function useProducts(page = 1, limit = 20) {
 
   const fetchProducts = useCallback(async (limit = 20, offset = 0) => {
     try {
-      console.log('[useProducts] Starting fetch - limit:', limit, 'offset:', offset);
       setIsLoading(products.length === 0);
       setError(null);
 
@@ -71,16 +70,11 @@ export function useProducts(page = 1, limit = 20) {
 
       const fetchedProducts = await Promise.race([fetchPromise, timeoutPromise]) as Product[];
 
-      console.log('[useProducts] Fetched products from database:', fetchedProducts?.length || 0, 'products');
-      console.log('[useProducts] Product data:', fetchedProducts);
-
       // Normalize cover image URLs so webp and storage paths resolve correctly
       const normalized = (fetchedProducts || []).map((p) => ({
         ...p,
         cover_image_url: getHighResImageUrl(p?.cover_image_url || ''),
       }));
-
-      console.log('[useProducts] Normalized products:', normalized);
       setProducts(normalized);
       writeCachedArray(PRODUCTS_CACHE_KEY, normalized);
     } catch (err) {
@@ -101,6 +95,7 @@ export function useProducts(page = 1, limit = 20) {
           try {
             const record = payload?.new || payload?.old;
             if (!record) return;
+            const recordId = (record as any).id;
 
             const normalizedRecord: Product = {
               ...record,
@@ -126,7 +121,7 @@ export function useProducts(page = 1, limit = 20) {
                   return next;
                 }
                 case 'DELETE': {
-                  const next = prev.filter((p) => String(p.id) !== String(record.id));
+                  const next = prev.filter((p) => String(p.id) !== String(recordId));
                   writeCachedArray(PRODUCTS_CACHE_KEY, next);
                   return next;
                 }
@@ -177,8 +172,6 @@ export function useProductById(productId: string) {
       try {
         setIsLoading(true);
         setError(null);
-
-        console.log('[useProductById] Fetching product:', productId);
 
         // Create a timeout promise that rejects after 15 seconds
         const timeoutPromise = new Promise((_, reject) =>
@@ -252,12 +245,6 @@ export function useProductById(productId: string) {
             throw new Error('Product not found');
           }
           
-          console.log('[useProductById] Product fetched:', {
-            id: productData?.id,
-            title: productData?.title,
-            cover_image_url: productData?.cover_image_url
-          });
-          
           // Fetch brand details if brand exists
           let productWithBrand: Product = productData as Product;
           if (productData?.brand) {
@@ -273,10 +260,6 @@ export function useProductById(productId: string) {
                   ...productData,
                   brand_details: brandData as typeof productWithBrand.brand_details
                 };
-                console.log('[useProductById] Brand details fetched:', {
-                  name: brandData.name,
-                  image_url: brandData.image_url
-                });
               }
             } catch (err) {
               console.warn('[useProductById] Failed to fetch brand details:', err);
@@ -298,11 +281,6 @@ export function useProductById(productId: string) {
             .eq('product_id', productId);
 
           if (imagesError) throw imagesError;
-
-          console.log('[useProductById] Product images fetched:', {
-            count: imagesData?.length,
-            urls: imagesData?.map(img => img.image_url)
-          });
 
           // Normalize image URLs
           const normalizedImages = (imagesData || []).map((img: any) => ({
@@ -445,9 +423,6 @@ export function useSearchProducts(searchTerm: string) {
           maxResults: 100,
         });
 
-        console.log('[useSearchProducts] Search term:', searchTerm);
-        console.log('[useSearchProducts] Results found:', searchedProducts.length);
-        
         setResults(searchedProducts);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Search failed';
@@ -504,7 +479,6 @@ export function useCategories() {
         })();
 
         const fetchedCategories = await Promise.race([fetchPromise, timeoutPromise]) as Category[];
-        console.log('[useCategories] Fetched categories:', fetchedCategories);
         setCategories(fetchedCategories);
         writeCachedArray(CATEGORIES_CACHE_KEY, fetchedCategories);
       } catch (err) {

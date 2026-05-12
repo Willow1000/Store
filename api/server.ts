@@ -8,15 +8,9 @@ handler.use(express.urlencoded({ limit: "50mb", extended: true }));
 // Middleware to load and delegate to the actual app
 handler.use(async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log(`[API] ${req.method} ${req.path} - NODE_ENV=${process.env.NODE_ENV}`);
-    
     // Try to load the bundled createApp function
     // The dist/index.js gets bundled and included in the function package via vercel.json
-    console.log("[API] Loading bundled module from dist/index.js...");
-    
     const bundled = await import("../dist/index.js");
-    console.log("[API] Bundled module loaded, exports:", Object.keys(bundled || {}));
-    
     const { createApp } = bundled as any;
 
     if (typeof createApp !== "function") {
@@ -29,16 +23,12 @@ handler.use(async (req: Request, res: Response, next: NextFunction) => {
       );
     }
 
-    console.log("[API] Calling createApp()...");
     // Create the actual app and delegate the request
     const app = createApp();
-    console.log("[API] App created successfully");
     
     if (typeof app !== "function") {
       throw new Error(`createApp() returned ${typeof app}, expected function`);
     }
-    
-    console.log("[API] Delegating request to app...");
     return app(req, res, next);
   } catch (error: any) {
     console.error("[API] Error:", error?.message || String(error));

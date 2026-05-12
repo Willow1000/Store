@@ -28,6 +28,8 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
 
   const { user, isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthModal();
@@ -89,21 +91,55 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
     setPanY(0);
   }, [selectedImageIdx]);
 
-  // Handle mouse drag for panning
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Handle drag for panning on mouse and touch devices
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    isDraggingRef.current = true;
+    const nextDragStart = { x: e.clientX - panX, y: e.clientY - panY };
+    dragStartRef.current = nextDragStart;
     setIsDragging(true);
-    setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
+    setDragStart(nextDragStart);
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
     requestAnimationFrame(() => {
-      setPanX(e.clientX - dragStart.x);
-      setPanY(e.clientY - dragStart.y);
+      setPanX(e.clientX - dragStartRef.current.x);
+      setPanY(e.clientY - dragStartRef.current.y);
     });
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    e.preventDefault();
+    isDraggingRef.current = true;
+    const nextDragStart = { x: touch.clientX - panX, y: touch.clientY - panY };
+    dragStartRef.current = nextDragStart;
+    setIsDragging(true);
+    setDragStart(nextDragStart);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    if (!touch || !isDraggingRef.current) return;
+    e.preventDefault();
+    requestAnimationFrame(() => {
+      setPanX(touch.clientX - dragStartRef.current.x);
+      setPanY(touch.clientY - dragStartRef.current.y);
+    });
+  };
+
+  const handleTouchEnd = () => {
+    isDraggingRef.current = false;
     setIsDragging(false);
   };
 
@@ -217,11 +253,15 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                   <>
                     <div 
                       className="relative w-full h-64 flex items-center justify-center overflow-hidden bg-gray-100 rounded-lg"
-                      onMouseDown={handleMouseDown}
-                      onMouseMove={handleMouseMove}
-                      onMouseUp={handleMouseUp}
-                      onMouseLeave={handleMouseUp}
-                      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                      onPointerDown={handlePointerDown}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      onPointerCancel={handlePointerUp}
+                      onTouchStart={handleTouchStart}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      onTouchCancel={handleTouchEnd}
+                      style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
                     >
                       <img
                         src={getHighResImageUrl(currentImage.image_url)}
@@ -229,8 +269,8 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                         className="w-full h-full object-contain select-none pointer-events-none will-change-transform"
                         style={{
                           imageRendering: 'high-quality',
-                          transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
-                          transformOrigin: 'center'
+                          transform: `translate3d(${panX}px, ${panY}px, 0) scale(${zoom})`,
+                          transformOrigin: 'center center'
                         }}
                         fetchPriority="high"
                         crossOrigin="anonymous"
@@ -240,7 +280,7 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                     </div>
                     
                     {/* Zoom Controls */}
-                    <div className="absolute bottom-2 right-2 flex gap-1 bg-white/90 backdrop-blur-sm p-1 rounded shadow">
+                    <div className="absolute bottom-2 right-2 flex gap-1 bg-white/75 sm:bg-white/90 backdrop-blur-sm p-1 rounded shadow">
                       <button
                         onClick={() => setZoom(Math.max(zoom - 0.2, 1))}
                         disabled={zoom <= 1}

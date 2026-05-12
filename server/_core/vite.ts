@@ -11,8 +11,6 @@ export async function setupVite(app: Express, server: Server) {
     return;
   }
 
-  console.log("[Vite] Setting up Vite dev server in development mode");
-  
   try {
     // Only import vite/config if we're actually in development
     const viteModule = await import("vite");
@@ -33,8 +31,6 @@ export async function setupVite(app: Express, server: Server) {
     const viteConfig = mergeConfig(mainViteConfig, middlewareConfig, false);
 
     const vite = await createViteServer(viteConfig);
-    console.log("[Vite] Vite server created successfully");
-
     app.use(vite.middlewares);
     app.use("*", async (req, res, next) => {
       const url = req.originalUrl;

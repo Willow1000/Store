@@ -24,6 +24,8 @@ export default function ProductDetail() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
 
   const { user, isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthModal();
@@ -40,14 +42,6 @@ export default function ProductDetail() {
       ]
     : images || [];
 
-  console.log('ProductDetail Debug:', { 
-    productId,
-    product,
-    images,
-    allImages,
-    isLoading 
-  });
-
   // Reset zoom and pan when image changes
   useEffect(() => {
     setZoom(1);
@@ -55,21 +49,55 @@ export default function ProductDetail() {
     setPanY(0);
   }, [selectedImage]);
 
-  // Handle mouse drag for panning
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Handle drag for panning on mouse and touch devices
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    isDraggingRef.current = true;
+    const nextDragStart = { x: e.clientX - panX, y: e.clientY - panY };
+    dragStartRef.current = nextDragStart;
     setIsDragging(true);
-    setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
+    setDragStart(nextDragStart);
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
     requestAnimationFrame(() => {
-      setPanX(e.clientX - dragStart.x);
-      setPanY(e.clientY - dragStart.y);
+      setPanX(e.clientX - dragStartRef.current.x);
+      setPanY(e.clientY - dragStartRef.current.y);
     });
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    e.preventDefault();
+    isDraggingRef.current = true;
+    const nextDragStart = { x: touch.clientX - panX, y: touch.clientY - panY };
+    dragStartRef.current = nextDragStart;
+    setIsDragging(true);
+    setDragStart(nextDragStart);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    if (!touch || !isDraggingRef.current) return;
+    e.preventDefault();
+    requestAnimationFrame(() => {
+      setPanX(touch.clientX - dragStartRef.current.x);
+      setPanY(touch.clientY - dragStartRef.current.y);
+    });
+  };
+
+  const handleTouchEnd = () => {
+    isDraggingRef.current = false;
     setIsDragging(false);
   };
 
@@ -92,13 +120,6 @@ export default function ProductDetail() {
   }, [zoom]);
 
   const handleAddToCart = async () => {
-    console.log('[ProductDetail] AddToCart clicked', {
-      isAuthenticated,
-      userId: user?.id,
-      productId: product?.id,
-      quantity,
-    });
-
     if (isOutOfStock) {
       toast.error('This item is out of stock');
       return;
@@ -121,10 +142,6 @@ export default function ProductDetail() {
     }
 
     try {
-      console.log('[ProductDetail] AddToCart sending mutation', {
-        productId: product.id,
-        quantity,
-      });
       const added = await addToCart(product.id, quantity);
 
       if (!added) {
@@ -140,13 +157,6 @@ export default function ProductDetail() {
   };
 
   const handleBuyNow = async () => {
-    console.log('[ProductDetail] QuickCheckout clicked', {
-      isAuthenticated,
-      userId: user?.id,
-      productId: product?.id,
-      quantity,
-    });
-
     if (isOutOfStock) {
       toast.error('This item is out of stock. Please contact support for more information.');
       return;
@@ -167,17 +177,10 @@ export default function ProductDetail() {
         toast.error('Product information is missing');
         return;
       }
-      
-      console.log('[ProductDetail] QuickCheckout adding item before redirect', {
-        productId: product.id,
-        quantity,
-      });
       const added = await addToCart(product.id, quantity);
-      console.log('[ProductDetail] QuickCheckout add result', { added });
       if (!added) {
         return;
       }
-      console.log('[ProductDetail] QuickCheckout navigating to /checkout');
       navigate('/checkout');
     } catch (error) {
       console.error('[ProductDetail] QuickCheckout exception', error);
@@ -339,11 +342,15 @@ export default function ProductDetail() {
                   <>
                     <div 
                       className="relative min-h-[300px] sm:min-h-[400px] flex items-center justify-center overflow-hidden"
-                      onMouseDown={handleMouseDown}
-                      onMouseMove={handleMouseMove}
-                      onMouseUp={handleMouseUp}
-                      onMouseLeave={handleMouseUp}
-                      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                      onPointerDown={handlePointerDown}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      onPointerCancel={handlePointerUp}
+                      onTouchStart={handleTouchStart}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      onTouchCancel={handleTouchEnd}
+                      style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
                     >
                       <img
                         key={`main-${selectedImage}`}
@@ -355,8 +362,8 @@ export default function ProductDetail() {
                         className="w-full h-full object-center object-contain p-4 transition-none select-none pointer-events-none will-change-transform"
                         style={{ 
                           imageRendering: 'high-quality',
-                          transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
-                          transformOrigin: 'center',
+                          transform: `translate3d(${panX}px, ${panY}px, 0) scale(${zoom})`,
+                          transformOrigin: 'center center',
                           backfaceVisibility: 'hidden'
                         }}
                         crossOrigin="anonymous"
@@ -367,7 +374,7 @@ export default function ProductDetail() {
                     </div>
                     
                     {/* Zoom Controls */}
-                    <div className="absolute bottom-4 right-4 flex gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-lg">
+                    <div className="absolute bottom-4 right-4 flex gap-2 bg-white/75 sm:bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-lg">
                       <button
                         onClick={() => setZoom(Math.max(zoom - 0.2, 1))}
                         disabled={zoom <= 1}

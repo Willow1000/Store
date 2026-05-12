@@ -60,10 +60,8 @@ export default function Products() {
     ) || null;
   }, [categories, categoryFilter]);
 
-  // Debug: Log all products fetched
   useEffect(() => {
-    console.log('[Products Page] All products loaded:', allProducts?.length || 0);
-    console.log('[Products Page] All products data:', allProducts);
+    // Intentionally left blank.
   }, [allProducts]);
 
   const selectedCategoryName = normalizeCategoryValue(String(selectedCategory?.name ?? ''));
@@ -96,7 +94,6 @@ export default function Products() {
 
   // Prefer server-filtered category results when a category is selected.
   const baseProducts = searchQuery ? searchResults : categoryFilter ? categoryProducts : allProducts;
-  console.log('[Products Page] Base products (after filtering logic):', baseProducts?.length || 0, baseProducts);
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {

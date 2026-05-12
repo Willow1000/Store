@@ -100,13 +100,6 @@ function openInlineModal(publicKey: string, config: PaystackConfig): Promise<Pay
     }
 
     try {
-      console.log('[Paystack] Setting up inline modal with:', {
-        key: publicKey.substring(0, 10) + '...',
-        email: config.email,
-        amount: amountInSubunits,
-        ref: config.reference,
-      });
-
       const handler = PaystackPop.setup({
         key: publicKey,
         email: config.email,
@@ -154,12 +147,6 @@ export function openPaystackModal(config: PaystackConfig) {
   const passedKey = config.publicKey?.trim();
   const envKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY?.trim();
   const publicKey = passedKey || envKey;
-  
-  console.log('[Paystack] Using public key:', {
-    passed: passedKey ? `${passedKey.substring(0, 10)}...` : 'not provided',
-    env: envKey ? `${envKey.substring(0, 10)}...` : 'not configured',
-    final: publicKey ? `${publicKey.substring(0, 10)}...` : 'NONE (ERROR)',
-  });
   
   if (!publicKey) {
     const error = 'Paystack public key is not configured. Set VITE_PAYSTACK_PUBLIC_KEY in .env.local';

@@ -91,13 +91,6 @@ export function createApp() {
           paidAt: paystackData.paid_at ? new Date(paystackData.paid_at) : null,
         });
 
-        console.log('[Payment Callback] Payment recorded successfully:', { 
-          reference: paystackData.reference, 
-          provider: 'paystack', 
-          status: paystackData.status,
-          amount: totalAmount 
-        });
-        
       } catch (paymentErr) {
         console.error('[Payment Callback] Failed to record payment:', paymentErr);
         return res.status(500).send('Payment verified but failed to record payment details');
@@ -121,13 +114,6 @@ export function createApp() {
           trackingNumber: null,
         });
 
-        console.log('[Payment Callback] Order created successfully:', { 
-          userId, 
-          orderNumber, 
-          totalAmount, 
-          reference: paystackData.reference
-        });
-        
       } catch (orderErr) {
         console.error('[Payment Callback] Failed to create order:', orderErr);
         return res.status(500).send('Payment recorded but failed to create order');
