@@ -69,19 +69,11 @@ function normalizePrice(value: unknown): string {
 }
 
 function getAppleMerchantAssociationPath(): string {
-  const candidates = [
-    path.resolve(import.meta.dirname, "../../client/public/.well-known/apple-developer-merchantid-domain-association"),
-    path.resolve(process.cwd(), "client/public/.well-known/apple-developer-merchantid-domain-association"),
-    path.resolve(process.cwd(), "dist/public/.well-known/apple-developer-merchantid-domain-association"),
-  ];
+  return path.resolve(process.cwd(), "server/_core/apple-developer-merchantid-domain-association");
+}
 
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-
-  return candidates[0];
+function getOriginalPath(req: express.Request): string {
+  return req.header('x-original-url') || req.header('x-forwarded-url') || req.path || '';
 }
 
 async function getFeedProducts(): Promise<FeedProduct[]> {
@@ -121,18 +113,29 @@ export function createApp() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  app.get('/.well-known', (_req, res) => {
-    const associationPath = getAppleMerchantAssociationPath();
+  app.use((req, res, next) => {
+    const originalPath = getOriginalPath(req);
 
-    try {
-      const association = fs.readFileSync(associationPath, 'utf-8');
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      return res.status(200).send(association);
-    } catch (error) {
-      console.error('[Apple Merchant] Failed to read association file:', error);
-      return res.status(500).send('Failed to load association file');
+    if (originalPath === '/.well-known') {
+      const associationPath = getAppleMerchantAssociationPath();
+
+      try {
+        const association = fs.readFileSync(associationPath, 'utf-8');
+        res.setHeader('Content-Type', 'application/text');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        return res.status(200).send(association);
+      } catch (error) {
+        console.error('[Apple Merchant] Failed to read association file:', error);
+        return res.status(500).send('Failed to load association file');
+      }
     }
+
+    if (originalPath === '/feed.xml') {
+      res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    }
+
+    return next();
   });
 
   // OAuth callback under /api/oauth/callback
@@ -271,7 +274,12 @@ export function createApp() {
   );
 
   // Product feed for external crawlers (e.g., Facebook/Commerce Manager)
-  app.get('/feed.xml', async (req: express.Request, res: express.Response) => {
+  app.get(['/feed.xml', '/api/server'], async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const originalPath = getOriginalPath(req);
+    if (originalPath !== '/feed.xml') {
+      return next();
+    }
+
     try {
       const origin = getFeedOrigin(req);
       const products = await getFeedProducts();
