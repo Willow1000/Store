@@ -1,5 +1,5 @@
 import { useRoute, useLocation } from 'wouter';
-import { Star, ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import { ProductDetailSkeleton } from '@/components/skeletons/ProductDetailSkeleton';
 import { toast } from 'sonner';
 import { Link } from 'wouter';
@@ -8,7 +8,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useProductById, useProducts } from '@/hooks/useSupabaseProducts';
 import { useSupabaseCart, useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuthModal } from '@/contexts/AuthModalContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getHighResImageUrl } from '@/lib/images';
 
 export default function ProductDetail() {
@@ -18,6 +18,12 @@ export default function ProductDetail() {
   
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [zoom, setZoom] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   const { user, isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthModal();
@@ -41,6 +47,49 @@ export default function ProductDetail() {
     allImages,
     isLoading 
   });
+
+  // Reset zoom and pan when image changes
+  useEffect(() => {
+    setZoom(1);
+    setPanX(0);
+    setPanY(0);
+  }, [selectedImage]);
+
+  // Handle mouse drag for panning
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    requestAnimationFrame(() => {
+      setPanX(e.clientX - dragStart.x);
+      setPanY(e.clientY - dragStart.y);
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Handle scroll zoom
+  useEffect(() => {
+    const container = imageContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const zoomSpeed = 0.1;
+        const newZoom = Math.min(Math.max(zoom - e.deltaY * 0.001 * zoomSpeed, 1), 3);
+        setZoom(newZoom);
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [zoom]);
 
   const handleAddToCart = async () => {
     console.log('[ProductDetail] AddToCart clicked', {
@@ -219,6 +268,13 @@ export default function ProductDetail() {
   const isOutOfStock = stock === 0;
   const isWishlisted = product.id && wishedProductIds.has(product.id);
 
+  const productDescription =
+    typeof product.item_specifics === 'string'
+      ? product.item_specifics.trim()
+      : product.item_specifics && typeof product.item_specifics === 'object'
+        ? JSON.stringify(product.item_specifics, null, 2)
+        : '';
+
   // Get similar products from the same category (max 6)
   const similarProducts = allProducts
     .filter(
@@ -237,47 +293,123 @@ export default function ProductDetail() {
           <div className="flex flex-row sm:flex-col-reverse gap-3 sm:gap-0">
             {/* Thumbnail Gallery - Vertical on mobile, below on sm+ */}
             {allImages && allImages.length > 1 && (
-              <div className="w-16 sm:w-full sm:mt-6 flex flex-col sm:flex-row max-w-2xl sm:mx-auto lg:max-w-none">
-                <div className="flex flex-col sm:grid sm:grid-cols-4 gap-2 sm:gap-4 w-full">
-                  {allImages.slice(0, 4).map((img, idx) => (
-                    <button
-                      key={img.id || idx}
-                      onClick={() => setSelectedImage(idx)}
-                      className={`relative h-16 sm:h-24 w-16 sm:w-full rounded-md flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-all flex-shrink-0 ${
-                        selectedImage === idx ? 'ring-2 ring-blue-500 bg-white' : 'bg-white border'
-                      }`}
-                    >
-                      <span className="absolute inset-0 rounded-md overflow-hidden">
-                        <img
-                          src={getHighResImageUrl(img.image_url)}
-                          alt={`Product image ${idx + 1}`}
-                          className="w-full h-full object-center object-contain"
-                          crossOrigin="anonymous"
-                        />
-                      </span>
-                    </button>
-                  ))}
+              <div className="w-auto sm:w-full sm:mt-6 max-w-2xl sm:mx-auto lg:max-w-none">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-auto sm:w-full overflow-y-auto sm:overflow-x-auto pb-2 sm:pb-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  <style>{`
+                    div::-webkit-scrollbar { display: none; }
+                  `}</style>
+                  {(() => {
+                    const isMobile = window.innerWidth < 640; // sm breakpoint
+                    const windowSize = isMobile ? 4 : 6; // 4 on mobile, 6 on desktop
+                    const startIdx = Math.max(0, Math.min(selectedImage, allImages.length - windowSize));
+                    const imagesToShow = allImages.slice(startIdx, startIdx + windowSize);
+                    
+                    return imagesToShow.map((img, idx) => {
+                      const actualImageIndex = startIdx + idx;
+                      return (
+                        <button
+                          key={img.id || idx}
+                          onClick={() => setSelectedImage(actualImageIndex)}
+                          className={`relative h-16 sm:h-24 w-16 sm:w-20 rounded-md flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-all flex-shrink-0 aspect-square ${
+                            selectedImage === actualImageIndex ? 'ring-2 ring-blue-500 bg-white' : 'bg-white border'
+                          }`}
+                        >
+                          <span className="absolute inset-0 rounded-md overflow-hidden">
+                            <img
+                              src={getHighResImageUrl(img.image_url)}
+                              alt={`Product image ${actualImageIndex + 1}`}
+                              className="w-full h-full object-center object-contain bg-white"
+                              style={{ imageRendering: 'high-quality' }}
+                              loading="lazy"
+                              crossOrigin="anonymous"
+                            />
+                          </span>
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             )}
 
             {/* Main Image */}
             <div className="flex-1 sm:w-full">
-              <div className="bg-white rounded-lg overflow-hidden shadow-lg border">
+              <div className="bg-white rounded-lg overflow-hidden shadow-lg border relative" ref={imageContainerRef}>
                 {allImages && allImages.length > 0 && allImages[selectedImage] ? (
-                  <img
-                    key={`main-${selectedImage}`}
-                    src={getHighResImageUrl(allImages[selectedImage].image_url)}
-                    alt={`${product.title}`}
-                    fetchPriority="high"
-                    loading="eager"
-                    className="w-full h-full object-center object-contain p-4 min-h-[300px] sm:min-h-[400px]"
-                    style={{ imageRendering: 'auto' }}
-                    crossOrigin="anonymous"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%23f5f5f5" width="400" height="400"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16" fill="%23999"%3EImage not available%3C/text%3E%3C/svg%3E';
-                    }}
-                  />
+                  <>
+                    <div 
+                      className="relative min-h-[300px] sm:min-h-[400px] flex items-center justify-center overflow-hidden"
+                      onMouseDown={handleMouseDown}
+                      onMouseMove={handleMouseMove}
+                      onMouseUp={handleMouseUp}
+                      onMouseLeave={handleMouseUp}
+                      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                    >
+                      <img
+                        key={`main-${selectedImage}`}
+                        src={getHighResImageUrl(allImages[selectedImage].image_url)}
+                        alt={`${product.title}`}
+                        fetchPriority="high"
+                        loading="eager"
+                        decoding="async"
+                        className="w-full h-full object-center object-contain p-4 transition-none select-none pointer-events-none will-change-transform"
+                        style={{ 
+                          imageRendering: 'high-quality',
+                          transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
+                          transformOrigin: 'center',
+                          backfaceVisibility: 'hidden'
+                        }}
+                        crossOrigin="anonymous"
+                        onError={(e) => {
+                          e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%23f5f5f5" width="400" height="400"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16" fill="%23999"%3EImage not available%3C/text%3E%3C/svg%3E';
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Zoom Controls */}
+                    <div className="absolute bottom-4 right-4 flex gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-lg">
+                      <button
+                        onClick={() => setZoom(Math.max(zoom - 0.2, 1))}
+                        disabled={zoom <= 1}
+                        className="p-2 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Zoom out"
+                        title="Zoom out"
+                      >
+                        <ZoomOut size={20} className="text-gray-700" />
+                      </button>
+                      <div className="flex items-center px-2 text-sm text-gray-700 font-medium">
+                        {Math.round(zoom * 100)}%
+                      </div>
+                      <button
+                        onClick={() => setZoom(Math.min(zoom + 0.2, 3))}
+                        disabled={zoom >= 3}
+                        className="p-2 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Zoom in"
+                        title="Zoom in"
+                      >
+                        <ZoomIn size={20} className="text-gray-700" />
+                      </button>
+                    </div>
+                    
+                    {selectedImage > 0 && (
+                      <button
+                        onClick={() => setSelectedImage(selectedImage - 1)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-colors"
+                        aria-label="Previous image"
+                      >
+                        <ChevronLeft size={24} className="text-gray-700" />
+                      </button>
+                    )}
+                    {selectedImage < allImages.length - 1 && (
+                      <button
+                        onClick={() => setSelectedImage(selectedImage + 1)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-colors"
+                        aria-label="Next image"
+                      >
+                        <ChevronRight size={24} className="text-gray-700" />
+                      </button>
+                    )}
+                  </>
                 ) : (
                   <div className="h-96 flex items-center justify-center text-gray-400">No image available</div>
                 )}
@@ -465,33 +597,6 @@ export default function ProductDetail() {
             </div>
           </div>
 
-          {/* Item Specifics / Additional Details */}
-          {product.item_specifics && (
-            <div className="mt-8 border-t border-gray-200 pt-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Additional Details</h3>
-              <div className="bg-gray-50 rounded-lg p-6">
-                {typeof product.item_specifics === 'string' ? (
-                  <div className="prose prose-sm max-w-none">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{product.item_specifics}</p>
-                  </div>
-                ) : typeof product.item_specifics === 'object' && Object.keys(product.item_specifics).length > 0 ? (
-                  <dl className="space-y-4">
-                    {Object.entries(product.item_specifics).map(([key, value]) => (
-                      value !== null && value !== undefined && value !== '' && (
-                        <div key={key} className="flex justify-between py-2 border-b border-gray-200 last:border-0">
-                          <dt className="text-sm font-medium text-gray-700 capitalize">{key.replace(/_/g, ' ')}:</dt>
-                          <dd className="text-sm font-semibold text-gray-900">
-                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                          </dd>
-                        </div>
-                      )
-                    ))}
-                  </dl>
-                ) : null}
-              </div>
-            </div>
-          )}
-
           {/* Product Information Section */}
           <div className="mt-8 border-t border-gray-200 pt-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Product Information</h3>
@@ -540,6 +645,20 @@ export default function ProductDetail() {
                   </div>
                 )}
               </dl>
+            </div>
+          </div>
+
+          {/* Product Description */}
+          <div className="mt-8 border-t border-gray-200 pt-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Product Description</h3>
+            <div className="bg-gray-50 rounded-lg p-6">
+              {productDescription ? (
+                <p className="whitespace-pre-line text-base leading-7 text-gray-700">
+                  {productDescription}
+                </p>
+              ) : (
+                <p className="text-base text-gray-500">No product description available.</p>
+              )}
             </div>
           </div>
 

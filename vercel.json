@@ -20,8 +20,17 @@
       "destination": "/api/server"
     },
     {
+      "source": "/.well-known/(.*)",
+      "destination": "/.well-known/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "errorPages": {
+    "400": "/400.html",
+    "403": "/403.html",
+    "404": "/404.html"
+  }
 }

@@ -51,7 +51,7 @@ export type Product = {
   stock: number | null;
   discount: number | null;
   part_number: string | null;
-  item_specifics: Record<string, any> | null;
+  item_specifics: string | Record<string, any> | null;
   created_at: string;
   brand_details?: Brand;
 };

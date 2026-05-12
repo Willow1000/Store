@@ -1,8 +1,8 @@
 'use client';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Star, Heart, ShoppingCart } from 'lucide-react';
-import { useState } from 'react';
+import { Star, Heart, ShoppingCart, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Link } from 'wouter';
@@ -22,6 +22,12 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   const { user, isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthModal();
@@ -41,6 +47,83 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
   const isWishlisted = product?.id && wishedProductIds.has(product.id);
   const stock = Number(product?.stock ?? 0);
   const isOutOfStock = stock === 0;
+
+  const normalizeSpecificKey = (key: string) => key.toLowerCase().replace(/[_\s-]/g, '');
+  const formatSpecificLabel = (key: string) =>
+    key
+      .replace(/[_-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const baseSpecifics: Array<[string, string]> = [
+    ['Brand', String(product?.brand_details?.name || product?.brand || '')],
+    ['Model', String(product?.model || '')],
+    ['Condition', String(product?.condition || '')],
+    ['Part Number', String(product?.part_number || '')],
+    ['Category', String(product?.category_name || '')],
+  ].filter(([, value]) => value && value.trim() !== '');
+
+  const existingSpecificKeys = new Set(baseSpecifics.map(([key]) => normalizeSpecificKey(key)));
+  const rawItemSpecifics =
+    product?.item_specifics && typeof product.item_specifics === 'object'
+      ? Object.entries(product.item_specifics)
+      : [];
+
+  const additionalSpecifics: Array<[string, string]> = rawItemSpecifics
+    .filter(([key, value]) => {
+      const normalized = normalizeSpecificKey(key);
+      if (existingSpecificKeys.has(normalized)) return false;
+      if (value === null || value === undefined) return false;
+      const stringValue = String(value).trim();
+      return stringValue !== '';
+    })
+    .map(([key, value]) => [formatSpecificLabel(key), String(value).trim()]);
+
+  const itemSpecificsPreview: Array<[string, string]> = [...baseSpecifics, ...additionalSpecifics].slice(0, 3);
+
+  // Reset zoom and pan when image changes
+  useEffect(() => {
+    setZoom(1);
+    setPanX(0);
+    setPanY(0);
+  }, [selectedImageIdx]);
+
+  // Handle mouse drag for panning
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    requestAnimationFrame(() => {
+      setPanX(e.clientX - dragStart.x);
+      setPanY(e.clientY - dragStart.y);
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Handle scroll zoom
+  useEffect(() => {
+    const container = imageContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const zoomSpeed = 0.1;
+        const newZoom = Math.min(Math.max(zoom - e.deltaY * 0.001 * zoomSpeed, 1), 3);
+        setZoom(newZoom);
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [zoom]);
 
   const handleAddToCart = async () => {
     if (isOutOfStock) {
@@ -129,42 +212,118 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
             {/* Image Gallery */}
             <div className="space-y-3">
               {/* Main Image */}
-              {currentImage ? (
-                <img
-                  src={getHighResImageUrl(currentImage.image_url)}
-                  alt={product.title}
-                  className="w-full h-64 object-contain rounded-lg bg-gray-100"
-                  crossOrigin="anonymous"
-                  loading="eager"
-                  decoding="async"
-                />
-              ) : (
-                <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-                  No image available
-                </div>
-              )}
+              <div className="relative" ref={imageContainerRef}>
+                {currentImage ? (
+                  <>
+                    <div 
+                      className="relative w-full h-64 flex items-center justify-center overflow-hidden bg-gray-100 rounded-lg"
+                      onMouseDown={handleMouseDown}
+                      onMouseMove={handleMouseMove}
+                      onMouseUp={handleMouseUp}
+                      onMouseLeave={handleMouseUp}
+                      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                    >
+                      <img
+                        src={getHighResImageUrl(currentImage.image_url)}
+                        alt={product.title}
+                        className="w-full h-full object-contain select-none pointer-events-none will-change-transform"
+                        style={{
+                          imageRendering: 'high-quality',
+                          transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
+                          transformOrigin: 'center'
+                        }}
+                        fetchPriority="high"
+                        crossOrigin="anonymous"
+                        loading="eager"
+                        decoding="async"
+                      />
+                    </div>
+                    
+                    {/* Zoom Controls */}
+                    <div className="absolute bottom-2 right-2 flex gap-1 bg-white/90 backdrop-blur-sm p-1 rounded shadow">
+                      <button
+                        onClick={() => setZoom(Math.max(zoom - 0.2, 1))}
+                        disabled={zoom <= 1}
+                        className="p-1.5 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Zoom out"
+                        title="Zoom out"
+                      >
+                        <ZoomOut size={16} className="text-gray-700" />
+                      </button>
+                      <div className="flex items-center px-1.5 text-xs text-gray-700 font-medium min-w-10 justify-center">
+                        {Math.round(zoom * 100)}%
+                      </div>
+                      <button
+                        onClick={() => setZoom(Math.min(zoom + 0.2, 3))}
+                        disabled={zoom >= 3}
+                        className="p-1.5 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Zoom in"
+                        title="Zoom in"
+                      >
+                        <ZoomIn size={16} className="text-gray-700" />
+                      </button>
+                    </div>
+                    {selectedImageIdx > 0 && (
+                      <button
+                        onClick={() => setSelectedImageIdx(selectedImageIdx - 1)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 p-1 bg-white/80 hover:bg-white rounded-full shadow-lg transition-colors"
+                        aria-label="Previous image"
+                      >
+                        <ChevronLeft size={20} className="text-gray-700" />
+                      </button>
+                    )}
+                    {selectedImageIdx < allImages.length - 1 && (
+                      <button
+                        onClick={() => setSelectedImageIdx(selectedImageIdx + 1)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-white/80 hover:bg-white rounded-full shadow-lg transition-colors"
+                        aria-label="Next image"
+                      >
+                        <ChevronRight size={20} className="text-gray-700" />
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
+                    No image available
+                  </div>
+                )}
+              </div>
 
               {/* Thumbnail Row */}
               {allImages.length > 1 && (
-                <div className="flex gap-2">
-                  {allImages.slice(0, 4).map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedImageIdx(idx)}
-                      className={`relative h-16 w-16 rounded-lg overflow-hidden border-2 transition-colors ${
-                        selectedImageIdx === idx ? 'border-blue-600' : 'border-gray-200'
-                      }`}
-                    >
-                      <img
-                        src={getHighResImageUrl(img.image_url)}
-                        alt={`${product.title} thumbnail ${idx}`}
-                        className="w-full h-full object-contain bg-gray-100"
-                        crossOrigin="anonymous"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </button>
-                  ))}
+                <div className="flex flex-col sm:flex-row gap-2 overflow-y-auto sm:overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  <style>{`
+                    div::-webkit-scrollbar { display: none; }
+                  `}</style>
+                  {(() => {
+                    const isMobile = window.innerWidth < 640; // sm breakpoint
+                    const windowSize = isMobile ? 4 : 6; // 4 on mobile, 6 on desktop
+                    const startIdx = Math.max(0, Math.min(selectedImageIdx, allImages.length - windowSize));
+                    const imagesToShow = allImages.slice(startIdx, startIdx + windowSize);
+                    
+                    return imagesToShow.map((img, idx) => {
+                      const actualImageIndex = startIdx + idx;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedImageIdx(actualImageIndex)}
+                          className={`relative h-16 w-16 rounded-lg overflow-hidden border-2 transition-colors flex-shrink-0 aspect-square ${
+                            selectedImageIdx === actualImageIndex ? 'border-blue-600' : 'border-gray-200'
+                          }`}
+                        >
+                          <img
+                            src={getHighResImageUrl(img.image_url)}
+                            alt={`${product.title} thumbnail ${actualImageIndex}`}
+                            className="w-full h-full object-contain bg-gray-100"
+                            style={{ imageRendering: 'high-quality' }}
+                            crossOrigin="anonymous"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </div>
@@ -196,52 +355,25 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
               {/* Description */}
               <p className="text-sm text-gray-700 line-clamp-3">{product.title}</p>
 
-              {/* Key Specifications */}
-              <div className="space-y-2">
-                {product.category_name && (
-                  <p className="text-sm text-gray-700">
-                    <span className="font-medium text-gray-900">Category:</span> {product.category_name}
-                  </p>
-                )}
-                {product.brand && (
-                  <p className="text-sm text-gray-700">
-                    <span className="font-medium text-gray-900">Brand:</span> {product.brand}
-                  </p>
-                )}
-                {product.model && (
-                  <p className="text-sm text-gray-700">
-                    <span className="font-medium text-gray-900">Model:</span> {product.model}
-                  </p>
-                )}
-                {product.part_number && (
-                  <p className="text-sm text-gray-700">
-                    <span className="font-medium text-gray-900">Part Number:</span> <code className="bg-gray-100 px-2 py-1 rounded text-xs">{product.part_number}</code>
-                  </p>
-                )}
-              </div>
-
-              {/* Item Specifics */}
-              {product.item_specifics && (
-                <div className="border-t pt-3">
-                  <p className="text-sm font-semibold text-gray-900 mb-2">Details:</p>
-                  <div className="bg-gray-50 rounded p-3 max-h-48 overflow-y-auto">
-                    {typeof product.item_specifics === 'string' ? (
-                      <p className="text-xs text-gray-700 whitespace-pre-wrap break-words">{product.item_specifics}</p>
-                    ) : typeof product.item_specifics === 'object' && Object.keys(product.item_specifics).length > 0 ? (
-                      <div className="space-y-1">
-                        {Object.entries(product.item_specifics).map(([key, value]) => (
-                          (value !== null && value !== undefined && value !== '') && (
-                            <div key={key} className="text-xs">
-                              <span className="font-medium text-gray-700">{key.replace(/_/g, ' ')}:</span>
-                              <span className="text-gray-600 ml-1">
-                                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                              </span>
-                            </div>
-                          )
-                        ))}
+              {itemSpecificsPreview.length > 0 && (
+                <div className="rounded-lg border border-gray-200 p-3 bg-gray-50/60">
+                  <p className="text-sm font-semibold text-gray-900 mb-2">Item Specifics</p>
+                  <div className="space-y-1.5">
+                    {itemSpecificsPreview.map(([label, value]) => (
+                      <div key={`${label}-${value}`} className="flex items-center justify-between gap-3">
+                        <span className="text-xs text-gray-600">{label}</span>
+                        <span className="text-xs font-medium text-gray-900 text-right truncate">{value}</span>
                       </div>
-                    ) : null}
+                    ))}
                   </div>
+                  <Link href={`/product/${product.id}`}>
+                    <button
+                      onClick={onClose}
+                      className="mt-3 text-xs font-semibold text-blue-700 hover:text-blue-800 underline"
+                    >
+                      View full item specifics
+                    </button>
+                  </Link>
                 </div>
               )}
 
