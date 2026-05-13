@@ -1,6 +1,8 @@
 import express, { type Request, type Response, type NextFunction } from "express";
+import { createRequire } from "module";
 
 const handler = express();
+const require = createRequire(import.meta.url);
 
 handler.use(express.json({ limit: "50mb" }));
 handler.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -10,7 +12,7 @@ handler.use(async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Try to load the bundled createApp function
     // The dist/index.js gets bundled and included in the function package via vercel.json
-    const bundled = await import("../dist/index.js");
+    const bundled = require("../dist/index.cjs");
     const { createApp } = bundled as any;
 
     if (typeof createApp !== "function") {

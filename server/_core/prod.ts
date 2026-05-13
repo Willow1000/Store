@@ -27,7 +27,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "../public");
+  const distPath = path.resolve(__dirname, "../public");
   if (!fs.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
