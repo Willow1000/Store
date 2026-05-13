@@ -308,7 +308,7 @@ export function createApp() {
           const title = String(p.title || p.name || '').trim();
           const description = String(p.description || p.short_description || title).trim();
           const price = normalizePrice(p.price);
-          const link = resolveUrl(p.url || `/product/${id}`, origin);
+          const link = resolveUrl(`/product/${id}`, origin);
           const imageSource = p.cover_image_url || p.image_url || (Array.isArray(p.images) ? p.images[0] : null);
           const image = resolveUrl(imageSource || '/images/placeholder.png', origin);
           const condition = String(p.condition || 'new').trim() || 'new';
