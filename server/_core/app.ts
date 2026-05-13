@@ -139,9 +139,9 @@ export function createApp() {
 
       try {
         const association = fs.readFileSync(associationPath, 'utf-8');
-        res.setHeader('Content-Type', 'application/text');
+        res.setHeader('Content-Type', 'application/octet-stream');
         res.setHeader('X-Content-Type-Options', 'nosniff');
-        return res.status(200).send(association);
+        return res.status(200).send(Buffer.from(association, 'hex'));
       } catch (error) {
         console.error('[Apple Merchant] Failed to read association file:', error);
         return res.status(500).send('Failed to load association file');
