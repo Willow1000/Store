@@ -9,7 +9,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { verifyTransaction, initializeTransaction } from "../paystack";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
-import { getDb, createOrder, createPayment, getProducts } from "../db";
+import { getDb, createOrder, createPayment } from "../db";
 
 function getRequestOrigin(req: express.Request): string | null {
   const forwardedProto = req.header('x-forwarded-proto')?.split(',')[0]?.trim();
@@ -59,6 +59,8 @@ type FeedProduct = {
   image_url?: string | null;
   created_at?: string | null;
   images?: unknown;
+  condition?: string | null;
+  brand?: string | null;
 };
 
 function escapeXml(value: unknown): string {
@@ -93,35 +95,33 @@ function getOriginalPath(req: express.Request): string {
 }
 
 async function getFeedProducts(): Promise<FeedProduct[]> {
-  if (ENV.supabaseUrl) {
-    const supabase = createClient(
-      ENV.supabaseUrl,
-      ENV.supabaseServiceKey || ENV.supabaseAnonKey || ''
-    );
-
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1000);
-
-      if (!error && Array.isArray(data) && data.length > 0) {
-        return data as FeedProduct[];
-      }
-
-      if (error) {
-        console.warn('[Feed] Supabase product lookup failed:', error.message);
-      } else {
-        console.warn('[Feed] Supabase product lookup returned no rows');
-      }
-    } catch (error) {
-      console.warn('[Feed] Supabase feed lookup failed:', error);
-    }
+  if (!ENV.supabaseUrl) {
+    console.warn('[Feed] Supabase URL is not configured');
+    return [];
   }
 
-  const products = (await getProducts(1000, 0)) || [];
-  return products as FeedProduct[];
+  const supabase = createClient(
+    ENV.supabaseUrl,
+    ENV.supabaseServiceKey || ENV.supabaseAnonKey || ''
+  );
+
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1000);
+
+    if (error) {
+      console.warn('[Feed] Supabase product lookup failed:', error.message);
+      return [];
+    }
+
+    return Array.isArray(data) ? (data as FeedProduct[]) : [];
+  } catch (error) {
+    console.warn('[Feed] Supabase feed lookup failed:', error);
+    return [];
+  }
 }
 
 export function createApp() {
@@ -304,16 +304,18 @@ export function createApp() {
 
       const items = products
         .map((p: FeedProduct) => {
-          const id = p.id ?? '';
-          const title = escapeXml(p.title || p.name || '');
-          const description = escapeXml(p.description || p.short_description || '');
+          const id = String(p.id ?? '').trim();
+          const title = String(p.title || p.name || '').trim();
+          const description = String(p.description || p.short_description || title).trim();
           const price = normalizePrice(p.price);
           const link = resolveUrl(p.url || `/product/${id}`, origin);
           const imageSource = p.cover_image_url || p.image_url || (Array.isArray(p.images) ? p.images[0] : null);
           const image = resolveUrl(imageSource || '/images/placeholder.png', origin);
+          const condition = String(p.condition || 'new').trim() || 'new';
+          const brand = String(p.brand || '').trim();
           const availability = (p.stock !== undefined && Number(p.stock) > 0) ? 'in stock' : 'out of stock';
 
-          if (!title || !price || !link) {
+          if (!id || !title || !price || !link) {
             return '';
           }
 
@@ -321,16 +323,18 @@ export function createApp() {
       <g:id>${escapeXml(id)}</g:id>
       <g:title>${title}</g:title>
       <g:description>${description}</g:description>
-      <g:price>${escapeXml(price)}</g:price>
       <g:link>${escapeXml(link)}</g:link>
       <g:image_link>${escapeXml(image)}</g:image_link>
       <g:availability>${escapeXml(availability)}</g:availability>
+      <g:condition>${escapeXml(condition)}</g:condition>
+      <g:price>${escapeXml(price)}</g:price>
+      ${brand ? `<g:brand>${escapeXml(brand)}</g:brand>` : ''}
     </item>`;
         })
         .filter(Boolean)
         .join('\n');
 
-      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss xmlns:g="http://google.com" version="2.0">\n  <channel>\n    <title>MotorVault Product Feed</title>\n    <link>${escapeXml(origin)}</link>\n${items}\n  </channel>\n</rss>`;
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">\n  <channel>\n    <title>MotorVault Product Feed</title>\n    <link>${escapeXml(origin)}</link>\n    <description>MotorVault product catalog feed</description>\n${items}\n  </channel>\n</rss>`;
 
       res.setHeader('Content-Type', 'application/xml; charset=utf-8');
       res.setHeader('X-Content-Type-Options', 'nosniff');
