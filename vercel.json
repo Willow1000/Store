@@ -3,7 +3,7 @@
   "outputDirectory": "dist/public",
   "functions": {
     "api/server.ts": {
-      "includeFiles": "dist/**,server/_core/apple-developer-merchantid-domain-association,node_modules/**"
+      "includeFiles": "dist/**,server/_core/apple-developer-merchantid-domain-association"
     }
   },
   "headers": [
@@ -32,7 +32,7 @@
       "destination": "/api/server"
     },
     {
-      "source": "/.well-known",
+      "source": "/.well-known/apple-developer-merchantid-domain-association",
       "destination": "/api/server"
     },
     {

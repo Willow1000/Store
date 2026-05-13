@@ -134,7 +134,7 @@ export function createApp() {
   app.use((req, res, next) => {
     const originalPath = getOriginalPath(req);
 
-    if (originalPath === '/.well-known') {
+    if (originalPath === '/.well-known/apple-developer-merchantid-domain-association') {
       const associationPath = getAppleMerchantAssociationPath();
 
       try {
