@@ -321,8 +321,8 @@ export function createApp() {
 
           return `    <item>
       <g:id>${escapeXml(id)}</g:id>
-      <g:title>${title}</g:title>
-      <g:description>${description}</g:description>
+      <g:title>${escapeXml(title)}</g:title>
+      <g:description>${escapeXml(description)}</g:description>
       <g:link>${escapeXml(link)}</g:link>
       <g:image_link>${escapeXml(image)}</g:image_link>
       <g:availability>${escapeXml(availability)}</g:availability>
