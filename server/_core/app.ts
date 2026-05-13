@@ -21,9 +21,25 @@ function getRequestOrigin(req: express.Request): string | null {
   return `${protocol}://${host}`;
 }
 
+function isValidConfiguredOrigin(value: string | undefined): boolean {
+  if (!value) return false;
+
+  const normalized = value.trim().replace(/\/$/, '');
+  if (!normalized || normalized.includes('your-production-domain.com')) {
+    return false;
+  }
+
+  try {
+    const url = new URL(normalized);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function getFeedOrigin(req: express.Request): string {
   const configuredOrigin = ENV.siteUrl?.trim();
-  if (configuredOrigin) {
+  if (isValidConfiguredOrigin(configuredOrigin)) {
     return configuredOrigin.replace(/\/$/, '');
   }
 
@@ -86,7 +102,7 @@ async function getFeedProducts(): Promise<FeedProduct[]> {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id,title,name,description,short_description,price,stock,url,cover_image_url,image_url,created_at,images')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(1000);
 
@@ -96,6 +112,8 @@ async function getFeedProducts(): Promise<FeedProduct[]> {
 
       if (error) {
         console.warn('[Feed] Supabase product lookup failed:', error.message);
+      } else {
+        console.warn('[Feed] Supabase product lookup returned no rows');
       }
     } catch (error) {
       console.warn('[Feed] Supabase feed lookup failed:', error);
@@ -295,6 +313,10 @@ export function createApp() {
           const image = resolveUrl(imageSource || '/images/placeholder.png', origin);
           const availability = (p.stock !== undefined && Number(p.stock) > 0) ? 'in stock' : 'out of stock';
 
+          if (!title || !price || !link) {
+            return '';
+          }
+
           return `    <item>
       <g:id>${escapeXml(id)}</g:id>
       <g:title>${title}</g:title>
@@ -305,6 +327,7 @@ export function createApp() {
       <g:availability>${escapeXml(availability)}</g:availability>
     </item>`;
         })
+        .filter(Boolean)
         .join('\n');
 
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss xmlns:g="http://google.com" version="2.0">\n  <channel>\n    <title>MotorVault Product Feed</title>\n    <link>${escapeXml(origin)}</link>\n${items}\n  </channel>\n</rss>`;
