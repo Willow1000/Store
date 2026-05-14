@@ -8,9 +8,9 @@
   },
   "headers": [
     {
-      "source": "./.well-known/(.*)",
+      "source": "/.well-known/apple-developer-merchantid-domain-association",
       "headers": [
-        { "key": "Content-Type", "value": "application/text" }
+        { "key": "Content-Type", "value": "text/plain; charset=utf-8" }
       ]
     }
   ],
