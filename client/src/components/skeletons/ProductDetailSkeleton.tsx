@@ -6,8 +6,10 @@ export function ProductDetailSkeleton() {
       <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
         {/* Breadcrumb */}
         <div className="mb-8 flex gap-2">
-          <Skeleton className="h-4 w-12" />
-          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-4" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-4" />
           <Skeleton className="h-4 w-32" />
         </div>
 
@@ -24,7 +26,7 @@ export function ProductDetailSkeleton() {
             </div>
 
             <div className="flex-1 sm:w-full">
-              <Skeleton className="w-full rounded-lg shadow-lg border min-h-[300px] sm:min-h-[400px] bg-gray-100" />
+              <Skeleton className="w-full aspect-square rounded-lg shadow-lg border bg-gray-100 min-h-[320px] sm:min-h-[420px]" />
             </div>
           </div>
 
@@ -32,12 +34,12 @@ export function ProductDetailSkeleton() {
           <div className="mt-10 px-4 sm:px-0 sm:mt-16 lg:mt-0 space-y-6">
             <div className="space-y-2">
               <Skeleton className="h-10 w-11/12" />
-              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-5 w-32" />
             </div>
 
             <div className="space-y-2">
               <Skeleton className="h-8 w-32" />
-              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-4 w-44" />
               <Skeleton className="h-4 w-48" />
             </div>
 
@@ -55,10 +57,13 @@ export function ProductDetailSkeleton() {
             </div>
 
             <div className="border-t pt-6 space-y-4">
-              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-5 w-36" />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-16 rounded-md bg-gray-100" />
+                  <div key={i} className="rounded-md border bg-gray-50 p-4 space-y-2">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-5 w-32" />
+                  </div>
                 ))}
               </div>
             </div>
@@ -108,7 +113,7 @@ export function ProductDetailSkeleton() {
             <Skeleton className="h-5 w-24" />
           </div>
 
-          <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
+          <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="group relative bg-white border rounded-lg overflow-hidden shadow-sm">
                 <Skeleton className="w-full h-48 bg-gray-100" />

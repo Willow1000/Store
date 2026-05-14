@@ -39,7 +39,6 @@ export type Model = {
 export type Product = {
   id: string;
   title: string;
-  url: string;
   category_name: string;
   owner_id: string | null;
   price: number;

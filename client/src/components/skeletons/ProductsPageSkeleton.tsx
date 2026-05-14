@@ -20,10 +20,46 @@ export function ProductsPageSkeleton() {
               <div>
                 <Skeleton className="h-5 w-20 mb-3" />
                 <div className="space-y-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-7 w-full" />
+                  ))}
+                </div>
+              </div>
+
+              {/* Brand Filter */}
+              <div>
+                <Skeleton className="h-5 w-16 mb-3" />
+                <div className="space-y-2">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Skeleton key={i} className="h-7 w-full" />
                   ))}
                 </div>
+              </div>
+
+              {/* Model Filter */}
+              <div>
+                <Skeleton className="h-5 w-16 mb-3" />
+                <div className="space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-7 w-full" />
+                  ))}
+                </div>
+              </div>
+
+              {/* Condition Filter */}
+              <div>
+                <Skeleton className="h-5 w-24 mb-3" />
+                <div className="space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-7 w-full" />
+                  ))}
+                </div>
+              </div>
+
+              {/* Availability Filter */}
+              <div>
+                <Skeleton className="h-5 w-24 mb-3" />
+                <Skeleton className="h-7 w-full" />
               </div>
 
               {/* Price Range Filter */}
@@ -40,6 +76,12 @@ export function ProductsPageSkeleton() {
                 <Skeleton className="h-5 w-16 mb-3" />
                 <Skeleton className="h-10 w-full" />
               </div>
+
+              {/* Deals Filter */}
+              <div>
+                <Skeleton className="h-5 w-28 mb-3" />
+                <Skeleton className="h-7 w-full" />
+              </div>
             </div>
           </div>
 
@@ -52,29 +94,33 @@ export function ProductsPageSkeleton() {
             <Skeleton className="h-4 w-64 mb-4" />
 
             {/* Products Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="group rounded-lg border border-border bg-white p-4 space-y-3">
-                  <Skeleton className="aspect-square rounded-lg bg-gray-100" />
-                  <Skeleton className="h-4 w-11/12" />
-                  <div className="flex items-center justify-between gap-3">
-                    <Skeleton className="h-5 w-20" />
-                    <Skeleton className="h-4 w-14" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-4">
+              {Array.from({ length: 16 }).map((_, i) => (
+                <div key={i} className="group cursor-pointer">
+                  <Skeleton className="relative bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden h-40 md:h-48 mb-3" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-11/12" />
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-14" />
+                    </div>
+                    <Skeleton className="h-4 w-24" />
                   </div>
-                  <Skeleton className="h-9 w-full rounded-md" />
                 </div>
               ))}
             </div>
 
             {/* Pagination Skeleton */}
-            <div className="flex justify-center gap-2 mt-8">
-              <Skeleton className="h-10 w-24" />
-              <div className="flex gap-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-10" />
-                ))}
+            <div className="flex justify-center mt-8">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-10 w-24" />
+                <div className="flex gap-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-10" />
+                  ))}
+                </div>
+                <Skeleton className="h-10 w-24" />
               </div>
-              <Skeleton className="h-10 w-24" />
             </div>
           </div>
         </div>

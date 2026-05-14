@@ -207,7 +207,6 @@ export function useProductById(productId: string) {
                 .map((item: any, idx: number) => ({
                   id: String(idx + 1),
                   title: String(item?.title || 'Product'),
-                  url: String(item?.url || ''),
                   category_name: String(item?.category || 'General'),
                   owner_id: null,
                   price: Number(String(item?.price || '0').replace(/[^\d.]/g, '') || 0),

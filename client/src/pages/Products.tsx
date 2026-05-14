@@ -15,8 +15,17 @@ import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { getHighResImageUrl } from '@/lib/images';
 import { getBrandSuggestions, getModelSuggestions } from '@/lib/productSearch';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'popular';
+const PRODUCTS_PER_PAGE = 32;
 
 const normalizeCategoryValue = (value: string) => value.trim().toLowerCase();
 
@@ -40,6 +49,7 @@ export default function Products() {
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
   const [dealsOnly, setDealsOnly] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { user, isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthModal();
@@ -66,6 +76,18 @@ export default function Products() {
 
   const selectedCategoryName = normalizeCategoryValue(String(selectedCategory?.name ?? ''));
   const selectedCategorySlug = normalizeCategoryValue(String(selectedCategory?.slug ?? ''));
+
+  const conditionOptions = useMemo(() => {
+    if (!allProducts || allProducts.length === 0) return [] as string[];
+
+    return Array.from(
+      new Set(
+        allProducts
+          .map((p) => String(p.condition || '').trim())
+          .filter(Boolean)
+      )
+    );
+  }, [allProducts]);
 
   const updateCategoryInUrl = (nextCategory: string) => {
     const [path, query = ''] = location.split('?');
@@ -191,8 +213,20 @@ export default function Products() {
     return filtered;
   }, [baseProducts, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly, brandFilter, modelFilter, conditionFilter, inStockOnly]);
 
-  // Display all products without pagination
-  const allDisplayedProducts = filteredProducts;
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter, sortBy, priceRange, dealsOnly, inStockOnly, brandFilter, modelFilter, conditionFilter]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
+
+  const allDisplayedProducts = useMemo(() => {
+    const start = (currentPage - 1) * PRODUCTS_PER_PAGE;
+    return filteredProducts.slice(start, start + PRODUCTS_PER_PAGE);
+  }, [filteredProducts, currentPage]);
 
   const shouldShowPageSkeleton =
     (isLoading && allProducts.length === 0) ||
@@ -377,33 +411,29 @@ export default function Products() {
               {/* Condition Filter */}
               <div className="mb-6">
                 <h3 className="font-bold text-sm mb-3">Condition</h3>
-                <div className="space-y-2">
-                  {['New', 'Very Good', 'Good', 'Used'].map((condition) => {
-                    const hasProducts = allProducts && allProducts.some(p => (p.condition || '').toLowerCase() === condition.toLowerCase());
-                    return (
-                      <label 
-                        key={condition}
-                        className={`flex items-center cursor-pointer p-2 rounded transition-colors ${
-                          hasProducts ? 'hover:bg-gray-100' : 'opacity-50 cursor-not-allowed'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={conditionFilter.includes(condition)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setConditionFilter([...conditionFilter, condition]);
-                            } else {
-                              setConditionFilter(conditionFilter.filter(c => c !== condition));
-                            }
-                          }}
-                          disabled={!hasProducts}
-                          className="w-4 h-4 cursor-pointer"
-                        />
-                        <span className="text-sm ml-2">{condition}</span>
-                      </label>
-                    );
-                  })}
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {conditionOptions.length > 0 ? conditionOptions.map((condition) => (
+                    <label
+                      key={condition}
+                      className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={conditionFilter.includes(condition)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setConditionFilter([...conditionFilter, condition]);
+                          } else {
+                            setConditionFilter(conditionFilter.filter(c => c !== condition));
+                          }
+                        }}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                      <span className="text-sm ml-2">{condition}</span>
+                    </label>
+                  )) : (
+                    <p className="text-xs text-gray-500 p-2">No conditions available</p>
+                  )}
                 </div>
               </div>
 
@@ -520,8 +550,15 @@ export default function Products() {
             </div>
 
             {/* Products Count */}
-            <div className="mb-4 text-sm text-gray-600">
-              Showing {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
+            <div className="mb-4 text-sm text-gray-600 flex items-center justify-between gap-3 flex-wrap">
+              <span>
+                Showing {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
+              </span>
+              {filteredProducts.length > PRODUCTS_PER_PAGE && (
+                <span>
+                  Page {currentPage} of {totalPages}
+                </span>
+              )}
             </div>
 
             {/* Products Grid */}
@@ -617,6 +654,68 @@ export default function Products() {
             ) : (
               <div className="text-center py-12">
                 <p className="text-gray-500 text-lg">No products found</p>
+              </div>
+            )}
+
+            {filteredProducts.length > PRODUCTS_PER_PAGE && (
+              <div className="mt-8 flex justify-center">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage((page) => Math.max(1, page - 1));
+                        }}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: totalPages }, (_, index) => index + 1)
+                      .filter((page) => {
+                        if (totalPages <= 7) return true;
+                        return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+                      })
+                      .reduce<Array<number | string>>((acc, page, _, array) => {
+                        const previous = acc[acc.length - 1];
+                        if (typeof previous === 'number' && typeof page === 'number' && page - previous > 1) {
+                          acc.push('ellipsis');
+                        }
+                        acc.push(page);
+                        return acc;
+                      }, [])
+                      .map((page, index) => (
+                        <PaginationItem key={`${page}-${index}`}>
+                          {page === 'ellipsis' ? (
+                            <span className="flex h-9 w-9 items-center justify-center text-sm text-gray-500">...</span>
+                          ) : (
+                            <PaginationLink
+                              href="#"
+                              isActive={page === currentPage}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentPage(page as number);
+                              }}
+                            >
+                              {page}
+                            </PaginationLink>
+                          )}
+                        </PaginationItem>
+                      ))}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage((page) => Math.min(totalPages, page + 1));
+                        }}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
             )}
 

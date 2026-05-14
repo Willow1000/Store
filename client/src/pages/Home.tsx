@@ -12,6 +12,7 @@ import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useState, useEffect } from 'react';
 import { getHighResImageUrl } from '@/lib/images';
+import { calculateShipping } from '@shared/shipping';
 
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
@@ -38,14 +39,27 @@ export default function Home() {
     .filter(Boolean)
     .slice(0, 5);
 
-  // Filter deals: products with free shipping OR price > 250 OR has discount
-  const dealsProducts = products?.filter((p) => {
-    const price = p.price !== null && p.price !== undefined 
-      ? parseFloat(String(p.price))
-      : 0;
-    const hasDiscount = p.discount !== null && p.discount !== undefined;
-    return p.freeShipping === true || price > 250 || hasDiscount;
-  }) || [];
+  // Filter deals: products with free shipping OR price > 250 OR has discount,
+  // then keep only one item per category.
+  const dealsProducts = (() => {
+    const eligibleProducts = products?.filter((p) => {
+      const price = p.price !== null && p.price !== undefined
+        ? parseFloat(String(p.price))
+        : 0;
+      const hasDiscount = p.discount !== null && p.discount !== undefined;
+      return p.freeShipping === true || price > 250 || hasDiscount;
+    }) || [];
+
+    const uniqueByCategory = new Map<string, (typeof eligibleProducts)[number]>();
+    eligibleProducts.forEach((product) => {
+      const categoryKey = String(product.category_name || product.category || 'uncategorized').trim().toLowerCase();
+      if (!uniqueByCategory.has(categoryKey)) {
+        uniqueByCategory.set(categoryKey, product);
+      }
+    });
+
+    return Array.from(uniqueByCategory.values());
+  })();
 
   const getDiscountPercentage = (price: number | string, discount: number | null | undefined) => {
     if (!discount) return null;
@@ -75,7 +89,7 @@ export default function Home() {
     <>
       <SEOHead
         title="MotorVault - Buy Automotive Parts Online | OEM & Aftermarket"
-        description="Shop automotive parts from MotorVault. Wide selection of OEM and aftermarket parts. Free shipping over $50. Quality guaranteed. Shop now!"
+        description="Shop automotive parts from MotorVault. Wide selection of OEM and aftermarket parts. Free shipping over $1500. Quality guaranteed. Shop now!"
         keywords={['automobile parts', 'car parts', 'auto parts', 'aftermarket parts', 'OEM parts', 'motor parts online']}
         canonical="https://motorvault.com"
       />
@@ -103,6 +117,7 @@ export default function Home() {
                 const discountPercentage = getDiscountPercentage(product.price, product.discount);
                 const isWished = product.id && wishedProductIds.has(product.id);
                 const stock = Number(product.stock ?? 0);
+                const price = parseFloat(String(product.price ?? 0));
 
                 return (
                   <Link key={product.id} href={`/product/${product.id}`}>
@@ -178,7 +193,9 @@ export default function Home() {
                           )}
                         </div>
                         {/* Shipping Info */}
-                        <p className="mt-1 text-xs sm:text-xs md:text-sm text-green-600 font-medium">Free shipping</p>
+                        {calculateShipping(price) === 0 && (
+                          <p className="mt-1 text-xs sm:text-xs md:text-sm text-green-600 font-medium">Free shipping</p>
+                        )}
 
                         {/* View Deal Button */}
                         <div className="mt-auto pt-2 sm:pt-4">
@@ -199,7 +216,7 @@ export default function Home() {
         <div className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
           <div className="mb-6">
             <h1 className="text-3xl font-extrabold text-gray-900">Today's Deals</h1>
-            <p className="mt-2 text-lg text-gray-600">Discounted items, free shipping on select products & premium items over $250</p>
+            <p className="mt-2 text-lg text-gray-600">Discounted items, free shipping on items over $1500 & premium items over $250</p>
           </div>
 
           {/* Products Grid */}
@@ -218,6 +235,7 @@ export default function Home() {
                 const originalPrice = product.discount ? parseFloat(String(product.discount)).toFixed(2) : null;
                 const isWished = product.id && wishedProductIds.has(product.id);
                 const stock = Number(product.stock ?? 0);
+                const price = parseFloat(String(product.price ?? 0));
 
                 return (
                   <Link key={product.id} href={`/product/${product.id}`}>
@@ -294,7 +312,9 @@ export default function Home() {
                         </div>
 
                         {/* Shipping Info */}
-                        <p className="mt-1 text-xs sm:text-xs md:text-sm text-green-600 font-medium">Free shipping</p>
+                        {calculateShipping(price) === 0 && (
+                          <p className="mt-1 text-xs sm:text-xs md:text-sm text-green-600 font-medium">Free shipping</p>
+                        )}
 
                         {/* View Deal Button */}
                         <div className="mt-auto pt-2 sm:pt-4">
