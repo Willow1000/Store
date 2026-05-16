@@ -167,6 +167,19 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000, // 1MB warning limit
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split vendor libraries into separate chunks
+          'react-vendor': ['react', 'react-dom'],
+          'ui-vendor': ['lucide-react', 'sonner'],
+          'router-vendor': ['wouter'],
+          'supabase-vendor': ['@supabase/supabase-js'],
+          'form-vendor': ['react-hook-form', 'zod'],
+        },
+      },
+    },
   },
   server: {
     port: 3000,

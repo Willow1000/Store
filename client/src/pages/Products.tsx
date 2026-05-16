@@ -9,7 +9,9 @@ import { SEOHead } from '@/components/SEOHead';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProductsPageSkeleton } from '@/components/skeletons/ProductsPageSkeleton';
 import { QuickViewModal } from '@/components/QuickViewModal';
+import { BrandFilter } from '@/components/BrandFilter';
 import { useProducts, useSearchProducts, useCategories, useProductsBySlug } from '@/hooks/useSupabaseProducts';
+import { useBrands } from '@/hooks/useBrands';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuthModal } from '@/contexts/AuthModalContext';
@@ -57,6 +59,7 @@ export default function Products() {
   const { results: searchResults, isLoading: isSearching } = useSearchProducts(searchQuery);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
   const { categories, isLoading: categoriesLoading } = useCategories();
+  const { brands, isLoading: brandsLoading, error: brandsError } = useBrands();
   const { products: categoryProducts, isLoading: isCategoryLoading } = useProductsBySlug(categoryFilter);
   const categoryQueryValue = normalizeCategoryValue(getCategoryFromUrl());
 
@@ -117,6 +120,28 @@ export default function Products() {
   // Prefer server-filtered category results when a category is selected.
   const baseProducts = searchQuery ? searchResults : categoryFilter ? categoryProducts : allProducts;
 
+  // Helper to get brand match priority (0 = no match, 1 = brand in title, 2 = exact brand match)
+  const getBrandMatchPriority = (product: typeof baseProducts[0]): number => {
+    if (brandFilter.length === 0) return 0;
+
+    const productBrand = (product.brand || '').toLowerCase();
+    const productTitle = (product.title || '').toLowerCase();
+
+    for (const selectedBrand of brandFilter) {
+      const selectedBrandLower = selectedBrand.toLowerCase();
+      // Exact brand attribute match (highest priority)
+      if (productBrand === selectedBrandLower) {
+        return 2;
+      }
+      // Brand in title match (lower priority)
+      if (productTitle.includes(selectedBrandLower)) {
+        return 1;
+      }
+    }
+
+    return 0;
+  };
+
   // Filter and sort products
   const filteredProducts = useMemo(() => {
     if (!baseProducts) return [];
@@ -138,12 +163,11 @@ export default function Products() {
           (!selectedCategory && productCategory === normalizeCategoryValue(categoryFilter));
       }
 
-      // Brand filter
+      // Brand filter - match by brand attribute OR brand in title
       let brandMatch = true;
+      const brandMatchPriority = getBrandMatchPriority(p);
       if (brandFilter.length > 0) {
-        brandMatch = brandFilter.some(
-          b => (p.brand || '').toLowerCase() === b.toLowerCase()
-        );
+        brandMatch = brandMatchPriority > 0;
       }
 
       // Model filter
@@ -189,6 +213,15 @@ export default function Products() {
     switch (sortBy) {
       case 'price-low':
         filtered.sort((a, b) => {
+          // First, prioritize by brand match if brand filter is active
+          if (brandFilter.length > 0) {
+            const aPriority = getBrandMatchPriority(a);
+            const bPriority = getBrandMatchPriority(b);
+            if (aPriority !== bPriority) {
+              return bPriority - aPriority; // Higher priority first
+            }
+          }
+          // Then sort by price
           const aPrice = parseFloat(String(a.price));
           const bPrice = parseFloat(String(b.price));
           return aPrice - bPrice;
@@ -196,17 +229,40 @@ export default function Products() {
         break;
       case 'price-high':
         filtered.sort((a, b) => {
+          // First, prioritize by brand match if brand filter is active
+          if (brandFilter.length > 0) {
+            const aPriority = getBrandMatchPriority(a);
+            const bPriority = getBrandMatchPriority(b);
+            if (aPriority !== bPriority) {
+              return bPriority - aPriority; // Higher priority first
+            }
+          }
+          // Then sort by price
           const aPrice = parseFloat(String(a.price));
           const bPrice = parseFloat(String(b.price));
           return bPrice - aPrice;
         });
         break;
       case 'popular':
-        // Keep original order for popular
+        // Prioritize by brand match if active, then keep original order
+        if (brandFilter.length > 0) {
+          filtered.sort((a, b) => {
+            const aPriority = getBrandMatchPriority(a);
+            const bPriority = getBrandMatchPriority(b);
+            return bPriority - aPriority; // Higher priority first
+          });
+        }
         break;
       case 'newest':
       default:
-        // Keep original order
+        // Prioritize by brand match if active, then keep original order
+        if (brandFilter.length > 0) {
+          filtered.sort((a, b) => {
+            const aPriority = getBrandMatchPriority(a);
+            const bPriority = getBrandMatchPriority(b);
+            return bPriority - aPriority; // Higher priority first
+          });
+        }
         break;
     }
 
@@ -527,14 +583,50 @@ export default function Products() {
 
           {/* Products Grid */}
           <div className="lg:col-span-4">
-            {/* Mobile Filter Button */}
-            <button
-              onClick={() => setShowFilters(true)}
-              className="lg:hidden mb-4 flex items-center gap-2 px-4 py-2 border border-gray-300 rounded"
-            >
-              <Filter className="w-4 h-4" />
-              Filters
-            </button>
+            {/* Mobile Filter and Brand Selection */}
+            <div className="lg:hidden mb-4">
+              <button
+                onClick={() => setShowFilters(true)}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded w-full"
+              >
+                <Filter className="w-4 h-4" />
+                Filters
+              </button>
+
+              {/* Mobile Brand Filter */}
+              <BrandFilter
+                brands={brands}
+                selectedBrands={brandFilter}
+                onBrandToggle={(brandName) => {
+                  setBrandFilter(prevBrands =>
+                    prevBrands.includes(brandName)
+                      ? prevBrands.filter(b => b !== brandName)
+                      : [...prevBrands, brandName]
+                  );
+                }}
+                isLoading={brandsLoading}
+                compact={true}
+                error={brandsError}
+              />
+            </div>
+
+            {/* Brand Filter - Desktop View */}
+            <div className="hidden lg:block mb-6">
+              <BrandFilter
+                brands={brands}
+                selectedBrands={brandFilter}
+                onBrandToggle={(brandName) => {
+                  setBrandFilter(prevBrands =>
+                    prevBrands.includes(brandName)
+                      ? prevBrands.filter(b => b !== brandName)
+                      : [...prevBrands, brandName]
+                  );
+                }}
+                isLoading={brandsLoading}
+                compact={false}
+                error={brandsError}
+              />
+            </div>
 
             {/* Search Bar */}
             <div className="mb-6">
