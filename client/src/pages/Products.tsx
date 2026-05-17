@@ -122,6 +122,12 @@ export default function Products() {
     return Boolean(q) || areFiltersActive();
   };
 
+  // Return true only when there is an active or recently-completed search term
+  const hasSearchTermActive = () => {
+    const q = (activeSearchRef.current || pendingCompletedSearchRef.current || searchQuery || '').trim();
+    return Boolean(q);
+  };
+
   const selectedCategory = useMemo(() => {
     if (!categoryFilter) return null;
     const normalizedFilter = normalizeCategoryValue(categoryFilter);
@@ -167,6 +173,7 @@ export default function Products() {
 
       if (pending && pending !== q) {
         // send one-time 'search' event for the completed/pending term
+        // include metadata to indicate the search was abandoned (user started a new search)
         try {
           const bodyPayload = {
             sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
@@ -184,7 +191,12 @@ export default function Products() {
             resultsCount: filteredProducts.length,
             matchedProductIds: filteredProducts.slice(0, 50).map((p) => p.id),
             pageUrl: window.location.href,
-          };
+            metadata: {
+              abandoned: true,
+              reason: 'started_new_search',
+              flushedAt: new Date().toISOString(),
+            },
+          } as Record<string, any>;
 
           const body = JSON.stringify(bodyPayload);
           if (navigator.sendBeacon) {
@@ -922,8 +934,8 @@ export default function Products() {
                       <div
                         className="group cursor-pointer"
                         onClick={() => {
-                            try {
-                              if (isSearchOrFiltersActive()) {
+                                try {
+                              if (hasSearchTermActive()) {
                                 const payload = {
                                   sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
                                   eventType: 'product_click',

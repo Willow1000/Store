@@ -18,7 +18,7 @@ import { calculateShipping } from '@shared/shipping';
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthModal();
-  const { products, isLoading } = useProducts(1, 20); // Fetch 20 products for deals
+  const { products, isLoading } = useProducts(1, 100); // Fetch 100 products for best deals selection
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
   const { categories, isLoading: categoriesLoading } = useCategories();
   const isMobile = useIsMobile();
@@ -41,15 +41,35 @@ export default function Home() {
     .filter(Boolean)
     .slice(0, 5);
 
-  // Filter deals: products with free shipping OR price > 250 OR has discount,
-  // then keep only one item per category.
+  // Filter deals: exactly 5 products from different categories with best offers (new or past items)
+  // Shows products with: price >= 1500 (premium), 7%+ discount, or free shipping
   const dealsProducts = (() => {
     const eligibleProducts = products?.filter((p) => {
       const price = p.price !== null && p.price !== undefined
         ? parseFloat(String(p.price))
         : 0;
-      const hasDiscount = p.discount !== null && p.discount !== undefined;
-      return p.freeShipping === true || price > 250 || hasDiscount;
+      const discount = p.discount !== null && p.discount !== undefined
+        ? parseFloat(String(p.discount))
+        : 0;
+      
+      // Check if product has free shipping
+      const hasFreeShipping = p.freeShipping === true;
+      
+      // If free shipping, it qualifies
+      if (hasFreeShipping) return true;
+      
+      // If price is above 1500 (premium items), it qualifies
+      if (price >= 1500) return true;
+      
+      if (discount <= 0 || isNaN(discount) || price <= 0) return false;
+      
+      // Calculate discount percentage
+      const discountPercentage = discount > 0 && price > 0
+        ? Math.round(((discount - price) / discount) * 100)
+        : 0;
+      
+      // Include products with 7%+ discount
+      return discountPercentage >= 7;
     }) || [];
 
     const uniqueByCategory = new Map<string, (typeof eligibleProducts)[number]>();
@@ -60,7 +80,30 @@ export default function Home() {
       }
     });
 
-    return Array.from(uniqueByCategory.values());
+    // Return exactly 5 products from different categories, sorted by combined deal score (premium + discount)
+    return Array.from(uniqueByCategory.values())
+      .sort((a, b) => {
+        const priceA = parseFloat(String(a.price ?? 0));
+        const priceB = parseFloat(String(b.price ?? 0));
+        const discountA = parseFloat(String(a.discount ?? 0));
+        const discountB = parseFloat(String(b.discount ?? 0));
+        
+        // Calculate discount percentage for both
+        const discountPercentA = discountA > 0 && priceA > 0
+          ? Math.round(((discountA - priceA) / discountA) * 100)
+          : 0;
+        const discountPercentB = discountB > 0 && priceB > 0
+          ? Math.round(((discountB - priceB) / discountB) * 100)
+          : 0;
+        
+        // Combined deal score: normalize price to score (price/1500) + discount percentage
+        // This gives premium items value while also rewarding good discounts
+        const scoreA = (priceA / 1500) + discountPercentA;
+        const scoreB = (priceB / 1500) + discountPercentB;
+        
+        return scoreB - scoreA;
+      })
+      .slice(0, 5);
   })();
 
   const getDiscountPercentage = (price: number | string, discount: number | null | undefined) => {
@@ -221,14 +264,14 @@ export default function Home() {
       <div className="bg-white">
         <div className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
           <div className="mb-6">
-            <h1 className="text-3xl font-extrabold text-gray-900">Today's Deals</h1>
-            <p className="mt-2 text-lg text-gray-600">Discounted items, free shipping on items over $1500 & premium items over $250</p>
+            <h1 className="text-3xl font-extrabold text-gray-900">Best Deals</h1>
+            <p className="mt-2 text-lg text-gray-600">Premium items above $1500, 7%+ discounts, and free shipping options from different categories</p>
           </div>
 
           {/* Products Grid */}
-          <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-5">
             {isLoading ? (
-              Array.from({ length: 8 }).map((_, i) => (
+              Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="space-y-4">
                   <Skeleton className="w-full aspect-square rounded-xl" />
                   <Skeleton className="w-3/4 h-4" />

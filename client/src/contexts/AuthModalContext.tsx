@@ -4,10 +4,10 @@ import { PendingAuthAction, savePendingAuthAction, clearPendingAuthAction } from
 interface AuthModalContextType {
   isOpen: boolean;
   mode: 'login' | 'signup';
-  actionType?: 'cart' | 'wishlist' | 'checkout' | null;
+  actionType?: 'cart' | 'wishlist' | 'checkout' | 'tickets' | null;
   openAuthModal: (
     mode?: 'login' | 'signup',
-    actionType?: 'cart' | 'wishlist' | 'checkout',
+    actionType?: 'cart' | 'wishlist' | 'checkout' | 'tickets',
     pendingAction?: PendingAuthAction
   ) => void;
   closeAuthModal: () => void;
@@ -19,11 +19,11 @@ const AuthModalContext = createContext<AuthModalContextType | undefined>(undefin
 export function AuthModalProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [actionType, setActionType] = useState<'cart' | 'wishlist' | 'checkout' | null>(null);
+  const [actionType, setActionType] = useState<'cart' | 'wishlist' | 'checkout' | 'tickets' | null>(null);
 
   const openAuthModal = (
     newMode: 'login' | 'signup' = 'login',
-    newActionType?: 'cart' | 'wishlist' | 'checkout',
+    newActionType?: 'cart' | 'wishlist' | 'checkout' | 'tickets',
     pendingAction?: PendingAuthAction
   ) => {
     setMode(newMode);
@@ -40,7 +40,7 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handleAuthRequired = (event: Event) => {
-      const customEvent = event as CustomEvent<PendingAuthAction & { actionType?: 'cart' | 'wishlist' | 'checkout' }>;
+      const customEvent = event as CustomEvent<PendingAuthAction & { actionType?: 'cart' | 'wishlist' | 'checkout' | 'tickets' }>;
       const pendingAction = customEvent.detail;
       openAuthModal('login', pendingAction?.actionType, pendingAction);
     };

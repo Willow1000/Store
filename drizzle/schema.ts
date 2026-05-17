@@ -7,6 +7,10 @@ export const statusEnum = pgEnum("status", ["pending", "confirmed", "shipped", "
 export const typeEnum = pgEnum("type", ["order_placed", "order_confirmed", "order_shipped", "order_delivered", "payment_failed", "system"]);
 export const conditionEnum = pgEnum("condition", ["new", "like-new", "good", "fair", "used"]);
 
+// Ticketing enums
+export const ticketStatusEnum = pgEnum("ticket_status", ["open", "in_progress", "resolved", "closed"]);
+export const ticketPriorityEnum = pgEnum("ticket_priority", ["low", "medium", "high"]);
+
 /**
  * Core user table backing auth flow.
  * Extend this file with additional tables as your product grows.
@@ -331,3 +335,26 @@ export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
     references: [products.id],
   }),
 }));
+
+// Tickets / Support table
+export const tickets = pgTable("tickets", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  referenceCode: varchar("referenceCode", { length: 64 }).notNull().unique(),
+  userId: varchar("userId", { length: 36 }),
+  contactEmail: varchar("contactEmail", { length: 320 }),
+  contactPhone: varchar("contactPhone", { length: 32 }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  status: ticketStatusEnum("status").default("open").notNull(),
+  priority: ticketPriorityEnum("priority").default("medium").notNull(),
+  channel: varchar("channel", { length: 50 }).default("web"),
+  assignedTo: varchar("assignedTo", { length: 36 }),
+  tags: jsonb("tags").default('[]'),
+  attachments: jsonb("attachments").default('[]'),
+  metadata: jsonb("metadata").default('{}'),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type Ticket = typeof tickets.$inferSelect;
+export type InsertTicket = typeof tickets.$inferInsert;

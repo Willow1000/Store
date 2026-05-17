@@ -250,6 +250,7 @@ export default function AuthModal() {
     cart: 'Sign in to add items to your cart',
     wishlist: 'Sign in to save items to your wishlist',
     checkout: 'Sign in to complete your purchase',
+    tickets: 'Sign in to your account to see your ticket(s)',
   };
 
   return (

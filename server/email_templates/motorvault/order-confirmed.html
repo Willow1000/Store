@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Order Confirmed — MotorVault</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#f7f7f8;margin:0;padding:0;color:#111}
+    .container{max-width:680px;margin:24px auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e6e6e9}
+    .header{background:#0f1724;padding:20px 24px;color:#fff;display:flex;align-items:center}
+    .logo{height:36px;margin-right:12px}
+    .brand{font-weight:700;font-size:18px}
+    .content{padding:24px}
+    .h1{font-size:20px;margin:0 0 8px}
+    .lead{color:#374151;margin:0 0 16px}
+    .order-card{background:#f3f4f6;padding:14px;border-radius:6px;margin:12px 0}
+    .footer{padding:20px 24px;background:#fafafa;color:#6b7280;font-size:13px}
+    .btn{display:inline-block;background:#dc2626;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img class="logo" src="https://motorvault.com/motorvault_horizontal.svg" alt="MotorVault logo" />
+      <div class="brand">MotorVault</div>
+    </div>
+    <div class="content">
+      <h1 class="h1">Order Confirmed</h1>
+      <p class="lead">Thanks for your purchase, {{customer_name}} — we received your order <strong>{{order_number}}</strong> and are getting it ready.</p>
+
+      <div class="order-card">
+        <div><strong>Order</strong>: {{order_number}}</div>
+        <div><strong>Date</strong>: {{order_date}}</div>
+        <div><strong>Total</strong>: {{order_total}}</div>
+      </div>
+
+      <p>We'll send another email once your order has been packaged and is ready for shipping. You can also view your order details in your account.</p>
+
+      <p>
+        <a class="btn" href="{{order_url}}">View order details</a>
+      </p>
+    </div>
+    <div class="footer">
+      <div>Questions? Contact our support at <a href="mailto:support@motorvault.com">support@motorvault.com</a></div>
+      <div style="margin-top:8px">© MotorVault</div>
+    </div>
+  </div>
+</body>
+</html>

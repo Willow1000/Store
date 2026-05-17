@@ -29,6 +29,7 @@ import Cookies from "./pages/Cookies";
 import About from "./pages/About";
 import Accessibility from "./pages/Accessibility";
 import FAQ from "./pages/FAQ";
+import Tickets from "./pages/Tickets";
 
 function Router() {
   return (
@@ -51,6 +52,7 @@ function Router() {
       <Route path={"/privacy"} component={Privacy} />
       <Route path={"/terms"} component={Terms} />
       <Route path={"/cookies"} component={Cookies} />
+      <Route path={"/tickets"} component={Tickets} />
       <Route path={"/accessibility"} component={Accessibility} />
       <Route path={"/faq"} component={FAQ} />
       <Route path={"/404"} component={NotFound} />

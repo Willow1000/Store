@@ -135,6 +135,14 @@ export default function Header() {
                     {t('header.myOrders', 'My Orders')}
                   </a>
                 </Link>
+                <Link href="/tickets">
+                  <a
+                    onClick={() => setIsAccountMenuOpen(false)}
+                    className="block px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-100"
+                  >
+                    {t('header.tickets', 'My Tickets')}
+                  </a>
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full px-3 sm:px-4 py-2 text-left text-xs sm:text-sm hover:bg-gray-100 flex items-center gap-2"
@@ -196,6 +204,11 @@ export default function Header() {
                 <Link href="/orders">
                   <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
                     My Orders
+                  </a>
+                </Link>
+                <Link href="/tickets">
+                  <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                    My Tickets
                   </a>
                 </Link>
               </>

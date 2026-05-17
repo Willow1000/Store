@@ -1,7 +1,7 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { InsertUser, users, cartItems, orders, notifications, categories, products, productVariants, InsertOrder, InsertNotification, wishlistItems, payments, InsertPayment, productSearchTracking, InsertProductSearchTracking } from "../drizzle/schema";
+import { InsertUser, users, cartItems, orders, notifications, categories, products, productVariants, InsertOrder, InsertNotification, wishlistItems, payments, InsertPayment, productSearchTracking, InsertProductSearchTracking, tickets, InsertTicket } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -227,6 +227,48 @@ export async function getCategories() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(categories);
+}
+
+// Ticket queries
+export async function createTicket(data: InsertTicket) {
+  try {
+    const db = await getDb();
+    if (!db) {
+      console.error('[createTicket] Database not available');
+      return null;
+    }
+    const result = await db.insert(tickets).values(data).returning();
+    return result[0] || null;
+  } catch (error) {
+    console.error('[createTicket] Error:', error);
+    throw error;
+  }
+}
+
+export async function getTicketsByUserId(userId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(tickets).where(eq(tickets.userId, userId)).orderBy(desc(tickets.createdAt));
+}
+
+export async function getTicketsByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(tickets).where(eq(tickets.contactEmail, email)).orderBy(desc(tickets.createdAt));
+}
+
+export async function getTicketByReferenceCode(referenceCode: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(tickets).where(eq(tickets.referenceCode, referenceCode));
+  return result[0] || null;
+}
+
+export async function updateTicket(referenceCode: string, data: Partial<InsertTicket>) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.update(tickets).set({ ...data, updatedAt: new Date() }).where(eq(tickets.referenceCode, referenceCode)).returning();
+  return result[0] || null;
 }
 
 // Notification queries

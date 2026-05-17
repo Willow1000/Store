@@ -2,12 +2,15 @@ import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from 'crypto';
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { registerOAuthRoutes } from "./oauth";
 import { verifyTransaction, initializeTransaction } from "../paystack";
 import { sdk } from "./sdk";
+import { COOKIE_NAME } from "@shared/const";
+import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
 import { getDb, createOrder, createPayment } from "../db";
 
@@ -158,6 +161,27 @@ export function createApp() {
 
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // Dev-only debug endpoint to inspect session cookie and verification.
+  if (process.env.NODE_ENV !== 'production') {
+    app.get('/api/debug/session', async (req, res) => {
+      try {
+        const cookieHeader = req.headers.cookie ?? null;
+        const parsed = cookieHeader ? parseCookieHeader(cookieHeader) : {};
+        const sessionCookie = parsed[COOKIE_NAME];
+        const verified = await sdk.verifySession(sessionCookie ?? null);
+        return res.json({
+          cookieHeader,
+          parsedCookies: parsed,
+          sessionCookie: Boolean(sessionCookie),
+          verifiedSession: verified,
+        });
+      } catch (err) {
+        console.error('[Debug] /api/debug/session error', err);
+        return res.status(500).json({ error: 'debug endpoint failed' });
+      }
+    });
+  }
 
   // Paystack redirect callback: verify reference and create order for authenticated user
   app.get('/payment/callback', async (req: express.Request, res: express.Response) => {
@@ -325,6 +349,14 @@ export function createApp() {
 
       const trackingUrl = `${supabaseUrl}/rest/v1/product_search_tracking`;
 
+      // Supabase/PostgREST maps JSON keys to PostgreSQL column names which
+      // are lowercased when created without quotes. Convert keys to
+      // lowercase to match the existing table column names (e.g. "clickedProductId" -> "clickedproductid").
+      const payloadForSupabase: Record<string, any> = {};
+      Object.keys(entry || {}).forEach((k) => {
+        payloadForSupabase[String(k).toLowerCase()] = (entry as any)[k];
+      });
+
       const trackRes = await fetch(trackingUrl, {
         method: 'POST',
         headers: {
@@ -333,7 +365,7 @@ export function createApp() {
           'apikey': serviceKey,
           'Prefer': 'return=minimal',
         },
-        body: JSON.stringify(entry),
+        body: JSON.stringify(payloadForSupabase),
       });
 
       if (!trackRes.ok) {
@@ -341,12 +373,222 @@ export function createApp() {
         console.error('[Track] Supabase API error:', trackRes.status, errText);
         return res.status(200).json({ success: true }); // Don't fail the user's request
       }
-
-      console.log('[Track] Successfully recorded:', entry.eventType, entry.searchTerm || entry.clickedProductId);
       return res.status(200).json({ success: true });
     } catch (err) {
       console.error('[Track] Failed to record event:', err);
       return res.status(200).json({ success: true }); // Don't fail the user's request
+    }
+  });
+
+  // Tickets API: create, list, update (uses Supabase REST API - same pattern as tracking)
+  app.post('/api/tickets', async (req, res) => {
+    try {
+      const payload = req.body || {};
+      let authenticatedUserId: string | null = null;
+
+      // Try to get user from Authorization header (Supabase token)
+      const authHeader = req.headers.authorization || '';
+      if (authHeader.startsWith('Bearer ')) {
+        const token = authHeader.slice(7);
+        try {
+          const supabaseUrl = process.env.VITE_SUPABASE_URL?.replace(/\/rest\/v1\/?$/, '') || 'https://dormxdlqbstebbsumdjj.supabase.co';
+          const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+          
+          if (supabaseAnonKey) {
+            const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                apikey: supabaseAnonKey,
+              },
+            });
+            
+            if (userRes.ok) {
+              const userData = await userRes.json();
+              authenticatedUserId = userData.id;
+            }
+          }
+        } catch (tokenErr) {
+          console.warn('[Tickets] Failed to validate Bearer token:', tokenErr);
+        }
+      }
+
+      if (!authenticatedUserId) {
+        return res.status(401).json({ error: 'Authentication required to create tickets' });
+      }
+
+      // Build ticket entry
+      const entry: any = {
+        referenceCode: String(payload.referenceCode || `T-${Date.now()}-${Math.random().toString(36).slice(2,6)}`),
+        userId: authenticatedUserId,
+        contactEmail: payload.contactEmail ?? null,
+        contactPhone: payload.contactPhone ?? null,
+        title: String(payload.title || '').slice(0, 255),
+        description: payload.description ?? null,
+        status: String(payload.status || 'open'),
+        priority: String(payload.priority || 'medium'),
+        channel: payload.channel ?? 'web',
+        assignedTo: payload.assignedTo ?? null,
+        tags: payload.tags ?? [],
+        attachments: payload.attachments ?? [],
+        metadata: payload.metadata ?? {},
+        createdAt: new Date().toISOString(),
+      };
+
+      // Use Supabase REST API - same pattern as tracking
+      const supabaseUrl = process.env.VITE_SUPABASE_URL?.replace(/\/rest\/v1\/?$/, '') || 'https://dormxdlqbstebbsumdjj.supabase.co';
+      const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+
+      if (!serviceKey) {
+        console.error('[Tickets] SUPABASE_SERVICE_KEY not configured');
+        return res.status(500).json({ error: 'Service key not configured' });
+      }
+
+      // Convert keys to lowercase to match PostgreSQL column names (same as tracking)
+      const payloadForSupabase: Record<string, any> = {};
+      Object.keys(entry || {}).forEach((k) => {
+        payloadForSupabase[String(k).toLowerCase()] = (entry as any)[k];
+      });
+
+      const ticketsUrl = `${supabaseUrl}/rest/v1/tickets`;
+
+      const ticketRes = await fetch(ticketsUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify(payloadForSupabase),
+      });
+
+      const resText = await ticketRes.text();
+      if (!ticketRes.ok) {
+        console.error('[Tickets] Supabase API error:', ticketRes.status, resText);
+        return res.status(502).json({ error: 'Failed to create ticket' });
+      }
+
+      const created = JSON.parse(resText || 'null');
+      return res.status(201).json({ success: true, ticket: Array.isArray(created) ? created[0] : created });
+    } catch (err) {
+      console.error('[Tickets] create error:', err);
+      return res.status(500).json({ error: 'internal' });
+    }
+  });
+
+  app.get('/api/tickets', async (req, res) => {
+    try {
+      const { referenceCode } = req.query as Record<string, string>;
+      let authenticatedUserId: string | null = null;
+
+      // Validate Bearer token to get authenticated user
+      const authHeader = req.headers.authorization || '';
+      if (authHeader.startsWith('Bearer ')) {
+        const token = authHeader.slice(7);
+        try {
+          const supabaseUrl = process.env.VITE_SUPABASE_URL?.replace(/\/rest\/v1\/?$/, '') || 'https://dormxdlqbstebbsumdjj.supabase.co';
+          const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+          
+          if (supabaseAnonKey) {
+            const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                apikey: supabaseAnonKey,
+              },
+            });
+            
+            if (userRes.ok) {
+              const userData = await userRes.json();
+              authenticatedUserId = userData.id;
+            }
+          }
+        } catch (tokenErr) {
+          console.warn('[Tickets] Failed to validate Bearer token:', tokenErr);
+        }
+      }
+
+      if (!authenticatedUserId) {
+        return res.status(401).json({ error: 'Authentication required to view tickets' });
+      }
+
+      const supabaseUrl = process.env.VITE_SUPABASE_URL?.replace(/\/rest\/v1\/?$/, '') || 'https://dormxdlqbstebbsumdjj.supabase.co';
+      const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+
+      if (!serviceKey) {
+        console.error('[Tickets] SUPABASE_SERVICE_KEY not configured');
+        return res.status(500).json({ error: 'Service key not configured' });
+      }
+
+      // Always filter by authenticated user's ID - users can only see their own tickets
+      let url = `${supabaseUrl}/rest/v1/tickets?select=*&userid=eq.${encodeURIComponent(authenticatedUserId)}`;
+      if (referenceCode) url += `&referencecode=eq.${encodeURIComponent(referenceCode)}`;
+      url += `&order=createdat.desc`;
+
+      const ticketRes = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+        },
+      });
+
+      if (!ticketRes.ok) {
+        const errText = await ticketRes.text();
+        console.error('[Tickets] Supabase API error:', ticketRes.status, errText);
+        return res.status(502).json({ error: 'Failed to fetch tickets' });
+      }
+
+      const tickets = await ticketRes.json();
+      return res.status(200).json(tickets || []);
+    } catch (err) {
+      console.error('[Tickets] list error:', err);
+      return res.status(500).json({ error: 'internal' });
+    }
+  });
+
+  app.patch('/api/tickets/:referenceCode', async (req, res) => {
+    try {
+      const { referenceCode } = req.params as { referenceCode: string };
+      const updates = req.body || {};
+
+      const supabaseUrl = process.env.VITE_SUPABASE_URL?.replace(/\/rest\/v1\/?$/, '') || 'https://dormxdlqbstebbsumdjj.supabase.co';
+      const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+
+      if (!serviceKey) {
+        console.error('[Tickets] SUPABASE_SERVICE_KEY not configured');
+        return res.status(500).json({ error: 'Service key not configured' });
+      }
+
+      // Convert keys to lowercase for PostgreSQL column names
+      const payloadForSupabase: Record<string, any> = {};
+      Object.keys(updates || {}).forEach((k) => {
+        payloadForSupabase[String(k).toLowerCase()] = (updates as any)[k];
+      });
+      payloadForSupabase.updatedat = new Date().toISOString();
+
+      const ticketsUrl = `${supabaseUrl}/rest/v1/tickets?referencecode=eq.${encodeURIComponent(referenceCode)}`;
+
+      const ticketRes = await fetch(ticketsUrl, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify(payloadForSupabase),
+      });
+
+      if (!ticketRes.ok) {
+        const errText = await ticketRes.text();
+        console.error('[Tickets] Supabase API error:', ticketRes.status, errText);
+        return res.status(502).json({ error: 'Failed to update ticket' });
+      }
+
+      const updated = await ticketRes.json();
+      return res.status(200).json({ success: true, ticket: Array.isArray(updated) ? updated[0] : updated });
+    } catch (err) {
+      console.error('[Tickets] update error:', err);
+      return res.status(500).json({ error: 'internal' });
     }
   });
 

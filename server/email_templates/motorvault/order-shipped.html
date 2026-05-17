@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Your order has shipped — MotorVault</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#f7f7f8;margin:0;padding:0;color:#111}
+    .container{max-width:680px;margin:24px auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e6e6e9}
+    .header{background:#0f1724;padding:20px 24px;color:#fff;display:flex;align-items:center}
+    .logo{height:36px;margin-right:12px}
+    .brand{font-weight:700;font-size:18px}
+    .content{padding:24px}
+    .h1{font-size:20px;margin:0 0 8px}
+    .lead{color:#374151;margin:0 0 16px}
+    .track{background:#eef2ff;padding:12px;border-radius:6px;border:1px solid #e0e7ff}
+    .footer{padding:20px 24px;background:#fafafa;color:#6b7280;font-size:13px}
+    .btn{display:inline-block;background:#0f1724;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img class="logo" src="https://motorvault.com/motorvault_horizontal.svg" alt="MotorVault logo" />
+      <div class="brand">MotorVault</div>
+    </div>
+    <div class="content">
+      <h1 class="h1">Your order has shipped</h1>
+      <p class="lead">Great news, {{customer_name}} — your order <strong>{{order_number}}</strong> is on its way.</p>
+
+      <div class="track">
+        <div><strong>Carrier</strong>: {{carrier_name}}</div>
+        <div><strong>Tracking</strong>: {{tracking_number}}</div>
+        <div style="margin-top:8px"><a href="{{tracking_url}}">Track your shipment</a></div>
+      </div>
+
+      <p style="margin-top:12px">If you have any questions about delivery, reply to this email or reach out to <a href="mailto:support@motorvault.com">support@motorvault.com</a>.</p>
+
+      <p>
+        <a class="btn" href="{{order_url}}">View order</a>
+      </p>
+    </div>
+    <div class="footer">
+      <div>Thanks for shopping at MotorVault.</div>
+      <div style="margin-top:8px">© MotorVault</div>
+    </div>
+  </div>
+</body>
+</html>

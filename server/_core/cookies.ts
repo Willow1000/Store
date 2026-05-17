@@ -39,10 +39,20 @@ export function getSessionCookieOptions(
   //       ? hostname
   //       : undefined;
 
+  const secure = isSecureRequest(req);
+  // For cross-site flows (OAuth, third-party payments) browsers require
+  // `SameSite=None` **and** `Secure=true`. On local dev (insecure) setting
+  // SameSite=None without Secure will cause browsers to reject the cookie,
+  // which results in the user appearing signed-out after redirects.
+  // Use `lax` for non-secure requests so cookies remain available on reloads
+  // and after navigations that are same-site, and use `none` when the
+  // connection is secure so cross-site flows continue to work in production.
+  const sameSite: CookieOptions['sameSite'] = secure ? 'none' : 'lax';
+
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    sameSite,
+    secure,
   };
 }
