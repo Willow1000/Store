@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Link } from 'wouter';
 import { Filter, X, Star, Heart, Eye } from 'lucide-react';
@@ -10,13 +10,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ProductsPageSkeleton } from '@/components/skeletons/ProductsPageSkeleton';
 import { QuickViewModal } from '@/components/QuickViewModal';
 import { BrandFilter } from '@/components/BrandFilter';
-import { useProducts, useSearchProducts, useCategories, useProductsBySlug } from '@/hooks/useSupabaseProducts';
+import { useProducts, useCategories, useProductsBySlug } from '@/hooks/useSupabaseProducts';
 import { useBrands } from '@/hooks/useBrands';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { getHighResImageUrl } from '@/lib/images';
-import { getBrandSuggestions, getModelSuggestions, getSimilarProducts } from '@/lib/productSearch';
+import { getBrandSuggestions, getModelSuggestions, getSimilarProducts, searchProducts } from '@/lib/productSearch';
 import { Product } from '@/types/supabase';
 import {
   Pagination,
@@ -48,6 +48,9 @@ const getCategoryFromUrl = () => {
 export default function Products() {
   const [location, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
+  const lastTrackedSearchRef = useRef('');
+  const activeSearchRef = useRef<string | null>(null);
+  const pendingCompletedSearchRef = useRef<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [brandFilter, setBrandFilter] = useState<string[]>([]);
   const [modelFilter, setModelFilter] = useState<string[]>([]);
@@ -65,12 +68,59 @@ export default function Products() {
   const { user, isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthModal();
   const { products: allProducts, isLoading } = useProducts(1, -1);
-  const { results: searchResults, isLoading: isSearching } = useSearchProducts(searchQuery);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
   const { categories, isLoading: categoriesLoading } = useCategories();
   const { brands, isLoading: brandsLoading, error: brandsError } = useBrands();
   const { products: categoryProducts, isLoading: isCategoryLoading } = useProductsBySlug(categoryFilter);
   const categoryQueryValue = normalizeCategoryValue(getCategoryFromUrl());
+
+  const brandsWithLogos = useMemo(
+    () => brands.filter((brand) => Boolean(brand.image_url && brand.image_url.trim())),
+    [brands]
+  );
+
+  // Lightweight non-blocking tracker helper
+  const sendTrackingEvent = (payload: Record<string, any>) => {
+    try {
+      // Ensure a persistent session id exists for anonymous users
+      try {
+        if (typeof window !== 'undefined') {
+          let sid = localStorage.getItem('sessionId');
+          if (!sid) {
+            sid = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `anon-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+            try { localStorage.setItem('sessionId', sid); } catch (e) {}
+          }
+          payload.sessionId = payload.sessionId || sid;
+        }
+      } catch (e) {}
+
+      const body = JSON.stringify(payload);
+      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+        navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
+        return;
+      }
+      // Fallback: fire-and-forget fetch with keepalive
+      fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+    } catch (err) {
+      // ignore tracking errors
+    }
+  };
+
+  const areFiltersActive = () => {
+    if (categoryFilter) return true;
+    if (brandFilter.length > 0) return true;
+    if (modelFilter.length > 0) return true;
+    if (conditionFilter.length > 0) return true;
+    if (inStockOnly) return true;
+    if (dealsOnly) return true;
+    if (priceRange[0] !== 0 || priceRange[1] !== 20000) return true;
+    return false;
+  };
+
+  const isSearchOrFiltersActive = () => {
+    const q = (activeSearchRef.current || pendingCompletedSearchRef.current || searchQuery || '').trim();
+    return Boolean(q) || areFiltersActive();
+  };
 
   const selectedCategory = useMemo(() => {
     if (!categoryFilter) return null;
@@ -95,6 +145,69 @@ export default function Products() {
       console.error('[Products] Failed to load recently viewed items:', error);
     }
   }, []);
+
+  // Search session logic:
+  // - track active typed term in sessionStorage under 'activeSearchTerm'
+  // - when user clears the search bar, move the last term to 'pendingSearchTerm'
+  // - when user starts a new search while a pending term exists, emit a single 'search' event for the pending term
+  useEffect(() => {
+    const prevActive = activeSearchRef.current;
+    const q = searchQuery.trim();
+
+    // Update activeSearchRef and sessionStorage
+    if (q) {
+      activeSearchRef.current = q;
+      try {
+        sessionStorage.setItem('activeSearchTerm', q);
+      } catch (e) {}
+      // If there is a pending completed term (user cleared before) and they now start a new search, emit the pending term
+      const pending = pendingCompletedSearchRef.current || (() => {
+        try { return sessionStorage.getItem('pendingSearchTerm'); } catch { return null; }
+      })();
+
+      if (pending && pending !== q) {
+        // send one-time 'search' event for the completed/pending term
+        try {
+          const bodyPayload = {
+            sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
+            eventType: 'search',
+            searchTerm: pending,
+            filters: {
+              category: categoryFilter,
+              brands: brandFilter,
+              models: modelFilter,
+              conditions: conditionFilter,
+              priceRange,
+              inStockOnly,
+              dealsOnly,
+            },
+            resultsCount: filteredProducts.length,
+            matchedProductIds: filteredProducts.slice(0, 50).map((p) => p.id),
+            pageUrl: window.location.href,
+          };
+
+          const body = JSON.stringify(bodyPayload);
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
+          } else {
+            fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+          }
+        } catch (err) {}
+
+        pendingCompletedSearchRef.current = null;
+        try { sessionStorage.removeItem('pendingSearchTerm'); } catch (e) {}
+      }
+    } else {
+      // search cleared: if there was an active term, mark it as pending
+      if (prevActive) {
+        pendingCompletedSearchRef.current = prevActive;
+        try { sessionStorage.setItem('pendingSearchTerm', prevActive); } catch (e) {}
+      }
+      activeSearchRef.current = null;
+      try { sessionStorage.removeItem('activeSearchTerm'); } catch (e) {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   const selectedCategoryName = normalizeCategoryValue(String(selectedCategory?.name ?? ''));
   const selectedCategorySlug = normalizeCategoryValue(String(selectedCategory?.slug ?? ''));
@@ -223,8 +336,8 @@ export default function Products() {
     }
   }, [location]);
 
-  // Prefer server-filtered category results when a category is selected.
-  const baseProducts = searchQuery ? searchResults : categoryFilter ? categoryProducts : allProducts;
+  // Prefer category-filtered results when a category is selected, then apply local text search.
+  const baseProducts = categoryFilter ? categoryProducts : allProducts;
 
   // Helper to get brand match priority (0 = no match, 1 = brand in title, 2 = exact brand match)
   const getBrandMatchPriority = (product: typeof baseProducts[0]): number => {
@@ -252,7 +365,14 @@ export default function Products() {
   const filteredProducts = useMemo(() => {
     if (!baseProducts) return [];
 
-    let filtered = baseProducts.filter((p) => {
+    const searchFiltered = searchQuery.trim()
+      ? searchProducts(baseProducts, searchQuery, {
+          includeSimilar: true,
+          maxResults: 1000,
+        })
+      : baseProducts;
+
+    let filtered = searchFiltered.filter((p) => {
       const price = p.price !== null && p.price !== undefined 
         ? parseFloat(String(p.price))
         : null;
@@ -386,7 +506,7 @@ export default function Products() {
     }
 
     return filtered;
-  }, [baseProducts, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly, brandFilter, modelFilter, conditionFilter, inStockOnly, allProducts, recentlyViewedIds]);
+  }, [baseProducts, searchQuery, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly, brandFilter, modelFilter, conditionFilter, inStockOnly, allProducts, recentlyViewedIds]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
 
@@ -402,6 +522,35 @@ export default function Products() {
     const start = (currentPage - 1) * PRODUCTS_PER_PAGE;
     return filteredProducts.slice(start, start + PRODUCTS_PER_PAGE);
   }, [filteredProducts, currentPage]);
+
+  const searchFeedback = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query || !baseProducts || filteredProducts.length === 0) {
+      return null;
+    }
+
+    const hasExactMatch = baseProducts.some((product) => {
+      const exactFields = [
+        product.title,
+        product.brand,
+        product.model,
+        product.category_name,
+        product.part_number,
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).trim().toLowerCase());
+
+      return exactFields.includes(query);
+    });
+
+    if (hasExactMatch) return null;
+
+    return {
+      query,
+      count: filteredProducts.length,
+      products: filteredProducts.slice(0, 6),
+    };
+  }, [searchQuery, baseProducts, filteredProducts]);
 
   const shouldShowPageSkeleton =
     (isLoading && allProducts.length === 0) ||
@@ -517,37 +666,6 @@ export default function Products() {
                     })
                   ) : (
                     <p className="text-xs text-gray-500 p-2">No categories available</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Brand Filter */}
-              <div className="mb-6">
-                <h3 className="font-bold text-sm mb-3">Brand</h3>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {allProducts && allProducts.length > 0 ? (
-                    Array.from(new Set(allProducts.map(p => p.brand).filter(Boolean))).map((brand) => (
-                      <label 
-                        key={brand}
-                        className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={brandFilter.includes(brand as string)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setBrandFilter([...brandFilter, brand as string]);
-                            } else {
-                              setBrandFilter(brandFilter.filter(b => b !== brand));
-                            }
-                          }}
-                          className="w-4 h-4 cursor-pointer"
-                        />
-                        <span className="text-sm ml-2">{brand}</span>
-                      </label>
-                    ))
-                  ) : (
-                    <p className="text-xs text-gray-500 p-2">No brands available</p>
                   )}
                 </div>
               </div>
@@ -714,7 +832,7 @@ export default function Products() {
 
               {/* Mobile Brand Filter */}
               <BrandFilter
-                brands={brands}
+                brands={brandsWithLogos}
                 selectedBrands={brandFilter}
                 onBrandToggle={(brandName) => {
                   setBrandFilter(prevBrands =>
@@ -732,7 +850,7 @@ export default function Products() {
             {/* Brand Filter - Desktop View */}
             <div className="hidden lg:block mb-6">
               <BrandFilter
-                brands={brands}
+                brands={brandsWithLogos}
                 selectedBrands={brandFilter}
                 onBrandToggle={(brandName) => {
                   setBrandFilter(prevBrands =>
@@ -760,6 +878,23 @@ export default function Products() {
               />
             </div>
 
+            {searchFeedback && (
+              <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <p className="text-sm font-semibold text-blue-800">
+                  No exact product found for “{searchQuery.trim()}”. Showing {searchFeedback.count} matching result{searchFeedback.count !== 1 ? 's' : ''}.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {searchFeedback.products.map((product) => (
+                    <Link key={product.id} href={`/product/${product.id}`}>
+                      <a className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-medium text-blue-800 border border-blue-200 hover:bg-blue-50">
+                        {product.title}
+                      </a>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Products Count */}
             <div className="mb-4 text-sm text-gray-600 flex items-center justify-between gap-3 flex-wrap">
               <span>
@@ -784,7 +919,36 @@ export default function Products() {
                   const stock = Number(product.stock ?? 0);
                   return (
                     <Link key={product.id} href={`/product/${product.id}`}>
-                      <div className="group cursor-pointer">
+                      <div
+                        className="group cursor-pointer"
+                        onClick={() => {
+                            try {
+                              if (isSearchOrFiltersActive()) {
+                                const payload = {
+                                  sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
+                                  eventType: 'product_click',
+                                  clickedProductId: product.id,
+                                  searchTerm: searchQuery || null,
+                                  filters: {
+                                    category: categoryFilter,
+                                    brands: brandFilter,
+                                    models: modelFilter,
+                                    conditions: conditionFilter,
+                                    priceRange,
+                                    inStockOnly,
+                                    dealsOnly,
+                                  },
+                                  resultsCount: filteredProducts.length,
+                                  pageUrl: window.location.href,
+                                  matchedProductIds: filteredProducts.slice(0, 50).map((p) => p.id),
+                                };
+                                sendTrackingEvent(payload);
+                              }
+                            } catch (e) {
+                              // ignore
+                            }
+                        }}
+                      >
                         <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden h-40 md:h-48 mb-3 flex items-center justify-center">
                           {product.cover_image_url ? (
                             <img

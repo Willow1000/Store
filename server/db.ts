@@ -1,18 +1,24 @@
 import { eq, and, desc, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, cartItems, orders, notifications, categories, products, productVariants, InsertOrder, InsertNotification, wishlistItems, payments, InsertPayment } from "../drizzle/schema";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import { InsertUser, users, cartItems, orders, notifications, categories, products, productVariants, InsertOrder, InsertNotification, wishlistItems, payments, InsertPayment, productSearchTracking, InsertProductSearchTracking } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _pool: Pool | null = null;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+      });
+      _db = drizzle(_pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
+      _pool = null;
     }
   }
   return _db;
@@ -278,6 +284,23 @@ export async function addToWishlist(userId: number, productId: number) {
     productId,
   });
   return result;
+}
+
+// Log a product search / filter event
+export async function logProductSearch(entry: InsertProductSearchTracking) {
+  const db = await getDb();
+  if (!db) {
+    console.warn('[logProductSearch] DB not available');
+    return null;
+  }
+
+  try {
+    const res = await db.insert(productSearchTracking).values(entry as any);
+    return res;
+  } catch (err) {
+    console.error('[logProductSearch] Failed to insert tracking row:', err);
+    return null;
+  }
 }
 
 export async function removeFromWishlist(userId: number, productId: number) {

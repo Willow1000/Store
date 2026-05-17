@@ -1,5 +1,5 @@
 import { useRoute, useLocation } from 'wouter';
-import { Star, ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
+import { ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import { ProductDetailSkeleton } from '@/components/skeletons/ProductDetailSkeleton';
 import { toast } from 'sonner';
 import { Link } from 'wouter';
@@ -17,6 +17,7 @@ export default function ProductDetail() {
   const productId = params?.id;
   
   const [selectedImage, setSelectedImage] = useState(0);
+  const [showLightbox, setShowLightbox] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [zoom, setZoom] = useState(1);
   const [panX, setPanX] = useState(0);
@@ -34,6 +35,44 @@ export default function ProductDetail() {
   const { addToCart } = useSupabaseCart(user?.id || null);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
 
+  // Lightweight non-blocking tracker helper (same pattern as Products.tsx)
+  const sendTrackingEvent = (payload: Record<string, any>) => {
+    try {
+      // Ensure a persistent session id exists for anonymous users
+      try {
+        if (typeof window !== 'undefined') {
+          let sid = localStorage.getItem('sessionId');
+          if (!sid) {
+            sid = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `anon-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+            try { localStorage.setItem('sessionId', sid); } catch (e) {}
+          }
+          payload.sessionId = payload.sessionId || sid;
+        }
+      } catch (e) {}
+
+      const body = JSON.stringify(payload);
+      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+        navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
+        return;
+      }
+      fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+    } catch (err) {
+      // ignore
+    }
+  };
+
+  const hasSearchSession = () => {
+    try {
+      const active = sessionStorage.getItem('activeSearchTerm');
+      const pending = sessionStorage.getItem('pendingSearchTerm');
+      return Boolean(active || pending);
+    } catch (e) {
+      return false;
+    }
+  };
+
+  
+
   // Combine cover image with product images
   const allImages: Array<{ id: string; image_url: string }> = product?.cover_image_url
     ? [
@@ -48,6 +87,18 @@ export default function ProductDetail() {
     setPanX(0);
     setPanY(0);
   }, [selectedImage]);
+
+  // Lightbox: close on Escape and navigate with arrow keys
+  useEffect(() => {
+    if (!showLightbox) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowLightbox(false);
+      if (e.key === 'ArrowLeft') setSelectedImage((i) => Math.max(0, i - 1));
+      if (e.key === 'ArrowRight') setSelectedImage((i) => Math.min(allImages.length - 1, i + 1));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showLightbox, allImages.length]);
 
   // Handle drag for panning on mouse and touch devices
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -150,6 +201,18 @@ export default function ProductDetail() {
       }
       toast.success(`Added ${quantity} item(s) to cart!`);
       setQuantity(1);
+      try {
+        if (hasSearchSession()) {
+          sendTrackingEvent({
+            sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
+            eventType: 'product_click',
+            clickedProductId: product.id,
+            action: 'add_to_cart',
+            pageUrl: window.location.href,
+            matchedProductIds: (allProducts || []).slice(0, 50).map(p => p.id),
+          });
+        }
+      } catch (e) {}
     } catch (error) {
       console.error('[ProductDetail] AddToCart exception', error);
       toast.error('Failed to add to cart');
@@ -181,6 +244,18 @@ export default function ProductDetail() {
       if (!added) {
         return;
       }
+        try {
+          if (hasSearchSession()) {
+            sendTrackingEvent({
+              sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
+              eventType: 'product_click',
+              clickedProductId: product.id,
+              action: 'buy_now',
+              pageUrl: window.location.href,
+              matchedProductIds: (allProducts || []).slice(0, 50).map(p => p.id),
+            });
+          }
+        } catch (e) {}
       navigate('/checkout');
     } catch (error) {
       console.error('[ProductDetail] QuickCheckout exception', error);
@@ -218,13 +293,15 @@ export default function ProductDetail() {
     }
   }, [product?.id]);
 
-  if (!productId) {
-    return (
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
-        <p className="text-gray-600">Product not found</p>
-      </div>
-    );
-  }
+  // Smooth handling when product lookup returns no result
+  useEffect(() => {
+    if (!isLoading && productId && !product) {
+      toast.error('Product not found. Redirecting to products.');
+      setTimeout(() => navigate('/products'), 1400);
+    }
+  }, [isLoading, productId, product, navigate]);
+
+  if (!productId) return null;
 
   if (isLoading) {
     return <ProductDetailSkeleton />;
@@ -246,13 +323,8 @@ export default function ProductDetail() {
     );
   }
 
-  if (!product) {
-    return (
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
-        <p className="text-gray-600">Product not found</p>
-      </div>
-    );
-  }
+
+  if (!product) return null;
 
   const currentPrice = Number(product.price);
   const originalPrice = product.original_price ? Number(product.original_price) : null;
@@ -278,6 +350,73 @@ export default function ProductDetail() {
         ? JSON.stringify(product.item_specifics, null, 2)
         : '';
 
+  const getEnquiryContactUrl = (outOfStockOnly: boolean = false) => {
+    const params = new URLSearchParams();
+    const subjectPrefix = outOfStockOnly ? 'Out of Stock Inquiry' : 'Product Enquiry';
+    const subject = `${subjectPrefix} - ${product.title}`;
+
+    const lines = [
+      'Hello Support,',
+      '',
+      outOfStockOnly
+        ? `I am interested in the product "${product.title}" which is currently out of stock.`
+        : `I would like to enquire about this product: "${product.title}".`,
+      '',
+      `Product: ${product.title}`,
+      product.part_number ? `Part Number: ${product.part_number}` : '',
+      product.brand ? `Brand: ${product.brand}` : '',
+      product.model ? `Model: ${product.model}` : '',
+      product.category_name ? `Category: ${product.category_name}` : '',
+      Number.isFinite(Number(product.price)) ? `Price: $${Number(product.price).toFixed(2)}` : '',
+      `Product Link: ${window.location.origin}/product/${product.id}`,
+      '',
+      outOfStockOnly
+        ? 'Please let me know when this item becomes available again.'
+        : 'Please share availability, compatibility details, and next steps to order.',
+    ].filter(Boolean);
+
+    params.set('subject', subject);
+    params.set('message', lines.join('\n'));
+    params.set('product', product.title);
+    params.set('productId', String(product.id));
+
+    if (typeof user?.name === 'string' && user.name.trim()) {
+      params.set('name', user.name.trim());
+    }
+    if (typeof user?.email === 'string' && user.email.trim()) {
+      params.set('email', user.email.trim());
+    }
+
+    const userLocation =
+      typeof (user as any)?.location === 'string'
+        ? (user as any).location
+        : typeof (user as any)?.country === 'string'
+          ? (user as any).country
+          : '';
+
+    if (userLocation.trim()) {
+      params.set('location', userLocation.trim().toLowerCase());
+    }
+
+    return `/contact?${params.toString()}`;
+  };
+
+  const handleEnquireItem = () => {
+    try {
+      if (hasSearchSession()) {
+        sendTrackingEvent({
+          sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
+          eventType: 'product_click',
+          clickedProductId: product?.id,
+          action: 'enquire',
+          pageUrl: window.location.href,
+          matchedProductIds: (allProducts || []).slice(0, 50).map(p => p.id),
+        });
+      }
+    } catch (e) {}
+    navigate(getEnquiryContactUrl(false));
+  };
+
   // Get similar products from the same category (max 6)
   const similarProducts = allProducts
     .filter(
@@ -302,11 +441,10 @@ export default function ProductDetail() {
                     div::-webkit-scrollbar { display: none; }
                   `}</style>
                   {(() => {
-                    const isMobile = window.innerWidth < 640; // sm breakpoint
-                    const windowSize = isMobile ? 4 : 6; // 4 on mobile, 6 on desktop
+                    const windowSize = 6; // always show up to 6 thumbnails on both mobile and desktop
                     const startIdx = Math.max(0, Math.min(selectedImage, allImages.length - windowSize));
                     const imagesToShow = allImages.slice(startIdx, startIdx + windowSize);
-                    
+
                     return imagesToShow.map((img, idx) => {
                       const actualImageIndex = startIdx + idx;
                       return (
@@ -341,7 +479,7 @@ export default function ProductDetail() {
                 {allImages && allImages.length > 0 && allImages[selectedImage] ? (
                   <>
                     <div 
-                      className="relative min-h-[300px] sm:min-h-[400px] flex items-center justify-center overflow-hidden"
+                      className="relative min-h-[400px] flex items-center justify-center overflow-hidden"
                       onPointerDown={handlePointerDown}
                       onPointerMove={handlePointerMove}
                       onPointerUp={handlePointerUp}
@@ -350,6 +488,9 @@ export default function ProductDetail() {
                       onTouchMove={handleTouchMove}
                       onTouchEnd={handleTouchEnd}
                       onTouchCancel={handleTouchEnd}
+                      onClick={() => {
+                        if (!isDraggingRef.current) setShowLightbox(true);
+                      }}
                       style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
                     >
                       <img
@@ -424,6 +565,40 @@ export default function ProductDetail() {
             </div>
           </div>
 
+          {/* Lightbox Modal */}
+          {showLightbox && allImages && allImages.length > 0 && (
+            <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center px-4" onClick={() => setShowLightbox(false)}>
+              <button className="absolute top-6 right-6 text-white p-2 rounded-md bg-black/30 hover:bg-black/50" onClick={() => setShowLightbox(false)} aria-label="Close">
+                ×
+              </button>
+
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white p-2 rounded-full bg-black/30 hover:bg-black/50"
+                onClick={(e) => { e.stopPropagation(); setSelectedImage((i) => Math.max(0, i - 1)); }}
+                aria-label="Previous"
+              >
+                ‹
+              </button>
+
+              <div className="max-w-[95vw] max-h-[95vh] flex items-center justify-center">
+                <img
+                  src={getHighResImageUrl(allImages[selectedImage].image_url)}
+                  alt={product?.title}
+                  className="max-w-full max-h-full object-contain"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white p-2 rounded-full bg-black/30 hover:bg-black/50"
+                onClick={(e) => { e.stopPropagation(); setSelectedImage((i) => Math.min(allImages.length - 1, i + 1)); }}
+                aria-label="Next"
+              >
+                ›
+              </button>
+            </div>
+          )}
+
           {/* RIGHT COLUMN - Product Info */}
           <div className="mt-10 px-4 sm:px-0 sm:mt-16 lg:mt-0">
             {/* Title */}
@@ -450,20 +625,6 @@ export default function ProductDetail() {
                 {isOutOfStock ? 'Out of stock' : `${stock} in stock`}
               </div>
               <span className="text-sm font-normal text-gray-500 block mt-2">{discountPercentage > 0 ? `(You save $${discountAmount.toFixed(2)})` : '(Estimated Price)'}</span>
-            </div>
-
-            {/* Rating */}
-            <div className="mt-3 flex items-center">
-              <div className="flex items-center">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    size={20}
-                    className={i < 4 ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}
-                  />
-                ))}
-              </div>
-              <p className="ml-3 text-sm text-gray-500">48 watchers interested</p>
             </div>
 
             {/* Description */}
@@ -510,13 +671,23 @@ export default function ProductDetail() {
                 </button>
               </div>
 
-              {/* Continue Shopping Button */}
-              <button
-                onClick={() => navigate('/products')}
-                className="w-full border border-gray-300 rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-gray-700 bg-white hover:bg-black hover:text-white hover:border-black active:bg-black active:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800 transition-all duration-200"
-              >
-                ← Continue Shopping
-              </button>
+              <div className="flex space-x-4">
+                {/* Continue Shopping Button (flex-1) */}
+                <button
+                  onClick={() => navigate('/products')}
+                  className="flex-1 border border-gray-300 rounded-md py-3 px-6 flex items-center justify-center text-base font-medium text-gray-700 bg-white hover:bg-black hover:text-white hover:border-black active:bg-black active:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800 transition-all duration-200"
+                >
+                  ← Continue Shopping
+                </button>
+
+                {/* Enquire About Item (compact, beside continue) */}
+                <button
+                  onClick={handleEnquireItem}
+                  className="w-40 flex-shrink-0 border border-blue-200 rounded-md py-3 px-4 flex items-center justify-center text-base font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                >
+                  Enquire
+                </button>
+              </div>
 
               {/* Out of Stock Message */}
               {isOutOfStock && (
@@ -529,7 +700,7 @@ export default function ProductDetail() {
                     </div>
                     <div className="ml-3">
                       <p className="text-sm font-medium text-red-800">
-                        This item is currently out of stock. Please <a href={`/contact?subject=${encodeURIComponent(`Out of Stock Inquiry - ${product?.title}`)}&message=${encodeURIComponent(`I am interested in the product "${product?.title}" which is currently out of stock. Please let me know when it will be available again.`)}`} className="underline hover:text-red-900 font-bold">contact support</a> for availability information.
+                        This item is currently out of stock. Please <a href={getEnquiryContactUrl(true)} className="underline hover:text-red-900 font-bold">contact support</a> for availability information.
                       </p>
                     </div>
                   </div>
@@ -689,7 +860,23 @@ export default function ProductDetail() {
                 const isWished = p.id && wishedProductIds.has(p.id);
                 return (
                   <Link key={p.id} href={`/product/${p.id}`}>
-                    <a className="group relative bg-white border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <a
+                      onClick={() => {
+                        try {
+                          if (hasSearchSession()) {
+                            sendTrackingEvent({
+                              sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
+                              eventType: 'product_click',
+                              clickedProductId: p.id,
+                              action: 'similar_click',
+                              pageUrl: window.location.href,
+                              matchedProductIds: (allProducts || []).slice(0, 50).map(pp => pp.id),
+                            });
+                          }
+                        } catch (e) {}
+                      }}
+                      className="group relative bg-white border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                    >
                       <div className="w-full bg-gray-200 group-hover:opacity-75 h-48">
                         <img
                           src={getHighResImageUrl(p.cover_image_url || '')}

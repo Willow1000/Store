@@ -6,6 +6,7 @@ import { useSearch } from 'wouter';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
 import { SEOHead } from '@/components/SEOHead';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 // Input length constraints
 const MAX_NAME_LENGTH = 100;
@@ -26,6 +27,19 @@ function isValidEmail(email: string): boolean {
   return emailRegex.test(email) && email.length <= MAX_EMAIL_LENGTH;
 }
 
+function normalizeLocation(value: string): string {
+  const location = value.trim().toLowerCase();
+  if (!location) return '';
+
+  if (location.includes('united states') || location === 'usa' || location === 'us') return 'usa';
+  if (location.includes('switzerland') || location === 'ch') return 'switzerland';
+  if (location.includes('poland') || location === 'pl') return 'poland';
+  if (location.includes('finland') || location === 'fi') return 'finland';
+  if (location.includes('united arab emirates') || location === 'uae' || location === 'ae') return 'uae';
+
+  return '';
+}
+
 interface ContactFormData {
   name: string;
   email: string;
@@ -36,6 +50,7 @@ interface ContactFormData {
 
 export default function Contact() {
   const searchParams = useSearch();
+  const { user } = useAuth();
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<ContactFormData>({
@@ -49,18 +64,38 @@ export default function Contact() {
   // Pre-fill form with query parameters
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
-    const subject = params.get('subject');
-    const message = params.get('message');
-    const productName = params.get('product');
+    const queryName = params.get('name') || '';
+    const queryEmail = params.get('email') || '';
+    const queryLocation = normalizeLocation(params.get('location') || '');
+    const querySubject = params.get('subject') || '';
+    const queryMessage = params.get('message') || '';
+    const productName = params.get('product') || '';
 
-    if (subject || message) {
+    const userName = typeof user?.name === 'string' ? user.name : '';
+    const userEmail = typeof user?.email === 'string' ? user.email : '';
+    const userLocation = normalizeLocation(
+      typeof (user as any)?.location === 'string'
+        ? (user as any).location
+        : typeof (user as any)?.country === 'string'
+          ? (user as any).country
+          : ''
+    );
+
+    const hasPrefillData =
+      Boolean(queryName || queryEmail || queryLocation || querySubject || queryMessage || productName) ||
+      Boolean(userName || userEmail || userLocation);
+
+    if (hasPrefillData) {
       setFormData((prev) => ({
         ...prev,
-        subject: subject ? decodeURIComponent(subject) : '',
-        message: message ? decodeURIComponent(message) : '',
+        name: prev.name || queryName || userName,
+        email: prev.email || queryEmail || userEmail,
+        location: prev.location || queryLocation || userLocation,
+        subject: prev.subject || querySubject,
+        message: prev.message || queryMessage,
       }));
     }
-  }, [searchParams]);
+  }, [searchParams, user]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,

@@ -291,26 +291,88 @@ export function createApp() {
     })
   );
 
-  // Product feed for external crawlers (e.g., Facebook/Commerce Manager)
-  app.get(['/feed.xml', '/api/server'], async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const originalPath = getOriginalPath(req);
-    if (originalPath !== '/feed.xml') {
-      return next();
-    }
-
+  // Simple tracking endpoint used by frontend to record searches and clicks
+  // Tracking endpoint using Supabase REST API (no direct DB connection needed)
+  app.post('/api/track', async (req, res) => {
     try {
-      const origin = getFeedOrigin(req);
-      const products = await getFeedProducts();
+      const payload = req.body || {};
 
-      const items = products
-        .map((p: FeedProduct) => {
-          const id = String(p.id ?? '').trim();
-          const title = String(p.title || p.name || '').trim();
-          const description = String(p.description || p.short_description || title).trim();
-          const price = normalizePrice(p.price);
-          const link = resolveUrl(`/product/${id}`, origin);
-          const imageSource = p.cover_image_url || p.image_url || (Array.isArray(p.images) ? p.images[0] : null);
-          const image = resolveUrl(imageSource || '/images/placeholder.png', origin);
+      // Normalize payload fields
+      const entry: any = {
+        sessionId: String(payload.sessionId || '') || (req.headers['x-session-id'] || ''),
+        userId: payload.userId || null,
+        eventType: String(payload.eventType || 'search'),
+        searchTerm: payload.searchTerm || null,
+        filters: payload.filters || {},
+        resultsCount: typeof payload.resultsCount === 'number' ? payload.resultsCount : 0,
+        matchedProductIds: payload.matchedProductIds || [],
+        clickedProductId: (payload.clickedProductId && typeof payload.clickedProductId === 'string') ? payload.clickedProductId : null,
+        pageUrl: payload.pageUrl || req.originalUrl || null,
+        referrer: payload.referrer || req.get('referer') || null,
+        userAgent: payload.userAgent || req.get('user-agent') || null,
+        metadata: payload.metadata || {},
+        createdAt: new Date().toISOString(),
+      };
+
+      // Try to insert via Supabase REST API
+      const supabaseUrl = process.env.VITE_SUPABASE_URL?.replace(/\/rest\/v1\/?$/, '') || 'https://dormxdlqbstebbsumdjj.supabase.co';
+      const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+
+      if (!serviceKey) {
+        console.warn('[Track] SUPABASE_SERVICE_KEY not configured, tracking skipped');
+        return res.status(200).json({ success: true }); // Don't fail the user's request
+      }
+
+      const trackingUrl = `${supabaseUrl}/rest/v1/product_search_tracking`;
+
+      const trackRes = await fetch(trackingUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify(entry),
+      });
+
+      if (!trackRes.ok) {
+        const errText = await trackRes.text();
+        console.error('[Track] Supabase API error:', trackRes.status, errText);
+        return res.status(200).json({ success: true }); // Don't fail the user's request
+      }
+
+      console.log('[Track] Successfully recorded:', entry.eventType, entry.searchTerm || entry.clickedProductId);
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      console.error('[Track] Failed to record event:', err);
+      return res.status(200).json({ success: true }); // Don't fail the user's request
+    }
+  });
+
+  // Legacy: batch tracking endpoint (async import from db) - kept for backward compatibility
+  import('../db')
+    .then(() => {
+      // Db is loaded but we're using REST API now
+    })
+    .catch((err) => {
+      console.warn('[App] Database connection setup skipped:', err);
+    });
+      app.get(['/feed.xml', '/api/server'], async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+        const originalPath = getOriginalPath(req);
+        if (originalPath !== '/feed.xml') return next();
+
+        try {
+          const origin = getFeedOrigin(req);
+          const products = await getFeedProducts();
+          const items = (products || []).map((p) => {
+            const imageSource = p.cover_image_url || p.image_url || (Array.isArray(p.images) ? p.images[0] : null);
+            const image = resolveUrl(imageSource || '/images/placeholder.png', origin);
+            const id = p.id || p.uuid || null;
+            const title = String(p.title || p.name || '').trim();
+            const description = String(p.description || p.summary || '').trim();
+            const price = (p.price !== undefined && p.price !== null) ? String(p.price) : '';
+            const link = String(p.url || p.link || (p.id ? `/product/${p.id}` : '')).trim();
           const condition = String(p.condition || 'new').trim() || 'new';
           const brand = String(p.brand || '').trim();
           const availability = (p.stock !== undefined && Number(p.stock) > 0) ? 'in stock' : 'out of stock';
