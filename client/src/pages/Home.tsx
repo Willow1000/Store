@@ -10,7 +10,8 @@ import { useProducts, useCategories } from '@/hooks/useSupabaseProducts';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuthModal } from '@/contexts/AuthModalContext';
-import { useState, useEffect } from 'react';
+import { useIsMobile } from '@/hooks/useMobile';
+import { useState, useEffect, useMemo } from 'react';
 import { getHighResImageUrl } from '@/lib/images';
 import { calculateShipping } from '@shared/shipping';
 
@@ -20,6 +21,7 @@ export default function Home() {
   const { products, isLoading } = useProducts(1, 20); // Fetch 20 products for deals
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
   const { categories, isLoading: categoriesLoading } = useCategories();
+  const isMobile = useIsMobile();
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
 
@@ -80,6 +82,10 @@ export default function Home() {
     const num = parseFloat(String(price));
     return isNaN(num) ? '0.00' : num.toFixed(2);
   };
+
+  const displayedCategories = useMemo(() => {
+    return categories.slice(0, isMobile ? 5 : 10);
+  }, [categories, isMobile]);
 
   if (isLoading || categoriesLoading) {
     return <HomePageSkeleton />;
@@ -356,11 +362,11 @@ export default function Home() {
           {/* Categories Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {categoriesLoading ? (
-              Array.from({ length: 10 }).map((_, i) => (
+              Array.from({ length: isMobile ? 5 : 10 }).map((_, i) => (
                 <Skeleton key={i} className="h-40 w-full rounded-lg" />
               ))
-            ) : categories.length > 0 ? (
-              categories.map((cat) => (
+            ) : displayedCategories.length > 0 ? (
+              displayedCategories.map((cat) => (
                 <Link key={cat.id} href={`/products?category=${encodeURIComponent(cat.slug || cat.name || '')}`}>
                   <div className="group relative h-40 overflow-hidden rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
                     {/* Fallback visual layer (shown when image is missing or fails) */}
