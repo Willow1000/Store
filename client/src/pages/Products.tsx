@@ -16,7 +16,8 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { getHighResImageUrl } from '@/lib/images';
-import { getBrandSuggestions, getModelSuggestions } from '@/lib/productSearch';
+import { getBrandSuggestions, getModelSuggestions, getSimilarProducts } from '@/lib/productSearch';
+import { Product } from '@/types/supabase';
 import {
   Pagination,
   PaginationContent,
@@ -27,6 +28,12 @@ import {
 } from '@/components/ui/pagination';
 
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'popular';
+
+interface FallbackResult {
+  products: Product[];
+  reason: 'similar' | 'recently-viewed';
+  message: string;
+}
 const PRODUCTS_PER_PAGE = 32;
 
 const normalizeCategoryValue = (value: string) => value.trim().toLowerCase();
@@ -52,6 +59,8 @@ export default function Products() {
   const [dealsOnly, setDealsOnly] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
+  const [fallbackResult, setFallbackResult] = useState<FallbackResult | null>(null);
 
   const { user, isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthModal();
@@ -76,6 +85,16 @@ export default function Products() {
   useEffect(() => {
     // Intentionally left blank.
   }, [allProducts]);
+
+  // Load recently viewed items from localStorage
+  useEffect(() => {
+    try {
+      const ids = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
+      setRecentlyViewedIds(ids.filter((id: any) => typeof id === 'string'));
+    } catch (error) {
+      console.error('[Products] Failed to load recently viewed items:', error);
+    }
+  }, []);
 
   const selectedCategoryName = normalizeCategoryValue(String(selectedCategory?.name ?? ''));
   const selectedCategorySlug = normalizeCategoryValue(String(selectedCategory?.slug ?? ''));
@@ -105,6 +124,93 @@ export default function Products() {
     const nextQuery = params.toString();
     const nextUrl = nextQuery ? `${path}?${nextQuery}` : path;
     navigate(nextUrl);
+  };
+
+  // Get fallback products when no exact matches
+  const getFallbackProducts = (exactResults: typeof allProducts): FallbackResult | null => {
+    if (exactResults.length > 0) return null;
+
+    // 1. Try to find similar products respecting selected filters
+    const filterCriteria: Partial<{
+      brands: string[];
+      models: string[];
+      conditions: string[];
+      categories: string[];
+      priceRange: [number, number];
+      inStock: boolean;
+    }> = {};
+
+    if (brandFilter.length > 0) filterCriteria.brands = brandFilter;
+    if (modelFilter.length > 0) filterCriteria.models = modelFilter;
+    if (conditionFilter.length > 0) filterCriteria.conditions = conditionFilter;
+    if (categoryFilter) filterCriteria.categories = [categoryFilter];
+    filterCriteria.priceRange = [priceRange[0], priceRange[1]];
+    if (inStockOnly) filterCriteria.inStock = true;
+
+    // Get all available products and filter them
+    const availableProducts = allProducts || [];
+    
+    // Create a relaxed filter by removing the most restrictive constraints
+    let similarResults: typeof allProducts = [];
+
+    // First try: Remove one filter at a time starting with price range
+    if (availableProducts.length > 0) {
+      // Try without price constraint first
+      const withoutPrice = availableProducts.filter(p => {
+        if (brandFilter.length > 0 && !brandFilter.includes(p.brand || '')) return false;
+        if (modelFilter.length > 0 && !modelFilter.includes(p.model || '')) return false;
+        if (conditionFilter.length > 0 && !conditionFilter.includes(p.condition || '')) return false;
+        if (categoryFilter && categoryFilter !== (p.category_name || '')) return false;
+        return true;
+      });
+      if (withoutPrice.length > 0) {
+        similarResults = withoutPrice;
+      } else {
+        // Try without category filter
+        const withoutCategory = availableProducts.filter(p => {
+          if (brandFilter.length > 0 && !brandFilter.includes(p.brand || '')) return false;
+          if (modelFilter.length > 0 && !modelFilter.includes(p.model || '')) return false;
+          if (conditionFilter.length > 0 && !conditionFilter.includes(p.condition || '')) return false;
+          return true;
+        });
+        if (withoutCategory.length > 0) {
+          similarResults = withoutCategory;
+        } else {
+          // Try without condition filter
+          const withoutCondition = availableProducts.filter(p => {
+            if (brandFilter.length > 0 && !brandFilter.includes(p.brand || '')) return false;
+            if (modelFilter.length > 0 && !modelFilter.includes(p.model || '')) return false;
+            if (categoryFilter && categoryFilter !== (p.category_name || '')) return false;
+            return true;
+          });
+          similarResults = withoutCondition.length > 0 ? withoutCondition : availableProducts;
+        }
+      }
+    }
+
+    // 2. If we found similar products, return them
+    if (similarResults.length > 0) {
+      return {
+        products: similarResults,
+        reason: 'similar',
+        message: 'No exact matches found. Showing similar products based on available filters.',
+      };
+    }
+
+    // 3. Fall back to recently viewed products
+    const recentlyViewedProducts = availableProducts.filter(p => 
+      recentlyViewedIds.includes(String(p.id))
+    );
+
+    if (recentlyViewedProducts.length > 0) {
+      return {
+        products: recentlyViewedProducts,
+        reason: 'recently-viewed',
+        message: 'No products match your search. Here are items you\'ve recently viewed.',
+      };
+    }
+
+    return null;
   };
 
   // Get category from URL query parameter
@@ -266,8 +372,21 @@ export default function Products() {
         break;
     }
 
+    // Apply fallback logic if no exact matches
+    if (filtered.length === 0) {
+      const fallback = getFallbackProducts(filtered);
+      if (fallback) {
+        setFallbackResult(fallback);
+        return fallback.products;
+      } else {
+        setFallbackResult(null);
+      }
+    } else {
+      setFallbackResult(null);
+    }
+
     return filtered;
-  }, [baseProducts, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly, brandFilter, modelFilter, conditionFilter, inStockOnly]);
+  }, [baseProducts, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly, brandFilter, modelFilter, conditionFilter, inStockOnly, allProducts, recentlyViewedIds]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
 
@@ -656,7 +775,7 @@ export default function Products() {
             {/* Products Grid */}
             {allDisplayedProducts.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-4">
-                {allDisplayedProducts.map((product, idx) => {
+                {allDisplayedProducts.map((product: Product, idx: number) => {
                   const price = product.price !== null && product.price !== undefined 
                     ? parseFloat(String(product.price))
                     : 0;
@@ -745,7 +864,20 @@ export default function Products() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No products found</p>
+                {fallbackResult ? (
+                  <div>
+                    <p className="text-blue-600 text-lg font-semibold mb-2">
+                      {fallbackResult.reason === 'similar' 
+                        ? '🔍 Similar Products' 
+                        : '👁️ Recently Viewed'}
+                    </p>
+                    <p className="text-gray-600 text-base mb-6">
+                      {fallbackResult.message}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-lg">No products found</p>
+                )}
               </div>
             )}
 
