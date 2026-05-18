@@ -41,6 +41,11 @@ function isValidConfiguredOrigin(value: string | undefined): boolean {
 }
 
 function getFeedOrigin(req: express.Request): string {
+  const preferredFeedOrigin = 'https://store-nine-eosin.vercel.app';
+  if (isValidConfiguredOrigin(preferredFeedOrigin)) {
+    return preferredFeedOrigin.replace(/\/$/, '');
+  }
+
   const configuredOrigin = ENV.siteUrl?.trim();
   if (isValidConfiguredOrigin(configuredOrigin)) {
     return configuredOrigin.replace(/\/$/, '');
@@ -67,6 +72,15 @@ type FeedProduct = {
   images?: unknown;
   condition?: string | null;
   brand?: string | null;
+  google_product_category?: string | null;
+  category?: string | null;
+  category_name?: string | null;
+  sale_price?: string | number | null;
+  item_group_id?: string | number | null;
+  color?: string | null;
+  size?: string | null;
+  age_group?: string | null;
+  gender?: string | null;
 };
 
 function escapeXml(value: unknown): string {
@@ -616,32 +630,49 @@ export function createApp() {
             const id = p.id || p.uuid || null;
             const title = String(p.title || p.name || '').trim();
             const description = String(p.description || p.summary || '').trim();
-            const price = (p.price !== undefined && p.price !== null) ? String(p.price) : '';
-            const link = String(p.url || p.link || (p.id ? `/product/${p.id}` : '')).trim();
-          const condition = String(p.condition || 'new').trim() || 'new';
-          const brand = String(p.brand || '').trim();
-          const availability = (p.stock !== undefined && Number(p.stock) > 0) ? 'in stock' : 'out of stock';
+            const price = normalizePrice(p.price);
+            const fallbackProductPath = id ? `/product/${id}` : '';
+            const link = resolveUrl(p.url || p.link || fallbackProductPath, origin);
+            const condition = String(p.condition || 'new').trim() || 'new';
+            const brand = String(p.brand || 'MotorVault').trim() || 'MotorVault';
+            const availability = (p.stock !== undefined && Number(p.stock) > 0) ? 'in stock' : 'out of stock';
+            const googleProductCategory = String(
+              p.google_product_category || p.category_name || p.category || 'Vehicles & Parts > Vehicle Parts & Accessories'
+            ).trim();
+            const salePrice = normalizePrice(p.sale_price);
+            const itemGroupId = String(p.item_group_id || '').trim();
+            const color = String(p.color || '').trim();
+            const size = String(p.size || '').trim();
+            const ageGroup = String(p.age_group || '').trim();
+            const gender = String(p.gender || '').trim();
 
-          if (!id || !title || !price || !link) {
-            return '';
-          }
+            if (!id || !title || !price || !link) {
+              return '';
+            }
 
-          return `    <item>
+            return `    <item>
       <g:id>${escapeXml(id)}</g:id>
       <g:title>${escapeXml(title)}</g:title>
       <g:description>${escapeXml(description)}</g:description>
       <g:link>${escapeXml(link)}</g:link>
       <g:image_link>${escapeXml(image)}</g:image_link>
-      <g:availability>${escapeXml(availability)}</g:availability>
+      <g:brand>${escapeXml(brand)}</g:brand>
       <g:condition>${escapeXml(condition)}</g:condition>
+      <g:availability>${escapeXml(availability)}</g:availability>
       <g:price>${escapeXml(price)}</g:price>
-      ${brand ? `<g:brand>${escapeXml(brand)}</g:brand>` : ''}
+      <g:google_product_category>${escapeXml(googleProductCategory)}</g:google_product_category>
+      ${salePrice ? `<g:sale_price>${escapeXml(salePrice)}</g:sale_price>` : ''}
+      ${itemGroupId ? `<g:item_group_id>${escapeXml(itemGroupId)}</g:item_group_id>` : ''}
+      ${color ? `<g:color>${escapeXml(color)}</g:color>` : ''}
+      ${size ? `<g:size>${escapeXml(size)}</g:size>` : ''}
+      ${ageGroup ? `<g:age_group>${escapeXml(ageGroup)}</g:age_group>` : ''}
+      ${gender ? `<g:gender>${escapeXml(gender)}</g:gender>` : ''}
     </item>`;
-        })
-        .filter(Boolean)
-        .join('\n');
+          })
+          .filter(Boolean)
+          .join('\n');
 
-      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">\n  <channel>\n    <title>MotorVault Product Feed</title>\n    <link>${escapeXml(origin)}</link>\n    <description>MotorVault product catalog feed</description>\n${items}\n  </channel>\n</rss>`;
+      const xml = `<?xml version="1.0"?>\n<rss xmlns:g="http://google.com" version="2.0">\n  <channel>\n    <title>MotorVault</title>\n    <link>${escapeXml(origin)}</link>\n    <description>Product catalog for Facebook Ads</description>\n${items}\n  </channel>\n</rss>`;
 
       res.setHeader('Content-Type', 'application/xml; charset=utf-8');
       res.setHeader('X-Content-Type-Options', 'nosniff');
