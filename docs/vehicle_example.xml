@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<listings>
+    <title>Vehicles Feed</title>
+    <link rel="self" href="http://www.example.com"/>
+    <listing>
+      <vehicle_id>SED1234</vehicle_id>
+      <title>2017 Ford Fusion SE</title>
+      <description>Ford Certified and 6-Speed Automatic. Turbocharged! Gasoline!</description>
+      <url>http://www.example.com/test</url>
+      <make>Ford</make>
+      <image>
+        <url>http://example.com/some.image_1.jpg</url>
+        <tag>Exterior</tag>
+      </image>
+      <model>Fusion</model>
+      <year>2017</year>
+      <mileage>
+        <value>10</value>
+        <unit>MI</unit>
+      </mileage>
+      <drivetrain>FWD</drivetrain>
+      <vin>1FADP5AU6DL536022</vin>
+      <body_style>SEDAN</body_style>
+      <fuel_type>GASOLINE</fuel_type>
+      <transmission>AUTOMATIC</transmission>
+      <condition>EXCELLENT</condition>
+      <price>18000 USD</price>
+      <address format="simple">
+          <component name="addr1">550 Auto Center Dr</component>
+          <component name="city">Watsonville</component>
+          <component name="region">CA</component>
+          <component name="postal_code">95076</component>
+          <component name="country">US</component>
+      </address>
+      <latitude>52.35</latitude>
+      <longitude>42.10</longitude>
+      <exterior_color>white</exterior_color>
+      <sale_price>16000 USD</sale_price>
+      <availability>AVAILABLE</availability>
+      <state_of_vehicle>NEW</state_of_vehicle>
+      <dealer_id>ABC1234</dealer_id>
+    </listing>
+</listings>

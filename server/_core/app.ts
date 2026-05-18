@@ -62,6 +62,7 @@ type FeedProduct = {
   description?: string | null;
   summary?: string | null;
   short_description?: string | null;
+  specifics?: string | null;
   price?: string | number | null;
   stock?: string | number | null;
   url?: string | null;
@@ -83,6 +84,21 @@ type FeedProduct = {
   size?: string | null;
   age_group?: string | null;
   gender?: string | null;
+  shipping_country?: string | null;
+  shipping_service?: string | null;
+  shipping_price?: string | number | null;
+  custom_label_0?: string | null;
+  gtin?: string | null;
+  upc?: string | null;
+  ean?: string | null;
+  mpn?: string | null;
+  manufacturer_part_number?: string | null;
+  status?: string | null;
+  model?: string | null;
+  item_specifics?: Record<string, unknown> | string | null;
+  original_price?: string | number | null;
+  originalprice?: string | number | null;
+  discount?: string | number | null;
 };
 
 function escapeXml(value: unknown): string {
@@ -111,10 +127,138 @@ function toTitleCase(input: string): string {
     .trim();
 }
 
-function normalizePrice(value: unknown): string {
+function normalizePrice(value: unknown, currency: string = 'USD'): string {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return '';
-  return `${amount.toFixed(2)} USD`;
+  return `${amount.toFixed(2)} ${currency}`;
+}
+
+function formatLabel(key: string): string {
+  return key
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function stringifySpecificValue(value: unknown): string {
+  if (value == null) return '';
+  if (Array.isArray(value)) {
+    const joined = value
+      .map((entry) => String(entry ?? '').trim())
+      .filter(Boolean)
+      .join(', ');
+    return joined;
+  }
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return '';
+    }
+  }
+  return String(value).trim();
+}
+
+function parseLooseSpecificsText(rawValue: string): Record<string, string> {
+  const normalized = rawValue
+    .replace(/[{}]/g, ' ')
+    .replace(/\r/g, '\n')
+    .replace(/[\t]+/g, ' ')
+    .replace(/\s*\|\s*/g, '\n')
+    .replace(/\s*;\s*/g, '\n')
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+
+  if (!normalized) return {};
+
+  const lines = normalized
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const parsed: Record<string, string> = {};
+  let detailIndex = 1;
+
+  for (const line of lines) {
+    const segment = line.replace(/^[-*+•]\s*/, '').trim();
+    if (!segment) continue;
+
+    const keyValueMatch = segment.match(/^([^:=]+?)\s*[:=]\s*(.+)$/);
+    if (keyValueMatch) {
+      const key = formatLabel(keyValueMatch[1]);
+      const value = keyValueMatch[2].trim();
+      if (!key || !value) continue;
+      parsed[key] = parsed[key] ? `${parsed[key]}, ${value}` : value;
+      continue;
+    }
+
+    parsed[`Detail ${detailIndex}`] = segment;
+    detailIndex += 1;
+  }
+
+  return parsed;
+}
+
+function parseItemSpecifics(value: FeedProduct['item_specifics']): Record<string, unknown> {
+  if (!value) return {};
+
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return value;
+  }
+
+  if (typeof value !== 'string') {
+    return {};
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) return {};
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Fall through to tolerant text parsing.
+  }
+
+  const normalizedJsonLike = trimmed
+    .replace(/([{,]\s*)([A-Za-z0-9_\-\s]+)\s*:/g, '$1"$2":')
+    .replace(/:\s*'([^']*)'/g, ':"$1"')
+    .replace(/,\s*}/g, '}');
+
+  try {
+    const parsed = JSON.parse(normalizedJsonLike);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Fall back to key/value line parser.
+  }
+
+  return parseLooseSpecificsText(trimmed);
+}
+
+function buildFeedDescription(product: FeedProduct): string {
+  const parsedSpecifics = parseItemSpecifics(product.item_specifics);
+  const specificsLines = Object.entries(parsedSpecifics)
+    .map(([key, value]) => {
+      const rendered = stringifySpecificValue(value)
+        .replace(/\s+/g, ' ')
+        .replace(/\s+,/g, ',')
+        .trim();
+      if (!rendered) return '';
+      return `${formatLabel(key)}: ${rendered}`;
+    })
+    .filter(Boolean);
+
+  if (specificsLines.length === 0) {
+    return 'Item specifics not provided';
+  }
+
+  return specificsLines.join('\n').slice(0, 5000);
 }
 
 function getAppleMerchantAssociationPath(): string {
@@ -182,6 +326,10 @@ export function createApp() {
     if (originalPath === '/feed.xml') {
       res.setHeader('Content-Type', 'application/xml; charset=utf-8');
       res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
     }
 
     return next();
@@ -643,7 +791,8 @@ export function createApp() {
             const id = rawId ?? (p.title ? `GEN-${Buffer.from(String(p.title)).toString('base64').replace(/=+$/,'').slice(0,12)}` : null);
             const title = String(p.title || p.name || '').trim();
             const titleCased = toTitleCase(title || '');
-            const description = String(p.description || p.short_description || p.summary || '').trim() || '';
+            const brand = String(p.brand || 'MotorVault').trim() || 'MotorVault';
+            const description = buildFeedDescription(p);
             const price = normalizePrice(p.price);
             const fallbackProductPath = id ? `/product/${id}` : '';
             const link = resolveUrl(p.url || p.link || fallbackProductPath, origin);
@@ -661,7 +810,6 @@ export function createApp() {
             } else {
               condition = 'used';
             }
-            const brand = String(p.brand || 'MotorVault').trim() || 'MotorVault';
             // Default to 'in stock' when availability is missing to satisfy feed requirements
             const availability = (p.stock !== undefined)
               ? (Number(p.stock) > 0 ? 'in stock' : 'out of stock')
@@ -669,9 +817,9 @@ export function createApp() {
             const quantity = (p.stock !== undefined && Number.isFinite(Number(p.stock)) && Number(p.stock) >= 1)
               ? Math.max(1, Math.floor(Number(p.stock)))
               : 1;
-            const googleProductCategory = String(
-              p.google_product_category || p.category_name || p.category || 'Vehicles & Parts > Vehicle Parts & Accessories'
-            ).trim();
+            // Only set googleProductCategory if it's not the default fallback
+            const rawCategory = String(p.google_product_category || p.category_name || p.category || '').trim();
+            const googleProductCategory = rawCategory || 'Vehicles & Parts > Vehicle Parts & Accessories';
             const salePrice = normalizePrice(p.sale_price);
             const itemGroupId = String(p.item_group_id || '').trim();
             const gtin = String(p.gtin || p.upc || p.ean || '').trim();
@@ -681,41 +829,63 @@ export function createApp() {
             const size = String(p.size || '').trim();
             const ageGroup = String(p.age_group || '').trim();
             const gender = String(p.gender || '').trim();
+            const shippingCountry = String(p.shipping_country || '').trim();
+            const shippingService = String(p.shipping_service || '').trim();
+            const shippingPrice = normalizePrice(p.shipping_price);
+            const customLabel0 = String(p.custom_label_0 || '').trim();
 
             if (!id || !title || !price || !link) {
               return '';
             }
-            return `    <item>
-          <g:id>${escapeXml(id)}</g:id>
-          <g:title>${escapeXml(titleCased || title)}</g:title>
-          <g:description>${escapeXml(description)}</g:description>
-      <g:link>${escapeXml(link)}</g:link>
-      <g:image_link>${escapeXml(image)}</g:image_link>
-      <g:brand>${escapeXml(brand)}</g:brand>
-      <g:condition>${escapeXml(condition)}</g:condition>
-      <g:availability>${escapeXml(availability)}</g:availability>
-      <g:price>${escapeXml(price)}</g:price>
-      <g:quantity>${escapeXml(quantity)}</g:quantity>
-          <g:quantity_to_sell_on_facebook>${escapeXml(quantity)}</g:quantity_to_sell_on_facebook>
-          <g:status>${escapeXml(status)}</g:status>
-          ${gtin ? `<g:gtin>${escapeXml(gtin)}</g:gtin>` : ''}
-          ${mpn ? `<g:mpn>${escapeXml(mpn)}</g:mpn>` : ''}
-      <g:google_product_category>${escapeXml(googleProductCategory)}</g:google_product_category>
-      ${salePrice ? `<g:sale_price>${escapeXml(salePrice)}</g:sale_price>` : ''}
-      ${itemGroupId ? `<g:item_group_id>${escapeXml(itemGroupId)}</g:item_group_id>` : ''}
-      ${color ? `<g:color>${escapeXml(color)}</g:color>` : ''}
-      ${size ? `<g:size>${escapeXml(size)}</g:size>` : ''}
-      ${ageGroup ? `<g:age_group>${escapeXml(ageGroup)}</g:age_group>` : ''}
-      ${gender ? `<g:gender>${escapeXml(gender)}</g:gender>` : ''}
-    </item>`;
+            
+            // Build core fields (always present)
+            let itemXml = `<item>
+<g:id>${escapeXml(id)}</g:id>
+<g:title>${escapeXml(titleCased || title)}</g:title>
+<g:description>${escapeXml(description)}</g:description>
+<g:link>${escapeXml(link)}</g:link>
+<g:image_link>${escapeXml(image)}</g:image_link>
+<g:brand>${escapeXml(brand)}</g:brand>
+<g:condition>${escapeXml(condition)}</g:condition>
+<g:availability>${escapeXml(availability)}</g:availability>
+<g:price>${escapeXml(price)}</g:price>`;
+
+            // Add optional fields only if they have values
+            if (salePrice) itemXml += `\n<g:sale_price>${escapeXml(salePrice)}</g:sale_price>`;
+            
+            // Add shipping if all required fields present
+            if (shippingCountry && shippingService && shippingPrice) {
+              itemXml += `\n<g:shipping>
+<g:country>${escapeXml(shippingCountry)}</g:country>
+<g:service>${escapeXml(shippingService)}</g:service>
+<g:price>${escapeXml(shippingPrice)}</g:price>
+</g:shipping>`;
+            }
+            
+            itemXml += `\n<g:google_product_category>${escapeXml(googleProductCategory)}</g:google_product_category>`;
+            if (customLabel0) itemXml += `\n<g:custom_label_0>${escapeXml(customLabel0)}</g:custom_label_0>`;
+            if (gtin) itemXml += `\n<g:gtin>${escapeXml(gtin)}</g:gtin>`;
+            if (mpn) itemXml += `\n<g:mpn>${escapeXml(mpn)}</g:mpn>`;
+            if (itemGroupId) itemXml += `\n<g:item_group_id>${escapeXml(itemGroupId)}</g:item_group_id>`;
+            if (color) itemXml += `\n<g:color>${escapeXml(color)}</g:color>`;
+            if (size) itemXml += `\n<g:size>${escapeXml(size)}</g:size>`;
+            if (ageGroup) itemXml += `\n<g:age_group>${escapeXml(ageGroup)}</g:age_group>`;
+            if (gender) itemXml += `\n<g:gender>${escapeXml(gender)}</g:gender>`;
+            itemXml += `\n</item>`;
+            
+            return itemXml;
           })
           .filter(Boolean)
           .join('\n');
 
-      const xml = `<?xml version="1.0"?>\n<rss xmlns:g="http://google.com" version="2.0">\n  <channel>\n    <title>MotorVault</title>\n    <link>${escapeXml(origin)}</link>\n    <description>Product catalog for Facebook Ads</description>\n${items}\n  </channel>\n</rss>`;
+      const xml = `<?xml version="1.0"?>\n<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">\n<channel>\n<title>MotorVault</title>\n<link>${escapeXml(origin)}</link>\n<description>Product catalog for Facebook Ads and sales</description>\n${items}\n</channel>\n</rss>`;
 
       res.setHeader('Content-Type', 'application/xml; charset=utf-8');
       res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
       return res.status(200).send(xml);
     } catch (err) {
       console.error('[Feed] Error generating feed:', err);

@@ -10,6 +10,19 @@ handler.use(express.urlencoded({ limit: "50mb", extended: true }));
 // Middleware to load and delegate to the actual app
 handler.use(async (req: Request, res: Response, next: NextFunction) => {
   try {
+    if (process.env.NODE_ENV !== "production") {
+      const source = await import("../server/_core/app");
+      const { createApp } = source as any;
+      if (typeof createApp !== "function") {
+        throw new Error("Source createApp is not a function");
+      }
+      const app = createApp();
+      if (typeof app !== "function") {
+        throw new Error(`Source createApp() returned ${typeof app}, expected function`);
+      }
+      return app(req, res, next);
+    }
+
     // Try to load the bundled createApp function
     // The dist/index.js gets bundled and included in the function package via vercel.json
     const bundled = require("../dist/index.cjs");
