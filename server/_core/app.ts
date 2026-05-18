@@ -77,6 +77,8 @@ type FeedProduct = {
   category_name?: string | null;
   sale_price?: string | number | null;
   item_group_id?: string | number | null;
+  sku?: string | null;
+  part_number?: string | null;
   color?: string | null;
   size?: string | null;
   age_group?: string | null;
@@ -100,10 +102,19 @@ function resolveUrl(value: unknown, origin: string): string {
   return raw.startsWith('/') ? `${origin}${raw}` : `${origin}/${raw}`;
 }
 
+function toTitleCase(input: string): string {
+  return String(input || '')
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => (w.length > 2 ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ')
+    .trim();
+}
+
 function normalizePrice(value: unknown): string {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return '';
-  return `${amount % 1 === 0 ? amount.toFixed(0) : amount.toFixed(2)} USD`;
+  return `${amount.toFixed(2)} USD`;
 }
 
 function getAppleMerchantAssociationPath(): string {
@@ -626,21 +637,46 @@ export function createApp() {
           const products = await getFeedProducts();
           const items = (products || []).map((p) => {
             const imageSource = p.cover_image_url || p.image_url || (Array.isArray(p.images) ? p.images[0] : null);
-            const image = resolveUrl(imageSource || '/images/placeholder.png', origin);
-            const id = p.id || p.uuid || null;
+            const placeholder = 'https://store-nine-eosin.vercel.app/images/placeholder.png';
+            const image = resolveUrl(imageSource || placeholder, origin);
+            const rawId = p.id ?? p.uuid ?? p.item_group_id ?? p.sku ?? p.part_number ?? null;
+            const id = rawId ?? (p.title ? `GEN-${Buffer.from(String(p.title)).toString('base64').replace(/=+$/,'').slice(0,12)}` : null);
             const title = String(p.title || p.name || '').trim();
-            const description = String(p.description || p.summary || '').trim();
+            const titleCased = toTitleCase(title || '');
+            const description = String(p.description || p.short_description || p.summary || '').trim() || '';
             const price = normalizePrice(p.price);
             const fallbackProductPath = id ? `/product/${id}` : '';
             const link = resolveUrl(p.url || p.link || fallbackProductPath, origin);
-            const condition = String(p.condition || 'new').trim() || 'new';
+            // Normalize condition to Facebook/Google accepted values: new, refurbished, used
+            const rawCondition = String(p.condition || '').trim().toLowerCase();
+            let condition = 'new';
+            if (!rawCondition) {
+              condition = 'new';
+            } else if (rawCondition.includes('refurb')) {
+              condition = 'refurbished';
+            } else if (rawCondition.includes('used') || rawCondition.includes('like') || rawCondition.includes('second')) {
+              condition = 'used';
+            } else if (rawCondition.includes('new')) {
+              condition = 'new';
+            } else {
+              condition = 'used';
+            }
             const brand = String(p.brand || 'MotorVault').trim() || 'MotorVault';
-            const availability = (p.stock !== undefined && Number(p.stock) > 0) ? 'in stock' : 'out of stock';
+            // Default to 'in stock' when availability is missing to satisfy feed requirements
+            const availability = (p.stock !== undefined)
+              ? (Number(p.stock) > 0 ? 'in stock' : 'out of stock')
+              : 'in stock';
+            const quantity = (p.stock !== undefined && Number.isFinite(Number(p.stock)) && Number(p.stock) >= 1)
+              ? Math.max(1, Math.floor(Number(p.stock)))
+              : 1;
             const googleProductCategory = String(
               p.google_product_category || p.category_name || p.category || 'Vehicles & Parts > Vehicle Parts & Accessories'
             ).trim();
             const salePrice = normalizePrice(p.sale_price);
             const itemGroupId = String(p.item_group_id || '').trim();
+            const gtin = String(p.gtin || p.upc || p.ean || '').trim();
+            const mpn = String(p.mpn || p.manufacturer_part_number || '').trim();
+            const status = String(p.status || 'active').trim() || 'active';
             const color = String(p.color || '').trim();
             const size = String(p.size || '').trim();
             const ageGroup = String(p.age_group || '').trim();
@@ -649,17 +685,21 @@ export function createApp() {
             if (!id || !title || !price || !link) {
               return '';
             }
-
             return `    <item>
-      <g:id>${escapeXml(id)}</g:id>
-      <g:title>${escapeXml(title)}</g:title>
-      <g:description>${escapeXml(description)}</g:description>
+          <g:id>${escapeXml(id)}</g:id>
+          <g:title>${escapeXml(titleCased || title)}</g:title>
+          <g:description>${escapeXml(description)}</g:description>
       <g:link>${escapeXml(link)}</g:link>
       <g:image_link>${escapeXml(image)}</g:image_link>
       <g:brand>${escapeXml(brand)}</g:brand>
       <g:condition>${escapeXml(condition)}</g:condition>
       <g:availability>${escapeXml(availability)}</g:availability>
       <g:price>${escapeXml(price)}</g:price>
+      <g:quantity>${escapeXml(quantity)}</g:quantity>
+          <g:quantity_to_sell_on_facebook>${escapeXml(quantity)}</g:quantity_to_sell_on_facebook>
+          <g:status>${escapeXml(status)}</g:status>
+          ${gtin ? `<g:gtin>${escapeXml(gtin)}</g:gtin>` : ''}
+          ${mpn ? `<g:mpn>${escapeXml(mpn)}</g:mpn>` : ''}
       <g:google_product_category>${escapeXml(googleProductCategory)}</g:google_product_category>
       ${salePrice ? `<g:sale_price>${escapeXml(salePrice)}</g:sale_price>` : ''}
       ${itemGroupId ? `<g:item_group_id>${escapeXml(itemGroupId)}</g:item_group_id>` : ''}
