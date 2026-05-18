@@ -51,13 +51,16 @@ function getFeedOrigin(req: express.Request): string {
 
 type FeedProduct = {
   id?: string | number;
+  uuid?: string | number;
   title?: string | null;
   name?: string | null;
   description?: string | null;
+  summary?: string | null;
   short_description?: string | null;
   price?: string | number | null;
   stock?: string | number | null;
   url?: string | null;
+  link?: string | null;
   cover_image_url?: string | null;
   image_url?: string | null;
   created_at?: string | null;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { 
   ChevronRight, Lock, Truck, AlertCircle, Check, 
@@ -15,6 +15,7 @@ import { useSupabaseCart } from '@/hooks/useSupabaseCart';
 import { supabase } from '@/lib/supabase';
 import { getHighResImageUrl } from '@/lib/images';
 import { calculateShipping } from '@shared/shipping';
+import { isMetaCheckoutRequest, parseMetaCouponPercent, parseMetaCheckoutParams, parseMetaProductsParam } from '@/lib/metaCheckout';
 
 const CHECKOUT_CART_SNAPSHOT_KEY = 'checkout-cart-snapshot-v1';
 
@@ -160,8 +161,18 @@ export default function Checkout() {
     clearCart: clearSupabaseCart,
   } = useSupabaseCart(user?.id || null);
 
+  const [metaCoupon, setMetaCoupon] = useState<string | null>(null);
+  const [metaParams, setMetaParams] = useState<Record<string, string>>({});
+
+  const isMetaCheckout = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return isMetaCheckoutRequest(params, window.location.pathname);
+  }, []);
+
   // Require authentication for checkout
   useEffect(() => {
+    if (isMetaCheckout) return;
     if (!sessionRestored) return; // Wait for session to be restored
     
     if (!isAuthenticated) {
@@ -171,7 +182,7 @@ export default function Checkout() {
         redirectTo: '/checkout',
       });
     }
-  }, [isAuthenticated, sessionRestored, openAuthModal]);
+  }, [isAuthenticated, sessionRestored, openAuthModal, isMetaCheckout]);
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [step, setStep] = useState<'shipping' | 'payment' | 'review'>(() => {
@@ -211,6 +222,90 @@ export default function Checkout() {
   const [setAsDefaultAddress, setSetAsDefaultAddress] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Meta/Facebook checkout entry: parse products/coupon/cart_origin and build cart from product IDs.
+  useEffect(() => {
+    if (!isMetaCheckout || typeof window === 'undefined') return;
+
+    const metaCheckoutParams = parseMetaCheckoutParams(window.location.search);
+    const parsedProducts = parseMetaProductsParam(metaCheckoutParams.products);
+
+    setMetaCoupon(metaCheckoutParams.coupon);
+    setMetaParams(metaCheckoutParams.raw);
+
+    const clearCartRequested = new URLSearchParams(window.location.search).get('clear') === 'true';
+    if (clearCartRequested) {
+      localStorage.removeItem('cart');
+      localStorage.removeItem(CHECKOUT_CART_SNAPSHOT_KEY);
+    }
+
+    if (parsedProducts.length === 0) {
+      setCartItems([]);
+      toast.error('No valid products were provided for checkout.');
+      return;
+    }
+
+    const hydrateMetaCart = async () => {
+      const ids = parsedProducts.map((item) => item.productId);
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, title, price, cover_image_url, stock')
+        .in('id', ids);
+
+      if (error) {
+        console.error('[Checkout] Failed to load Meta checkout products:', error);
+        toast.error('Unable to load checkout products from your Meta cart.');
+        return;
+      }
+
+      const productMap = new Map((data || []).map((product) => [String(product.id), product]));
+      const unavailable: string[] = [];
+
+      const mapped: CartItem[] = parsedProducts
+        .map((entry) => {
+          const product = productMap.get(entry.productId);
+          if (!product) {
+            unavailable.push(entry.productId);
+            return null;
+          }
+
+          const availableStock = Number(product.stock ?? 0);
+          if (availableStock <= 0) {
+            unavailable.push(entry.productId);
+            return null;
+          }
+
+          return {
+            product_id: String(product.id),
+            title: product.title || 'Product',
+            price: `$ ${Number(product.price || 0).toFixed(2)}`,
+            image: product.cover_image_url || '',
+            quantity: Math.min(entry.quantity, availableStock),
+          };
+        })
+        .filter((value): value is CartItem => Boolean(value));
+
+      setCartItems(mapped);
+      writeCheckoutSnapshot(mapped);
+
+      const localCart = mapped.map((item) => ({
+        productId: item.product_id,
+        productIndex: Number.NaN,
+        title: item.title,
+        price: item.price,
+        image: item.image,
+        quantity: item.quantity,
+      }));
+      localStorage.setItem('cart', JSON.stringify(localCart));
+      window.dispatchEvent(new Event('cartUpdated'));
+
+      if (unavailable.length > 0) {
+        toast.warning('Some items were unavailable and were removed from checkout.');
+      }
+    };
+
+    hydrateMetaCart();
+  }, [isMetaCheckout]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -270,6 +365,8 @@ export default function Checkout() {
 
   // Load cart from the appropriate source
   useEffect(() => {
+    if (isMetaCheckout) return;
+
     if (isAuthenticated) {
       const mapped = supabaseCartItems.map((item) => ({
         product_id: item.product_id,
@@ -302,7 +399,7 @@ export default function Checkout() {
     }));
     setCartItems(items);
     writeCheckoutSnapshot(items);
-  }, [isAuthenticated, supabaseCartItems]);
+  }, [isAuthenticated, supabaseCartItems, isMetaCheckout]);
 
   // Keep shipping form synced when user becomes available after refresh.
   useEffect(() => {
@@ -375,7 +472,9 @@ export default function Checkout() {
   ) / 100;
 
   const shipping = calculateShipping(subtotal);
-  const total = Math.round((subtotal + shipping) * 100) / 100; // Ensure final total is precise
+  const couponPercent = isMetaCheckout ? parseMetaCouponPercent(metaCoupon) : 0;
+  const couponDiscount = Math.round((subtotal * (couponPercent / 100)) * 100) / 100;
+  const total = Math.round((subtotal + shipping - couponDiscount) * 100) / 100; // Ensure final total is precise
 
   const paymentMethods: PaymentMethod[] = [
     {
@@ -498,6 +597,12 @@ export default function Checkout() {
   };
 
   const handleContinueToPayment = async () => {
+    if (isMetaCheckout) {
+      if (!validateShipping()) return;
+      setStep('payment');
+      return;
+    }
+
     if (!isAuthenticated || !user?.id) {
       openAuthModal('login', 'checkout', {
         type: 'checkout',
@@ -543,6 +648,14 @@ export default function Checkout() {
             quantity: item.quantity,
             price: item.price,
           })),
+          coupon: metaCoupon,
+          couponPercent: couponPercent || undefined,
+          cartOrigin: metaParams.cart_origin,
+          fbclid: metaParams.fbclid,
+          utmSource: metaParams.utm_source,
+          utmMedium: metaParams.utm_medium,
+          utmCampaign: metaParams.utm_campaign,
+          utmContent: metaParams.utm_content,
         },
       });
 
@@ -616,7 +729,7 @@ export default function Checkout() {
     }
   };
 
-  if (!isAuthenticated && !sessionRestored) {
+  if (!isMetaCheckout && !isAuthenticated && !sessionRestored) {
     return null; // Show nothing while session is being restored
   }
 
@@ -671,7 +784,7 @@ export default function Checkout() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isMetaCheckout && !isAuthenticated) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center px-4">
         <div className="w-full max-w-md text-center">
@@ -963,6 +1076,7 @@ export default function Checkout() {
                     </select>
                   </div>
 
+                  {isAuthenticated && (
                   <label className="flex items-center gap-3 p-4 rounded border border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors">
                     <input
                       type="checkbox"
@@ -974,6 +1088,7 @@ export default function Checkout() {
                       Set this as my default shipping address
                     </span>
                   </label>
+                  )}
 
                   <button
                     type="button"
@@ -1184,6 +1299,12 @@ export default function Checkout() {
                   <span className="text-gray-600">{t('checkout.subtotal', 'Subtotal')}</span>
                   <span className="font-medium text-gray-900">{`$${subtotal.toFixed(2)}`}</span>
                 </div>
+                {couponPercent > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Coupon ({metaCoupon})</span>
+                    <span className="font-medium text-green-700">-{`$${couponDiscount.toFixed(2)}`}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">{t('checkout.shipping', 'Shipping')}</span>
                   <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-medium text-gray-900'}>

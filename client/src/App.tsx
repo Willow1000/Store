@@ -41,6 +41,7 @@ function Router() {
       <Route path={"/about"} component={About} />
       <Route path={"/cart"} component={Cart} />
       <Route path={"/checkout"} component={Checkout} />
+      <Route path={"/checkout/meta"} component={Checkout} />
       <Route path={"/account"} component={Account} />
       <Route path={"/orders"} component={Orders} />
       <Route path={"/orders/:id"} component={OrderDetail} />
