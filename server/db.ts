@@ -1,7 +1,7 @@
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { InsertUser, users, cartItems, orders, notifications, categories, products, productVariants, InsertOrder, InsertNotification, wishlistItems, payments, InsertPayment, productSearchTracking, InsertProductSearchTracking, tickets, InsertTicket } from "../drizzle/schema";
+import { InsertUser, users, cartItems, orders, notifications, categories, products, productVariants, orderItems, InsertOrder, InsertNotification, wishlistItems, payments, InsertPayment, productSearchTracking, InsertProductSearchTracking, tickets, InsertTicket, offers } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -198,15 +198,255 @@ export async function getUserOrders(userId: number) {
   return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
 }
 
-export async function createOrder(userId: number, data: Omit<InsertOrder, 'userId'>) {
+export type ResolvedOffer = {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  type: 'percentage' | 'fixed';
+  value: string;
+  minimumSubtotal: string | null;
+  discountAmount: number;
+};
+
+export type OrderItemInput = {
+  productId: number;
+  variantId?: number | null;
+  quantity: number;
+  price: string | number;
+};
+
+export type OrderItemEmailSummary = {
+  name: string;
+  sku: string;
+  description: string;
+  quantity: number;
+  price: string;
+  unit_price: string;
+  line_total: string;
+};
+
+export type ProductSearchTrackingInput = {
+  sessionId: string;
+  userId?: string | null;
+  eventType: 'search' | 'product_click';
+  searchTerm?: string | null;
+  filters?: Record<string, unknown>;
+  resultsCount?: number;
+  matchedProductIds?: Array<string | number>;
+  clickedProductId?: string | number | null;
+  pageUrl?: string | null;
+  referrer?: string | null;
+  userAgent?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+export async function recordProductSearchTrackingEvent(input: ProductSearchTrackingInput): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const userId = typeof input.userId === 'string' && /^[0-9a-fA-F-]{36}$/.test(input.userId)
+    ? input.userId
+    : null;
+  const clickedProductId = typeof input.clickedProductId === 'string' && /^[0-9a-fA-F-]{36}$/.test(input.clickedProductId)
+    ? input.clickedProductId
+    : null;
+
+  const metadata = {
+    ...(input.metadata ?? {}),
+    ...(input.userId !== undefined && input.userId !== null && userId === null
+      ? { user_id: String(input.userId) }
+      : {}),
+    ...(input.clickedProductId !== undefined && input.clickedProductId !== null && clickedProductId === null
+      ? { clicked_product_id: String(input.clickedProductId) }
+      : {}),
+  };
+
+  try {
+    await db.execute(sql`
+      insert into public.product_search_tracking (
+        sessionid,
+        userid,
+        eventtype,
+        searchterm,
+        filters,
+        resultscount,
+        matchedproductids,
+        clickedproductid,
+        pageurl,
+        referrer,
+        useragent,
+        metadata,
+        createdat
+      ) values (
+        ${input.sessionId},
+        ${userId},
+        ${input.eventType},
+        ${input.searchTerm ?? null},
+        ${JSON.stringify(input.filters ?? {})}::jsonb,
+        ${Number.isFinite(input.resultsCount as number) ? Number(input.resultsCount) : 0},
+        ${JSON.stringify(input.matchedProductIds ?? [])}::jsonb,
+        ${clickedProductId},
+        ${input.pageUrl ?? null},
+        ${input.referrer ?? null},
+        ${input.userAgent ?? null},
+        ${JSON.stringify(metadata)}::jsonb,
+        timezone('utc', now())
+      )
+    `);
+
+    return true;
+  } catch (error) {
+    console.warn('[Track] Failed to insert tracking event directly:', error);
+    return false;
+  }
+}
+
+export async function getOfferByCode(code: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const normalizedCode = code.trim().toUpperCase();
+  const result = await db.select().from(offers).where(eq(offers.code, normalizedCode)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function resolveOfferByCode(code: string, subtotal: number): Promise<ResolvedOffer | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const offer = await getOfferByCode(code);
+  if (!offer) return null;
+
+  const now = new Date();
+  if (!offer.active) return null;
+  if (offer.startsAt && new Date(offer.startsAt) > now) return null;
+  if (offer.endsAt && new Date(offer.endsAt) < now) return null;
+  if (offer.maxUses !== null && offer.maxUses !== undefined && Number(offer.usedCount ?? 0) >= offer.maxUses) return null;
+  if (offer.minimumSubtotal && subtotal < Number(offer.minimumSubtotal)) return null;
+
+  // Calculate discount based on offer type
+  // - 'percentage': discount = subtotal * (value / 100)
+  // - 'fixed': discount = min(value, subtotal) to ensure discount doesn't exceed total
+  const numericValue = Number(offer.value);
+  const discountAmount = offer.type === 'percentage'
+    ? subtotal * (numericValue / 100)
+    : Math.min(numericValue, subtotal);
+
+  return {
+    id: offer.id,
+    code: offer.code,
+    name: offer.name,
+    description: offer.description ?? null,
+    type: offer.type,
+    value: String(offer.value),
+    minimumSubtotal: offer.minimumSubtotal ? String(offer.minimumSubtotal) : null,
+    discountAmount: Number(discountAmount.toFixed(2)),
+  };
+}
+
+export async function incrementOfferUsage(offerId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(offers).set({ usedCount: sql`${offers.usedCount} + 1`, updatedAt: new Date() }).where(eq(offers.id, offerId));
+}
+
+export async function createOrderItems(orderId: number, items: OrderItemInput[]): Promise<OrderItemEmailSummary[]> {
+  const db = await getDb();
+  if (!db || items.length === 0) return [];
+
+  await db.insert(orderItems).values(
+    items.map((item) => ({
+      orderId,
+      productId: item.productId,
+      variantId: item.variantId ?? null,
+      quantity: item.quantity,
+      price: item.price,
+    }))
+  );
+
+  const productIds = Array.from(new Set(items.map((item) => item.productId)));
+  const productRows = await db.select().from(products).where(inArray(products.id, productIds));
+  const productMap = new Map(productRows.map((product) => [product.id, product]));
+
+  return items.map((item) => {
+    const product = productMap.get(item.productId);
+    const unitPrice = Number(item.price);
+    const lineTotal = unitPrice * item.quantity;
+
+    return {
+      name: product?.name || `Product #${item.productId}`,
+      sku: product?.sku || '',
+      description: product?.description || '',
+      quantity: item.quantity,
+      price: String(item.price),
+      unit_price: unitPrice.toFixed(2),
+      line_total: lineTotal.toFixed(2),
+    };
+  });
+}
+
+export async function createOrder(
+  userId: number,
+  data: Omit<InsertOrder, 'userId'>,
+  userEmail?: string,
+  customerName?: string,
+  items?: OrderItemInput[],
+) {
   const db = await getDb();
   if (!db) return null;
   
-  const result = await db.insert(orders).values({
+  const insertedRows = await db.insert(orders).values({
     ...data,
     userId,
-  });
-  return result;
+  }).returning({ id: orders.id });
+
+  const orderId = insertedRows[0]?.id;
+  let enrichedItems: OrderItemEmailSummary[] = [];
+
+  if (orderId && items && items.length > 0) {
+    try {
+      enrichedItems = await createOrderItems(orderId, items);
+    } catch (error) {
+      console.warn('[Orders] Failed to create order items:', error);
+    }
+  }
+
+  if (data.offerId) {
+    try {
+      await incrementOfferUsage(Number(data.offerId));
+    } catch (error) {
+      console.warn('[Offers] Failed to increment usage count:', error);
+    }
+  }
+  
+  // Send confirmation email asynchronously (don't wait for it)
+  if (userEmail) {
+    try {
+      const { sendOrderConfirmationEmail } = await import('../_core/emailService');
+      const orderDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      
+      await sendOrderConfirmationEmail(userEmail, {
+        customer_name: customerName || (userEmail.includes('@') ? userEmail.split('@')[0].replace(/[._-]+/g, ' ').trim().replace(/\b\w/g, (char) => char.toUpperCase()) : 'Valued Customer'),
+        order_number: data.orderNumber as string,
+        order_date: orderDate,
+        order_total: data.total as string,
+        currency: 'USD',
+        order_url: `https://store-nine-eosin.vercel.app/orders/${orderId || userId}`,
+        items: enrichedItems,
+      }).catch(err => console.error('[Order Confirmation Email] Error:', err));
+    } catch (error) {
+      console.error('[Email Service] Failed to send confirmation email:', error);
+      // Don't throw - order was created successfully, email is just a bonus
+    }
+  }
+  
+  return insertedRows[0] ?? null;
 }
 
 // Payment queries

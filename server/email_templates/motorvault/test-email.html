@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Test Email — MotorVault</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#f7f7f8;margin:0;padding:0;color:#111}
+    .container{max-width:680px;margin:24px auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e6e6e9}
+    .header{background:#0f1724;padding:20px 24px;color:#fff;text-align:center;border-bottom:4px solid #dc2626}
+    .logo{height:42px;margin:0 auto 10px;display:block}
+    .brand{font-weight:700;font-size:18px;color:#fff}
+    .content{padding:24px}
+    .h1{font-size:20px;margin:0 0 8px}
+    .lead{color:#374151;margin:0 0 16px}
+    .test-card{background:#f3f4f6;padding:14px;border-radius:6px;margin:12px 0;border-left:4px solid #dc2626}
+    .test-card div{padding:4px 0}
+    .success-badge{display:inline-block;background:#10b981;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600;margin-right:8px}
+    .footer{padding:20px 24px;background:#fafafa;color:#6b7280;font-size:13px;text-align:center;border-top:1px solid #e5e7eb}
+    .footer a{color:#0f1724;text-decoration:none;font-weight:600}
+    .footer a:hover{text-decoration:underline}
+    .copyright{margin-top:8px;color:#111827;font-weight:600}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img class="logo" src="https://store-nine-eosin.vercel.app/images/motorvault_horizontal.svg" alt="MotorVault logo" />
+      <div class="brand">MotorVault</div>
+    </div>
+    <div class="content">
+      <h1 class="h1">Email Configuration Test</h1>
+      <p class="lead">Great news! Your MotorVault email system is configured and working correctly.</p>
+
+      <div class="test-card">
+        <div><span class="success-badge">✓</span><strong>SMTP Connection</strong> — Successfully connected to Gmail SMTP server</div>
+        <div><strong>Status:</strong> Configuration validated and operational</div>
+        <div><strong>Server:</strong> smtp.gmail.com:587 (TLS)</div>
+        <div><strong>From:</strong> {{sender_email}}</div>
+        <div><strong>Timestamp:</strong> {{timestamp}}</div>
+      </div>
+
+      <p>Your email service is ready to send:</p>
+      <ul style="color:#374151;margin:12px 0">
+        <li><strong>Order Confirmations</strong> — Sent immediately when orders are placed</li>
+        <li><strong>Order Status Updates</strong> — Sent when order is packaged and shipped</li>
+        <li><strong>Support Notifications</strong> — System alerts and important updates</li>
+      </ul>
+
+      <p style="color:#6b7280;font-size:13px;margin-top:20px">This is an automated test email sent to verify your SMTP configuration. No action is required.</p>
+    </div>
+    <div class="footer">
+      <div>For support, contact <a href="mailto:support@motorvault.com">support@motorvault.com</a></div>
+      <div class="copyright">© {{sender_name}}. All rights reserved.</div>
+    </div>
+  </div>
+</body>
+</html>

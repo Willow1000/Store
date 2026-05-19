@@ -10,7 +10,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { generateUUID } from '@/lib/paystack';
 import { readCartFromStorage } from '@/lib/cart';
-import { trpcClient } from '@/lib/trpc';
+import { trpc, trpcClient } from '@/lib/trpc';
 import { useSupabaseCart } from '@/hooks/useSupabaseCart';
 import { supabase } from '@/lib/supabase';
 import { getHighResImageUrl } from '@/lib/images';
@@ -472,9 +472,24 @@ export default function Checkout() {
   ) / 100;
 
   const shipping = calculateShipping(subtotal);
-  const couponPercent = isMetaCheckout ? parseMetaCouponPercent(metaCoupon) : 0;
-  const couponDiscount = Math.round((subtotal * (couponPercent / 100)) * 100) / 100;
-  const total = Math.round((subtotal + shipping - couponDiscount) * 100) / 100; // Ensure final total is precise
+
+  const resolvedOffer = trpc.offers.resolve.useQuery(
+    { code: metaCoupon || '', subtotal },
+    {
+      enabled: isMetaCheckout && Boolean(metaCoupon) && subtotal > 0,
+    }
+  );
+
+  const legacyCouponPercent = isMetaCheckout && !resolvedOffer.data ? parseMetaCouponPercent(metaCoupon) : 0;
+  const offerDiscountAmount = resolvedOffer.data
+    ? resolvedOffer.data.discountAmount
+    : Math.round((subtotal * (legacyCouponPercent / 100)) * 100) / 100;
+  const couponLabel = resolvedOffer.data
+    ? `${resolvedOffer.data.name} (${resolvedOffer.data.code})`
+    : legacyCouponPercent > 0 && metaCoupon
+      ? `Coupon (${metaCoupon})`
+      : null;
+  const total = Math.round((subtotal + shipping - offerDiscountAmount) * 100) / 100; // Ensure final total is precise
 
   const paymentMethods: PaymentMethod[] = [
     {
@@ -636,6 +651,11 @@ export default function Checkout() {
         currency: 'USD',
         description: `Order from Modern E-commerce - ${cartItems.length} items`,
         metadata: {
+          subtotal,
+          shipping,
+          tax: 0,
+          discountAmount: offerDiscountAmount,
+          total,
           name: `${formData.firstName} ${formData.lastName}`.trim(),
           phone: formData.phone,
           address: formData.address,
@@ -649,7 +669,12 @@ export default function Checkout() {
             price: item.price,
           })),
           coupon: metaCoupon,
-          couponPercent: couponPercent || undefined,
+          offerId: resolvedOffer.data?.id ?? undefined,
+          offerCode: resolvedOffer.data?.code ?? metaCoupon ?? undefined,
+          offerType: resolvedOffer.data?.type ?? undefined,
+          offerValue: resolvedOffer.data?.value ?? (legacyCouponPercent > 0 ? String(legacyCouponPercent) : undefined),
+          offerName: resolvedOffer.data?.name ?? undefined,
+          couponPercent: legacyCouponPercent || undefined,
           cartOrigin: metaParams.cart_origin,
           fbclid: metaParams.fbclid,
           utmSource: metaParams.utm_source,
@@ -1299,10 +1324,10 @@ export default function Checkout() {
                   <span className="text-gray-600">{t('checkout.subtotal', 'Subtotal')}</span>
                   <span className="font-medium text-gray-900">{`$${subtotal.toFixed(2)}`}</span>
                 </div>
-                {couponPercent > 0 && (
+                {offerDiscountAmount > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Coupon ({metaCoupon})</span>
-                    <span className="font-medium text-green-700">-{`$${couponDiscount.toFixed(2)}`}</span>
+                    <span className="text-gray-600">{couponLabel || 'Discount'}</span>
+                    <span className="font-medium text-green-700">-{`$${offerDiscountAmount.toFixed(2)}`}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">

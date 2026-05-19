@@ -7,34 +7,45 @@
   <style>
     body{font-family:Arial,Helvetica,sans-serif;background:#f7f7f8;margin:0;padding:0;color:#111}
     .container{max-width:680px;margin:24px auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e6e6e9}
-    .header{background:#0f1724;padding:20px 24px;color:#fff;display:flex;align-items:center}
-    .logo{height:36px;margin-right:12px}
+    .header{background:#0f1724;padding:20px 24px;color:#fff;text-align:center;border-bottom:4px solid #dc2626}
+    .logo{height:42px;margin:0 auto 10px;display:block}
     .brand{font-weight:700;font-size:18px}
     .content{padding:24px}
     .h1{font-size:20px;margin:0 0 8px}
     .lead{color:#374151;margin:0 0 16px}
     .order-card{background:#f3f4f6;padding:14px;border-radius:6px;margin:12px 0}
-    .footer{padding:20px 24px;background:#fafafa;color:#6b7280;font-size:13px}
+    .item-list{margin:14px 0 0;padding:0;list-style:none}
+    .item-list li{padding:10px 0;border-bottom:1px solid #e5e7eb}
+    .item-list li:last-child{border-bottom:none}
+    .item-name{font-weight:600;color:#111827}
+    .item-meta{font-size:13px;color:#6b7280;margin-top:4px}
+    .footer{padding:20px 24px;background:#fafafa;color:#6b7280;font-size:13px;text-align:center;border-top:1px solid #e5e7eb}
     .btn{display:inline-block;background:#dc2626;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none}
+    .copyright{margin-top:8px;color:#111827;font-weight:600}
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <img class="logo" src="https://motorvault.com/motorvault_horizontal.svg" alt="MotorVault logo" />
+      <img class="logo" src="https://store-nine-eosin.vercel.app/images/motorvault_horizontal.svg" alt="MotorVault logo" />
       <div class="brand">MotorVault</div>
     </div>
     <div class="content">
       <h1 class="h1">Order Confirmed</h1>
-      <p class="lead">Thanks for your purchase, {{customer_name}} — we received your order <strong>{{order_number}}</strong> and are getting it ready.</p>
+      <p class="lead">Thanks for your purchase, {{customer_name}} — we received your order <strong>{{order_number}}</strong> and are preparing each item for dispatch.</p>
 
       <div class="order-card">
         <div><strong>Order</strong>: {{order_number}}</div>
         <div><strong>Date</strong>: {{order_date}}</div>
         <div><strong>Total</strong>: {{order_total}}</div>
+        <div><strong>Items</strong>: {{item_count}}</div>
       </div>
 
-      <p>We'll send another email once your order has been packaged and is ready for shipping. You can also view your order details in your account.</p>
+      <p>Your order details are below so you can review exactly what was confirmed. We'll send another email once your package has been assembled and is ready for shipping.</p>
+
+      <ul class="item-list">
+        {{items_html}}
+      </ul>
 
       <p>
         <a class="btn" href="{{order_url}}">View order details</a>
@@ -42,7 +53,7 @@
     </div>
     <div class="footer">
       <div>Questions? Contact our support at <a href="mailto:support@motorvault.com">support@motorvault.com</a></div>
-      <div style="margin-top:8px">© MotorVault</div>
+      <div class="copyright">© {{sender_name}}. All rights reserved.</div>
     </div>
   </div>
 </body>

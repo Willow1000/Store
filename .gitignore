@@ -50,6 +50,14 @@ pids
 coverage/
 *.lcov
 
+# Test files (local testing only, not committed)
+*.test.ts
+test-*.ts
+test-*.js
+test-*.md
+*-test.md
+*-notes.md
+
 # nyc test coverage
 .nyc_output
 

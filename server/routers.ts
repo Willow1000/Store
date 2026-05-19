@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { getProducts, getProductById, getFeaturedProducts, getNewArrivals, getDeals, getTrendingProducts, getUserCart, addToCart, getUserOrders, createOrder, getCategories, createNotification, getUserNotifications, getUserWishlist, addToWishlist, removeFromWishlist, upsertUser } from "./db";
+import { getProducts, getProductById, getFeaturedProducts, getNewArrivals, getDeals, getTrendingProducts, getUserCart, addToCart, getUserOrders, createOrder, getCategories, createNotification, getUserNotifications, getUserWishlist, addToWishlist, removeFromWishlist, upsertUser, resolveOfferByCode } from "./db";
 import { initializeTransaction, verifyTransaction } from "./paystack";
 
 function getRequestOrigin(req: { header: (name: string) => string | undefined; protocol?: string }): string | null {
@@ -84,6 +84,16 @@ export const appRouter = router({
     list: publicProcedure.query(() => getCategories()),
   }),
 
+  // Offer procedures
+  offers: router({
+    resolve: publicProcedure
+      .input(z.object({
+        code: z.string().min(1),
+        subtotal: z.number().nonnegative().default(0),
+      }))
+      .query(({ input }) => resolveOfferByCode(input.code, input.subtotal)),
+  }),
+
   // Cart procedures
   cart: router({
     getCart: protectedProcedure.query(({ ctx }) => getUserCart(ctx.user.id)),
@@ -117,13 +127,16 @@ export const appRouter = router({
         shippingCost: z.string().optional(),
         tax: z.string().optional(),
         total: z.string(),
+        discountAmount: z.string().optional(),
+        offerId: z.number().optional(),
+        offerCode: z.string().optional(),
         shippingAddress: z.record(z.string(), z.unknown()),
         billingAddress: z.record(z.string(), z.unknown()).optional(),
         paymentMethod: z.string(),
         stripePaymentIntentId: z.string().optional(),
         paystackPaymentId: z.string().optional(),
       }))
-      .mutation(({ ctx, input }) => createOrder(ctx.user.id, input as any))
+      .mutation(({ ctx, input }) => createOrder(ctx.user.id, input as any, ctx.user.email, ctx.user.name))
   }),
 
   // Paystack procedures

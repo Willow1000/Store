@@ -1,13 +1,47 @@
-<svg width="600" height="150" viewBox="0 0 600 150" xmlns="http://www.w3.org/2000/svg">
+<svg width="800" height="160" viewBox="0 0 800 160" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <symbol id="icon" viewBox="0 0 200 200">
-      <path d="M 187.51 78.99 L 187.51 121.01 L 163.20 115.17 L 164.20 110.17 L 176.74 147.02 L 147.02 176.74 L 133.96 155.42 L 138.21 152.59 L 121.01 187.51 L 78.99 187.51 L 84.83 163.20 L 89.83 164.20 L 52.98 176.74 L 23.26 147.02 L 44.58 133.96 L 47.41 138.21 L 12.49 121.01 L 12.49 78.99 L 36.80 84.83 L 35.80 89.83 L 23.26 52.98 L 52.98 23.26 L 66.04 44.58 L 61.79 47.41 L 78.99 12.49 L 121.01 12.49 L 115.17 36.80 L 110.17 35.80 L 147.02 23.26 L 176.74 52.98 L 155.42 66.04 L 152.59 61.79 Z" fill="black" />
-      <path d="M 77.50 72.50 L 122.50 72.50 L 122.50 100.00 C 122.50 122.00 100.00 127.50 100.00 127.50 C 100.00 127.50 77.50 122.00 77.50 100.00 Z" fill="white" />
-      <rect x="93" y="92" width="14" height="12" rx="1" fill="black" />
-      <path d="M 95 92 L 95 88 C 95 85 97 83 100 83 C 103 83 105 85 105 88 L 105 92" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" />
-      <circle cx="100" cy="98" r="1.5" fill="white" />
-    </symbol>
+    <style>
+      .logo-text { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }
+      .logo-main { font-size: 56px; font-weight: 700; letter-spacing: -0.5px; }
+      .logo-sub { font-size: 56px; font-weight: 300; letter-spacing: -0.5px; }
+    </style>
+    <linearGradient id="vaultGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a1a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f1724;stop-opacity:1" />
+    </linearGradient>
   </defs>
-  <use href="#icon" x="20" y="25" width="100" height="100" />
-  <text x="140" y="92" font-family="Arial, sans-serif" font-weight="800" font-size="52" letter-spacing="0.05em" fill="black">MOTOR<tspan font-weight="300">VAULT</tspan></text>
+  
+  <!-- Icon: Modern Padlock/Vault -->
+  <g transform="translate(30, 25)">
+    <!-- Outer circle ring -->
+    <circle cx="60" cy="60" r="58" fill="none" stroke="#0f1724" stroke-width="2.5"/>
+    
+    <!-- Padlock body -->
+    <g>
+      <!-- Shackle (top arch) -->
+      <path d="M 38 50 Q 38 28 60 28 Q 82 28 82 50" fill="none" stroke="#0f1724" stroke-width="4" stroke-linecap="round"/>
+      
+      <!-- Lock body -->
+      <rect x="40" y="50" width="40" height="45" rx="3" fill="#0f1724"/>
+      
+      <!-- Lock face - subtle gradient -->
+      <rect x="42" y="52" width="36" height="41" rx="2" fill="#f5f5f5"/>
+      
+      <!-- Keyhole circle -->
+      <circle cx="60" cy="70" r="5" fill="#0f1724"/>
+      
+      <!-- Keyhole stem -->
+      <rect x="58" y="75" width="4" height="12" fill="#0f1724" rx="1"/>
+    </g>
+    
+    <!-- Accent dot (security indicator) -->
+    <circle cx="60" cy="95" r="2.5" fill="#dc2626"/>
+  </g>
+  
+  <!-- Text: MOTORVAULT -->
+  <text x="125" y="110" class="logo-text logo-main" fill="#0f1724">MOTOR</text>
+  <text x="525" y="110" class="logo-text logo-sub" fill="#0f1724">VAULT</text>
+  
+  <!-- Tagline (optional but professional) -->
+  <text x="125" y="132" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="500" letter-spacing="0.5px" fill="#6b7280" text-transform="uppercase">SECURE MARKETPLACE</text>
 </svg>

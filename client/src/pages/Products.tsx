@@ -85,7 +85,7 @@ export default function Products() {
       // Ensure a persistent session id exists for anonymous users
       try {
         if (typeof window !== 'undefined') {
-          let sid = localStorage.getItem('sessionId');
+          let sid = localStorage.getItem('sessionId') || '';
           if (!sid) {
             sid = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `anon-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
             try { localStorage.setItem('sessionId', sid); } catch (e) {}

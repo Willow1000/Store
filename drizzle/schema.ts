@@ -6,6 +6,7 @@ export const roleEnum = pgEnum("role", ["user", "admin"]);
 export const statusEnum = pgEnum("status", ["pending", "confirmed", "shipped", "delivered", "cancelled"]);
 export const typeEnum = pgEnum("type", ["order_placed", "order_confirmed", "order_shipped", "order_delivered", "payment_failed", "system"]);
 export const conditionEnum = pgEnum("condition", ["new", "like-new", "good", "fair", "used"]);
+export const offerTypeEnum = pgEnum("offer_type", ["percentage", "fixed"]);
 
 // Ticketing enums
 export const ticketStatusEnum = pgEnum("ticket_status", ["open", "in_progress", "resolved", "closed"]);
@@ -129,6 +130,27 @@ export const wishlistItems = pgTable("wishlistItems", {
 export type WishlistItem = typeof wishlistItems.$inferSelect;
 export type InsertWishlistItem = typeof wishlistItems.$inferInsert;
 
+// Offers Table
+export const offers = pgTable("offers", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  code: varchar("code", { length: 64 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  type: offerTypeEnum("type").notNull(),
+  value: decimal("value", { precision: 10, scale: 2 }).notNull(),
+  minimumSubtotal: decimal("minimumSubtotal", { precision: 10, scale: 2 }),
+  maxUses: integer("maxUses"),
+  usedCount: integer("usedCount").default(0).notNull(),
+  active: boolean("active").default(true).notNull(),
+  startsAt: timestamp("startsAt", { withTimezone: true }),
+  endsAt: timestamp("endsAt", { withTimezone: true }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type Offer = typeof offers.$inferSelect;
+export type InsertOffer = typeof offers.$inferInsert;
+
 // Orders Table
 export const orders = pgTable("orders", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -142,6 +164,9 @@ export const orders = pgTable("orders", {
   shippingAddress: jsonb("shippingAddress"),
   billingAddress: jsonb("billingAddress"),
   paymentMethod: varchar("paymentMethod", { length: 50 }),
+  offerId: integer("offerId"),
+  offerCode: varchar("offerCode", { length: 64 }),
+  discountAmount: decimal("discountAmount", { precision: 10, scale: 2 }).default("0").notNull(),
   stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 255 }),
   paystackPaymentId: varchar("paystackPaymentId", { length: 255 }),
   trackingNumber: varchar("trackingNumber", { length: 100 }),
@@ -291,8 +316,16 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.userId],
     references: [users.id],
   }),
+  offer: one(offers, {
+    fields: [orders.offerId],
+    references: [offers.id],
+  }),
   items: many(orderItems),
   notifications: many(notifications),
+}));
+
+export const offersRelations = relations(offers, ({ many }) => ({
+  orders: many(orders),
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({

@@ -15,6 +15,13 @@
       "when": 1776232718699,
       "tag": "0001_brainy_namor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1779212479576,
+      "tag": "0002_broad_blonde_phantom",
+      "breakpoints": true
     }
   ]
 }

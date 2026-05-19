@@ -12,7 +12,8 @@ import { sdk } from "./sdk";
 import { COOKIE_NAME } from "@shared/const";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
-import { getDb, createOrder, createPayment } from "../db";
+import { getDb, createOrder, createPayment, resolveOfferByCode, recordProductSearchTrackingEvent } from "../db";
+import { verifyEmailConnection } from "./emailService";
 
 function getRequestOrigin(req: express.Request): string | null {
   const forwardedProto = req.header('x-forwarded-proto')?.split(',')[0]?.trim();
@@ -397,6 +398,27 @@ export function createApp() {
       const paystackData = verification.data as any;
       const amountCents = paystackData.amount as number;
       const totalAmount = Number((amountCents / 100).toFixed(2));
+      const paymentMetadata = (paystackData.metadata && typeof paystackData.metadata === 'object') ? paystackData.metadata : {};
+      const subtotalAmount = Number(paymentMetadata.subtotal ?? totalAmount);
+      const shippingCost = Number(paymentMetadata.shipping ?? 0);
+      const taxAmount = Number(paymentMetadata.tax ?? 0);
+      const submittedOfferCode = paymentMetadata.offerCode ? String(paymentMetadata.offerCode).trim() : '';
+      const resolvedOffer = submittedOfferCode
+        ? await resolveOfferByCode(submittedOfferCode, subtotalAmount)
+        : null;
+      const discountAmount = resolvedOffer?.discountAmount ?? 0;
+      const offerId = resolvedOffer?.id ?? null;
+      const offerCode = resolvedOffer?.code ?? (submittedOfferCode ? submittedOfferCode.toUpperCase() : null);
+      const customerEmail = String(paymentMetadata.email || paystackData.customer?.email || paystackData.email || '');
+      const customerName = String(paymentMetadata.name || paystackData.customer?.name || '');
+      const orderLineItems = Array.isArray(paymentMetadata.items)
+        ? paymentMetadata.items.map((item: any) => ({
+            productId: Number(item.productId),
+            variantId: item.variantId ? Number(item.variantId) : undefined,
+            quantity: Number(item.quantity || 1),
+            price: item.price,
+          })).filter((item: any) => Number.isFinite(item.productId) && item.productId > 0)
+        : [];
 
       let paymentId: string | null = null;
       let orderId: number | null = null;
@@ -434,16 +456,19 @@ export function createApp() {
         const result = await createOrder(userId, {
           orderNumber,
           status: 'confirmed',
-          subtotal: String(totalAmount),
-          shippingCost: '0',
-          tax: '0',
+          subtotal: String(subtotalAmount),
+          shippingCost: String(shippingCost),
+          tax: String(taxAmount),
           total: String(totalAmount),
+          discountAmount: String(discountAmount),
+          offerId,
+          offerCode,
           paymentMethod: 'paystack',
           paystackPaymentId: paystackData.reference,
           shippingAddress: null,
           billingAddress: null,
           trackingNumber: null,
-        });
+        }, customerEmail, customerName, orderLineItems);
 
       } catch (orderErr) {
         console.error('[Payment Callback] Failed to create order:', orderErr);
@@ -492,7 +517,7 @@ export function createApp() {
   );
 
   // Simple tracking endpoint used by frontend to record searches and clicks
-  // Tracking endpoint using Supabase REST API (no direct DB connection needed)
+  // Tracking endpoint writes directly to Postgres so it works on the deployed domain too.
   app.post('/api/track', async (req, res) => {
     try {
       const payload = req.body || {};
@@ -514,41 +539,25 @@ export function createApp() {
         createdAt: new Date().toISOString(),
       };
 
-      // Try to insert via Supabase REST API
-      const supabaseUrl = process.env.VITE_SUPABASE_URL?.replace(/\/rest\/v1\/?$/, '') || 'https://dormxdlqbstebbsumdjj.supabase.co';
-      const serviceKey = process.env.SUPABASE_SERVICE_KEY;
-
-      if (!serviceKey) {
-        console.warn('[Track] SUPABASE_SERVICE_KEY not configured, tracking skipped');
-        return res.status(200).json({ success: true }); // Don't fail the user's request
-      }
-
-      const trackingUrl = `${supabaseUrl}/rest/v1/product_search_tracking`;
-
-      // Supabase/PostgREST maps JSON keys to PostgreSQL column names which
-      // are lowercased when created without quotes. Convert keys to
-      // lowercase to match the existing table column names (e.g. "clickedProductId" -> "clickedproductid").
-      const payloadForSupabase: Record<string, any> = {};
-      Object.keys(entry || {}).forEach((k) => {
-        payloadForSupabase[String(k).toLowerCase()] = (entry as any)[k];
+      const recorded = await recordProductSearchTrackingEvent({
+        sessionId: String(entry.sessionId),
+        userId: entry.userId ? String(entry.userId) : null,
+        eventType: entry.eventType === 'product_click' ? 'product_click' : 'search',
+        searchTerm: entry.searchTerm,
+        filters: entry.filters,
+        resultsCount: Number(entry.resultsCount || 0),
+        matchedProductIds: Array.isArray(entry.matchedProductIds) ? entry.matchedProductIds : [],
+        clickedProductId: entry.clickedProductId,
+        pageUrl: entry.pageUrl,
+        referrer: entry.referrer,
+        userAgent: entry.userAgent,
+        metadata: entry.metadata,
       });
 
-      const trackRes = await fetch(trackingUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceKey}`,
-          'apikey': serviceKey,
-          'Prefer': 'return=minimal',
-        },
-        body: JSON.stringify(payloadForSupabase),
-      });
-
-      if (!trackRes.ok) {
-        const errText = await trackRes.text();
-        console.error('[Track] Supabase API error:', trackRes.status, errText);
-        return res.status(200).json({ success: true }); // Don't fail the user's request
+      if (!recorded) {
+        console.warn('[Track] Direct insert did not complete');
       }
+
       return res.status(200).json({ success: true });
     } catch (err) {
       console.error('[Track] Failed to record event:', err);
@@ -891,6 +900,12 @@ export function createApp() {
       console.error('[Feed] Error generating feed:', err);
       return res.status(500).send('Failed to generate feed');
     }
+  });
+
+  // Verify email connection on startup
+  verifyEmailConnection().catch(err => {
+    console.warn('[Email] Warning: Email service may not be properly configured:', err);
+    // Don't throw - the server will continue working, just without emails
   });
 
   return app;
