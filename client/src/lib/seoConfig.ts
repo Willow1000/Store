@@ -9,7 +9,7 @@ export const SEO_CONFIG = {
     name: 'MotorVault',
     url: 'https://motorvault.com',
     description: 'Premium automotive parts marketplace. Shop OEM and aftermarket auto parts from trusted sources globally. Quality guaranteed with fast shipping.',
-    logo: 'https://motorvault.com/motorvault_horizontal.svg',
+    logo: '/images/motorvault_horizontal.svg',
     language: 'en',
     locale: 'en_US',
   },
@@ -111,7 +111,7 @@ export const SEO_CONFIG = {
       '@type': 'Organization',
       name: 'MotorVault',
       url: 'https://modernmart.manus.space',
-      logo: 'https://modernmart.manus.space/motorvault_horizontal.svg',
+      logo: '/images/motorvault_horizontal.svg',
       description: 'Premium motor products marketplace',
     },
     // LocalBusiness settings

@@ -531,6 +531,12 @@ export default function Products() {
   }, [totalPages]);
 
   const allDisplayedProducts = useMemo(() => {
+    // When search is active and results fit on one page (specific/limited results), 
+    // show all of them without pagination. Otherwise, use normal pagination.
+    if (hasSearchTermActive() && filteredProducts.length <= PRODUCTS_PER_PAGE) {
+      return filteredProducts;
+    }
+    // Standard pagination for browsing or when results exceed one page
     const start = (currentPage - 1) * PRODUCTS_PER_PAGE;
     return filteredProducts.slice(start, start + PRODUCTS_PER_PAGE);
   }, [filteredProducts, currentPage]);
