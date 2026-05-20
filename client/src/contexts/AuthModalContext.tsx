@@ -40,7 +40,7 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handleAuthRequired = (event: Event) => {
-      const customEvent = event as CustomEvent<PendingAuthAction & { actionType?: 'cart' | 'wishlist' | 'checkout' | 'tickets' }>;
+      const customEvent = event as CustomEvent<PendingAuthAction & { actionType?: 'cart' | 'wishlist' | 'checkout' | 'tickets'; message?: string; reason?: string }>;
       const pendingAction = customEvent.detail;
       openAuthModal('login', pendingAction?.actionType, pendingAction);
     };

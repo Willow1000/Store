@@ -51,6 +51,7 @@ export default function Products() {
   const lastTrackedSearchRef = useRef('');
   const activeSearchRef = useRef<string | null>(null);
   const pendingCompletedSearchRef = useRef<string | null>(null);
+  const lastSearchSnapshotRef = useRef<{ count: number; productIds: Array<string | number> }>({ count: 0, productIds: [] });
   const [categoryFilter, setCategoryFilter] = useState('');
   const [brandFilter, setBrandFilter] = useState<string[]>([]);
   const [modelFilter, setModelFilter] = useState<string[]>([]);
@@ -188,8 +189,8 @@ export default function Products() {
               inStockOnly,
               dealsOnly,
             },
-            resultsCount: filteredProducts.length,
-            matchedProductIds: filteredProducts.slice(0, 50).map((p) => p.id),
+            resultsCount: lastSearchSnapshotRef.current.count,
+            matchedProductIds: lastSearchSnapshotRef.current.productIds,
             pageUrl: window.location.href,
             metadata: {
               abandoned: true,
@@ -214,6 +215,40 @@ export default function Products() {
       if (prevActive) {
         pendingCompletedSearchRef.current = prevActive;
         try { sessionStorage.setItem('pendingSearchTerm', prevActive); } catch (e) {}
+
+        if (prevActive.length > 5) {
+          try {
+            const clearedPayload = {
+              sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
+              eventType: 'search',
+              searchTerm: prevActive,
+              filters: {
+                category: categoryFilter,
+                brands: brandFilter,
+                models: modelFilter,
+                conditions: conditionFilter,
+                priceRange,
+                inStockOnly,
+                dealsOnly,
+              },
+              resultsCount: lastSearchSnapshotRef.current.count,
+              matchedProductIds: lastSearchSnapshotRef.current.productIds,
+              pageUrl: window.location.href,
+              metadata: {
+                cleared: true,
+                reason: 'cleared_search_bar',
+                clearedAt: new Date().toISOString(),
+              },
+            } as Record<string, any>;
+
+            const body = JSON.stringify(clearedPayload);
+            if (navigator.sendBeacon) {
+              navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
+            } else {
+              fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+            }
+          } catch (err) {}
+        }
       }
       activeSearchRef.current = null;
       try { sessionStorage.removeItem('activeSearchTerm'); } catch (e) {}
@@ -519,6 +554,13 @@ export default function Products() {
 
     return filtered;
   }, [baseProducts, searchQuery, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly, brandFilter, modelFilter, conditionFilter, inStockOnly, allProducts, recentlyViewedIds]);
+
+  useEffect(() => {
+    lastSearchSnapshotRef.current = {
+      count: filteredProducts.length,
+      productIds: filteredProducts.slice(0, 50).map((product) => product.id),
+    };
+  }, [filteredProducts]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
 
@@ -941,12 +983,13 @@ export default function Products() {
                         className="group cursor-pointer"
                         onClick={() => {
                                 try {
-                              if (hasSearchTermActive()) {
+                                const trackedSearchTerm = (activeSearchRef.current || pendingCompletedSearchRef.current || searchQuery || '').trim();
+                                if (trackedSearchTerm.length > 5) {
                                 const payload = {
                                   sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
                                   eventType: 'product_click',
                                   clickedProductId: product.id,
-                                  searchTerm: searchQuery || null,
+                                    searchTerm: trackedSearchTerm,
                                   filters: {
                                     category: categoryFilter,
                                     brands: brandFilter,

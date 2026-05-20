@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Brand } from '@/types/supabase';
+import { isTimeoutError, recoverFromTimeout } from '@/lib/sessionRecovery';
 
 const BRANDS_CACHE_KEY = 'brands_cache_v1';
 
@@ -80,6 +81,10 @@ export function useBrands() {
         const message = err instanceof Error ? err.message : 'Failed to fetch brands';
         console.error('[useBrands] Error:', message, err);
         setError(message);
+
+        if (isTimeoutError(err)) {
+          await recoverFromTimeout(message);
+        }
         
         // Try to use cached data if available
         const cached = readCachedArray<Brand>(BRANDS_CACHE_KEY);

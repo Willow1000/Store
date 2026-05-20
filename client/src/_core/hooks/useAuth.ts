@@ -144,7 +144,7 @@ export function useAuth(options?: UseAuthOptions) {
     retry: true,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     refetchOnWindowFocus: true,
-    enabled: !!supabaseSession?.access_token, // Only fetch if we have a valid Supabase session
+    enabled: true, // Always fetch me() so cookie-based server sessions are respected
     staleTime: 0, // Always consider it stale so it refetches
   });
 
@@ -208,7 +208,7 @@ export function useAuth(options?: UseAuthOptions) {
       session: supabaseSession,
       loading: meQuery.isLoading || logoutMutation.isPending || isSessionLoading,
       error: meQuery.error ?? logoutMutation.error ?? null,
-      isAuthenticated: Boolean(supabaseSession),
+      isAuthenticated: Boolean(resolvedUser),
       sessionRestored,
     };
   }, [
@@ -225,7 +225,7 @@ export function useAuth(options?: UseAuthOptions) {
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;
     if (meQuery.isLoading || logoutMutation.isPending || isSessionLoading) return;
-    if (state.user && supabaseSession) return;
+    if (state.user) return;
     if (typeof window === "undefined") return;
     if (window.location.pathname === redirectPath) return;
 

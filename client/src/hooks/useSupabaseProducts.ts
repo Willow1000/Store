@@ -4,6 +4,7 @@ import { getHighResImageUrl } from '@/lib/images';
 import { Product, ProductImage } from '@/types/supabase';
 import { toast } from 'sonner';
 import { searchProducts, filterProducts, sortProducts } from '@/lib/productSearch';
+import { isTimeoutError, recoverFromTimeout } from '@/lib/sessionRecovery';
 
 const PRODUCTS_CACHE_KEY = 'products_cache_v2';
 const CATEGORIES_CACHE_KEY = 'categories_cache_v2';
@@ -81,6 +82,9 @@ export function useProducts(page = 1, limit = 20) {
       const message = err instanceof Error ? err.message : 'Failed to fetch products';
       setError(message);
       console.error('[useProducts] Error fetching products:', err);
+      if (isTimeoutError(err)) {
+        await recoverFromTimeout(message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -296,6 +300,9 @@ export function useProductById(productId: string) {
         const message = err instanceof Error ? err.message : 'Failed to fetch product';
         setError(message);
         console.error('[useProductById] Error fetching product:', err);
+        if (isTimeoutError(err)) {
+          await recoverFromTimeout(message);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -344,6 +351,9 @@ export function useProductsByCategory(categoryName: string) {
         const message = err instanceof Error ? err.message : 'Failed to fetch products';
         setError(message);
         console.error('Error fetching products:', err);
+        if (isTimeoutError(err)) {
+          await recoverFromTimeout(message);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -484,6 +494,9 @@ export function useCategories() {
         const message = err instanceof Error ? err.message : 'Failed to fetch categories';
         setError(message);
         console.error('Error fetching categories:', err);
+        if (isTimeoutError(err)) {
+          await recoverFromTimeout(message);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -547,6 +560,9 @@ export function useProductsBySlug(categorySlug: string) {
         const message = err instanceof Error ? err.message : 'Failed to fetch products';
         setError(message);
         console.error('Error fetching products by slug:', err);
+        if (isTimeoutError(err)) {
+          await recoverFromTimeout(message);
+        }
       } finally {
         setIsLoading(false);
       }

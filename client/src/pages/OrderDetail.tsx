@@ -3,20 +3,18 @@ import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { ArrowLeft, Clock, CheckCircle, Truck, Package } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
 
 export default function OrderDetail({ params }: { params: { id: string } }) {
-  const { isAuthenticated, sessionRestored } = useAuth();
+  const { user, isAuthenticated, sessionRestored, loading } = useAuth();
   const { openAuthModal } = useAuthModal();
   const authPromptedRef = useRef(false);
   const [location, setLocation] = useLocation();
-  const orderId = parseInt(params.id);
-  const { data: orders, isLoading } = trpc.orders.list.useQuery(undefined, {
-    enabled: sessionRestored && isAuthenticated,
-  });
+  const orderId = params.id;
+  const { orders, isLoading } = useSupabaseOrders(user?.id ?? null);
 
   useEffect(() => {
-    if (!sessionRestored) return;
+    if (!sessionRestored || loading) return;
     if (isAuthenticated) {
       authPromptedRef.current = false;
       return;
@@ -24,9 +22,9 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
     if (authPromptedRef.current) return;
     authPromptedRef.current = true;
     openAuthModal('login', undefined, { redirectTo: location });
-  }, [isAuthenticated, sessionRestored, location, openAuthModal]);
+  }, [isAuthenticated, sessionRestored, loading, location, openAuthModal]);
 
-  if (!sessionRestored) {
+  if (!sessionRestored || loading) {
     return (
         <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <div className="animate-pulse space-y-4">
@@ -52,7 +50,7 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
     );
   }
 
-  const order = orders?.find((o) => o.id === orderId);
+  const order = orders?.find((o) => String(o.id) === String(orderId));
 
   if (!order) {
     return (
@@ -93,7 +91,7 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
     shippingInfo = { ...shippingInfo, ...order.shippingAddress };
   }
 
-  const subtotal = typeof order.total === 'string' ? parseFloat(order.total) : order.total || 0;
+  const subtotal = Number(order.total_amount || 0);
   const shipping = 0; // Shipping already included in total
 
   return (
@@ -112,13 +110,13 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
           <div className="md:col-span-2 space-y-6">
             {/* Order Header */}
             <div className="rounded-lg border border-border bg-white p-6">
-              <h1 className="text-3xl font-bold mb-6">Order #{order.orderNumber}</h1>
+              <h1 className="text-3xl font-bold mb-6">Order #{String(order.id).slice(0, 8)}</h1>
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Order Date</p>
                   <p className="font-semibold">
-                    {new Date(order.createdAt).toLocaleDateString('en-US', {
+                    {new Date(order.created_at).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
