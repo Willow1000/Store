@@ -8,10 +8,18 @@ export default function AuthCallback() {
   const [, navigate] = useLocation();
   const [isProcessing, setIsProcessing] = useState(true);
 
+  const clearUrlFragment = () => {
+    if (typeof window === 'undefined') return;
+    const cleanUrl = `${window.location.pathname}${window.location.search}`;
+    window.history.replaceState({}, document.title, cleanUrl);
+  };
+
   useEffect(() => {
     const handleCallback = async () => {
       try {
         // Check if Supabase successfully processed the OAuth callback
+        // Do NOT clear the URL fragment before calling `getSession()` —
+        // Supabase parses tokens from the fragment/hash.
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error || !session) {
@@ -63,17 +71,55 @@ export default function AuthCallback() {
               return false;
             })
           : false;
-        
-        // Redirect to home immediately
-        setIsProcessing(false);
-        if (!handledPendingAction) {
-          navigate('/');
+
+        // If pending action was handled, it already navigated to the correct place
+        if (handledPendingAction) {
+          setIsProcessing(false);
+          return;
         }
+
+        // Otherwise, determine where to redirect based on oauth_return_to
+        let finalTarget = '/';
+        try {
+          // Check localStorage for oauth_return_to (stored before OAuth flow)
+          const storedReturnTo = typeof window !== 'undefined' 
+            ? localStorage.getItem('oauth_return_to')
+            : null;
+          
+          if (storedReturnTo) {
+            if (storedReturnTo.startsWith('/')) {
+              finalTarget = storedReturnTo;
+            } else {
+              try {
+                const parsed = new URL(storedReturnTo, window.location.origin);
+                if (parsed.origin === window.location.origin) {
+                  finalTarget = parsed.pathname + parsed.search + parsed.hash;
+                }
+              } catch (e) {
+                // ignore invalid URLs
+              }
+            }
+            // Clear it so it's not reused
+            localStorage.removeItem('oauth_return_to');
+          }
+        } catch (e) {
+          // ignore and fall back to '/'
+        }
+
+        // Clear the fragment after session has been read to avoid removing
+        // the token before Supabase can parse it.
+        clearUrlFragment();
+
+        setIsProcessing(false);
+        navigate(finalTarget, { replace: true });
       } catch (error) {
         console.error('Callback error:', error);
         toast.error('Authentication failed. Please try again.');
         setIsProcessing(false);
-        setTimeout(() => navigate('/'), 2000);
+        setTimeout(() => {
+          clearUrlFragment();
+          navigate('/', { replace: true });
+        }, 2000);
       }
     };
 

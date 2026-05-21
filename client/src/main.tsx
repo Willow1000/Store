@@ -1,3 +1,14 @@
+// Silence client-side debug logs in production build
+if (import.meta.env.PROD) {
+  try {
+    (console as any).debug = () => {};
+    (console as any).log = () => {};
+    (console as any).info = () => {};
+  } catch (e) {
+    // ignore
+  }
+}
+
 import { trpc } from "@/lib/trpc";
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

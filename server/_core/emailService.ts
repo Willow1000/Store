@@ -1,9 +1,11 @@
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 let transporter: nodemailer.Transporter | null = null;
 const errorLogPath = path.join(process.cwd(), 'server', 'logs', 'nodemailer-errors.log');
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 function ensureErrorLogDir(): void {
   fs.mkdirSync(path.dirname(errorLogPath), { recursive: true });
@@ -47,7 +49,7 @@ function getTransporter(): nodemailer.Transporter {
  */
 function loadTemplate(templateName: string, data: Record<string, any>): string {
   try {
-    const templatePath = path.join(__dirname, '../email_templates/motorvault', `${templateName}.html`);
+    const templatePath = path.resolve(moduleDir, '../email_templates/motorvault', `${templateName}.html`);
     let templateContent = fs.readFileSync(templatePath, 'utf-8');
 
     Object.entries(data).forEach(([key, value]) => {
@@ -96,6 +98,10 @@ function buildItemsHtml(items?: Array<{
   }).join('');
 }
 
+function formatTextBlock(value: string | undefined | null): string {
+  return escapeHtml(String(value ?? '').trim()).replace(/\n/g, '<br />');
+}
+
 export interface OrderConfirmationData {
   customer_name: string;
   order_number: string;
@@ -142,6 +148,93 @@ export async function sendOrderConfirmationEmail(
     return true;
   } catch (error) {
     logEmailError(`[Email] Failed to send order confirmation to ${recipientEmail}`, error);
+    return false;
+  }
+}
+
+export interface TicketConfirmationData {
+  customer_name: string;
+  ticket_reference: string;
+  ticket_subject: string;
+  ticket_priority: string;
+  ticket_status: string;
+  ticket_created_at: string;
+  ticket_description: string;
+  contact_email?: string;
+  contact_phone?: string;
+  support_email?: string;
+}
+
+export async function sendTicketConfirmationEmail(
+  recipientEmail: string,
+  data: TicketConfirmationData
+): Promise<boolean> {
+  try {
+    const transporterInstance = getTransporter();
+    const htmlContent = loadTemplate('ticket-received', {
+      ...data,
+      customer_name: escapeHtml(data.customer_name),
+      ticket_reference: escapeHtml(data.ticket_reference),
+      ticket_subject: escapeHtml(data.ticket_subject),
+      ticket_priority: escapeHtml(data.ticket_priority),
+      ticket_status: escapeHtml(data.ticket_status),
+      ticket_created_at: escapeHtml(data.ticket_created_at),
+      ticket_description: formatTextBlock(data.ticket_description),
+      contact_email: escapeHtml(data.contact_email || ''),
+      contact_phone: escapeHtml(data.contact_phone || ''),
+      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com'),
+      sender_name: process.env.SENDER_NAME || 'Our Store',
+    });
+
+    await transporterInstance.sendMail({
+      from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
+      to: recipientEmail,
+      subject: `We received your ticket — ${data.ticket_reference}`,
+      html: htmlContent,
+    });
+
+    console.log(`[Email] Ticket confirmation sent to ${recipientEmail}`);
+    return true;
+  } catch (error) {
+    logEmailError(`[Email] Failed to send ticket confirmation to ${recipientEmail}`, error);
+    return false;
+  }
+}
+
+export interface ContactConfirmationData {
+  customer_name: string;
+  contact_subject: string;
+  contact_location: string;
+  contact_message: string;
+  support_email?: string;
+}
+
+export async function sendContactConfirmationEmail(
+  recipientEmail: string,
+  data: ContactConfirmationData
+): Promise<boolean> {
+  try {
+    const transporterInstance = getTransporter();
+    const htmlContent = loadTemplate('contact-received', {
+      customer_name: escapeHtml(data.customer_name),
+      contact_subject: escapeHtml(data.contact_subject || 'General support request'),
+      contact_location: escapeHtml(data.contact_location || 'Not provided'),
+      contact_message: formatTextBlock(data.contact_message),
+      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com'),
+      sender_name: process.env.SENDER_NAME || 'Our Store',
+    });
+
+    await transporterInstance.sendMail({
+      from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
+      to: recipientEmail,
+      subject: 'We received your message',
+      html: htmlContent,
+    });
+
+    console.log(`[Email] Contact confirmation sent to ${recipientEmail}`);
+    return true;
+  } catch (error) {
+    logEmailError(`[Email] Failed to send contact confirmation to ${recipientEmail}`, error);
     return false;
   }
 }

@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useLocation } from 'wouter';
 import { executePendingAuthAction, getPendingAuthAction } from '@/lib/authPendingAction';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
+import { sanitizeEmail, sanitizeName, sanitizePhone, sanitizeText } from '@shared/sanitize';
 
 export default function AuthModal() {
   const { isOpen, mode, actionType, closeAuthModal, setMode } = useAuthModal();
@@ -40,6 +41,7 @@ export default function AuthModal() {
     const configuredAppUrl = import.meta.env.VITE_APP_URL?.trim();
     const runtimeOrigin = window.location.origin;
     const defaultCallbackPath = '/auth/callback';
+    const looksLikePlaceholderAppUrl = !configuredAppUrl || /your-production-domain\.com|replace-with-your/i.test(configuredAppUrl);
 
     // If a full redirect URL is configured, use it as-is
     if (configuredRedirect && /^https?:\/\//i.test(configuredRedirect)) {
@@ -48,7 +50,7 @@ export default function AuthModal() {
 
     // Determine base origin for relative redirects
     let baseOrigin = runtimeOrigin;
-    if (configuredAppUrl) {
+    if (configuredAppUrl && !looksLikePlaceholderAppUrl) {
       try {
         baseOrigin = new URL(configuredAppUrl).origin;
       } catch {
@@ -66,6 +68,16 @@ export default function AuthModal() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
+      // Get the authModal's pending action (which may have been set by openAuthModal call)
+      // to determine where to redirect after OAuth completes
+      const pendingAction = getPendingAuthAction();
+      const returnToPath = pendingAction?.redirectTo || `${window.location.pathname}${window.location.search}`;
+      
+      // Store the redirect target in localStorage so auth callback can retrieve it after OAuth redirect
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('oauth_return_to', returnToPath);
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -124,7 +136,7 @@ export default function AuthModal() {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: loginData.email,
+        email: sanitizeEmail(loginData.email, 255),
         password: loginData.password,
       });
 
@@ -188,13 +200,13 @@ export default function AuthModal() {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
-        email: signupData.email,
+        email: sanitizeEmail(signupData.email, 255),
         password: signupData.password,
         options: {
           data: {
-            name: signupData.name,
-            phone: signupData.phone,
-            address: signupData.address,
+            name: sanitizeName(signupData.name, 100),
+            phone: sanitizePhone(signupData.phone, 24),
+            address: sanitizeText(signupData.address, 255),
           },
         },
       });

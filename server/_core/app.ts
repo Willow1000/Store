@@ -13,7 +13,19 @@ import { COOKIE_NAME } from "@shared/const";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
 import { getDb, createOrder, createPayment, resolveOfferByCode, recordProductSearchTrackingEvent } from "../db";
-import { verifyEmailConnection } from "./emailService";
+import { sendContactConfirmationEmail, sendTicketConfirmationEmail } from "./emailService";
+import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeName, sanitizePhone, sanitizeText } from "@shared/sanitize";
+
+// In production, silence non-error console output to avoid leaking debug info.
+if (process.env.NODE_ENV === 'production') {
+  try {
+    (console as any).debug = () => {};
+    (console as any).log = () => {};
+    (console as any).info = () => {};
+  } catch (e) {
+    // ignore
+  }
+}
 
 function getRequestOrigin(req: express.Request): string | null {
   const forwardedProto = req.header('x-forwarded-proto')?.split(',')[0]?.trim();
@@ -570,6 +582,8 @@ export function createApp() {
     try {
       const payload = req.body || {};
       let authenticatedUserId: string | null = null;
+      let authenticatedUserEmail: string | null = null;
+      let authenticatedUserName: string | null = null;
 
       // Try to get user from Authorization header (Supabase token)
       const authHeader = req.headers.authorization || '';
@@ -590,6 +604,8 @@ export function createApp() {
             if (userRes.ok) {
               const userData = await userRes.json();
               authenticatedUserId = userData.id;
+              authenticatedUserEmail = userData.email || null;
+              authenticatedUserName = userData.user_metadata?.name || userData.email || null;
             }
           }
         } catch (tokenErr) {
@@ -603,15 +619,15 @@ export function createApp() {
 
       // Build ticket entry
       const entry: any = {
-        referenceCode: String(payload.referenceCode || `T-${Date.now()}-${Math.random().toString(36).slice(2,6)}`),
+        referenceCode: sanitizeText(payload.referenceCode || `T-${Date.now()}-${Math.random().toString(36).slice(2,6)}`, 64),
         userId: authenticatedUserId,
-        contactEmail: payload.contactEmail ?? null,
-        contactPhone: payload.contactPhone ?? null,
-        title: String(payload.title || '').slice(0, 255),
-        description: payload.description ?? null,
-        status: String(payload.status || 'open'),
-        priority: String(payload.priority || 'medium'),
-        channel: payload.channel ?? 'web',
+        contactEmail: sanitizeEmail(payload.contactEmail || authenticatedUserEmail || '', 255) || null,
+        contactPhone: sanitizePhone(payload.contactPhone || '', 24) || null,
+        title: sanitizeText(payload.title || '', 255),
+        description: sanitizeMultilineText(payload.description || '', 5000) || null,
+        status: sanitizeText(payload.status || 'open', 32),
+        priority: sanitizeText(payload.priority || 'medium', 32),
+        channel: sanitizeText(payload.channel || 'web', 32),
         assignedTo: payload.assignedTo ?? null,
         tags: payload.tags ?? [],
         attachments: payload.attachments ?? [],
@@ -654,9 +670,97 @@ export function createApp() {
       }
 
       const created = JSON.parse(resText || 'null');
+
+      const recipientEmail = String(payload.contactEmail || authenticatedUserEmail || '').trim();
+      if (recipientEmail) {
+        const ticket = Array.isArray(created) ? created[0] : created;
+        void sendTicketConfirmationEmail(recipientEmail, {
+          customer_name: sanitizeName(authenticatedUserName || payload.contactEmail || 'Customer', 100),
+          ticket_reference: String(ticket?.referencecode || ticket?.referenceCode || entry.referenceCode),
+          ticket_subject: String(ticket?.title || entry.title || 'Support ticket'),
+          ticket_priority: String(ticket?.priority || entry.priority || 'medium'),
+          ticket_status: String(ticket?.status || entry.status || 'open'),
+          ticket_created_at: String(ticket?.createdat || ticket?.createdAt || entry.createdAt),
+          ticket_description: String(ticket?.description || entry.description || ''),
+          contact_email: sanitizeEmail(payload.contactEmail || authenticatedUserEmail || '', 255),
+          contact_phone: sanitizePhone(payload.contactPhone || '', 24),
+          support_email: process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com',
+        }).then((sent) => {
+          if (!sent) {
+            console.warn('[Tickets] Ticket confirmation email was not sent');
+          }
+        });
+      }
+
       return res.status(201).json({ success: true, ticket: Array.isArray(created) ? created[0] : created });
     } catch (err) {
       console.error('[Tickets] create error:', err);
+      return res.status(500).json({ error: 'internal' });
+    }
+  });
+
+  app.post('/api/contact-us', async (req, res) => {
+    try {
+      const payload = req.body || {};
+      const name = sanitizeName(payload.name || '', 100);
+      const email = sanitizeEmail(payload.email || '', 255);
+      const location = sanitizeLocation(payload.location || '');
+      const subject = sanitizeText(payload.subject || '', 200);
+      const message = sanitizeMultilineText(payload.message || '', 5000);
+
+      if (!name || !email || !location || !message) {
+        return res.status(400).json({ error: 'Missing required contact fields' });
+      }
+
+      const supabaseUrl = process.env.VITE_SUPABASE_URL?.replace(/\/rest\/v1\/?$/, '') || 'https://dormxdlqbstebbsumdjj.supabase.co';
+      const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+
+      if (!serviceKey) {
+        console.error('[Contact] SUPABASE_SERVICE_KEY not configured');
+        return res.status(500).json({ error: 'Service key not configured' });
+      }
+
+      const contactPayload = {
+        name,
+        email,
+        location,
+        subject,
+        message,
+      };
+
+      const contactRes = await fetch(`${supabaseUrl}/rest/v1/contactus`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify(contactPayload),
+      });
+
+      const resText = await contactRes.text();
+      if (!contactRes.ok) {
+        console.error('[Contact] Supabase API error:', contactRes.status, resText);
+        return res.status(502).json({ error: 'Failed to send contact message' });
+      }
+
+      void sendContactConfirmationEmail(email, {
+        customer_name: name,
+        contact_subject: subject || 'General support request',
+        contact_location: location,
+        contact_message: message,
+        support_email: process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com',
+      }).then((sent) => {
+        if (!sent) {
+          console.warn('[Contact] Confirmation email was not sent');
+        }
+      });
+
+      const created = JSON.parse(resText || 'null');
+      return res.status(201).json({ success: true, message: Array.isArray(created) ? created[0] : created });
+    } catch (err) {
+      console.error('[Contact] create error:', err);
       return res.status(500).json({ error: 'internal' });
     }
   });
@@ -900,12 +1004,6 @@ export function createApp() {
       console.error('[Feed] Error generating feed:', err);
       return res.status(500).send('Failed to generate feed');
     }
-  });
-
-  // Verify email connection on startup
-  verifyEmailConnection().catch(err => {
-    console.warn('[Email] Warning: Email service may not be properly configured:', err);
-    // Don't throw - the server will continue working, just without emails
   });
 
   return app;

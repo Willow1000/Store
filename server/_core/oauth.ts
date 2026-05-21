@@ -60,7 +60,9 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: SESSION_DURATION_MS });
 
-      res.redirect(302, "/");
+      // Redirect to client-side auth callback page.
+      // Client will handle reading oauth_return_to from localStorage and redirecting appropriately.
+      res.redirect(302, "/auth/callback");
     } catch (error) {
       console.error("[OAuth] Callback failed", error);
       res.status(500).json({ error: "OAuth callback failed" });

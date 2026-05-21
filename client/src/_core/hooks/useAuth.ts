@@ -63,6 +63,7 @@ export function useAuth(options?: UseAuthOptions) {
   // Get Supabase session
   useEffect(() => {
     let isMounted = true;
+    let initialSessionHandled = false;
 
     const getSession = async () => {
       try {
@@ -73,12 +74,6 @@ export function useAuth(options?: UseAuthOptions) {
         if (isMounted) {
           setSupabaseSession(session);
           setIsSessionLoading(false);
-          // Only mark session as restored AFTER we have the session state
-          setTimeout(() => {
-            if (isMounted) {
-              setSessionRestored(true);
-            }
-          }, 0);
         }
         // Check session expiry after restoring it
         if (session) {
@@ -103,6 +98,14 @@ export function useAuth(options?: UseAuthOptions) {
           setSupabaseSession(session);
           setIsSessionLoading(false);
         }
+
+        if (event === 'INITIAL_SESSION') {
+          initialSessionHandled = true;
+          if (isMounted) {
+            setSessionRestored(true);
+          }
+        }
+
         if (event === 'SIGNED_OUT') {
           clearSessionStartedAt();
           utils.auth.me.setData(undefined, null);
@@ -130,6 +133,10 @@ export function useAuth(options?: UseAuthOptions) {
           }
           // Invalidate the auth query to refetch user data
           utils.auth.me.invalidate();
+
+          if (!initialSessionHandled && isMounted) {
+            setSessionRestored(true);
+          }
         }
       }
     );

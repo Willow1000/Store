@@ -28,7 +28,23 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
   ) => {
     setMode(newMode);
     if (newActionType) setActionType(newActionType);
-    if (pendingAction) savePendingAuthAction(pendingAction);
+
+    const currentPath = typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}`
+      : '/';
+
+    // Ensure auth-required flows always retain an intended return URL.
+    const normalizedPendingAction: PendingAuthAction | undefined = pendingAction
+      ? {
+          ...pendingAction,
+          type: pendingAction.type || (newActionType as PendingAuthAction['type']),
+          redirectTo: pendingAction.redirectTo || currentPath,
+        }
+      : (newActionType
+          ? { type: newActionType as PendingAuthAction['type'], redirectTo: currentPath }
+          : undefined);
+
+    if (normalizedPendingAction) savePendingAuthAction(normalizedPendingAction);
     setIsOpen(true);
   };
 

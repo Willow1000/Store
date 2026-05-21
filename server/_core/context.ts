@@ -55,41 +55,43 @@ export async function createContext(
         if (error) {
           console.debug('[Auth] Supabase token verification failed:', error.message);
         } else if (supabaseUser?.id) {
-
-          
-          // Look up user in our database by Supabase user ID
-          const dbUser = await db.getUserByOpenId(supabaseUser.id);
-          
-          if (dbUser) {
-
-            return {
-              req: opts.req,
-              res: opts.res,
-              user: dbUser,
-            };
-          }
-          
-          // If user doesn't exist in DB, create them
-          try {
-
-            await db.upsertUser({
-              openId: supabaseUser.id,
-              email: supabaseUser.email,
-              name: supabaseUser.user_metadata?.name,
-              loginMethod: supabaseUser.user_metadata?.provider || 'email',
-              lastSignedIn: new Date(),
-            });
-            const newUser = await db.getUserByOpenId(supabaseUser.id);
-            if (newUser) {
+          if (db.isDatabaseConfigured()) {
+            // Look up user in our database by Supabase user ID
+            const dbUser = await db.getUserByOpenId(supabaseUser.id);
+            
+            if (dbUser) {
 
               return {
                 req: opts.req,
                 res: opts.res,
-                user: newUser,
+                user: dbUser,
               };
             }
-          } catch (syncError) {
-            console.error("[Auth] Failed to sync Supabase user:", syncError);
+            
+            // If user doesn't exist in DB, create them
+            try {
+
+              await db.upsertUser({
+                openId: supabaseUser.id,
+                email: supabaseUser.email,
+                name: supabaseUser.user_metadata?.name,
+                loginMethod: supabaseUser.user_metadata?.provider || 'email',
+                lastSignedIn: new Date(),
+              });
+              const newUser = await db.getUserByOpenId(supabaseUser.id);
+              if (newUser) {
+
+                return {
+                  req: opts.req,
+                  res: opts.res,
+                  user: newUser,
+                };
+              }
+            } catch (syncError) {
+              console.error("[Auth] Failed to sync Supabase user:", syncError);
+            }
+          } else {
+            console.debug('[Auth] Database sync disabled - skipping Supabase user hydration');
           }
         }
       } else {

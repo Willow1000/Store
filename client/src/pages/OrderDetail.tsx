@@ -1,9 +1,10 @@
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAuthModal } from '@/contexts/AuthModalContext';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { ArrowLeft, Clock, CheckCircle, Truck, Package } from 'lucide-react';
 import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
+import { supabase } from '@/lib/supabase';
 
 export default function OrderDetail({ params }: { params: { id: string } }) {
   const { user, isAuthenticated, sessionRestored, loading } = useAuth();
@@ -12,6 +13,15 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
   const [location, setLocation] = useLocation();
   const orderId = params.id;
   const { orders, isLoading } = useSupabaseOrders(user?.id ?? null);
+  const [shippingInfo, setShippingInfo] = useState({
+    firstName: '',
+    lastName: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    country: 'US',
+  });
 
   useEffect(() => {
     if (!sessionRestored || loading) return;
@@ -23,6 +33,107 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
     authPromptedRef.current = true;
     openAuthModal('login', undefined, { redirectTo: location });
   }, [isAuthenticated, sessionRestored, loading, location, openAuthModal]);
+
+  // Initialize order from orders array - moved before conditional returns
+  const order = orders?.find((o) => String(o.id) === String(orderId));
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const parseName = (name: string | null | undefined) => {
+      const raw = String(name || '').trim();
+      if (!raw) return { firstName: '', lastName: '' };
+      const [firstName, ...rest] = raw.split(' ');
+      return { firstName, lastName: rest.join(' ') };
+    };
+
+    const parseAddressLine = (addressLine: string | null | undefined) => {
+      const raw = String(addressLine || '');
+      const [addressPart, statePart] = raw.split(' | ');
+      return {
+        address: (addressPart || '').trim(),
+        state: (statePart || '').trim(),
+      };
+    };
+
+    async function loadShippingInfo() {
+      // Guard: only load if we have an order
+      if (!order) return;
+
+      const userName = parseName(user?.name);
+
+      // 1) Preferred source: payment metadata captured at checkout time for this order.
+      const { data: paymentRow } = await supabase
+        .from('payments')
+        .select('metadata')
+        .eq('order_id', order.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const metadata = (paymentRow?.metadata && typeof paymentRow.metadata === 'object')
+        ? (paymentRow.metadata as Record<string, any>)
+        : null;
+
+      if (metadata) {
+        const metaName = parseName(metadata.name);
+        const next = {
+          firstName: metadata.firstName || metaName.firstName || userName.firstName,
+          lastName: metadata.lastName || metaName.lastName || userName.lastName,
+          address: metadata.address || '',
+          city: metadata.city || '',
+          state: metadata.state || '',
+          zip: metadata.zip || metadata.postalCode || '',
+          country: metadata.country || 'US',
+        };
+
+        if (!cancelled) setShippingInfo(next);
+        return;
+      }
+
+      // 2) Fallback: current default address for the user.
+      if (user?.id) {
+        const { data: addressRow } = await supabase
+          .from('addresses')
+          .select('address_line, city, postal_code, country')
+          .eq('user_id', user.id)
+          .eq('is_default', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (addressRow) {
+          const parsed = parseAddressLine(addressRow.address_line);
+          const next = {
+            firstName: userName.firstName,
+            lastName: userName.lastName,
+            address: parsed.address,
+            city: addressRow.city || '',
+            state: parsed.state,
+            zip: addressRow.postal_code || '',
+            country: addressRow.country || 'US',
+          };
+          if (!cancelled) setShippingInfo(next);
+          return;
+        }
+      }
+
+      // 3) Last fallback: user name only.
+      if (!cancelled) {
+        setShippingInfo((prev) => ({
+          ...prev,
+          firstName: userName.firstName,
+          lastName: userName.lastName,
+        }));
+      }
+    }
+
+    loadShippingInfo();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [order, user?.id, user?.name]);
 
   if (!sessionRestored || loading) {
     return (
@@ -50,8 +161,6 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
     );
   }
 
-  const order = orders?.find((o) => String(o.id) === String(orderId));
-
   if (!order) {
     return (
       <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
@@ -70,29 +179,9 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
     );
   }
 
-  // Parse shipping address safely
-  let shippingInfo = {
-    firstName: '',
-    lastName: '',
-    address: '',
-    city: '',
-    state: '',
-    zip: '',
-    country: 'US',
-  };
-
-  if (typeof order.shippingAddress === 'string') {
-    try {
-      shippingInfo = JSON.parse(order.shippingAddress);
-    } catch (e) {
-      shippingInfo = { ...shippingInfo, address: order.shippingAddress };
-    }
-  } else if (typeof order.shippingAddress === 'object' && order.shippingAddress) {
-    shippingInfo = { ...shippingInfo, ...order.shippingAddress };
-  }
-
   const subtotal = Number(order.total_amount || 0);
   const shipping = 0; // Shipping already included in total
+  const orderItems = Array.isArray((order as any).items) ? (order as any).items : [];
 
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
@@ -168,7 +257,26 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
             <div className="rounded-lg border border-border bg-white p-6">
               <h2 className="text-xl font-bold mb-4">Order Items</h2>
               <div className="space-y-4">
-                <p className="text-gray-600 text-sm">Order items will be displayed here</p>
+                {orderItems.length === 0 ? (
+                  <p className="text-gray-600 text-sm">No order items found for this order.</p>
+                ) : (
+                  orderItems.map((item: any) => {
+                    const quantity = Number(item?.quantity || 1);
+                    const unitPrice = Number(item?.price || 0);
+                    const lineTotal = quantity * unitPrice;
+                    return (
+                      <div key={item.id || `${item.product_id}-${quantity}`} className="flex items-start justify-between border-b border-gray-100 pb-3 last:border-b-0">
+                        <div>
+                          <p className="font-semibold text-sm">
+                            {item?.product?.title || item?.product?.name || 'Product'}
+                          </p>
+                          <p className="text-xs text-gray-600">Qty: {quantity}</p>
+                        </div>
+                        <p className="font-semibold text-sm">${lineTotal.toFixed(2)}</p>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>

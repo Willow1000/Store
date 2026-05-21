@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 const PENDING_AUTH_ACTION_KEY = 'pending_auth_action';
 const pendingAuthStorage = typeof window !== 'undefined' ? window.localStorage : null;
 
-export type PendingAuthActionType = 'cart' | 'wishlist' | 'checkout';
+export type PendingAuthActionType = 'cart' | 'wishlist' | 'checkout' | 'tickets';
 
 export interface PendingAuthAction {
   type?: PendingAuthActionType;

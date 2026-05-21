@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { supabase } from '@/lib/supabase';
+import { sanitizeEmail, sanitizeMultilineText, sanitizePhone, sanitizeText } from '@shared/sanitize';
 
 export default function TicketsPage() {
   const { user, isAuthenticated, sessionRestored } = useAuth() as any;
@@ -21,21 +22,6 @@ export default function TicketsPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    // try to prefill email if user exists
-    if (user && user.email) setEmail(user.email);
-    fetchTickets();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, user?.email, email]);
-
-  useEffect(() => {
-    if (!sessionRestored) return;
-
-    if (!isAuthenticated) {
-      openAuthModal('login', 'tickets');
-    }
-  }, [isAuthenticated, openAuthModal, sessionRestored]);
-
   const titleOptions = [
     'Item not found',
     'Order not received',
@@ -48,6 +34,20 @@ export default function TicketsPage() {
     'Payment failed',
     'Other',
   ];
+
+  useEffect(() => {
+    if (user && user.email) setEmail(sanitizeEmail(user.email, 255));
+    fetchTickets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.email]);
+
+  useEffect(() => {
+    if (!sessionRestored) return;
+
+    if (!isAuthenticated) {
+      openAuthModal('login', 'tickets');
+    }
+  }, [isAuthenticated, openAuthModal, sessionRestored]);
 
   const setSelectedFilesFromInput = (files: File[]) => {
     setFileWarning(null);
@@ -72,8 +72,7 @@ export default function TicketsPage() {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      
-      // Get Supabase session token for authentication
+
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
 
@@ -126,15 +125,14 @@ export default function TicketsPage() {
         throw new Error('Authentication required to create tickets');
       }
 
-      // Generate a client-side reference code to namespace uploads
       const referenceCode = `T-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
       const payload: any = {
         referenceCode,
-        contactEmail: email || null,
-        contactPhone: phone || null,
-        title,
-        description,
+        contactEmail: sanitizeEmail(email, 255) || null,
+        contactPhone: sanitizePhone(phone, 24) || null,
+        title: sanitizeText(title, 255),
+        description: sanitizeMultilineText(description, 5000),
         priority,
         channel: 'web',
         metadata: { createdFrom: 'tickets-ui', referenceCode },
@@ -156,8 +154,7 @@ export default function TicketsPage() {
       }
 
       setMessage(`Ticket created: ${json.ticket?.referencecode || json.ticket?.referenceCode}`);
-      
-      // Reset form fields
+
       setTitle('');
       setDescription('');
       setPhone('');
@@ -166,8 +163,7 @@ export default function TicketsPage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      
-      // Refresh ticket list after a short delay to allow DB to persist
+
       setTimeout(() => {
         fetchTickets();
       }, 500);
@@ -192,11 +188,11 @@ export default function TicketsPage() {
         )}
         <div>
           <label htmlFor="contactEmail" className="block text-sm font-medium">Your email</label>
-          <input id="contactEmail" name="contactEmail" type="email" aria-required="true" className="border p-2 w-full" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input id="contactEmail" name="contactEmail" type="email" aria-required="true" className="border p-2 w-full" value={email} onChange={(e) => setEmail(sanitizeEmail(e.target.value, 255))} />
         </div>
         <div>
           <label htmlFor="contactPhone" className="block text-sm font-medium">Phone</label>
-          <input id="contactPhone" name="contactPhone" type="tel" required aria-required="true" className="border p-2 w-full" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <input id="contactPhone" name="contactPhone" type="tel" required aria-required="true" className="border p-2 w-full" value={phone} onChange={(e) => setPhone(sanitizePhone(e.target.value, 24))} />
         </div>
         <div>
           <label htmlFor="ticketTitle" className="block text-sm font-medium">Title</label>
@@ -208,7 +204,7 @@ export default function TicketsPage() {
             aria-required="true"
             className="border p-2 w-full"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => setTitle(sanitizeText(e.target.value, 255))}
             placeholder="Select a common issue or type your own"
           />
           <datalist id="ticketTitleOptions">
@@ -219,7 +215,7 @@ export default function TicketsPage() {
         </div>
         <div>
           <label htmlFor="ticketDescription" className="block text-sm font-medium">Description</label>
-          <textarea id="ticketDescription" name="description" required aria-required="true" className="border p-2 w-full" value={description} onChange={(e) => setDescription(e.target.value)} />
+          <textarea id="ticketDescription" name="description" required aria-required="true" className="border p-2 w-full" value={description} onChange={(e) => setDescription(sanitizeMultilineText(e.target.value, 5000))} />
         </div>
         <div>
           <label htmlFor="priority" className="block text-sm font-medium">Priority</label>

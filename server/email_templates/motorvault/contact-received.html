@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>We Received Your Message — MotorVault</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#f7f7f8;margin:0;padding:0;color:#111}
+    .container{max-width:720px;margin:24px auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e6e6e9}
+    .header{background:#0f1724;padding:20px 24px;color:#fff;text-align:center;border-bottom:4px solid #dc2626}
+    .brand{font-weight:700;font-size:18px}
+    .content{padding:24px}
+    .h1{font-size:20px;margin:0 0 8px}
+    .lead{color:#374151;margin:0 0 16px;line-height:1.6}
+    .message-card{background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-top:16px}
+    .message-card div{padding:4px 0}
+    .message-block{margin-top:12px;white-space:pre-wrap;line-height:1.6;color:#111827}
+    .footer{padding:20px 24px;background:#fafafa;color:#6b7280;font-size:13px;text-align:center;border-top:1px solid #e5e7eb}
+    .copyright{margin-top:8px;color:#111827;font-weight:600}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">MotorVault Support</div>
+    </div>
+    <div class="content">
+      <h1 class="h1">We received your message</h1>
+      <p class="lead">Hi {{customer_name}}, thanks for reaching out. We have received your message and one of our team members will contact you by email as soon as possible.</p>
+
+      <div class="message-card">
+        <div><strong>Status</strong>: Received</div>
+        <div><strong>Next step</strong>: A team member will reply via your email address</div>
+      </div>
+    </div>
+    <div class="footer">
+      <div>Need more help? Email <a href="mailto:{{support_email}}">{{support_email}}</a></div>
+      <div class="copyright">© {{sender_name}}. All rights reserved.</div>
+    </div>
+  </div>
+</body>
+</html>

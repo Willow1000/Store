@@ -7,13 +7,47 @@ import { ENV } from './_core/env';
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: Pool | null = null;
 
+export function isDatabaseConfigured() {
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (!databaseUrl) {
+    return false;
+  }
+
+  if (/YOUR_SUPABASE_PASSWORD|replace-with-your/i.test(databaseUrl)) {
+    return false;
+  }
+
+  return true;
+}
+
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db && isDatabaseConfigured()) {
     try {
-      _pool = new Pool({
+      // Try to parse DATABASE_URL if it's a connection string, otherwise use as-is
+      let poolConfig: any = {
         connectionString: process.env.DATABASE_URL,
-      });
+        family: 4, // Force IPv4 only, not IPv6
+        // Disable IPv6 at the socket level
+        host: process.env.DATABASE_URL?.includes('://') 
+          ? new URL(process.env.DATABASE_URL).hostname 
+          : undefined,
+      };
+      
+      // If we extracted a hostname, use explicit connection params
+      if (poolConfig.host && process.env.DATABASE_URL?.includes('://')) {
+        const url = new URL(process.env.DATABASE_URL);
+        poolConfig = {
+          user: url.username || 'postgres',
+          password: url.password || '',
+          host: url.hostname,
+          port: parseInt(url.port || '5432', 10),
+          database: url.pathname.substring(1) || 'postgres',
+          family: 4,
+        };
+      }
+
+      _pool = new Pool(poolConfig);
       _db = drizzle(_pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
@@ -84,9 +118,12 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 }
 
 export async function getUserByOpenId(openId: string) {
+  if (!isDatabaseConfigured()) {
+    return undefined;
+  }
+
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
     return undefined;
   }
 

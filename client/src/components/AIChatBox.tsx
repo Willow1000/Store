@@ -1,3 +1,4 @@
+import { sanitizeMultilineText } from '@shared/sanitize';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -167,7 +168,7 @@ export function AIChatBox({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedInput = input.trim();
+    const trimmedInput = sanitizeMultilineText(input, 5000);
     if (!trimmedInput || isLoading) return;
 
     onSendMessage(trimmedInput);
@@ -311,7 +312,7 @@ export function AIChatBox({
         <Textarea
           ref={textareaRef}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => setInput(sanitizeMultilineText(e.target.value, 5000))}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="flex-1 max-h-32 resize-none min-h-9"

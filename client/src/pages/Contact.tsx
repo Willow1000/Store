@@ -5,21 +5,13 @@ import { toast } from 'sonner';
 import { useSearch } from 'wouter';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
 import { SEOHead } from '@/components/SEOHead';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeName, sanitizeText } from '@shared/sanitize';
 
 // Input length constraints
 const MAX_NAME_LENGTH = 100;
 const MAX_EMAIL_LENGTH = 255;
 const MAX_MESSAGE_LENGTH = 5000;
-
-// Sanitize input to prevent XSS
-function sanitizeInput(input: string): string {
-  return input
-    .trim()
-    .replace(/[<>]/g, '') // Remove angle brackets
-    .slice(0, MAX_MESSAGE_LENGTH); // Limit length
-}
 
 // Validate email format
 function isValidEmail(email: string): boolean {
@@ -88,11 +80,11 @@ export default function Contact() {
     if (hasPrefillData) {
       setFormData((prev) => ({
         ...prev,
-        name: prev.name || queryName || userName,
-        email: prev.email || queryEmail || userEmail,
-        location: prev.location || queryLocation || userLocation,
-        subject: prev.subject || querySubject,
-        message: prev.message || queryMessage,
+        name: prev.name || sanitizeName(queryName || userName, MAX_NAME_LENGTH),
+        email: prev.email || sanitizeEmail(queryEmail || userEmail, MAX_EMAIL_LENGTH),
+        location: prev.location || sanitizeLocation(queryLocation || userLocation),
+        subject: prev.subject || sanitizeText(querySubject, 200),
+        message: prev.message || sanitizeMultilineText(queryMessage, MAX_MESSAGE_LENGTH),
       }));
     }
   }, [searchParams, user]);
@@ -105,13 +97,15 @@ export default function Contact() {
 
     // Apply length limits and sanitization
     if (field === 'name') {
-      value = sanitizeInput(value).slice(0, MAX_NAME_LENGTH);
+      value = sanitizeName(value, MAX_NAME_LENGTH);
     } else if (field === 'email') {
-      value = sanitizeInput(value).slice(0, MAX_EMAIL_LENGTH);
+      value = sanitizeEmail(value, MAX_EMAIL_LENGTH);
     } else if (field === 'subject') {
-      value = sanitizeInput(value).slice(0, 200);
+      value = sanitizeText(value, 200);
+    } else if (field === 'location') {
+      value = sanitizeLocation(value);
     } else if (field === 'message') {
-      value = sanitizeInput(value).slice(0, MAX_MESSAGE_LENGTH);
+      value = sanitizeMultilineText(value, MAX_MESSAGE_LENGTH);
     }
 
     setFormData((prev) => ({
@@ -168,20 +162,25 @@ export default function Contact() {
         return;
       }
 
-      // Submit to Supabase
-      const { error } = await supabase.from('contactus').insert([
-        {
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          location: formData.location,
-          subject: formData.subject.trim(),
-          message: formData.message.trim(),
+      const response = await fetch('/api/contact-us', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      ]);
+        body: JSON.stringify({
+          name: sanitizeName(formData.name, MAX_NAME_LENGTH),
+          email: sanitizeEmail(formData.email, MAX_EMAIL_LENGTH),
+          location: sanitizeLocation(formData.location),
+          subject: sanitizeText(formData.subject, 200),
+          message: sanitizeMultilineText(formData.message, MAX_MESSAGE_LENGTH),
+        }),
+      });
 
-      if (error) {
+      const responseBody = await response.json().catch(() => null);
+
+      if (!response.ok) {
         toast.error('Failed to send message. Please try again later.');
-        console.error('Contact form error:', error);
+        console.error('Contact form error:', responseBody);
         setIsLoading(false);
         return;
       }

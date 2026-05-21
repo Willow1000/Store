@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { getHighResImageUrl } from '@/lib/images';
 import { calculateShipping } from '@shared/shipping';
 import { isMetaCheckoutRequest, parseMetaCouponPercent, parseMetaCheckoutParams, parseMetaProductsParam } from '@/lib/metaCheckout';
+import { sanitizeEmail, sanitizePhone, sanitizePostalCode, sanitizeText, sanitizeName } from '@shared/sanitize';
 
 const CHECKOUT_CART_SNAPSHOT_KEY = 'checkout-cart-snapshot-v1';
 
@@ -219,7 +220,6 @@ export default function Checkout() {
     };
   });
 
-  const [setAsDefaultAddress, setSetAsDefaultAddress] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -406,9 +406,9 @@ export default function Checkout() {
     if (!user) return;
     setFormData((prev) => ({
       ...prev,
-      firstName: prev.firstName || user.name?.split(' ')[0] || '',
-      lastName: prev.lastName || user.name?.split(' ').slice(1).join(' ') || '',
-      email: prev.email || user.email || '',
+      firstName: prev.firstName || sanitizeName(user.name?.split(' ')[0] || '', 60),
+      lastName: prev.lastName || sanitizeName(user.name?.split(' ').slice(1).join(' ') || '', 60),
+      email: prev.email || sanitizeEmail(user.email || '', 255),
     }));
   }, [user?.id]); // Only depend on user.id to avoid frequent updates
 
@@ -515,7 +515,18 @@ export default function Checkout() {
 
   const handleShippingChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const sanitizedValue = (() => {
+      if (name === 'firstName' || name === 'lastName') return sanitizeName(value, 60);
+      if (name === 'email') return sanitizeEmail(value, 255);
+      if (name === 'address') return sanitizeText(value, 255);
+      if (name === 'city') return sanitizeText(value, 80);
+      if (name === 'state') return sanitizeText(value, 32).toUpperCase();
+      if (name === 'zip') return sanitizePostalCode(value, 16);
+      if (name === 'country') return sanitizeText(value, 8).toUpperCase();
+      return sanitizeText(value, 255);
+    })();
+
+    setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
     // Clear error for this field when user starts typing
     if (formErrors[name]) {
       setFormErrors(prev => {
@@ -528,7 +539,7 @@ export default function Checkout() {
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
-    const formatted = formatPhoneNumber(value);
+    const formatted = formatPhoneNumber(sanitizePhone(value, 24));
     setFormData(prev => ({ ...prev, phone: formatted }));
     // Clear phone error when user starts typing
     if (formErrors.phone) {
@@ -570,41 +581,113 @@ export default function Checkout() {
     return true;
   };
 
-  const saveDefaultAddressIfRequested = async () => {
-    if (!setAsDefaultAddress) return true;
+  const saveCheckoutAddress = async () => {
+    if (isMetaCheckout) {
+      return true;
+    }
+
     if (!isAuthenticated || !user?.id) {
-      toast.error('Please sign in to save a default address');
+      toast.error('Please sign in to save your shipping address');
       return false;
     }
 
     setIsSavingAddress(true);
     try {
-      const { error: unsetError } = await supabase
+      const normalized = (value: string | null | undefined) => String(value || '').trim().toLowerCase();
+      const nextAddressLine = composeAddressLine(sanitizeText(formData.address, 255), sanitizeText(formData.state, 32).toUpperCase());
+      const nextAddressPayload = {
+        user_id: user.id,
+        country: sanitizeText(formData.country, 8).toUpperCase(),
+        city: sanitizeText(formData.city, 80),
+        address_line: nextAddressLine,
+        postal_code: sanitizePostalCode(formData.zip, 16),
+      };
+
+      const { data: existingAddress, error: existingAddressError } = await supabase
         .from('addresses')
-        .update({ is_default: false })
+        .select('id, country, city, address_line, postal_code, is_default, created_at')
         .eq('user_id', user.id)
-        .eq('is_default', true);
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (unsetError) throw unsetError;
+      if (existingAddressError) throw existingAddressError;
 
-      const { error: insertError } = await supabase
-        .from('addresses')
-        .insert({
-          user_id: user.id,
-          country: formData.country,
-          city: formData.city,
-          address_line: composeAddressLine(formData.address, formData.state),
-          postal_code: formData.zip,
-          is_default: true,
-        });
+      if (!existingAddress) {
+        const { error: insertError } = await supabase
+          .from('addresses')
+          .insert({
+            ...nextAddressPayload,
+            is_default: true,
+          });
+        if (insertError) throw insertError;
+        toast.success('Shipping address saved for future checkout');
+        return true;
+      }
 
-      if (insertError) throw insertError;
+      const sameAddress =
+        normalized(existingAddress.country) === normalized(nextAddressPayload.country) &&
+        normalized(existingAddress.city) === normalized(nextAddressPayload.city) &&
+        normalized(existingAddress.address_line) === normalized(nextAddressPayload.address_line) &&
+        normalized(existingAddress.postal_code) === normalized(nextAddressPayload.postal_code);
 
-      toast.success('Default shipping address saved');
+      if (sameAddress) {
+        // Keep same address reusable as default.
+        if (!existingAddress.is_default) {
+          const { error: unsetError } = await supabase
+            .from('addresses')
+            .update({ is_default: false })
+            .eq('user_id', user.id)
+            .eq('is_default', true);
+          if (unsetError) throw unsetError;
+
+          const { error: promoteError } = await supabase
+            .from('addresses')
+            .update({ is_default: true })
+            .eq('id', existingAddress.id);
+          if (promoteError) throw promoteError;
+        }
+        return true;
+      }
+
+      const shouldUpdateDefault = window.confirm(
+        'You entered a different shipping address from your saved one. Update your saved address to this new address?'
+      );
+
+      if (shouldUpdateDefault) {
+        const { error: unsetError } = await supabase
+          .from('addresses')
+          .update({ is_default: false })
+          .eq('user_id', user.id)
+          .eq('is_default', true);
+        if (unsetError) throw unsetError;
+
+        const { error: updateError } = await supabase
+          .from('addresses')
+          .update({
+            ...nextAddressPayload,
+            is_default: true,
+          })
+          .eq('id', existingAddress.id);
+        if (updateError) throw updateError;
+
+        toast.success('Saved shipping address updated');
+      } else {
+        const { error: insertError } = await supabase
+          .from('addresses')
+          .insert({
+            ...nextAddressPayload,
+            is_default: false,
+          });
+        if (insertError) throw insertError;
+
+        toast.info('Using new address for this checkout. Saved default remains unchanged.');
+      }
+
       return true;
     } catch (error) {
-      console.error('[Checkout] Failed to save default address:', error);
-      toast.error('Failed to save default address');
+      console.error('[Checkout] Failed to save shipping address:', error);
+      toast.error('Failed to save shipping address');
       return false;
     } finally {
       setIsSavingAddress(false);
@@ -629,7 +712,7 @@ export default function Checkout() {
 
     if (!validateShipping()) return;
 
-    const saved = await saveDefaultAddressIfRequested();
+    const saved = await saveCheckoutAddress();
     if (!saved) return;
 
     setStep('payment');
@@ -645,7 +728,7 @@ export default function Checkout() {
 
       // Tutorial 2: Initialize transaction on server first
       const initResponse = await trpcClient.paystack.transactions.initialize.mutate({
-        email: formData.email,
+        email: sanitizeEmail(formData.email, 255),
         amount: Math.round(total * 100), // Convert USD total to cents
         reference: paymentReference,
         currency: 'USD',
@@ -656,13 +739,13 @@ export default function Checkout() {
           tax: 0,
           discountAmount: offerDiscountAmount,
           total,
-          name: `${formData.firstName} ${formData.lastName}`.trim(),
-          phone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zip: formData.zip,
-          country: formData.country,
+          name: `${sanitizeName(formData.firstName, 60)} ${sanitizeName(formData.lastName, 60)}`.trim(),
+          phone: sanitizePhone(formData.phone, 24),
+          address: sanitizeText(formData.address, 255),
+          city: sanitizeText(formData.city, 80),
+          state: sanitizeText(formData.state, 32).toUpperCase(),
+          zip: sanitizePostalCode(formData.zip, 16),
+          country: sanitizeText(formData.country, 8).toUpperCase(),
           items: cartItems.map((item) => ({
             productId: item.product_id,
             quantity: item.quantity,
@@ -1102,17 +1185,9 @@ export default function Checkout() {
                   </div>
 
                   {isAuthenticated && (
-                  <label className="flex items-center gap-3 p-4 rounded border border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={setAsDefaultAddress}
-                      onChange={(e) => setSetAsDefaultAddress(e.target.checked)}
-                      className="h-5 w-5 rounded cursor-pointer accent-black"
-                    />
-                    <span className="text-sm text-gray-700 font-medium">
-                      Set this as my default shipping address
-                    </span>
-                  </label>
+                    <div className="p-4 rounded border border-gray-200 bg-gray-50 text-sm text-gray-700">
+                      Shipping addresses are saved automatically for future checkout. If you use a different address, you will be asked whether to update your saved address.
+                    </div>
                   )}
 
                   <button
