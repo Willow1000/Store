@@ -1,11 +1,11 @@
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
 let transporter: nodemailer.Transporter | null = null;
 const errorLogPath = path.join(process.cwd(), 'server', 'logs', 'nodemailer-errors.log');
-const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+
+// Use __filename for module directory resolution; server is bundled to CJS.
+const moduleDir = (typeof __filename !== 'undefined') ? path.dirname(__filename) : process.cwd();
 
 function ensureErrorLogDir(): void {
   fs.mkdirSync(path.dirname(errorLogPath), { recursive: true });
