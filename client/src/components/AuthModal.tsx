@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useLocation } from 'wouter';
 import { executePendingAuthAction, getPendingAuthAction } from '@/lib/authPendingAction';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
+import { COUNTRY_PHONE_OPTIONS, DEFAULT_PHONE_COUNTRY, buildInternationalPhoneNumber, getCountryPhoneLabel, normalizeLocalPhoneDigits, formatLocalPhoneNumber } from '@/lib/countryPhone';
 import { sanitizeEmail, sanitizeName, sanitizePhone, sanitizeText } from '@shared/sanitize';
 
 export default function AuthModal() {
@@ -31,6 +32,7 @@ export default function AuthModal() {
     password: '',
     confirmPassword: '',
     phone: '',
+    country: DEFAULT_PHONE_COUNTRY,
     address: '',
   });
 
@@ -206,6 +208,7 @@ export default function AuthModal() {
           data: {
             name: sanitizeName(signupData.name, 100),
             phone: sanitizePhone(signupData.phone, 24),
+            country: signupData.country,
             address: sanitizeText(signupData.address, 255),
           },
         },
@@ -247,6 +250,7 @@ export default function AuthModal() {
           password: '',
           confirmPassword: '',
           phone: '',
+          country: DEFAULT_PHONE_COUNTRY,
           address: '',
         });
         setSignupCaptchaToken(null);
@@ -449,15 +453,30 @@ export default function AuthModal() {
                 <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">
                   Phone (optional)
                 </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-                  <input
-                    type="tel"
-                    value={signupData.phone}
-                    onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
-                    placeholder="+234 801 000 0000"
-                    className="w-full pl-10 pr-4 py-2 md:py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                  />
+                <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)]">
+                  <select
+                    value={signupData.country}
+                    onChange={(e) => setSignupData({ ...signupData, country: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 md:py-2.5 text-sm focus:border-black focus:outline-none focus:ring-2 focus:ring-black"
+                    aria-label="Select phone country code"
+                  >
+                    {COUNTRY_PHONE_OPTIONS.map((countryOption) => (
+                      <option key={countryOption.value} value={countryOption.value}>
+                        {getCountryPhoneLabel(countryOption.value)}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+                    <input
+                      type="tel"
+                      value={signupData.phone}
+                      onChange={(e) => setSignupData({ ...signupData, phone: formatLocalPhoneNumber(normalizeLocalPhoneDigits(e.target.value, signupData.country, 15), signupData.country) })}
+                      placeholder="555 123 4567"
+                      className="w-full pl-10 pr-4 py-2 md:py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                    />
+                              phone: sanitizePhone(buildInternationalPhoneNumber(signupData.country, signupData.phone), 24),
+                  </div>
                 </div>
               </div>
 

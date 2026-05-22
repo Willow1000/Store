@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { supabase } from '@/lib/supabase';
+import { COUNTRY_PHONE_OPTIONS, DEFAULT_PHONE_COUNTRY, buildInternationalPhoneNumber, formatLocalPhoneNumber, getCountryPhoneLabel, normalizeLocalPhoneDigits } from '@/lib/countryPhone';
 import { sanitizeEmail, sanitizeMultilineText, sanitizeMultilineTextInput, sanitizePhone, sanitizePhoneInput, sanitizeText, sanitizeTextInput } from '@shared/sanitize';
 
 export default function TicketsPage() {
@@ -15,6 +16,7 @@ export default function TicketsPage() {
   const [description, setDescription] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [country, setCountry] = useState(DEFAULT_PHONE_COUNTRY);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileWarning, setFileWarning] = useState<string | null>(null);
   const [priority, setPriority] = useState('medium');
@@ -130,7 +132,8 @@ export default function TicketsPage() {
       const payload: any = {
         referenceCode,
         contactEmail: sanitizeEmail(email, 255) || null,
-        contactPhone: sanitizePhone(phone, 24) || null,
+        contactPhone: sanitizePhone(buildInternationalPhoneNumber(country, phone), 24) || null,
+        contactCountry: country,
         title: sanitizeText(title, 255),
         description: sanitizeMultilineText(description, 5000),
         priority,
@@ -158,6 +161,7 @@ export default function TicketsPage() {
       setTitle('');
       setDescription('');
       setPhone('');
+      setCountry(DEFAULT_PHONE_COUNTRY);
       setSelectedFiles([]);
       setFileWarning(null);
       if (fileInputRef.current) {
@@ -192,7 +196,31 @@ export default function TicketsPage() {
         </div>
         <div>
           <label htmlFor="contactPhone" className="block text-sm font-medium">Phone</label>
-          <input id="contactPhone" name="contactPhone" type="tel" required aria-required="true" className="border p-2 w-full" value={phone} onChange={(e) => setPhone(sanitizePhoneInput(e.target.value, 24))} />
+          <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)]">
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="border p-2 rounded bg-white"
+              aria-label="Select phone country code"
+            >
+              {COUNTRY_PHONE_OPTIONS.map((countryOption) => (
+                <option key={countryOption.value} value={countryOption.value}>
+                  {getCountryPhoneLabel(countryOption.value)}
+                </option>
+              ))}
+            </select>
+            <input
+              id="contactPhone"
+              name="contactPhone"
+              type="tel"
+              required
+              aria-required="true"
+              className="border p-2 w-full"
+              value={phone}
+              onChange={(e) => setPhone(formatLocalPhoneNumber(normalizeLocalPhoneDigits(e.target.value, country, 15), country))}
+              placeholder="555 123 4567"
+            />
+          </div>
         </div>
         <div>
           <label htmlFor="ticketTitle" className="block text-sm font-medium">Title</label>
