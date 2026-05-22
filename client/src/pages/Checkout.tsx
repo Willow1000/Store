@@ -16,7 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { getHighResImageUrl } from '@/lib/images';
 import { calculateShipping } from '@shared/shipping';
 import { isMetaCheckoutRequest, parseMetaCouponPercent, parseMetaCheckoutParams, parseMetaProductsParam } from '@/lib/metaCheckout';
-import { sanitizeEmail, sanitizePhone, sanitizePostalCode, sanitizeText, sanitizeName } from '@shared/sanitize';
+import { sanitizeEmail, sanitizePhone, sanitizePhoneInput, sanitizePostalCode, sanitizeText, sanitizeTextInput, sanitizeName, sanitizeNameInput } from '@shared/sanitize';
 
 const CHECKOUT_CART_SNAPSHOT_KEY = 'checkout-cart-snapshot-v1';
 
@@ -516,14 +516,14 @@ export default function Checkout() {
   const handleShippingChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const sanitizedValue = (() => {
-      if (name === 'firstName' || name === 'lastName') return sanitizeName(value, 60);
+      if (name === 'firstName' || name === 'lastName') return sanitizeNameInput(value, 60);
       if (name === 'email') return sanitizeEmail(value, 255);
-      if (name === 'address') return sanitizeText(value, 255);
-      if (name === 'city') return sanitizeText(value, 80);
-      if (name === 'state') return sanitizeText(value, 32).toUpperCase();
+      if (name === 'address') return sanitizeTextInput(value, 255);
+      if (name === 'city') return sanitizeTextInput(value, 80);
+      if (name === 'state') return sanitizeTextInput(value, 32).toUpperCase();
       if (name === 'zip') return sanitizePostalCode(value, 16);
-      if (name === 'country') return sanitizeText(value, 8).toUpperCase();
-      return sanitizeText(value, 255);
+      if (name === 'country') return sanitizeTextInput(value, 8).toUpperCase();
+      return sanitizeTextInput(value, 255);
     })();
 
     setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
@@ -539,7 +539,7 @@ export default function Checkout() {
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
-    const formatted = formatPhoneNumber(sanitizePhone(value, 24));
+    const formatted = formatPhoneNumber(sanitizePhoneInput(value, 24));
     setFormData(prev => ({ ...prev, phone: formatted }));
     // Clear phone error when user starts typing
     if (formErrors.phone) {

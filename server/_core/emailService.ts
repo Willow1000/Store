@@ -7,6 +7,45 @@ const errorLogPath = path.join(process.cwd(), 'server', 'logs', 'nodemailer-erro
 // Use __filename for module directory resolution; server is bundled to CJS.
 const moduleDir = (typeof __filename !== 'undefined') ? path.dirname(__filename) : process.cwd();
 
+function resolveTemplatePath(templateName: string): string {
+  const fileName = `${templateName}.html`;
+  const candidates = [
+    path.resolve(process.cwd(), 'server', 'email_templates', 'motorvault', fileName),
+    path.resolve(process.cwd(), 'email_templates', 'motorvault', fileName),
+    path.resolve(moduleDir, '../email_templates/motorvault', fileName),
+    path.resolve(moduleDir, '../../server/email_templates/motorvault', fileName),
+    path.resolve(moduleDir, '../../email_templates/motorvault', fileName),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`Email template not found for ${templateName}. Tried: ${candidates.join(', ')}`);
+}
+
+async function sendMailWithRetry(
+  transporterInstance: nodemailer.Transporter,
+  mailOptions: nodemailer.SendMailOptions,
+  context: string,
+): Promise<void> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      await transporterInstance.sendMail(mailOptions);
+      return;
+    } catch (error) {
+      lastError = error;
+      logEmailError(`[Email] Attempt ${attempt} failed: ${context}`, error);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
 function ensureErrorLogDir(): void {
   fs.mkdirSync(path.dirname(errorLogPath), { recursive: true });
 }
@@ -30,6 +69,10 @@ function getTransporter(): nodemailer.Transporter {
     return transporter;
   }
 
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+    throw new Error('SMTP_USER or SMTP_PASSWORD is not configured');
+  }
+
   const smtpConfig: nodemailer.TransportOptions = {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587', 10),
@@ -49,7 +92,7 @@ function getTransporter(): nodemailer.Transporter {
  */
 function loadTemplate(templateName: string, data: Record<string, any>): string {
   try {
-    const templatePath = path.resolve(moduleDir, '../email_templates/motorvault', `${templateName}.html`);
+    const templatePath = resolveTemplatePath(templateName);
     let templateContent = fs.readFileSync(templatePath, 'utf-8');
 
     Object.entries(data).forEach(([key, value]) => {
@@ -137,12 +180,12 @@ export async function sendOrderConfirmationEmail(
       sender_name: process.env.SENDER_NAME || 'Our Store',
     });
 
-    await transporterInstance.sendMail({
+    await sendMailWithRetry(transporterInstance, {
       from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
       to: recipientEmail,
       subject: `Order Confirmed — #${data.order_number}`,
       html: htmlContent,
-    });
+    }, `order confirmation to ${recipientEmail}`);
 
     console.log(`[Email] Order confirmation sent to ${recipientEmail}`);
     return true;
@@ -186,12 +229,12 @@ export async function sendTicketConfirmationEmail(
       sender_name: process.env.SENDER_NAME || 'Our Store',
     });
 
-    await transporterInstance.sendMail({
+    await sendMailWithRetry(transporterInstance, {
       from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
       to: recipientEmail,
       subject: `We received your ticket — ${data.ticket_reference}`,
       html: htmlContent,
-    });
+    }, `ticket confirmation to ${recipientEmail}`);
 
     console.log(`[Email] Ticket confirmation sent to ${recipientEmail}`);
     return true;
@@ -224,12 +267,12 @@ export async function sendContactConfirmationEmail(
       sender_name: process.env.SENDER_NAME || 'Our Store',
     });
 
-    await transporterInstance.sendMail({
+    await sendMailWithRetry(transporterInstance, {
       from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
       to: recipientEmail,
       subject: 'We received your message',
       html: htmlContent,
-    });
+    }, `contact confirmation to ${recipientEmail}`);
 
     console.log(`[Email] Contact confirmation sent to ${recipientEmail}`);
     return true;

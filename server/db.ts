@@ -132,6 +132,20 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUserById(id: number) {
+  if (!isDatabaseConfigured()) {
+    return undefined;
+  }
+
+  const db = await getDb();
+  if (!db) {
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 // Product queries
 export async function getProducts(limit = 20, offset = 0) {
   const db = await getDb();

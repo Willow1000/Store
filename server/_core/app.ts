@@ -12,7 +12,7 @@ import { sdk } from "./sdk";
 import { COOKIE_NAME } from "@shared/const";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
-import { getDb, createOrder, createPayment, resolveOfferByCode, recordProductSearchTrackingEvent } from "../db";
+import { getDb, createOrder, createPayment, getUserById, resolveOfferByCode, recordProductSearchTrackingEvent } from "../db";
 import { sendContactConfirmationEmail, sendTicketConfirmationEmail } from "./emailService";
 import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeName, sanitizePhone, sanitizeText } from "@shared/sanitize";
 
@@ -421,8 +421,20 @@ export function createApp() {
       const discountAmount = resolvedOffer?.discountAmount ?? 0;
       const offerId = resolvedOffer?.id ?? null;
       const offerCode = resolvedOffer?.code ?? (submittedOfferCode ? submittedOfferCode.toUpperCase() : null);
-      const customerEmail = String(paymentMetadata.email || paystackData.customer?.email || paystackData.email || '');
-      const customerName = String(paymentMetadata.name || paystackData.customer?.name || '');
+      let customerEmail = String(paymentMetadata.email || paystackData.customer?.email || paystackData.email || '');
+      let customerName = String(paymentMetadata.name || paystackData.customer?.name || '');
+
+      if (!customerEmail && userId) {
+        try {
+          const dbUser = await getUserById(userId);
+          customerEmail = String(dbUser?.email || '');
+          if (!customerName) {
+            customerName = String(dbUser?.name || '');
+          }
+        } catch (lookupErr) {
+          console.warn('[Payment Callback] Failed to resolve user email for order confirmation:', lookupErr);
+        }
+      }
       const orderLineItems = Array.isArray(paymentMetadata.items)
         ? paymentMetadata.items.map((item: any) => ({
             productId: Number(item.productId),
@@ -672,9 +684,10 @@ export function createApp() {
       const created = JSON.parse(resText || 'null');
 
       const recipientEmail = String(payload.contactEmail || authenticatedUserEmail || '').trim();
+      let ticketEmailSent = false;
       if (recipientEmail) {
         const ticket = Array.isArray(created) ? created[0] : created;
-        void sendTicketConfirmationEmail(recipientEmail, {
+        ticketEmailSent = await sendTicketConfirmationEmail(recipientEmail, {
           customer_name: sanitizeName(authenticatedUserName || payload.contactEmail || 'Customer', 100),
           ticket_reference: String(ticket?.referencecode || ticket?.referenceCode || entry.referenceCode),
           ticket_subject: String(ticket?.title || entry.title || 'Support ticket'),
@@ -685,14 +698,18 @@ export function createApp() {
           contact_email: sanitizeEmail(payload.contactEmail || authenticatedUserEmail || '', 255),
           contact_phone: sanitizePhone(payload.contactPhone || '', 24),
           support_email: process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com',
-        }).then((sent) => {
-          if (!sent) {
-            console.warn('[Tickets] Ticket confirmation email was not sent');
-          }
         });
+
+        if (!ticketEmailSent) {
+          console.warn('[Tickets] Ticket confirmation email was not sent');
+        }
       }
 
-      return res.status(201).json({ success: true, ticket: Array.isArray(created) ? created[0] : created });
+      return res.status(201).json({
+        success: true,
+        emailSent: recipientEmail ? ticketEmailSent : false,
+        ticket: Array.isArray(created) ? created[0] : created,
+      });
     } catch (err) {
       console.error('[Tickets] create error:', err);
       return res.status(500).json({ error: 'internal' });
@@ -745,20 +762,24 @@ export function createApp() {
         return res.status(502).json({ error: 'Failed to send contact message' });
       }
 
-      void sendContactConfirmationEmail(email, {
+      const contactEmailSent = await sendContactConfirmationEmail(email, {
         customer_name: name,
         contact_subject: subject || 'General support request',
         contact_location: location,
         contact_message: message,
         support_email: process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com',
-      }).then((sent) => {
-        if (!sent) {
-          console.warn('[Contact] Confirmation email was not sent');
-        }
       });
 
+      if (!contactEmailSent) {
+        console.warn('[Contact] Confirmation email was not sent');
+      }
+
       const created = JSON.parse(resText || 'null');
-      return res.status(201).json({ success: true, message: Array.isArray(created) ? created[0] : created });
+      return res.status(201).json({
+        success: true,
+        emailSent: contactEmailSent,
+        message: Array.isArray(created) ? created[0] : created,
+      });
     } catch (err) {
       console.error('[Contact] create error:', err);
       return res.status(500).json({ error: 'internal' });

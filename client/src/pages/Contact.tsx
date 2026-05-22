@@ -6,7 +6,7 @@ import { useSearch } from 'wouter';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
 import { SEOHead } from '@/components/SEOHead';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeName, sanitizeText } from '@shared/sanitize';
+import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeMultilineTextInput, sanitizeName, sanitizeNameInput, sanitizeText, sanitizeTextInput } from '@shared/sanitize';
 
 // Input length constraints
 const MAX_NAME_LENGTH = 100;
@@ -97,15 +97,15 @@ export default function Contact() {
 
     // Apply length limits and sanitization
     if (field === 'name') {
-      value = sanitizeName(value, MAX_NAME_LENGTH);
+      value = sanitizeNameInput(value, MAX_NAME_LENGTH);
     } else if (field === 'email') {
       value = sanitizeEmail(value, MAX_EMAIL_LENGTH);
     } else if (field === 'subject') {
-      value = sanitizeText(value, 200);
+      value = sanitizeTextInput(value, 200);
     } else if (field === 'location') {
       value = sanitizeLocation(value);
     } else if (field === 'message') {
-      value = sanitizeMultilineText(value, MAX_MESSAGE_LENGTH);
+      value = sanitizeMultilineTextInput(value, MAX_MESSAGE_LENGTH);
     }
 
     setFormData((prev) => ({

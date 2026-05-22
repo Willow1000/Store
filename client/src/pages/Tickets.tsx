@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { supabase } from '@/lib/supabase';
-import { sanitizeEmail, sanitizeMultilineText, sanitizePhone, sanitizeText } from '@shared/sanitize';
+import { sanitizeEmail, sanitizeMultilineText, sanitizeMultilineTextInput, sanitizePhone, sanitizePhoneInput, sanitizeText, sanitizeTextInput } from '@shared/sanitize';
 
 export default function TicketsPage() {
   const { user, isAuthenticated, sessionRestored } = useAuth() as any;
@@ -192,7 +192,7 @@ export default function TicketsPage() {
         </div>
         <div>
           <label htmlFor="contactPhone" className="block text-sm font-medium">Phone</label>
-          <input id="contactPhone" name="contactPhone" type="tel" required aria-required="true" className="border p-2 w-full" value={phone} onChange={(e) => setPhone(sanitizePhone(e.target.value, 24))} />
+          <input id="contactPhone" name="contactPhone" type="tel" required aria-required="true" className="border p-2 w-full" value={phone} onChange={(e) => setPhone(sanitizePhoneInput(e.target.value, 24))} />
         </div>
         <div>
           <label htmlFor="ticketTitle" className="block text-sm font-medium">Title</label>
@@ -204,7 +204,7 @@ export default function TicketsPage() {
             aria-required="true"
             className="border p-2 w-full"
             value={title}
-            onChange={(e) => setTitle(sanitizeText(e.target.value, 255))}
+            onChange={(e) => setTitle(sanitizeTextInput(e.target.value, 255))}
             placeholder="Select a common issue or type your own"
           />
           <datalist id="ticketTitleOptions">
@@ -215,7 +215,7 @@ export default function TicketsPage() {
         </div>
         <div>
           <label htmlFor="ticketDescription" className="block text-sm font-medium">Description</label>
-          <textarea id="ticketDescription" name="description" required aria-required="true" className="border p-2 w-full" value={description} onChange={(e) => setDescription(sanitizeMultilineText(e.target.value, 5000))} />
+          <textarea id="ticketDescription" name="description" required aria-required="true" className="border p-2 w-full" value={description} onChange={(e) => setDescription(sanitizeMultilineTextInput(e.target.value, 5000))} />
         </div>
         <div>
           <label htmlFor="priority" className="block text-sm font-medium">Priority</label>
