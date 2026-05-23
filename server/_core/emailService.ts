@@ -282,6 +282,50 @@ export async function sendContactConfirmationEmail(
   }
 }
 
+export interface ContactReplyData {
+  customer_name: string;
+  customer_email: string;
+  original_subject: string;
+  original_message: string;
+  customer_location: string;
+  reply_message: string;
+  support_email?: string;
+}
+
+/**
+ * Send contact us reply email
+ */
+export async function sendContactReplyEmail(
+  recipientEmail: string,
+  data: ContactReplyData
+): Promise<boolean> {
+  try {
+    const transporterInstance = getTransporter();
+    const htmlContent = loadTemplate('contact-reply', {
+      customer_name: escapeHtml(data.customer_name),
+      original_subject: escapeHtml(data.original_subject || 'Your message'),
+      original_message: formatTextBlock(data.original_message),
+      customer_location: escapeHtml(data.customer_location || 'Not provided'),
+      reply_message: formatTextBlock(data.reply_message),
+      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com'),
+      sender_name: process.env.SENDER_NAME || 'Our Store',
+    });
+
+    await sendMailWithRetry(transporterInstance, {
+      from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
+      to: recipientEmail,
+      subject: `Re: ${data.original_subject}`,
+      html: htmlContent,
+    }, `contact reply to ${recipientEmail}`);
+
+    console.log(`[Email] Contact reply sent to ${recipientEmail}`);
+    return true;
+  } catch (error) {
+    logEmailError(`[Email] Failed to send contact reply to ${recipientEmail}`, error);
+    return false;
+  }
+}
+
 /**
  * Verify email transporter connection
  */

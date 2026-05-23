@@ -133,3 +133,4 @@ facebookinstructions.txt
 
 # Local-only admin dashboard (do not commit)
 tools/local-dashboard/
+tools/schema*
