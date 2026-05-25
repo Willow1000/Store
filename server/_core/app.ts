@@ -12,7 +12,7 @@ import { sdk } from "./sdk";
 import { COOKIE_NAME } from "@shared/const";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
-import { getDb, createOrder, createPayment, getUserById, resolveOfferByCode, recordProductSearchTrackingEvent } from "../db";
+import { getDb, createOrder, createPayment, getUserById, resolveOfferByCode, recordProductSearchTrackingEvent, recentSimilarTrackingExists } from "../db";
 import { sendContactConfirmationEmail, sendTicketConfirmationEmail } from "./emailService";
 import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeName, sanitizePhone, sanitizeText } from "@shared/sanitize";
 
@@ -51,6 +51,60 @@ function isValidConfiguredOrigin(value: string | undefined): boolean {
   } catch {
     return false;
   }
+}
+
+async function insertProductSearchTrackingEventToSupabase(entry: {
+  sessionId: string;
+  userId: string | null;
+  eventType: 'search' | 'product_click';
+  searchTerm: string | null;
+  filters: Record<string, unknown>;
+  resultsCount: number;
+  matchedProductIds: Array<string | number>;
+  clickedProductId: string | null;
+  pageUrl: string | null;
+  referrer: string | null;
+  userAgent: string | null;
+  metadata: Record<string, unknown>;
+}): Promise<boolean> {
+  const supabaseUrl = ENV.supabaseUrl || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+  const serviceKey = ENV.supabaseServiceKey || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+  if (!supabaseUrl || !serviceKey) {
+    return false;
+  }
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/product_search_tracking`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${serviceKey}`,
+      'apikey': serviceKey,
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify({
+      sessionid: entry.sessionId,
+      userid: entry.userId,
+      eventtype: entry.eventType,
+      searchterm: entry.searchTerm,
+      filters: entry.filters,
+      resultscount: entry.resultsCount,
+      matchedproductids: entry.matchedProductIds,
+      clickedproductid: entry.clickedProductId,
+      pageurl: entry.pageUrl,
+      referrer: entry.referrer,
+      useragent: entry.userAgent,
+      metadata: entry.metadata,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.warn('[Track] Supabase REST insert failed:', response.status, errorText);
+    return false;
+  }
+
+  return true;
 }
 
 function getFeedOrigin(req: express.Request): string {
@@ -555,13 +609,30 @@ export function createApp() {
         filters: payload.filters || {},
         resultsCount: typeof payload.resultsCount === 'number' ? payload.resultsCount : 0,
         matchedProductIds: payload.matchedProductIds || [],
-        clickedProductId: (payload.clickedProductId && typeof payload.clickedProductId === 'string') ? payload.clickedProductId : null,
+        clickedProductId: payload.clickedProductId !== undefined && payload.clickedProductId !== null
+          ? String(payload.clickedProductId)
+          : null,
         pageUrl: payload.pageUrl || req.originalUrl || null,
         referrer: payload.referrer || req.get('referer') || null,
         userAgent: payload.userAgent || req.get('user-agent') || null,
         metadata: payload.metadata || {},
         createdAt: new Date().toISOString(),
       };
+
+      // Server-side dedupe safety net: if a very similar event was recorded recently, skip inserting.
+      const isRecentDuplicate = await recentSimilarTrackingExists({
+        sessionId: String(entry.sessionId),
+        eventType: entry.eventType === 'product_click' ? 'product_click' : 'search',
+        searchTerm: entry.searchTerm ?? null,
+        clickedProductId: entry.clickedProductId ?? null,
+        resultsCount: Number(entry.resultsCount || 0),
+        withinSeconds: 5,
+      });
+
+      if (isRecentDuplicate) {
+        console.info('[Track] Skipping recent duplicate event');
+        return res.status(200).json({ success: true });
+      }
 
       const recorded = await recordProductSearchTrackingEvent({
         sessionId: String(entry.sessionId),
@@ -578,7 +649,22 @@ export function createApp() {
         metadata: entry.metadata,
       });
 
-      if (!recorded) {
+      const supabaseRecorded = recorded || await insertProductSearchTrackingEventToSupabase({
+        sessionId: String(entry.sessionId),
+        userId: entry.userId ? String(entry.userId) : null,
+        eventType: entry.eventType === 'product_click' ? 'product_click' : 'search',
+        searchTerm: entry.searchTerm,
+        filters: entry.filters,
+        resultsCount: Number(entry.resultsCount || 0),
+        matchedProductIds: Array.isArray(entry.matchedProductIds) ? entry.matchedProductIds : [],
+        clickedProductId: entry.clickedProductId,
+        pageUrl: entry.pageUrl,
+        referrer: entry.referrer,
+        userAgent: entry.userAgent,
+        metadata: entry.metadata,
+      });
+
+      if (!supabaseRecorded) {
         console.warn('[Track] Direct insert did not complete');
       }
 

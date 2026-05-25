@@ -244,7 +244,7 @@ export const productSearchTracking = pgTable("product_search_tracking", {
   filters: jsonb("filters").default('{}'),
   resultsCount: integer("resultsCount").default(0),
   matchedProductIds: jsonb("matchedProductIds").default('[]'),
-  clickedProductId: uuid("clickedProductId"),
+  clickedProductId: text("clickedProductId"),
   pageUrl: text("pageUrl"),
   referrer: text("referrer"),
   userAgent: text("userAgent"),

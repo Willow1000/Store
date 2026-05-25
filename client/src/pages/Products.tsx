@@ -34,6 +34,17 @@ interface FallbackResult {
   reason: 'similar' | 'recently-viewed';
   message: string;
 }
+
+interface SearchSnapshot {
+  signature: string;
+  searchTerm: string;
+  filters: Record<string, unknown>;
+  resultsCount: number;
+  matchedProductIds: Array<string | number>;
+  pageUrl: string | null;
+  metadata: Record<string, unknown>;
+}
+
 const PRODUCTS_PER_PAGE = 32;
 
 const normalizeCategoryValue = (value: string) => value.trim().toLowerCase();
@@ -51,6 +62,9 @@ export default function Products() {
   const lastTrackedSearchRef = useRef('');
   const activeSearchRef = useRef<string | null>(null);
   const pendingCompletedSearchRef = useRef<string | null>(null);
+  const searchResolvedByClickRef = useRef(false);
+  const lastCompletedSearchTermRef = useRef<string | null>(null);
+  const pendingSearchSnapshotRef = useRef<SearchSnapshot | null>(null);
   const lastSearchSnapshotRef = useRef<{ count: number; productIds: Array<string | number> }>({ count: 0, productIds: [] });
   const [categoryFilter, setCategoryFilter] = useState('');
   const [brandFilter, setBrandFilter] = useState<string[]>([]);
@@ -104,6 +118,40 @@ export default function Products() {
       fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
     } catch (err) {
       // ignore tracking errors
+    }
+  };
+
+  const getCurrentTrackingFilters = () => ({
+    category: categoryFilter,
+    brands: brandFilter,
+    models: modelFilter,
+    conditions: conditionFilter,
+    priceRange,
+    inStockOnly,
+    dealsOnly,
+  });
+
+  const trackProductClick = (productId: string | number) => {
+    try {
+      const trackedSearchTerm = (activeSearchRef.current || pendingCompletedSearchRef.current || searchQuery || '').trim();
+      if (!trackedSearchTerm.length) {
+        return;
+      }
+
+      searchResolvedByClickRef.current = true;
+
+      sendTrackingEvent({
+        sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
+        eventType: 'product_click',
+        clickedProductId: productId,
+        searchTerm: trackedSearchTerm.length > 0 ? trackedSearchTerm : null,
+        filters: getCurrentTrackingFilters(),
+        resultsCount: filteredProducts.length,
+        pageUrl: window.location.href,
+        matchedProductIds: filteredProducts.slice(0, 50).map((p) => p.id),
+      });
+    } catch (e) {
+      // ignore
     }
   };
 
@@ -164,6 +212,8 @@ export default function Products() {
     // Update activeSearchRef and sessionStorage
     if (q) {
       activeSearchRef.current = q;
+      lastCompletedSearchTermRef.current = q;
+      searchResolvedByClickRef.current = false;
       try {
         sessionStorage.setItem('activeSearchTerm', q);
       } catch (e) {}
@@ -173,83 +223,69 @@ export default function Products() {
       })();
 
       if (pending && pending !== q) {
-        // send one-time 'search' event for the completed/pending term
-        // include metadata to indicate the search was abandoned (user started a new search)
-        try {
-          const bodyPayload = {
-            sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
-            eventType: 'search',
-            searchTerm: pending,
-            filters: {
-              category: categoryFilter,
-              brands: brandFilter,
-              models: modelFilter,
-              conditions: conditionFilter,
-              priceRange,
-              inStockOnly,
-              dealsOnly,
-            },
-            resultsCount: lastSearchSnapshotRef.current.count,
-            matchedProductIds: lastSearchSnapshotRef.current.productIds,
-            pageUrl: window.location.href,
-            metadata: {
-              abandoned: true,
-              reason: 'started_new_search',
-              flushedAt: new Date().toISOString(),
-            },
-          } as Record<string, any>;
-
-          const body = JSON.stringify(bodyPayload);
-          if (navigator.sendBeacon) {
-            navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
-          } else {
-            fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
-          }
-        } catch (err) {}
-
         pendingCompletedSearchRef.current = null;
         try { sessionStorage.removeItem('pendingSearchTerm'); } catch (e) {}
       }
     } else {
-      // search cleared: if there was an active term, mark it as pending
-      if (prevActive) {
-        pendingCompletedSearchRef.current = prevActive;
-        try { sessionStorage.setItem('pendingSearchTerm', prevActive); } catch (e) {}
+      // search cleared: if there was an active term, emit it as a "cleared" search
+      const clearedSearchTerm = prevActive || lastCompletedSearchTermRef.current || '';
+      if (clearedSearchTerm) {
+        const shouldTrackAbandonedSearch = !searchResolvedByClickRef.current;
+        searchResolvedByClickRef.current = false;
 
-        if (prevActive.length > 5) {
-          try {
-            const clearedPayload = {
-              sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
-              eventType: 'search',
-              searchTerm: prevActive,
-              filters: {
-                category: categoryFilter,
-                brands: brandFilter,
-                models: modelFilter,
-                conditions: conditionFilter,
-                priceRange,
-                inStockOnly,
-                dealsOnly,
-              },
-              resultsCount: lastSearchSnapshotRef.current.count,
-              matchedProductIds: lastSearchSnapshotRef.current.productIds,
-              pageUrl: window.location.href,
-              metadata: {
-                cleared: true,
-                reason: 'cleared_search_bar',
-                clearedAt: new Date().toISOString(),
-              },
-            } as Record<string, any>;
+        pendingCompletedSearchRef.current = null;
+        try { sessionStorage.removeItem('pendingSearchTerm'); } catch (e) {}
+        pendingSearchSnapshotRef.current = null;
 
-            const body = JSON.stringify(clearedPayload);
-            if (navigator.sendBeacon) {
-              navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
-            } else {
-              fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
-            }
-          } catch (err) {}
+        if (!shouldTrackAbandonedSearch) {
+          activeSearchRef.current = null;
+          try { sessionStorage.removeItem('activeSearchTerm'); } catch (e) {}
+          return;
+        }
+
+        // Build signature using the current filters
+        const signature = [
+          clearedSearchTerm,
+          categoryFilter,
+          brandFilter.join(','),
+          modelFilter.join(','),
+          conditionFilter.join(','),
+          `${priceRange[0]}-${priceRange[1]}`,
+          inStockOnly ? '1' : '0',
+          dealsOnly ? '1' : '0',
+        ].join('|');
+
+        if (lastTrackedSearchRef.current !== signature) {
+          // Prefer the buffered snapshot if it matches
+          const snap = pendingSearchSnapshotRef.current;
+          const payloadBase = snap && (snap as any).signature === signature ? snap : {
+            searchTerm: clearedSearchTerm,
+            filters: getCurrentTrackingFilters(),
+            resultsCount: filteredProducts.length,
+            matchedProductIds: filteredProducts.slice(0, 50).map((p) => p.id),
+            pageUrl: typeof window !== 'undefined' ? window.location.href : null,
+            metadata: {
+              noResults: filteredProducts.length === 0,
+              cleared: true,
+              trackedAt: new Date().toISOString(),
+            },
+          };
+
+          sendTrackingEvent({
+            sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
+            eventType: 'search',
+            searchTerm: payloadBase.searchTerm || clearedSearchTerm,
+            filters: payloadBase.filters,
+            resultsCount: payloadBase.resultsCount || 0,
+            matchedProductIds: payloadBase.matchedProductIds || [],
+            pageUrl: payloadBase.pageUrl,
+            metadata: { ...(payloadBase.metadata || {}), cleared: true },
+          });
+
+          lastTrackedSearchRef.current = signature;
         }
       }
+
       activeSearchRef.current = null;
       try { sessionStorage.removeItem('activeSearchTerm'); } catch (e) {}
     }
@@ -562,27 +598,6 @@ export default function Products() {
     };
   }, [filteredProducts]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, categoryFilter, sortBy, priceRange, dealsOnly, inStockOnly, brandFilter, modelFilter, conditionFilter]);
-
-  useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalPages));
-  }, [totalPages]);
-
-  const allDisplayedProducts = useMemo(() => {
-    // When search is active and results fit on one page (specific/limited results), 
-    // show all of them without pagination. Otherwise, use normal pagination.
-    if (hasSearchTermActive() && filteredProducts.length <= PRODUCTS_PER_PAGE) {
-      return filteredProducts;
-    }
-    // Standard pagination for browsing or when results exceed one page
-    const start = (currentPage - 1) * PRODUCTS_PER_PAGE;
-    return filteredProducts.slice(start, start + PRODUCTS_PER_PAGE);
-  }, [filteredProducts, currentPage]);
-
   const searchFeedback = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query || !baseProducts || filteredProducts.length === 0) {
@@ -611,6 +626,85 @@ export default function Products() {
       products: filteredProducts.slice(0, 6),
     };
   }, [searchQuery, baseProducts, filteredProducts]);
+
+  // Debounce and buffer stabilized searches. We DO NOT emit here; searches are
+  // emitted only when they lead to a product click or when the user clears
+  // the search input (meaning they didn't find what they wanted).
+  useEffect(() => {
+    const searchTerm = searchQuery.trim();
+    if (!searchTerm) return;
+
+    const trackingSignature = [
+      searchTerm,
+      categoryFilter,
+      brandFilter.join(','),
+      modelFilter.join(','),
+      conditionFilter.join(','),
+      `${priceRange[0]}-${priceRange[1]}`,
+      inStockOnly ? '1' : '0',
+      dealsOnly ? '1' : '0',
+    ].join('|');
+
+    const timer = window.setTimeout(() => {
+      pendingSearchSnapshotRef.current = {
+        signature: trackingSignature,
+        searchTerm,
+        filters: {
+          category: categoryFilter,
+          brands: brandFilter,
+          models: modelFilter,
+          conditions: conditionFilter,
+          priceRange,
+          inStockOnly,
+          dealsOnly,
+        },
+        resultsCount: filteredProducts.length,
+        matchedProductIds: filteredProducts.slice(0, 50).map((product) => product.id),
+        pageUrl: typeof window !== 'undefined' ? window.location.href : null,
+        metadata: {
+          exactMatch: Boolean(searchFeedback === null && filteredProducts.length > 0),
+          noResults: filteredProducts.length === 0,
+          fallbackShown: Boolean(fallbackResult),
+          trackedAt: new Date().toISOString(),
+        },
+      };
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    searchQuery,
+    categoryFilter,
+    brandFilter,
+    modelFilter,
+    conditionFilter,
+    priceRange,
+    inStockOnly,
+    dealsOnly,
+    filteredProducts,
+    searchFeedback,
+    fallbackResult,
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter, sortBy, priceRange, dealsOnly, inStockOnly, brandFilter, modelFilter, conditionFilter]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
+
+  const allDisplayedProducts = useMemo(() => {
+    // When search is active and results fit on one page (specific/limited results), 
+    // show all of them without pagination. Otherwise, use normal pagination.
+    if (hasSearchTermActive() && filteredProducts.length <= PRODUCTS_PER_PAGE) {
+      return filteredProducts;
+    }
+    // Standard pagination for browsing or when results exceed one page
+    const start = (currentPage - 1) * PRODUCTS_PER_PAGE;
+    return filteredProducts.slice(start, start + PRODUCTS_PER_PAGE);
+  }, [filteredProducts, currentPage]);
 
   const shouldShowPageSkeleton =
     (isLoading && allProducts.length === 0) ||
@@ -945,7 +1039,13 @@ export default function Products() {
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {searchFeedback.products.map((product) => (
-                    <Link key={product.id} href={`/product/${product.id}`}>
+                    <Link
+                      key={product.id}
+                      href={`/product/${product.id}`}
+                      onClick={() => {
+                        trackProductClick(product.id);
+                      }}
+                    >
                       <a className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-medium text-blue-800 border border-blue-200 hover:bg-blue-50">
                         {product.title}
                       </a>
@@ -982,32 +1082,7 @@ export default function Products() {
                       <div
                         className="group cursor-pointer"
                         onClick={() => {
-                                try {
-                                const trackedSearchTerm = (activeSearchRef.current || pendingCompletedSearchRef.current || searchQuery || '').trim();
-                                if (trackedSearchTerm.length > 5) {
-                                const payload = {
-                                  sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
-                                  eventType: 'product_click',
-                                  clickedProductId: product.id,
-                                    searchTerm: trackedSearchTerm,
-                                  filters: {
-                                    category: categoryFilter,
-                                    brands: brandFilter,
-                                    models: modelFilter,
-                                    conditions: conditionFilter,
-                                    priceRange,
-                                    inStockOnly,
-                                    dealsOnly,
-                                  },
-                                  resultsCount: filteredProducts.length,
-                                  pageUrl: window.location.href,
-                                  matchedProductIds: filteredProducts.slice(0, 50).map((p) => p.id),
-                                };
-                                sendTrackingEvent(payload);
-                              }
-                            } catch (e) {
-                              // ignore
-                            }
+                          trackProductClick(product.id);
                         }}
                       >
                         <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden h-40 md:h-48 mb-3 flex items-center justify-center">

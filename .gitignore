@@ -54,6 +54,7 @@ coverage/
 *.test.ts
 test-*.ts
 test-*.js
+test-*.mjs
 test-*.md
 *-test.md
 *-notes.md

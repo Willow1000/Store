@@ -299,8 +299,8 @@ export async function recordProductSearchTrackingEvent(input: ProductSearchTrack
   const userId = typeof input.userId === 'string' && /^[0-9a-fA-F-]{36}$/.test(input.userId)
     ? input.userId
     : null;
-  const clickedProductId = typeof input.clickedProductId === 'string' && /^[0-9a-fA-F-]{36}$/.test(input.clickedProductId)
-    ? input.clickedProductId
+  const clickedProductId = input.clickedProductId !== undefined && input.clickedProductId !== null
+    ? String(input.clickedProductId)
     : null;
 
   const metadata = {
@@ -352,6 +352,47 @@ export async function recordProductSearchTrackingEvent(input: ProductSearchTrack
     return false;
   }
 }
+
+  export async function recentSimilarTrackingExists(params: {
+    sessionId: string;
+    eventType: 'search' | 'product_click';
+    searchTerm?: string | null;
+    clickedProductId?: string | null;
+    resultsCount?: number;
+    withinSeconds?: number;
+  }): Promise<boolean> {
+    const db = await getDb();
+    if (!db) return false;
+
+    const within = params.withinSeconds ?? 5;
+    const searchTerm = params.searchTerm ?? null;
+    const clickedProductId = params.clickedProductId ?? null;
+    const resultsCount = Number(params.resultsCount ?? 0);
+
+    try {
+      const res = await db.execute(sql`
+        select count(*) as cnt from public.product_search_tracking
+        where sessionid = ${params.sessionId}
+          and eventtype = ${params.eventType}
+          and coalesce(searchterm,'') = coalesce(${searchTerm}, '')
+          and coalesce(clickedproductid,'') = coalesce(${clickedProductId}, '')
+          and coalesce(resultscount, 0) = ${resultsCount}
+          and createdat > timezone('utc', now() - (${within} || ' seconds')::interval)
+      `);
+
+      // db.execute returns an array-like result; inspect first row
+      const row = (res && Array.isArray(res) && res[0]) ? res[0] : null;
+      let cnt = 0;
+      if (row) {
+        const raw = (row as any).cnt ?? (row as any).count ?? (row as any)["count"] ?? (row as any)["CNT"] ?? 0;
+        cnt = Number(raw || 0);
+      }
+      return cnt > 0;
+    } catch (err) {
+      console.warn('[Track] Failed to check recentSimilarTrackingExists:', err);
+      return false;
+    }
+  }
 
 export async function getOfferByCode(code: string) {
   const db = await getDb();
