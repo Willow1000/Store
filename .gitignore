@@ -135,3 +135,13 @@ facebookinstructions.txt
 # Local-only admin dashboard (do not commit)
 tools/local-dashboard/
 tools/schema*
+## Scraper outputs and caches
+tools/scraper/output/
+tools/scraper/output/checkpoints/
+tools/scraper/node_modules/
+# Playwright browser cache (avoid committing binaries)
+**/.playwright/
+**/playwright/.local-browsers/
+**/.cache/ms-playwright/
+
+scraper.txt

@@ -1,3 +1,18 @@
+              <div>
+                <h3 className="font-semibold mb-2">Facebook</h3>
+                <a
+                  href="https://www.facebook.com/profile.php?id=61590090897198"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors mt-2"
+                  title="Visit our Facebook page"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5 mr-2">
+                    <path d="M22.675 0h-21.35C.595 0 0 .592 0 1.326v21.348C0 23.406.595 24 1.325 24h11.495v-9.294H9.691v-3.622h3.129V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.797.143v3.24l-1.918.001c-1.504 0-1.797.715-1.797 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116C23.406 24 24 23.406 24 22.674V1.326C24 .592 23.406 0 22.675 0" />
+                  </svg>
+                  Visit us on Facebook
+                </a>
+              </div>
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -222,8 +237,8 @@ export default function Contact() {
               <div>
                 <h3 className="font-semibold mb-2">Email</h3>
                 <p className="text-gray-600">
-                  <a href="mailto:support@motorvault.com" className="text-blue-600 hover:underline">
-                    support@motorvault.com
+                  <a href="mailto:support.motorvault@gmail.com" className="text-blue-600 hover:underline">
+                    support.motorvault@gmail.com
                   </a>
                 </p>
               </div>
@@ -240,6 +255,38 @@ export default function Contact() {
                   Saturday: 10 AM - 4 PM<br />
                   Sunday: Closed
                 </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">WhatsApp</h3>
+                 <a
+                   href="https://wa.me/14054379072?text=Hello%2C%20I%27m%20from%20your%20website%2C%20can%20I%20get%20more%20information."
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors mt-2"
+                   title="Chat with us on WhatsApp"
+                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.52 3.48A11.94 11.94 0 0012 0C5.37 0 0 5.37 0 12c0 2.12.55 4.19 1.6 6.01L0 24l6.18-1.62A11.94 11.94 0 0012 24c6.63 0 12-5.37 12-12 0-3.19-1.24-6.19-3.48-8.52zM12 22c-1.85 0-3.67-.5-5.24-1.44l-.37-.22-3.67.96.98-3.58-.24-.37A9.97 9.97 0 012 12C2 6.48 6.48 2 12 2c2.39 0 4.63.84 6.44 2.36A9.97 9.97 0 0122 12c0 5.52-4.48 10-10 10zm5.13-7.47c-.28-.14-1.65-.81-1.9-.9-.25-.09-.43-.14-.61.14-.18.28-.7.9-.86 1.08-.16.18-.32.2-.6.07-.28-.14-1.18-.44-2.25-1.41-.83-.74-1.39-1.65-1.55-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.34.42-.51.14-.17.18-.29.28-.48.09-.19.05-.36-.02-.5-.07-.14-.61-1.47-.84-2.01-.22-.53-.45-.46-.62-.47-.16-.01-.36-.01-.56-.01-.19 0-.5.07-.76.34-.26.27-1 1-.98 2.43.02 1.43 1.03 2.81 1.18 3 .15.19 2.03 3.1 4.93 4.23.69.3 1.23.48 1.65.61.69.22 1.32.19 1.81.12.55-.08 1.65-.67 1.88-1.32.23-.65.23-1.2.16-1.32-.07-.12-.25-.19-.53-.33z" />
+                  </svg>
+                  Chat with us on WhatsApp
+                </a>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Facebook</h3>
+                <a
+                  href="https://www.facebook.com/profile.php?id=61590090897198"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors mt-2"
+                  title="Visit our Facebook page"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5 mr-2">
+                    <path d="M22.675 0h-21.35C.595 0 0 .592 0 1.326v21.348C0 23.406.595 24 1.325 24h11.495v-9.294H9.691v-3.622h3.129V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.797.143v3.24l-1.918.001c-1.504 0-1.797.715-1.797 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116C23.406 24 24 23.406 24 22.674V1.326C24 .592 23.406 0 22.675 0" />
+                  </svg>
+                  Visit us on Facebook
+                </a>
               </div>
             </div>
           </div>

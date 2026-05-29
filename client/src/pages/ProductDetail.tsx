@@ -646,7 +646,7 @@ export default function ProductDetail() {
                     : 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
                 }`}
               >
-                {isOutOfStock ? 'Out of Stock' : 'Quick Purchase - Checkout Now'}
+                {isOutOfStock ? 'Out of Stock' : 'Quick Purchase'}
               </button>
 
               {/* Add to Cart & Wishlist Row */}
