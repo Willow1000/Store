@@ -59,10 +59,10 @@ export async function initCurrencyClient(): Promise<void> {
     try {
       const g = await fetchGeolocation();
       if (g) {
-        geoData = g;
         cache.geo = g;
         if (g.ip) cache.ip = g.ip;
         cache.fetchedAt = Date.now();
+        geoData = g;
         localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
       }
     } catch (e) {
@@ -70,21 +70,7 @@ export async function initCurrencyClient(): Promise<void> {
     }
   }
 
-    // If cache had a currency but geo was missing, attempt to fetch geo again (only if cache expired)
-    if (!geoData && cache.currency && cacheExpired) {
-      try {
-        const g = await fetchGeolocation();
-        if (g) {
-          geoData = g;
-          cache.geo = g;
-          if (g.ip) cache.ip = g.ip;
-          cache.fetchedAt = Date.now();
-          localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
+    // (Removed unreachable and broken code from previous patch)
 
   // If country is in Africa, always use USD for display and do NOT fetch currency API
   const africanCountries = [

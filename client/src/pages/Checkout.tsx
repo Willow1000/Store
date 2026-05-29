@@ -1556,7 +1556,7 @@ export default function Checkout() {
                             <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
                           </div>
                           <p className="font-semibold text-gray-900">
-                            {`${currencyClient.getCurrencySymbolLocal()}${(currencyClient.convertUSD(parseFloat(item.price.replace(/[^\d.]/g, '') || 0)) * item.quantity).toFixed(2)}`}
+                            {`${currencyClient.getCurrencySymbolLocal()}${(currencyClient.convertUSD(parseFloat(item.price.replace(/[^\d.]/g, '') || '')) * item.quantity).toFixed(2)}`}
                           </p>
                         </div>
                       ))}
@@ -1615,7 +1615,7 @@ export default function Checkout() {
                         <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
                         <p className="text-xs text-gray-600 mt-1">×{item.quantity}</p>
                         <p className="text-sm font-semibold text-gray-900 mt-1">
-                          {`${currencyClient.getCurrencySymbolLocal()}${(currencyClient.convertUSD(parseFloat(item.price.replace(/[^\d.]/g, '') || 0)) * item.quantity).toFixed(2)}`}
+                          {`${currencyClient.getCurrencySymbolLocal()}${(currencyClient.convertUSD(parseFloat(item.price.replace(/[^\d.]/g, '') || '')) * item.quantity).toFixed(2)}`}
                         </p>
                       </div>
                     </div>

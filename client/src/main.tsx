@@ -92,6 +92,15 @@ const trpcClient = trpc.createClient({
   try {
     // Initialize currency/geolocation once before mounting the app
     await currencyClient.init();
+    // Dev helper: report detected currency and rate to console for debugging
+    try {
+      console.info('[currencyClient] detected', {
+        code: currencyClient.getCurrencyCode(),
+        rate: currencyClient.getCurrencyRate(),
+      });
+    } catch (e) {
+      // ignore
+    }
   } catch (e) {
     console.warn('[currencyClient] initialization failed', e);
   }

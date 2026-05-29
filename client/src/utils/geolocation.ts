@@ -41,14 +41,19 @@ export interface GeolocationData {
 }
 
 export async function fetchGeolocation(ip?: string): Promise<GeolocationData | null> {
-  const apiKey = '991a9e6eefd54dbb91b0bf82625a48c2';
+  // Use environment variable for API key; never hardcode secrets
+  const apiKey = import.meta.env.VITE_GEOLOCATION_API_KEY || '';
   let url = `https://api.ipgeolocation.io/v3/ipgeo?apiKey=${apiKey}`;
   if (ip) url += `&ip=${encodeURIComponent(ip)}`;
   try {
     const res = await fetch(url);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (import.meta.env.DEV) console.warn('[geolocation] API error', res.status, res.statusText);
+      return null;
+    }
     return await res.json();
   } catch (e) {
+    if (import.meta.env.DEV) console.warn('[geolocation] fetch error', e);
     return null;
   }
 }
