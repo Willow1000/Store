@@ -14,6 +14,7 @@ import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
+import currencyClient from './lib/currencyClient';
 import superjson from "superjson";
 import App from "./App";
 import { supabase } from "@/lib/supabase";
@@ -87,10 +88,19 @@ const trpcClient = trpc.createClient({
   ],
 });
 
-createRoot(document.getElementById("root")!).render(
-  <trpc.Provider client={trpcClient} queryClient={queryClient}>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  </trpc.Provider>
-);
+(async () => {
+  try {
+    // Initialize currency/geolocation once before mounting the app
+    await currencyClient.init();
+  } catch (e) {
+    console.warn('[currencyClient] initialization failed', e);
+  }
+
+  createRoot(document.getElementById("root")!).render(
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </trpc.Provider>
+  );
+})();

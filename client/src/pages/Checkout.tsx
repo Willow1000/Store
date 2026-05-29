@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { getHighResImageUrl } from '@/lib/images';
 import { COUNTRY_PHONE_OPTIONS, DEFAULT_PHONE_COUNTRY, buildInternationalPhoneNumber, formatLocalPhoneNumber, getCountryPhoneLabel, normalizeLocalPhoneDigits } from '@/lib/countryPhone';
 import { calculateShipping } from '@shared/shipping';
+import currencyClient from '@/lib/currencyClient';
 import { isMetaCheckoutRequest, parseMetaCouponPercent, parseMetaCheckoutParams, parseMetaProductsParam } from '@/lib/metaCheckout';
 import { sanitizeEmail, sanitizePhone, sanitizePhoneInput, sanitizePostalCode, sanitizeText, sanitizeTextInput, sanitizeName, sanitizeNameInput } from '@shared/sanitize';
 
@@ -203,8 +204,10 @@ const POSTAL_LABEL_BY_COUNTRY: Record<string, string> = {
 };
 
 function getRegionMap(country: string): Record<string, RegionData> {
+  if (!country) return {};
   if (country === 'US') return US_STATES_AND_CITIES;
-  return EUROPE_REGIONS_AND_CITIES[country] || {};
+  if (EUROPE_REGIONS_AND_CITIES[country]) return EUROPE_REGIONS_AND_CITIES[country];
+  return {};
 }
 
 const getStateOptions = (country: string): StateOption[] => {
@@ -265,6 +268,26 @@ interface PaymentMethod {
 }
 
 export default function Checkout() {
+  // Get geo data from currencyClient
+  const geo = currencyClient.getGeoData();
+  // Auto-fill country, state, and city from geolocation if available and not already set
+    useEffect(() => {
+      if (!geo) return;
+      setFormData((prev) => {
+        const next: typeof prev = { ...prev };
+        // Always sync with detected location for all geo fields
+        const country = geo.location?.country_code2?.toUpperCase();
+        const state = geo.location?.state_prov || '';
+        const city = geo.location?.city || '';
+        // Find phone country code from COUNTRY_PHONE_OPTIONS
+        const phoneCountry = country && COUNTRY_PHONE_OPTIONS.find(opt => opt.value === country) ? country : prev.phoneCountry;
+        next.country = country || prev.country;
+        next.state = state || prev.state;
+        next.city = city || prev.city;
+        next.phoneCountry = phoneCountry;
+        return next;
+      });
+    }, [geo]);
   const [, navigate] = useLocation();
   const { user, isAuthenticated, loading: authLoading, sessionRestored } = useAuth();
   const { openAuthModal } = useAuthModal();
@@ -1533,7 +1556,7 @@ export default function Checkout() {
                             <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
                           </div>
                           <p className="font-semibold text-gray-900">
-                            ${(parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity).toFixed(2)}
+                            {`${currencyClient.getCurrencySymbolLocal()}${(currencyClient.convertUSD(parseFloat(item.price.replace(/[^\d.]/g, '') || 0)) * item.quantity).toFixed(2)}`}
                           </p>
                         </div>
                       ))}
@@ -1554,7 +1577,7 @@ export default function Checkout() {
                     disabled={isProcessing}
                     className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 text-sm sm:text-base"
                   >
-                    {isProcessing ? t('checkout.processing', 'Processing...') : `${t('checkout.payNow', 'Pay Now')} $${total.toFixed(2)}`}
+                    {isProcessing ? t('checkout.processing', 'Processing...') : `${t('checkout.payNow', 'Pay Now')} ${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(total).toFixed(2)}`}
                   </button>
                 </div>
               </div>
@@ -1592,7 +1615,7 @@ export default function Checkout() {
                         <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
                         <p className="text-xs text-gray-600 mt-1">×{item.quantity}</p>
                         <p className="text-sm font-semibold text-gray-900 mt-1">
-                          ${(parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity).toFixed(2)}
+                          {`${currencyClient.getCurrencySymbolLocal()}${(currencyClient.convertUSD(parseFloat(item.price.replace(/[^\d.]/g, '') || 0)) * item.quantity).toFixed(2)}`}
                         </p>
                       </div>
                     </div>
@@ -1604,18 +1627,18 @@ export default function Checkout() {
               <div className="space-y-4 mb-8 pb-8 border-b border-gray-200">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">{t('checkout.subtotal', 'Subtotal')}</span>
-                  <span className="font-medium text-gray-900">{`$${subtotal.toFixed(2)}`}</span>
+                  <span className="font-medium text-gray-900">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(subtotal).toFixed(2)}`}</span>
                 </div>
                 {offerDiscountAmount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">{couponLabel || 'Discount'}</span>
-                    <span className="font-medium text-green-700">-{`$${offerDiscountAmount.toFixed(2)}`}</span>
+                    <span className="font-medium text-green-700">-{offerDiscountAmount.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">{t('checkout.shipping', 'Shipping')}</span>
                   <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-medium text-gray-900'}>
-                    {shipping === 0 ? t('checkout.free', 'FREE') : `$${shipping.toFixed(2)}`}
+                    {shipping === 0 ? t('checkout.free', 'FREE') : `${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(shipping).toFixed(2)}`}
                   </span>
                 </div>
               </div>
@@ -1624,7 +1647,7 @@ export default function Checkout() {
               <div className="mb-8">
                 <div className="flex justify-between items-baseline">
                   <span className="text-gray-600">{t('checkout.total', 'Total')}</span>
-                  <span className="text-3xl font-bold text-black">{`$${total.toFixed(2)}`}</span>
+                    <span className="text-3xl font-bold text-black">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(total).toFixed(2)}`}</span>
                 </div>
               </div>
 
@@ -1632,7 +1655,7 @@ export default function Checkout() {
               <div className="space-y-3 text-sm text-gray-700">
                 <div className="flex gap-3 items-start">
                   <Check size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                  <span>{t('checkout.freeShipping', 'Free shipping on orders over $50')}</span>
+                  <span>{t('checkout.freeShipping', `Free shipping on orders over ${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(50).toFixed(2)}`)}</span>
                 </div>
                 <div className="flex gap-3 items-start">
                   <Check size={18} className="text-green-600 flex-shrink-0 mt-0.5" />

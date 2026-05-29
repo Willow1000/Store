@@ -12,10 +12,24 @@ import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useIsMobile } from '@/hooks/useMobile';
 import { useState, useEffect, useMemo } from 'react';
+import currencyClient from '@/lib/currencyClient';
 import { getHighResImageUrl } from '@/lib/images';
 import { calculateShipping } from '@shared/shipping';
 
 export default function Home() {
+    // Use centralized currency client - main initializes before mount
+    const [currencyRate, setCurrencyRate] = useState<number>(1);
+    const [currencyCode, setCurrencyCode] = useState<string>('USD');
+
+    useEffect(() => {
+      try {
+        setCurrencyCode(currencyClient.getCurrencyCode());
+        setCurrencyRate(currencyClient.getCurrencyRate());
+      } catch (e) {
+        setCurrencyCode('USD');
+        setCurrencyRate(1);
+      }
+    }, []);
   const { user, isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthModal();
   const { products, isLoading } = useProducts(1, 100); // Fetch 100 products for best deals selection
@@ -120,10 +134,11 @@ export default function Home() {
     return (numPrice / (1 - discount / 100)).toFixed(2);
   };
 
+  // Format price in local currency via currencyClient
   const formatPrice = (price: number | string | null | undefined) => {
-    if (price === null || price === undefined) return '0.00';
-    const num = parseFloat(String(price));
-    return isNaN(num) ? '0.00' : num.toFixed(2);
+    const num = price === null || price === undefined ? 0 : parseFloat(String(price));
+    if (isNaN(num)) return '0.00';
+    return currencyClient.formatUSD(num);
   };
 
   const displayedCategories = useMemo(() => {
@@ -167,6 +182,8 @@ export default function Home() {
                 const isWished = product.id && wishedProductIds.has(product.id);
                 const stock = Number(product.stock ?? 0);
                 const price = parseFloat(String(product.price ?? 0));
+                const displayRate = currencyRate || 1;
+                const displayCode = currencyCode;
 
                 return (
                   <Link key={product.id} href={`/product/${product.id}`}>
@@ -233,11 +250,25 @@ export default function Home() {
                         {/* Price Section */}
                         <div className="mt-2 sm:mt-4 flex items-baseline space-x-1 sm:space-x-2">
                           <span className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">
-                            ${formatPrice(product.price)}
+                            {currencyClient.isAfricanUser()
+                              ? currencyClient.formatUSD(product.price)
+                              : (() => {
+                                  const rate = currencyClient.getCurrencyRate() || 1;
+                                  const symbol = currencyClient.getCurrencySymbolLocal();
+                                  return `${symbol}${(parseFloat(String(product.price)) * rate).toFixed(2)}`;
+                                })()
+                            }
                           </span>
                           {product.discount && (
                             <span className="text-xs sm:text-sm text-gray-500 line-through">
-                              ${formatPrice(product.discount)}
+                              {currencyClient.isAfricanUser()
+                                ? currencyClient.formatUSD(product.discount)
+                                : (() => {
+                                    const rate = currencyClient.getCurrencyRate() || 1;
+                                    const symbol = currencyClient.getCurrencySymbolLocal();
+                                    return `${symbol}${(parseFloat(String(product.discount)) * rate).toFixed(2)}`;
+                                  })()
+                              }
                             </span>
                           )}
                         </div>
@@ -349,16 +380,30 @@ export default function Home() {
                         </h3>
 
                         {/* Price Section */}
-                        <div className="mt-2 sm:mt-4 flex items-baseline space-x-1 sm:space-x-2">
-                          <span className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">
-                            ${parseFloat(String(product.price)).toFixed(2)}
-                          </span>
-                          {originalPrice && (
-                            <span className="text-xs sm:text-sm text-gray-500 line-through">
-                              ${originalPrice}
-                            </span>
-                          )}
-                        </div>
+                                <div className="mt-2 sm:mt-4 flex items-baseline space-x-1 sm:space-x-2">
+                                  <span className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">
+                                    {currencyClient.isAfricanUser()
+                                      ? currencyClient.formatUSD(parseFloat(String(product.price || 0)))
+                                      : (() => {
+                                          const rate = currencyClient.getCurrencyRate() || 1;
+                                          const symbol = currencyClient.getCurrencySymbolLocal();
+                                          return `${symbol}${(parseFloat(String(product.price || 0)) * rate).toFixed(2)}`;
+                                        })()
+                                    }
+                                  </span>
+                                  {originalPrice && (
+                                    <span className="text-xs sm:text-sm text-gray-500 line-through">
+                                      {currencyClient.isAfricanUser()
+                                        ? currencyClient.formatUSD(parseFloat(String(originalPrice || 0)))
+                                        : (() => {
+                                            const rate = currencyClient.getCurrencyRate() || 1;
+                                            const symbol = currencyClient.getCurrencySymbolLocal();
+                                            return `${symbol}${(parseFloat(String(originalPrice || 0)) * rate).toFixed(2)}`;
+                                          })()
+                                      }
+                                    </span>
+                                  )}
+                                </div>
 
                         {/* Shipping Info */}
                         {calculateShipping(price) === 0 && (

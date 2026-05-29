@@ -1,3 +1,4 @@
+              // ...existing code...
               <div>
                 <h3 className="font-semibold mb-2">Facebook</h3>
                 <a
@@ -16,6 +17,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import currencyClient from '@/lib/currencyClient';
 import { toast } from 'sonner';
 import { useSearch } from 'wouter';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
@@ -56,6 +58,8 @@ interface ContactFormData {
 }
 
 export default function Contact() {
+  // Use centralized geo data (populated by currencyClient.init on app startup)
+  const geo = currencyClient.getGeoData();
   const searchParams = useSearch();
   const { user } = useAuth();
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);

@@ -9,6 +9,7 @@ import { useProductById, useProducts } from '@/hooks/useSupabaseProducts';
 import { useSupabaseCart, useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useState, useEffect, useRef } from 'react';
+import currencyClient from '@/lib/currencyClient';
 import { getHighResImageUrl } from '@/lib/images';
 
 export default function ProductDetail() {
@@ -328,6 +329,20 @@ export default function ProductDetail() {
 
   const currentPrice = Number(product.price);
   const originalPrice = product.original_price ? Number(product.original_price) : null;
+
+  // Use centralized currency client (initialized at app bootstrap)
+  // Always show USD for African users (enforced in currencyClient)
+  const currencyCode = currencyClient.getCurrencyCode();
+  const currencyRate = currencyClient.getCurrencyRate();
+  // Use USD for African users, else use detected currency
+  const formatPrice = (n: number) => {
+    if (currencyClient.isAfricanUser()) {
+      return currencyClient.formatUSD(n);
+    }
+    const rate = currencyClient.getCurrencyRate() || 1;
+    const symbol = currencyClient.getCurrencySymbolLocal();
+    return `${symbol}${(n * rate).toFixed(2)}`;
+  };
   
   // Calculate accurate discount percentage: (discount - price) / discount * 100
   let discountPercentage = 0;
@@ -367,7 +382,7 @@ export default function ProductDetail() {
       product.brand ? `Brand: ${product.brand}` : '',
       product.model ? `Model: ${product.model}` : '',
       product.category_name ? `Category: ${product.category_name}` : '',
-      Number.isFinite(Number(product.price)) ? `Price: $${Number(product.price).toFixed(2)}` : '',
+      Number.isFinite(Number(product.price)) ? `Price: ${Number(product.price).toFixed(2)}` : '',
       `Product Link: ${window.location.origin}/product/${product.id}`,
       '',
       outOfStockOnly
@@ -608,23 +623,25 @@ export default function ProductDetail() {
             <div className="mt-3">
               <div className="flex items-center gap-3">
                 <p className="text-3xl text-gray-900 font-bold">
-                  ${currentPrice.toFixed(2)}
-                </p>
+                    {formatPrice(currentPrice)}
+                  </p>
                 {product.discount && Number(product.discount) > currentPrice && (
                   <p className="text-2xl text-gray-500 line-through">
-                    ${Number(product.discount).toFixed(2)}
+                    {formatPrice(Number(product.discount))}
                   </p>
                 )}
               </div>
               {discountPercentage > 0 && (
                 <div className="mt-2 inline-block bg-red-100 text-red-800 px-3 py-1 rounded text-sm font-semibold">
-                  Save {discountPercentage}% - ${discountAmount.toFixed(2)}
+                  Save {discountPercentage}% - {discountAmount.toFixed(2)}
                 </div>
               )}
               <div className={`mt-2 inline-block px-3 py-1 rounded text-sm font-semibold ${isOutOfStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                 {isOutOfStock ? 'Out of stock' : `${stock} in stock`}
               </div>
-              <span className="text-sm font-normal text-gray-500 block mt-2">{discountPercentage > 0 ? `(You save $${discountAmount.toFixed(2)})` : '(Estimated Price)'}</span>
+              <span className="text-sm font-normal text-gray-500 block mt-2">
+                {discountPercentage > 0 ? `(You save ${discountAmount.toFixed(2)})` : '(Estimated Price)'}
+              </span>
             </div>
 
             {/* Description */}
@@ -784,7 +801,7 @@ export default function ProductDetail() {
                   <div className="flex justify-between items-center py-2">
                     <dt className="text-sm font-medium text-gray-700">Current Price:</dt>
                     <dd className="text-sm font-semibold text-gray-900">
-                      ${currentPrice.toFixed(2)}
+                      {formatPrice(currentPrice)}
                     </dd>
                   </div>
                 )}
@@ -792,7 +809,7 @@ export default function ProductDetail() {
                   <div className="flex justify-between items-center py-2">
                     <dt className="text-sm font-medium text-gray-700">Original Price:</dt>
                     <dd className="text-sm font-semibold text-gray-500 line-through">
-                      ${Number(product.discount).toFixed(2)}
+                      {formatPrice(Number(product.discount))}
                     </dd>
                   </div>
                 )}
@@ -800,7 +817,7 @@ export default function ProductDetail() {
                   <div className="flex justify-between items-center py-2">
                     <dt className="text-sm font-medium text-gray-700">Discount:</dt>
                     <dd className="text-sm font-semibold text-green-600">
-                      {discountPercentage}% (${discountAmount.toFixed(2)})
+                      {discountPercentage}% ({discountAmount.toFixed(2)})
                     </dd>
                   </div>
                 )}
@@ -895,7 +912,7 @@ export default function ProductDetail() {
                         </h3>
                         <p className="mt-1 text-xs text-gray-500 capitalize">{p.condition || 'New'}</p>
                         <p className="mt-2 text-lg font-bold text-gray-900">
-                          ${parseFloat(String(p.price)).toFixed(2)}
+                          {currencyClient.formatUSD(parseFloat(String(p.price || 0)))}
                         </p>
                       </div>
                     </a>

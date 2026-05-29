@@ -1,6 +1,8 @@
-'use client';
+  // ...existing code...
+ 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
+import currencyClient from '@/lib/currencyClient';
 import { useLocation } from 'wouter';
 import { Link } from 'wouter';
 import { Filter, X, Star, Heart, Eye } from 'lucide-react';
@@ -57,6 +59,9 @@ const getCategoryFromUrl = () => {
 };
 
 export default function Products() {
+  // Use centralized currency client
+  const currencyCode = currencyClient.getCurrencyCode();
+  const currencyRate = currencyClient.getCurrencyRate();
   const [location, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const lastTrackedSearchRef = useRef('');
@@ -93,6 +98,28 @@ export default function Products() {
     () => brands.filter((brand) => Boolean(brand.image_url && brand.image_url.trim())),
     [brands]
   );
+
+  // Compute a dynamic maximum price from product data (fallback to 20000)
+  const computedMaxPrice = useMemo(() => {
+    try {
+      const vals = Array.isArray(allProducts) ? allProducts.map(p => Number(p.price) || 0) : [];
+      if (vals.length === 0) return 20000;
+      const max = Math.max(...vals, 20000);
+      // round up to nearest 10 or 100 for nicer slider steps
+      return Math.ceil(max / 10) * 10;
+    } catch (e) {
+      return 20000;
+    }
+  }, [allProducts]);
+
+  // Ensure priceRange uses the computed max on initial load
+  useEffect(() => {
+    if (!computedMaxPrice) return;
+    setPriceRange(prev => {
+      if (prev[1] === computedMaxPrice) return prev;
+      return [prev[0], computedMaxPrice];
+    });
+  }, [computedMaxPrice]);
 
   // Lightweight non-blocking tracker helper
   const sendTrackingEvent = (payload: Record<string, any>) => {
@@ -162,7 +189,7 @@ export default function Products() {
     if (conditionFilter.length > 0) return true;
     if (inStockOnly) return true;
     if (dealsOnly) return true;
-    if (priceRange[0] !== 0 || priceRange[1] !== 20000) return true;
+    if (priceRange[0] !== 0 || priceRange[1] !== computedMaxPrice) return true;
     return false;
   };
 
@@ -903,11 +930,11 @@ export default function Products() {
                 <h3 className="font-bold text-sm mb-3">Price Range</h3>
                 <div className="space-y-2">
                   <div>
-                    <label className="text-xs text-gray-600">Min: ${priceRange[0]}</label>
+                    <label className="text-xs text-gray-600">Min: {currencyClient.getCurrencySymbolLocal()}{currencyClient.convertUSD(priceRange[0]).toFixed(2)}</label>
                     <input
                       type="range"
                       min="0"
-                      max="20000"
+                      max={computedMaxPrice}
                       value={priceRange[0]}
                       onChange={(e) => {
                         const newMin = parseInt(e.target.value);
@@ -919,11 +946,11 @@ export default function Products() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-600">Max: ${priceRange[1]}</label>
+                    <label className="text-xs text-gray-600">Max: {currencyClient.getCurrencySymbolLocal()}{currencyClient.convertUSD(priceRange[1]).toFixed(2)}</label>
                     <input
                       type="range"
                       min="0"
-                      max="20000"
+                      max={computedMaxPrice}
                       value={priceRange[1]}
                       onChange={(e) => {
                         const newMax = parseInt(e.target.value);
@@ -1067,20 +1094,36 @@ export default function Products() {
               )}
             </div>
 
+            {/* ...existing code... */}
             {/* Products Grid */}
             {allDisplayedProducts.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-4">
                 {allDisplayedProducts.map((product: Product, idx: number) => {
-                  const price = product.price !== null && product.price !== undefined 
+                  const priceUSD = product.price !== null && product.price !== undefined 
                     ? parseFloat(String(product.price))
                     : 0;
-                  const discount = product.discount ? parseFloat(String(product.discount)) : null;
-                  const discountPercentage = discount ? Math.round(((discount - price) / discount) * 100) : 0;
+                  const discountUSD = product.discount ? parseFloat(String(product.discount)) : null;
+                  const discountPercentage = discountUSD ? Math.round(((discountUSD - priceUSD) / discountUSD) * 100) : 0;
                   const stock = Number(product.stock ?? 0);
+                  // Convert price for display
+                  // Always show USD for African users, else use detected currency and symbol
+                  const formatPrice = (n: number) => {
+                    if (currencyClient.isAfricanUser()) {
+                      return currencyClient.formatUSD(n);
+                    }
+                    const rate = currencyClient.getCurrencyRate() || 1;
+                    // Always get the symbol for the detected currency
+                    const symbol = currencyClient.getCurrencySymbolLocal();
+                    return `${symbol}${(parseFloat(String(n)) * rate).toFixed(2)}`;
+                  };
+                  // Use correct symbol and code for non-African users
+                  const priceDisplay = formatPrice(priceUSD);
+                  const discountDisplay = discountUSD ? formatPrice(discountUSD) : null;
                   return (
                     <Link key={product.id} href={`/product/${product.id}`}>
                       <div
-                        className="group cursor-pointer"
+                        className="group cursor-pointer min-h-[320px] flex flex-col justify-between"
+                        style={{ minHeight: 320 }}
                         onClick={() => {
                           trackProductClick(product.id);
                         }}
@@ -1101,7 +1144,7 @@ export default function Products() {
                           ) : (
                             <div className="text-gray-400 text-center text-sm">No image available</div>
                           )}
-                          {discount && (
+                          {product.discount && (
                             <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
                               -{discountPercentage}%
                             </div>
@@ -1149,9 +1192,14 @@ export default function Products() {
                         </div>
                         <h3 className="text-xs md:text-sm font-medium line-clamp-2 group-hover:text-blue-600">{product.title}</h3>
                         <div className="flex items-center gap-2">
-                          <p className="text-gray-900 font-bold text-xs md:text-sm">${price.toFixed(2)}</p>
-                          {discount && (
-                            <p className="text-gray-500 line-through text-xs">${discount.toFixed(2)}</p>
+                          <p className="text-gray-900 font-bold text-xs md:text-sm">
+                            {priceDisplay}
+                          </p>
+                          {discountDisplay && (
+                            <p className="text-gray-500 line-through text-xs">
+                              {/* Discount as plain number for non-African users, already converted */}
+                              {currencyClient.isAfricanUser() ? discountDisplay : Number(discountDisplay.replace(/[^\d.]/g, ''))}
+                            </p>
                           )}
                         </div>
                         <p className={`mt-1 text-xs font-semibold ${stock === 0 ? 'text-red-600' : 'text-gray-500'}`}>

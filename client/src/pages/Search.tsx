@@ -2,6 +2,7 @@ import { useLocation } from 'wouter';
 import { useMemo } from 'react';
 import { Link } from 'wouter';
 import { SEOHead } from '@/components/SEOHead';
+import currencyClient from '@/lib/currencyClient';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -79,10 +80,10 @@ export default function Search() {
                     </div>
                     <h3 className="mb-2 line-clamp-2 font-semibold">{product.name}</h3>
                     <div className="mb-4 flex items-center justify-between">
-                      <span className="text-lg font-bold">${product.price}</span>
+                      <span className="text-lg font-bold">{currencyClient.formatUSD(Number(product.price || 0))}</span>
                       {product.originalPrice && (
                         <span className="text-sm text-gray-500 line-through">
-                          ${product.originalPrice}
+                          {currencyClient.formatUSD(Number(product.originalPrice || 0))}
                         </span>
                       )}
                     </div>

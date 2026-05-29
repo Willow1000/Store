@@ -11,6 +11,7 @@ import { useSupabaseCart } from '@/hooks/useSupabaseCart';
 import { useProducts } from '@/hooks/useSupabaseProducts';
 import { getHighResImageUrl } from '@/lib/images';
 import { calculateShipping } from '@shared/shipping';
+import currencyClient from '@/lib/currencyClient';
 
 const t = (_key: string, fallback: string) => fallback;
 
@@ -248,7 +249,7 @@ export default function Cart() {
                       <a className="font-semibold hover:text-blue-600 line-clamp-2">{item.title}</a>
                     </Link>
                     <p className="mb-3 text-sm text-gray-600">
-                      ${parseFloat(item.price.replace(/[^\d.]/g, '') || '0').toFixed(2)}
+                      {currencyClient.formatUSD(parseFloat(item.price.replace(/[^\d.]/g, '') || '0'))}
                     </p>
                     <p className={`mb-3 text-xs font-semibold ${item.stock === 0 ? 'text-red-600' : 'text-gray-500'}`}>
                       {item.stock === 0
@@ -282,7 +283,7 @@ export default function Cart() {
                   {/* Price & Remove */}
                   <div className="flex flex-col items-end justify-between">
                     <p className="font-bold text-sm sm:text-base">
-                      ${(parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity).toFixed(2)}
+                      {currencyClient.formatUSD((parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity))}
                     </p>
                     <button
                       onClick={() => removeFromCart(item.productIndex)}
@@ -311,23 +312,23 @@ export default function Cart() {
             <div className="space-y-3 sm:space-y-4 border-b border-border pb-4">
               <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-gray-600">{t('checkout.subtotal', 'Subtotal')}</span>
-                <span className="font-semibold">{`$${subtotal.toFixed(2)}`}</span>
+                <span className="font-semibold">{currencyClient.formatUSD(subtotal)}</span>
               </div>
               <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-gray-600">{t('checkout.shipping', 'Shipping')}</span>
                 <span className="font-semibold">
-                  {shipping === 0 ? t('checkout.free', 'FREE') : `$${shipping.toFixed(2)}`}
+                  {shipping === 0 ? t('checkout.free', 'FREE') : currencyClient.formatUSD(shipping)}
                 </span>
               </div>
               <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-gray-600">{t('checkout.vat', 'V.A.T')} (8%)</span>
-                <span className="font-semibold">{`$${vat.toFixed(2)}`}</span>
+                <span className="font-semibold">{currencyClient.formatUSD(vat)}</span>
               </div>
             </div>
 
             <div className="my-4 flex justify-between">
               <span className="font-bold text-base sm:text-lg">{t('checkout.total', 'Total')}</span>
-              <span className="text-xl sm:text-2xl font-bold">{`$${total.toFixed(2)}`}</span>
+              <span className="text-xl sm:text-2xl font-bold">{currencyClient.formatUSD(total)}</span>
             </div>
 
             {shipping > 0 && (

@@ -3,6 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Star, Heart, ShoppingCart, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import currencyClient from '@/lib/currencyClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Link } from 'wouter';
@@ -34,6 +35,10 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
   const { user, isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthModal();
   const { product, images, isLoading } = useProductById(productId);
+  // Use centralized currency client for symbol, code and rate
+  const currencyCode = currencyClient.getCurrencyCode();
+  const currencyRate = currencyClient.getCurrencyRate();
+  const currencySymbol = currencyClient.getCurrencySymbolLocal();
   const { addToCart } = useSupabaseCart(user?.id || null);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
 
@@ -372,9 +377,20 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
             <div className="space-y-4">
               {/* Price */}
               <div>
-                <p className="text-2xl font-bold text-gray-900">${parseFloat(String(product.price)).toFixed(2)}</p>
+                {/* Use currency symbol and conversion, hide USD, show discount as plain number */}
+                <p className="text-2xl font-bold text-gray-900">
+                  {currencyClient.isAfricanUser()
+                    ? currencyClient.formatUSD(parseFloat(String(product.price)))
+                    : `${currencySymbol}${(parseFloat(String(product.price)) * currencyRate).toFixed(2)}`}
+                </p>
+                {product.discount && (
+                  <p className="text-sm text-gray-500 line-through">
+                    {/* Discount as plain number, no symbol */}
+                    {(parseFloat(String(product.discount)) * (currencyClient.isAfricanUser() ? 1 : currencyRate)).toFixed(2)}
+                  </p>
+                )}
                 <p className="text-sm text-gray-600 mt-1">Condition: {product.condition || 'Good'}</p>
-                <p className={`mt-2 inline-block px-3 py-1 rounded text-xs font-semibold ${isOutOfStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                <p className={`mt-2 inline-block px-3 py-1 rounded text-xs font-semibold ${isOutOfStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}> 
                   {isOutOfStock ? 'Out of stock' : `${stock} in stock`}
                 </p>
               </div>
