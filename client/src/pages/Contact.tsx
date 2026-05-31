@@ -18,6 +18,7 @@
 
 import { useState, useEffect } from 'react';
 import currencyClient from '@/lib/currencyClient';
+import { fetchGeolocation } from '@/utils/geolocation';
 import { toast } from 'sonner';
 import { useSearch } from 'wouter';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
@@ -55,6 +56,7 @@ interface ContactFormData {
   subject: string;
   location: string;
   message: string;
+  geo?: any | null;
 }
 
 export default function Contact() {
@@ -70,6 +72,7 @@ export default function Contact() {
     subject: '',
     location: '',
     message: '',
+    geo: null,
   });
 
   // Pre-fill form with query parameters
@@ -77,9 +80,13 @@ export default function Contact() {
     const params = new URLSearchParams(searchParams);
     const queryName = params.get('name') || '';
     const queryEmail = params.get('email') || '';
-    const queryLocation = normalizeLocation(params.get('location') || '');
+    // Prefer explicit location param, then user profile, then geo lookup
+    const paramLocation = params.get('location') || '';
+    const geoCountryCode = currencyClient.getCountryCode() || '';
+    const queryLocation = normalizeLocation(paramLocation || geoCountryCode || '');
     const querySubject = params.get('subject') || '';
     const queryMessage = params.get('message') || '';
+    const isEnquiry = params.get('enquiry') === '1';
     const productName = params.get('product') || '';
 
     const userName = typeof user?.name === 'string' ? user.name : '';
@@ -97,16 +104,97 @@ export default function Contact() {
       Boolean(userName || userEmail || userLocation);
 
     if (hasPrefillData) {
+      // Format message nicely if it contains item/spec info or if productName present
+      const formatMessage = (raw: string, geoObj?: any) => {
+        const rawLower = (raw || '').toLowerCase();
+        let item = '';
+        let specs: string[] = [];
+
+        // Try to extract known patterns like "item name:" or "item:"
+        const itemMatch = raw.match(/item(?: name)?\s*:\s*([^\n\r]+)/i);
+        if (itemMatch && itemMatch[1]) item = itemMatch[1].trim();
+
+        const specMatch = raw.match(/items? specification\s*:\s*([^\n\r]+)/i) || raw.match(/item specification\s*:\s*([^\n\r]+)/i);
+        if (specMatch && specMatch[1]) {
+          specs = specMatch[1].split(/;|,|\|/).map(s => s.trim()).filter(Boolean);
+        }
+
+        // If nothing parsed but raw contains semicolon-separated filters, use them
+        if (!item && raw && raw.includes('\n')) {
+          const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+          if (lines.length === 1) item = lines[0];
+        }
+
+        // Fallbacks
+        if (!item && productName) item = productName;
+        if (!item && !raw) item = '';
+
+        // Build nice template
+        let out = '';
+        if (item) out += `Item: ${item}\n\n`;
+        out += 'Item specification:\n';
+        if (specs.length) {
+          out += specs.map(s => `- ${s}`).join('\n') + '\n\n';
+        } else if (raw && raw.trim()) {
+          out += raw.trim() + '\n\n';
+        } else {
+          out += 'None\n\n';
+        }
+
+        // Add detected country if available
+        const detectedCountry = queryLocation || userLocation || '';
+        if (detectedCountry) out += `Location: ${detectedCountry}\n\n`;
+
+        // If geo object available, append compact geo details
+        if (geoObj) {
+          try {
+            const g = geoObj;
+            const ip = (g && g.ip) ? g.ip : '';
+            const cc2 = (g.location && (g.location.country_code2 || g.location.country_code)) || '';
+            const country = (g.location && (g.location.country_name || g.location.country)) || '';
+            const city = (g.location && g.location.city) || '';
+            const lat = (g.location && g.location.latitude) || '';
+            const lon = (g.location && g.location.longitude) || '';
+
+            out += 'Detected geolocation:\n';
+            if (ip) out += `- IP: ${ip}\n`;
+            if (cc2) out += `- Country Code: ${cc2}\n`;
+            if (country) out += `- Country: ${country}\n`;
+            if (city) out += `- City: ${city}\n`;
+            if (lat || lon) out += `- Coordinates: ${lat}, ${lon}\n`;
+            out += '\n';
+          } catch (e) {}
+        }
+
+        out += 'Additional details:\n';
+
+        return out.trim();
+      };
+
+      // Attach cached geo when available
+      const cachedGeo = currencyClient.getGeoData() || null;
+      const finalMessage = isEnquiry ? formatMessage(queryMessage, cachedGeo) : (queryMessage || '');
+
       setFormData((prev) => ({
         ...prev,
         name: prev.name || sanitizeName(queryName || userName, MAX_NAME_LENGTH),
         email: prev.email || sanitizeEmail(queryEmail || userEmail, MAX_EMAIL_LENGTH),
         location: prev.location || sanitizeLocation(queryLocation || userLocation),
         subject: prev.subject || sanitizeText(querySubject, 200),
-        message: prev.message || sanitizeMultilineText(queryMessage, MAX_MESSAGE_LENGTH),
+        message: prev.message || sanitizeMultilineText(finalMessage, MAX_MESSAGE_LENGTH),
+        geo: prev.geo || cachedGeo,
       }));
     }
   }, [searchParams, user]);
+
+  // Always autofill location from cached geo-location data
+  useEffect(() => {
+    const geo = currencyClient.getGeoData();
+    if (geo && geo.location) {
+      const cc = geo.location.country_code2 || geo.location.country_code || geo.location.country_name || '';
+      setFormData(prev => ({ ...prev, location: normalizeLocation(cc), geo: prev.geo || geo }));
+    }
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -192,6 +280,7 @@ export default function Contact() {
           location: sanitizeLocation(formData.location),
           subject: sanitizeText(formData.subject, 200),
           message: sanitizeMultilineText(formData.message, MAX_MESSAGE_LENGTH),
+          geo: formData.geo || null,
         }),
       });
 
@@ -212,6 +301,7 @@ export default function Contact() {
         subject: '',
         location: '',
         message: '',
+        geo: null,
       });
       setCaptchaToken(null);
     } catch (error) {
@@ -348,11 +438,53 @@ export default function Contact() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                 >
                   <option value="">Select your location</option>
-                  <option value="usa">United States</option>
-                  <option value="switzerland">Switzerland</option>
-                  <option value="poland">Poland</option>
-                  <option value="finland">Finland</option>
-                  <option value="uae">United Arab Emirates</option>
+                  <option value="United States">United States</option>
+                  <option value="Canada">Canada</option>
+
+                  {/* European countries */}
+                  <option value="Albania">Albania</option>
+                  <option value="Andorra">Andorra</option>
+                  <option value="Austria">Austria</option>
+                  <option value="Belarus">Belarus</option>
+                  <option value="Belgium">Belgium</option>
+                  <option value="Bosnia and Herzegovina">Bosnia and Herzegovina</option>
+                  <option value="Bulgaria">Bulgaria</option>
+                  <option value="Croatia">Croatia</option>
+                  <option value="Cyprus">Cyprus</option>
+                  <option value="Czech Republic">Czech Republic</option>
+                  <option value="Denmark">Denmark</option>
+                  <option value="Estonia">Estonia</option>
+                  <option value="Finland">Finland</option>
+                  <option value="France">France</option>
+                  <option value="Germany">Germany</option>
+                  <option value="Greece">Greece</option>
+                  <option value="Hungary">Hungary</option>
+                  <option value="Iceland">Iceland</option>
+                  <option value="Ireland">Ireland</option>
+                  <option value="Italy">Italy</option>
+                  <option value="Kosovo">Kosovo</option>
+                  <option value="Latvia">Latvia</option>
+                  <option value="Liechtenstein">Liechtenstein</option>
+                  <option value="Lithuania">Lithuania</option>
+                  <option value="Luxembourg">Luxembourg</option>
+                  <option value="Malta">Malta</option>
+                  <option value="Moldova">Moldova</option>
+                  <option value="Monaco">Monaco</option>
+                  <option value="Montenegro">Montenegro</option>
+                  <option value="Netherlands">Netherlands</option>
+                  <option value="North Macedonia">North Macedonia</option>
+                  <option value="Norway">Norway</option>
+                  <option value="Poland">Poland</option>
+                  <option value="Portugal">Portugal</option>
+                  <option value="Romania">Romania</option>
+                  <option value="San Marino">San Marino</option>
+                  <option value="Serbia">Serbia</option>
+                  <option value="Slovakia">Slovakia</option>
+                  <option value="Slovenia">Slovenia</option>
+                  <option value="Spain">Spain</option>
+                  <option value="Sweden">Sweden</option>
+                  <option value="Switzerland">Switzerland</option>
+                  <option value="United Kingdom">United Kingdom</option>
                 </select>
               </div>
               

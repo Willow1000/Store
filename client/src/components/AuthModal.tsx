@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Mail, Lock, User as UserIcon, Phone, MapPin, Eye, EyeOff } from 'lucide-react';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -10,6 +10,7 @@ import { useLocation } from 'wouter';
 import { executePendingAuthAction, getPendingAuthAction } from '@/lib/authPendingAction';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
 import { COUNTRY_PHONE_OPTIONS, DEFAULT_PHONE_COUNTRY, buildInternationalPhoneNumber, getCountryPhoneLabel, normalizeLocalPhoneDigits, formatLocalPhoneNumber } from '@/lib/countryPhone';
+import currencyClient from '@/lib/currencyClient';
 import { sanitizeEmail, sanitizeName, sanitizePhone, sanitizeText } from '@shared/sanitize';
 
 export default function AuthModal() {
@@ -35,6 +36,18 @@ export default function AuthModal() {
     country: DEFAULT_PHONE_COUNTRY,
     address: '',
   });
+
+  // Autofill country code and phone country from cached geo-location
+  useEffect(() => {
+    if (mode !== 'signup') return;
+    const geo = currencyClient.getGeoData();
+    if (geo && geo.location) {
+      const cc = geo.location.country_code2 || geo.location.country_code || '';
+      if (cc && signupData.country !== cc) {
+        setSignupData((prev) => ({ ...prev, country: cc }));
+      }
+    }
+  }, [mode]);
 
   if (!isOpen) return null;
 
@@ -68,18 +81,27 @@ export default function AuthModal() {
   })();
 
   const handleGoogleSignIn = async () => {
+    // Check captcha before proceeding
+    const captchaToken = mode === 'login' ? loginCaptchaToken : signupCaptchaToken;
+    if (!captchaToken) {
+      // Scroll to captcha and show message
+      const captchaEl = document.querySelector('.recaptcha-checkbox, .RecaptchaCheckbox, [data-testid="recaptcha"]');
+      if (captchaEl && typeof captchaEl.scrollIntoView === 'function') {
+        captchaEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      toast.error('Please complete the security check (captcha) before continuing with Google sign-in.');
+      return;
+    }
     setIsLoading(true);
     try {
       // Get the authModal's pending action (which may have been set by openAuthModal call)
       // to determine where to redirect after OAuth completes
       const pendingAction = getPendingAuthAction();
       const returnToPath = pendingAction?.redirectTo || `${window.location.pathname}${window.location.search}`;
-      
       // Store the redirect target in localStorage so auth callback can retrieve it after OAuth redirect
       if (typeof window !== 'undefined') {
         localStorage.setItem('oauth_return_to', returnToPath);
       }
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -219,7 +241,7 @@ export default function AuthModal() {
       } else if (data.user) {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData?.user) {
-          toast.error('Signup session not found. Please verify and sign in again.');
+          // Do not show confusing error; just return silently
           return;
         }
 
@@ -242,8 +264,8 @@ export default function AuthModal() {
           }
         }
         
-        toast.success('Account created! Please check your email to verify.');
-        closeAuthModal();
+        toast.success(`Account created! Please check your email (${signupData.email}) and verify it to complete your registration.`);
+        setTimeout(() => closeAuthModal(), 1000);
         setSignupData({
           name: '',
           email: '',
@@ -475,7 +497,6 @@ export default function AuthModal() {
                       placeholder="555 123 4567"
                       className="w-full pl-10 pr-4 py-2 md:py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
                     />
-                              phone: sanitizePhone(buildInternationalPhoneNumber(signupData.country, signupData.phone), 24),
                   </div>
                 </div>
               </div>

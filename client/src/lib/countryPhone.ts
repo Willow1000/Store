@@ -7,6 +7,7 @@ export type CountryPhoneOption = {
 
 export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
   { value: 'US', label: 'United States', dialCode: '+1', flag: '🇺🇸' },
+  { value: 'CA', label: 'Canada', dialCode: '+1', flag: '🇨🇦' },
   { value: 'GB', label: 'United Kingdom', dialCode: '+44', flag: '🇬🇧' },
   { value: 'DE', label: 'Germany', dialCode: '+49', flag: '🇩🇪' },
   { value: 'FR', label: 'France', dialCode: '+33', flag: '🇫🇷' },

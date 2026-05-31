@@ -1079,6 +1079,46 @@ export default function Products() {
                     </Link>
                   ))}
                 </div>
+
+                {/* Enquire CTA: show help message and blue enquire button (prefilled Product inquiry) */}
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-800">can't find what you are looking for? let us help</p>
+                  {(() => {
+                    const activeFilters: string[] = [];
+                    if (categoryFilter) activeFilters.push(`category: ${categoryFilter}`);
+                    if (brandFilter.length) activeFilters.push(`brands: ${brandFilter.join(',')}`);
+                    if (modelFilter.length) activeFilters.push(`models: ${modelFilter.join(',')}`);
+                    if (conditionFilter.length) activeFilters.push(`conditions: ${conditionFilter.join(',')}`);
+                    if (inStockOnly) activeFilters.push('inStockOnly: true');
+                    if (dealsOnly) activeFilters.push('dealsOnly: true');
+                    if (priceRange && priceRange.length === 2) activeFilters.push(`priceRange: ${priceRange[0]}-${priceRange[1]}`);
+
+                    const filtersStr = activeFilters.length ? activeFilters.join('; ') : 'None';
+                    const subject = 'Product inquiry';
+                    const message = `item: ${searchQuery.trim()}\nitem specification: ${filtersStr}`;
+                    const country = currencyClient.getCountryCode() || '';
+
+                    const params = new URLSearchParams();
+                    if (user && typeof user.name === 'string') params.set('name', user.name);
+                    if (user && typeof user.email === 'string') params.set('email', user.email);
+                    if (country) params.set('location', country);
+                    // Mark link as coming from enquiry CTA so contact can tailor the message template
+                    params.set('enquiry', '1');
+                    params.set('subject', subject);
+                    params.set('message', message);
+
+                    const href = `/contact?${params.toString()}`;
+
+                    return (
+                      <a
+                        href={href}
+                        className="mt-2 inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+                      >
+                        Enquire
+                      </a>
+                    );
+                  })()}
+                </div>
               </div>
             )}
 

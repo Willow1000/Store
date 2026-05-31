@@ -197,6 +197,23 @@ const EUROPE_REGIONS_AND_CITIES: Record<string, Record<string, RegionData>> = {
   },
 };
 
+// Canada provinces + major cities
+const CANADA_PROVINCES: Record<string, RegionData> = {
+  ON: { label: 'Ontario', cities: ['Toronto', 'Ottawa', 'Mississauga', 'Brampton', 'Hamilton'] },
+  QC: { label: 'Quebec', cities: ['Montreal', 'Quebec City', 'Laval', 'Gatineau', 'Longueuil'] },
+  BC: { label: 'British Columbia', cities: ['Vancouver', 'Victoria', 'Surrey', 'Burnaby', 'Richmond'] },
+  AB: { label: 'Alberta', cities: ['Calgary', 'Edmonton', 'Red Deer', 'Lethbridge', 'St. Albert'] },
+  MB: { label: 'Manitoba', cities: ['Winnipeg', 'Brandon', 'Steinbach', 'Thompson', 'Portage la Prairie'] },
+  NS: { label: 'Nova Scotia', cities: ['Halifax', 'Sydney', 'Truro', 'New Glasgow', 'Glace Bay'] },
+  NB: { label: 'New Brunswick', cities: ['Moncton', 'Saint John', 'Fredericton', 'Bathurst', 'Miramichi'] },
+  SK: { label: 'Saskatchewan', cities: ['Saskatoon', 'Regina', 'Prince Albert', 'Moose Jaw', 'Swift Current'] },
+  NL: { label: 'Newfoundland and Labrador', cities: ['St. John\'s', 'Corner Brook', 'Gander', 'Mount Pearl', 'Happy Valley-Goose Bay'] },
+  PE: { label: 'Prince Edward Island', cities: ['Charlottetown', 'Summerside', 'Cornwall', 'Montague', 'Souris'] },
+  NT: { label: 'Northwest Territories', cities: ['Yellowknife'] },
+  YT: { label: 'Yukon', cities: ['Whitehorse'] },
+  NU: { label: 'Nunavut', cities: ['Iqaluit'] },
+};
+
 const POSTAL_LABEL_BY_COUNTRY: Record<string, string> = {
   US: 'ZIP Code',
   GB: 'Postcode',
@@ -206,6 +223,7 @@ const POSTAL_LABEL_BY_COUNTRY: Record<string, string> = {
 function getRegionMap(country: string): Record<string, RegionData> {
   if (!country) return {};
   if (country === 'US') return US_STATES_AND_CITIES;
+  if (country === 'CA') return CANADA_PROVINCES;
   if (EUROPE_REGIONS_AND_CITIES[country]) return EUROPE_REGIONS_AND_CITIES[country];
   return {};
 }
@@ -213,17 +231,35 @@ function getRegionMap(country: string): Record<string, RegionData> {
 const getStateOptions = (country: string): StateOption[] => {
   const regionMap = getRegionMap(country);
   const entries = Object.entries(regionMap);
-  if (entries.length === 0) {
-    return [{ value: '', label: 'Select state' }];
+  // If we have explicit region mappings, return them.
+  if (entries.length > 0) {
+    return [
+      { value: '', label: 'Select state' },
+      ...entries.map(([code, data]) => ({
+        value: code,
+        label: data.label,
+      })),
+    ];
   }
 
-  return [
-    { value: '', label: 'Select state' },
-    ...entries.map(([code, data]) => ({
-      value: code,
-      label: data.label,
-    })),
-  ];
+  // No explicit region map: if we have cached geo data for this country,
+  // expose the detected state as a selectable option so the user can still
+  // choose a region and then cities will populate from the cached city.
+  try {
+    const geo = currencyClient.getGeoData();
+    const geoCountry = geo?.location?.country_code2?.toUpperCase();
+    const geoState = geo?.location?.state_prov;
+    if (geo && geoCountry === country && geoState) {
+      return [
+        { value: '', label: 'Select state' },
+        { value: 'GEO_STATE', label: geoState },
+      ];
+    }
+  } catch (e) {
+    // ignore and fall through
+  }
+
+  return [{ value: '', label: 'Select state' }];
 };
 
 const getCityOptions = (country: string, state: string): string[] => {
@@ -231,7 +267,34 @@ const getCityOptions = (country: string, state: string): string[] => {
     return [];
   }
   const regionMap = getRegionMap(country);
-  return regionMap[state]?.cities || [];
+  // If we have a mapping for this state, return it.
+  if (regionMap[state]?.cities && regionMap[state].cities.length > 0) {
+    return regionMap[state].cities;
+  }
+
+  // If state is our synthetic GEO_STATE, return the cached geo city.
+  if (state === 'GEO_STATE') {
+    try {
+      const geo = currencyClient.getGeoData();
+      const geoCountry = geo?.location?.country_code2?.toUpperCase();
+      const geoCity = geo?.location?.city;
+      if (geo && geoCountry === country && geoCity) return [geoCity];
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // Fallback: if no mapping, but cached geo matches, return the detected city
+  try {
+    const geo = currencyClient.getGeoData();
+    const geoCountry = geo?.location?.country_code2?.toUpperCase();
+    const geoCity = geo?.location?.city;
+    if (geo && geoCountry === country && geoCity) return [geoCity];
+  } catch (e) {
+    // ignore
+  }
+
+  return [];
 };
 
 const getStateLabel = (country: string) => (country === 'GB' ? 'Region / Nation' : 'State / Region');
@@ -1406,11 +1469,52 @@ export default function Checkout() {
                       className="w-full px-4 py-3 border border-gray-300 rounded focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-colors text-base bg-white"
                       required
                     >
-                      {COUNTRY_PHONE_OPTIONS.map((countryOption) => (
-                        <option key={countryOption.value} value={countryOption.value}>
-                          {getCountryPhoneLabel(countryOption.value)}
-                        </option>
-                      ))}
+                                      {/* US, Canada, and all European countries */}
+                                      <option value="">Select country</option>
+                                      <option value="US">United States</option>
+                                      <option value="CA">Canada</option>
+                                      <option value="AL">Albania</option>
+                                      <option value="AD">Andorra</option>
+                                      <option value="AT">Austria</option>
+                                      <option value="BY">Belarus</option>
+                                      <option value="BE">Belgium</option>
+                                      <option value="BA">Bosnia and Herzegovina</option>
+                                      <option value="BG">Bulgaria</option>
+                                      <option value="HR">Croatia</option>
+                                      <option value="CY">Cyprus</option>
+                                      <option value="CZ">Czech Republic</option>
+                                      <option value="DK">Denmark</option>
+                                      <option value="EE">Estonia</option>
+                                      <option value="FI">Finland</option>
+                                      <option value="FR">France</option>
+                                      <option value="DE">Germany</option>
+                                      <option value="GR">Greece</option>
+                                      <option value="HU">Hungary</option>
+                                      <option value="IS">Iceland</option>
+                                      <option value="IE">Ireland</option>
+                                      <option value="IT">Italy</option>
+                                      <option value="LV">Latvia</option>
+                                      <option value="LI">Liechtenstein</option>
+                                      <option value="LT">Lithuania</option>
+                                      <option value="LU">Luxembourg</option>
+                                      <option value="MT">Malta</option>
+                                      <option value="MD">Moldova</option>
+                                      <option value="MC">Monaco</option>
+                                      <option value="ME">Montenegro</option>
+                                      <option value="NL">Netherlands</option>
+                                      <option value="MK">North Macedonia</option>
+                                      <option value="NO">Norway</option>
+                                      <option value="PL">Poland</option>
+                                      <option value="PT">Portugal</option>
+                                      <option value="RO">Romania</option>
+                                      <option value="SM">San Marino</option>
+                                      <option value="RS">Serbia</option>
+                                      <option value="SK">Slovakia</option>
+                                      <option value="SI">Slovenia</option>
+                                      <option value="ES">Spain</option>
+                                      <option value="SE">Sweden</option>
+                                      <option value="CH">Switzerland</option>
+                                      <option value="GB">United Kingdom</option>
                     </select>
                   </div>
 
