@@ -1,3 +1,37 @@
+/**
+ * Send admin notification for contact/lead
+ */
+export async function sendContactAdminNotification(
+  adminEmail: string,
+  data: { name: string; email: string; location: string; subject: string; message: string; }
+): Promise<boolean> {
+  try {
+    const transporterInstance = getTransporter();
+    const htmlContent = `
+      <h2>New Contact/Inquiry Received</h2>
+      <p>An inquiry or lead was submitted via the Contact Us form. Please review the details below:</p>
+      <ul>
+        <li><strong>Name:</strong> ${escapeHtml(data.name)}</li>
+        <li><strong>Email:</strong> ${escapeHtml(data.email)}</li>
+        <li><strong>Location:</strong> ${escapeHtml(data.location)}</li>
+        <li><strong>Subject:</strong> ${escapeHtml(data.subject)}</li>
+        <li><strong>Message:</strong><br/>${formatTextBlock(data.message)}</li>
+      </ul>
+      <p>Log in to the admin dashboard or check your CRM to follow up.</p>
+    `;
+    await sendMailWithRetry(transporterInstance, {
+      from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
+      to: adminEmail,
+      subject: 'New Contact/Inquiry Submitted — Action Required',
+      html: htmlContent,
+    }, `admin contact notification to ${adminEmail}`);
+    console.log(`[Email] Admin notification sent to ${adminEmail}`);
+    return true;
+  } catch (error) {
+    logEmailError(`[Email] Failed to send admin notification to ${adminEmail}`, error);
+    return false;
+  }
+}
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';

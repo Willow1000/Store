@@ -13,7 +13,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
 import { getDb, createOrder, createPayment, getUserById, resolveOfferByCode, recordProductSearchTrackingEvent, recentSimilarTrackingExists } from "../db";
-import { sendContactConfirmationEmail, sendTicketConfirmationEmail } from "./emailService";
+import { sendContactConfirmationEmail, sendTicketConfirmationEmail, sendContactAdminNotification } from "./emailService";
 import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeName, sanitizePhone, sanitizeText } from "@shared/sanitize";
 
 // In production, silence non-error console output to avoid leaking debug info.
@@ -848,12 +848,23 @@ export function createApp() {
         return res.status(502).json({ error: 'Failed to send contact message' });
       }
 
+
+      // Send confirmation to user
       const contactEmailSent = await sendContactConfirmationEmail(email, {
         customer_name: name,
         contact_subject: subject || 'General support request',
         contact_location: location,
         contact_message: message,
         support_email: process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com',
+      });
+
+      // Send an official admin notification for every inquiry/lead
+      await sendContactAdminNotification('wilkinsondari7@gmail.com', {
+        name,
+        email,
+        location,
+        subject,
+        message,
       });
 
       if (!contactEmailSent) {

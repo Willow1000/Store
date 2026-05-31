@@ -1,3 +1,13 @@
+              // List of all supported locations (must match select options exactly)
+              const SUPPORTED_LOCATIONS = [
+                'United States', 'Canada',
+                'Albania', 'Andorra', 'Austria', 'Belarus', 'Belgium', 'Bosnia and Herzegovina', 'Bulgaria',
+                'Croatia', 'Cyprus', 'Czech Republic', 'Denmark', 'Estonia', 'Finland', 'France', 'Germany',
+                'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy', 'Kosovo', 'Latvia', 'Liechtenstein',
+                'Lithuania', 'Luxembourg', 'Malta', 'Moldova', 'Monaco', 'Montenegro', 'Netherlands',
+                'North Macedonia', 'Norway', 'Poland', 'Portugal', 'Romania', 'San Marino', 'Serbia',
+                'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'United Kingdom',
+              ];
               // ...existing code...
               <div>
                 <h3 className="font-semibold mb-2">Facebook</h3>
@@ -37,17 +47,9 @@ function isValidEmail(email: string): boolean {
   return emailRegex.test(email) && email.length <= MAX_EMAIL_LENGTH;
 }
 
+// For select, store/display the value as shown in the dropdown (no normalization)
 function normalizeLocation(value: string): string {
-  const location = value.trim().toLowerCase();
-  if (!location) return '';
-
-  if (location.includes('united states') || location === 'usa' || location === 'us') return 'usa';
-  if (location.includes('switzerland') || location === 'ch') return 'switzerland';
-  if (location.includes('poland') || location === 'pl') return 'poland';
-  if (location.includes('finland') || location === 'fi') return 'finland';
-  if (location.includes('united arab emirates') || location === 'uae' || location === 'ae') return 'uae';
-
-  return '';
+  return value.trim();
 }
 
 interface ContactFormData {
@@ -83,7 +85,12 @@ export default function Contact() {
     // Prefer explicit location param, then user profile, then geo lookup
     const paramLocation = params.get('location') || '';
     const geoCountryCode = currencyClient.getCountryCode() || '';
-    const queryLocation = normalizeLocation(paramLocation || geoCountryCode || '');
+    // Always use display value for select
+    const displayLocation =
+      paramLocation ||
+      (typeof (user as any)?.location === 'string' ? (user as any).location : '') ||
+      (typeof (user as any)?.country === 'string' ? (user as any).country : '') ||
+      geoCountryCode || '';
     const querySubject = params.get('subject') || '';
     const queryMessage = params.get('message') || '';
     const isEnquiry = params.get('enquiry') === '1';
@@ -100,7 +107,7 @@ export default function Contact() {
     );
 
     const hasPrefillData =
-      Boolean(queryName || queryEmail || queryLocation || querySubject || queryMessage || productName) ||
+      Boolean(queryName || queryEmail || displayLocation || querySubject || queryMessage || productName) ||
       Boolean(userName || userEmail || userLocation);
 
     if (hasPrefillData) {
@@ -142,7 +149,7 @@ export default function Contact() {
         }
 
         // Add detected country if available
-        const detectedCountry = queryLocation || userLocation || '';
+        const detectedCountry = displayLocation || userLocation || '';
         if (detectedCountry) out += `Location: ${detectedCountry}\n\n`;
 
         // If geo object available, append compact geo details
@@ -175,24 +182,31 @@ export default function Contact() {
       const cachedGeo = currencyClient.getGeoData() || null;
       const finalMessage = isEnquiry ? formatMessage(queryMessage, cachedGeo) : (queryMessage || '');
 
-      setFormData((prev) => ({
-        ...prev,
-        name: prev.name || sanitizeName(queryName || userName, MAX_NAME_LENGTH),
-        email: prev.email || sanitizeEmail(queryEmail || userEmail, MAX_EMAIL_LENGTH),
-        location: prev.location || sanitizeLocation(queryLocation || userLocation),
-        subject: prev.subject || sanitizeText(querySubject, 200),
-        message: prev.message || sanitizeMultilineText(finalMessage, MAX_MESSAGE_LENGTH),
-        geo: prev.geo || cachedGeo,
-      }));
+      setFormData((prev) => {
+        // Only set location if it matches a supported option
+        let loc = sanitizeLocation(displayLocation);
+        if (!SUPPORTED_LOCATIONS.includes(loc)) loc = '';
+        return {
+          ...prev,
+          name: prev.name || sanitizeName(queryName || userName, MAX_NAME_LENGTH),
+          email: prev.email || sanitizeEmail(queryEmail || userEmail, MAX_EMAIL_LENGTH),
+          location: prev.location || loc,
+          subject: prev.subject || sanitizeText(querySubject, 200),
+          message: prev.message || sanitizeMultilineText(finalMessage, MAX_MESSAGE_LENGTH),
+          geo: prev.geo || cachedGeo,
+        };
+      });
     }
   }, [searchParams, user]);
 
-  // Always autofill location from cached geo-location data
+  // Always autofill location from cached geo-location data (display value)
   useEffect(() => {
     const geo = currencyClient.getGeoData();
     if (geo && geo.location) {
-      const cc = geo.location.country_code2 || geo.location.country_code || geo.location.country_name || '';
-      setFormData(prev => ({ ...prev, location: normalizeLocation(cc), geo: prev.geo || geo }));
+      const cc = geo.location.country_name || geo.location.country_code2 || geo.location.country_code || '';
+      let loc = sanitizeLocation(cc);
+      if (!SUPPORTED_LOCATIONS.includes(loc)) loc = '';
+      setFormData(prev => ({ ...prev, location: loc, geo: prev.geo || geo }));
     }
   }, []);
 
@@ -210,7 +224,7 @@ export default function Contact() {
     } else if (field === 'subject') {
       value = sanitizeTextInput(value, 200);
     } else if (field === 'location') {
-      value = sanitizeLocation(value);
+      // Do not sanitize location; use exact dropdown value
     } else if (field === 'message') {
       value = sanitizeMultilineTextInput(value, MAX_MESSAGE_LENGTH);
     }
