@@ -1,5 +1,4 @@
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { SEOHead } from '@/components/SEOHead';
@@ -8,20 +7,11 @@ import { toast } from 'sonner';
 
 export default function Account() {
   const { user, isAuthenticated, sessionRestored, logout } = useAuth();
-  const { openAuthModal } = useAuthModal();
   const authPromptedRef = useRef(false);
   const [location] = useLocation();
-
   useEffect(() => {
-    if (!sessionRestored) return;
-    if (isAuthenticated) {
-      authPromptedRef.current = false;
-      return;
-    }
-    if (authPromptedRef.current) return;
-    authPromptedRef.current = true;
-    openAuthModal('login', undefined, { redirectTo: location });
-  }, [isAuthenticated, sessionRestored, location, openAuthModal]);
+    // no-op: do not force-open auth modal. allow blank profile for unauthenticated users.
+  }, [isAuthenticated, sessionRestored]);
 
   const handleLogout = async () => {
     try {
@@ -51,7 +41,17 @@ export default function Account() {
   }
 
   if (!isAuthenticated || !user) {
-    return null;
+    // Show a blank account area for guests (per requirements)
+    return (
+      <div className="min-h-screen bg-background w-full overflow-x-hidden">
+        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
+          <h1 className="mb-8 text-4xl font-bold">My Account</h1>
+          <div className="rounded-lg border border-border bg-white p-6">
+            {/* intentionally blank for unauthenticated users */}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

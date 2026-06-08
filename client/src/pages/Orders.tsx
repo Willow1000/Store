@@ -1,5 +1,4 @@
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { Package, Clock, CheckCircle, Truck, XCircle, ChevronDown, ChevronUp, Calendar, DollarSign, MapPin } from 'lucide-react';
@@ -8,7 +7,6 @@ import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
 
 export default function Orders() {
   const { user, isAuthenticated, sessionRestored, loading } = useAuth();
-  const { openAuthModal } = useAuthModal();
   const authPromptedRef = useRef(false);
   const [location, setLocation] = useLocation();
   const { orders, isLoading, error } = useSupabaseOrders(user?.id ?? null);
@@ -90,15 +88,8 @@ export default function Orders() {
   });
 
   useEffect(() => {
-    if (!sessionRestored || loading) return;
-    if (isAuthenticated) {
-      authPromptedRef.current = false;
-      return;
-    }
-    if (authPromptedRef.current) return;
-    authPromptedRef.current = true;
-    openAuthModal('login', undefined, { redirectTo: location });
-  }, [isAuthenticated, sessionRestored, loading, location, openAuthModal]);
+    // no-op: do not force-open auth modal; allow blank orders view for unauthenticated users
+  }, [isAuthenticated, sessionRestored, loading]);
 
   if (!sessionRestored || loading) {
     return (
@@ -133,7 +124,16 @@ export default function Orders() {
   }
 
   if (!isAuthenticated) {
-    return null;
+    return (
+      <div className="min-h-screen bg-background w-full overflow-x-hidden">
+        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
+          <h1 className="mb-8 text-3xl font-bold">My Orders</h1>
+          <div className="rounded-lg border border-border bg-white p-6">
+            {/* blank for unauthenticated users */}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (isLoading) {

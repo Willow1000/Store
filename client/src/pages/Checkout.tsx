@@ -7,7 +7,6 @@ import {
 import { toast } from 'sonner';
 import { SEOHead } from '@/components/SEOHead';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import { generateUUID } from '@/lib/paystack';
 import { readCartFromStorage } from '@/lib/cart';
 import { trpc, trpcClient } from '@/lib/trpc';
@@ -19,6 +18,7 @@ import { calculateShipping } from '@shared/shipping';
 import currencyClient from '@/lib/currencyClient';
 import { isMetaCheckoutRequest, parseMetaCouponPercent, parseMetaCheckoutParams, parseMetaProductsParam } from '@/lib/metaCheckout';
 import { sanitizeEmail, sanitizePhone, sanitizePhoneInput, sanitizePostalCode, sanitizeText, sanitizeTextInput, sanitizeName, sanitizeNameInput } from '@shared/sanitize';
+import { InlineCheckoutAuth } from '@/components/InlineCheckoutAuth';
 
 const CHECKOUT_CART_SNAPSHOT_KEY = 'checkout-cart-snapshot-v1';
 
@@ -220,6 +220,23 @@ const POSTAL_LABEL_BY_COUNTRY: Record<string, string> = {
   IE: 'Eircode',
 };
 
+function getStateLabel(country: string | undefined | null): string {
+  if (!country) return 'State';
+  const c = String(country).toUpperCase();
+  if (c === 'US') return 'State';
+  if (c === 'CA') return 'Province';
+  if (c === 'GB') return 'Region';
+  if (c === 'IE') return 'County';
+  // Generic fallback
+  return 'State';
+}
+
+function getPostalCodeLabel(country: string | undefined | null): string {
+  if (!country) return 'Postal code';
+  const c = String(country).toUpperCase();
+  return POSTAL_LABEL_BY_COUNTRY[c] || 'Postal code';
+}
+
 function getRegionMap(country: string): Record<string, RegionData> {
   if (!country) return {};
   if (country === 'US') return US_STATES_AND_CITIES;
@@ -235,10 +252,7 @@ const getStateOptions = (country: string): StateOption[] => {
   if (entries.length > 0) {
     return [
       { value: '', label: 'Select state' },
-      ...entries.map(([code, data]) => ({
-        value: code,
-        label: data.label,
-      })),
+      ...entries.map(([code, data]) => ({ value: code, label: data.label })),
     ];
   }
 
@@ -267,7 +281,6 @@ const getCityOptions = (country: string, state: string): string[] => {
     return [];
   }
   const regionMap = getRegionMap(country);
-  // If we have a mapping for this state, return it.
   if (regionMap[state]?.cities && regionMap[state].cities.length > 0) {
     return regionMap[state].cities;
   }
@@ -297,39 +310,6 @@ const getCityOptions = (country: string, state: string): string[] => {
   return [];
 };
 
-const getStateLabel = (country: string) => (country === 'GB' ? 'Region / Nation' : 'State / Region');
-const getPostalCodeLabel = (country: string) => POSTAL_LABEL_BY_COUNTRY[country] || 'Postal Code';
-const getPhoneFormat = (_country: string) => '(###) ### ####';
-
-interface CartItem {
-  product_id: string;
-  title: string;
-  price: string;
-  image: string;
-  quantity: number;
-}
-
-interface FormData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  phoneCountry: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  country: string;
-}
-
-interface PaymentMethod {
-  id: 'visa' | 'mastercard' | 'applePay';
-  name: string;
-  icon: React.ReactNode;
-  description: string;
-  disabled?: boolean;
-}
-
 export default function Checkout() {
   // Get geo data from currencyClient
   const geo = currencyClient.getGeoData();
@@ -353,7 +333,6 @@ export default function Checkout() {
     }, [geo]);
   const [, navigate] = useLocation();
   const { user, isAuthenticated, loading: authLoading, sessionRestored } = useAuth();
-  const { openAuthModal } = useAuthModal();
   const {
     items: supabaseCartItems,
     isLoading: supabaseCartLoading,
@@ -368,19 +347,6 @@ export default function Checkout() {
     return isMetaCheckoutRequest(params, window.location.pathname);
   }, []);
 
-  useEffect(() => {
-    if (isMetaCheckout) return;
-    if (!sessionRestored) return; // Wait for session to be restored
-
-    if (!isAuthenticated) {
-      toast.error('Please sign in to checkout');
-      openAuthModal('login', 'checkout', {
-        type: 'checkout',
-        redirectTo: '/checkout',
-      });
-    }
-  }, [isAuthenticated, sessionRestored, openAuthModal, isMetaCheckout]);
-
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [step, setStep] = useState<'shipping' | 'payment' | 'review'>(() => {
     try {
@@ -393,6 +359,11 @@ export default function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   
   const [selectedPayment, setSelectedPayment] = useState<'visa' | 'mastercard' | 'applePay'>('visa');
+  // Coupon code UI state
+  const [couponCodeInput, setCouponCodeInput] = useState<string>('');
+  const [appliedOfferData, setAppliedOfferData] = useState<any | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<FormData>(() => {
     try {
@@ -701,12 +672,15 @@ export default function Checkout() {
     }
   );
 
+  // If user applies a coupon via the UI, resolvedOffer is only used for meta coupon flows.
+  const finalAppliedOffer = appliedOfferData || resolvedOffer.data || null;
+
   const legacyCouponPercent = isMetaCheckout && !resolvedOffer.data ? parseMetaCouponPercent(metaCoupon) : 0;
-  const offerDiscountAmount = resolvedOffer.data
-    ? resolvedOffer.data.discountAmount
+  const offerDiscountAmount = finalAppliedOffer
+    ? finalAppliedOffer.discountAmount
     : Math.round((subtotal * (legacyCouponPercent / 100)) * 100) / 100;
-  const couponLabel = resolvedOffer.data
-    ? `${resolvedOffer.data.name} (${resolvedOffer.data.code})`
+  const couponLabel = finalAppliedOffer
+    ? `${finalAppliedOffer.name} (${finalAppliedOffer.code})`
     : legacyCouponPercent > 0 && metaCoupon
       ? `Coupon (${metaCoupon})`
       : null;
@@ -948,11 +922,8 @@ export default function Checkout() {
     }
 
     if (!isAuthenticated || !user?.id) {
-      openAuthModal('login', 'checkout', {
-        type: 'checkout',
-        redirectTo: '/checkout',
-      });
-      toast.error('Please sign in to continue');
+      // Inline auth UI is shown above for unauthenticated users.
+      toast.error('Please sign in using the form above to continue');
       return;
     }
 
@@ -1000,12 +971,12 @@ export default function Checkout() {
             quantity: item.quantity,
             price: item.price,
           })),
-          coupon: metaCoupon,
-          offerId: resolvedOffer.data?.id ?? undefined,
-          offerCode: resolvedOffer.data?.code ?? metaCoupon ?? undefined,
-          offerType: resolvedOffer.data?.type ?? undefined,
-          offerValue: resolvedOffer.data?.value ?? (legacyCouponPercent > 0 ? String(legacyCouponPercent) : undefined),
-          offerName: resolvedOffer.data?.name ?? undefined,
+          coupon: couponCodeInput || metaCoupon || undefined,
+          offerId: finalAppliedOffer?.id ?? undefined,
+          offerCode: finalAppliedOffer?.code ?? metaCoupon ?? undefined,
+          offerType: finalAppliedOffer?.type ?? undefined,
+          offerValue: finalAppliedOffer?.value ?? (legacyCouponPercent > 0 ? String(legacyCouponPercent) : undefined),
+          offerName: finalAppliedOffer?.name ?? undefined,
           couponPercent: legacyCouponPercent || undefined,
           cartOrigin: metaParams.cart_origin,
           fbclid: metaParams.fbclid,
@@ -1086,11 +1057,16 @@ export default function Checkout() {
     }
   };
 
-  if (!isMetaCheckout && !isAuthenticated && !sessionRestored) {
-    return null; // Show nothing while session is being restored
+  // Only skip rendering during SSR; always render in the browser so
+  // the inline auth UI is available even while session restoration
+  // or network requests are in-flight.
+  if (typeof window === 'undefined') {
+    return null;
   }
 
-  if (authLoading || (isAuthenticated && supabaseCartLoading && cartItems.length === 0)) {
+  // Avoid hiding the full checkout UI during transient auth/cart loading on refresh.
+  // Only show the skeleton while the initial session restoration is in-flight.
+  if (!sessionRestored && authLoading) {
     return (
       <div className="min-h-screen bg-white w-full overflow-x-hidden">
         <div className="max-w-screen-xl mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-12 lg:py-16 animate-pulse">
@@ -1143,16 +1119,16 @@ export default function Checkout() {
 
   if (!isMetaCheckout && !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-4">
-        <div className="w-full max-w-md text-center">
-          <h1 className="text-3xl font-bold text-black mb-3">{t('checkout.loginRequired', 'Login Required')}</h1>
-          <p className="text-gray-600 mb-8 text-base leading-relaxed">{t('checkout.signInToContinue', 'Please sign in to continue with checkout.')}</p>
-          <button
-            onClick={() => openAuthModal('login', 'checkout')}
-            className="w-full py-4 bg-black text-white rounded font-semibold hover:bg-gray-900 transition-colors duration-200"
-          >
-            {t('checkout.signInToCheckout', 'Sign In to Checkout')}
-          </button>
+      <div className="min-h-screen bg-white py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-screen-xl mx-auto">
+          {/* Header */}
+          <div className="mb-12">
+            <h1 className="text-3xl sm:text-4xl font-bold text-black mb-2">Checkout</h1>
+            <p className="text-gray-600">Complete your purchase securely</p>
+          </div>
+
+          {/* Inline Auth */}
+          <InlineCheckoutAuth />
         </div>
       </div>
     );
@@ -1729,6 +1705,111 @@ export default function Checkout() {
 
               {/* Pricing Breakdown */}
               <div className="space-y-4 mb-8 pb-8 border-b border-gray-200">
+                {/* Coupon Entry */}
+                <div className="mb-4">
+                  <label className="text-sm font-medium text-gray-700">Have a coupon?</label>
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      value={couponCodeInput}
+                      onChange={(e) => { setCouponCodeInput(e.target.value.trim()); setCouponError(null); }}
+                      placeholder="Enter coupon code"
+                      className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                    <button
+                      onClick={async () => {
+                        if (!couponCodeInput) {
+                          setCouponError('Please enter a coupon code');
+                          return;
+                        }
+                        setCouponLoading(true);
+                        setCouponError(null);
+                        try {
+                          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+                          const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+                          if (!supabaseUrl || !anonKey) throw new Error('Supabase client not configured');
+
+                          const url = `${supabaseUrl}offers?code=eq.${encodeURIComponent(couponCodeInput.trim())}`;
+                          const r = await fetch(url, {
+                            headers: {
+                              apikey: anonKey,
+                              Authorization: `Bearer ${anonKey}`,
+                              Accept: 'application/json',
+                            },
+                          });
+
+                          if (!r.ok) {
+                            throw new Error(`Supabase request failed: ${r.status}`);
+                          }
+
+                          const body = await r.json();
+                          if (!Array.isArray(body) || body.length === 0) {
+                            setAppliedOfferData(null);
+                            setCouponError('Coupon is not valid or not applicable to your order');
+                            return;
+                          }
+
+                          const offer = body[0];
+                          const now = new Date();
+                          if (!offer.active) {
+                            setCouponError('Coupon is not active');
+                            setAppliedOfferData(null);
+                          } else if (offer.startsAt && new Date(offer.startsAt) > now) {
+                            setCouponError('Coupon is not yet active');
+                            setAppliedOfferData(null);
+                          } else if (offer.endsAt && new Date(offer.endsAt) < now) {
+                            setCouponError('Coupon has expired');
+                            setAppliedOfferData(null);
+                          } else if (offer.maxUses !== null && offer.maxUses !== undefined && Number(offer.usedCount ?? 0) >= offer.maxUses) {
+                            setCouponError('Coupon has been fully redeemed');
+                            setAppliedOfferData(null);
+                          } else if (offer.minimumSubtotal && subtotal < Number(offer.minimumSubtotal)) {
+                            setCouponError(`Coupon requires minimum subtotal of ${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(Number(offer.minimumSubtotal)).toFixed(2)}`);
+                            setAppliedOfferData(null);
+                          } else {
+                            const numericValue = Number(offer.value);
+                            const discountAmount = offer.type === 'percentage'
+                              ? Math.round((subtotal * (numericValue / 100)) * 100) / 100
+                              : Math.min(numericValue, subtotal);
+                            const resolved = {
+                              id: offer.id,
+                              code: offer.code,
+                              name: offer.name,
+                              description: offer.description ?? null,
+                              type: offer.type,
+                              value: String(offer.value),
+                              minimumSubtotal: offer.minimumSubtotal ? String(offer.minimumSubtotal) : null,
+                              discountAmount: Number(discountAmount.toFixed ? discountAmount.toFixed(2) : discountAmount),
+                            };
+                            setAppliedOfferData(resolved);
+                            toast.success('Coupon applied');
+                          }
+                        } catch (err) {
+                          console.error('[Checkout] Coupon validation failed', err);
+                          setCouponError('Failed to validate coupon');
+                          setAppliedOfferData(null);
+                        } finally {
+                          setCouponLoading(false);
+                        }
+                      }}
+                      disabled={couponLoading}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-60"
+                    >
+                      {couponLoading ? 'Checking...' : 'Apply'}
+                    </button>
+                  </div>
+                  {couponError && <p className="text-xs text-red-600 mt-1">{couponError}</p>}
+                  {appliedOfferData && (
+                    <div className="mt-2 text-sm text-green-700 flex items-center justify-between">
+                      <span>{`${appliedOfferData.name} (${appliedOfferData.code}) applied`}</span>
+                      <button
+                        onClick={() => { setAppliedOfferData(null); setCouponCodeInput(''); toast.success('Coupon removed'); }}
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">{t('checkout.subtotal', 'Subtotal')}</span>
                   <span className="font-medium text-gray-900">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(subtotal).toFixed(2)}`}</span>

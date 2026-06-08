@@ -95,8 +95,45 @@ export function useSupabaseCart(userId: string | null) {
   const addToCart = useCallback(
     async (productId: string, quantity: number = 1) => {
       if (!userId) {
-        toast.error('Please sign in to add items to cart');
-        return false;
+        // Guest: persist to localStorage cart
+        try {
+          const { addToLocalCart } = await import('@/lib/cart');
+          const { data: productData, error: productError } = await supabase
+            .from('products')
+            .select('id, title, price, cover_image_url, stock')
+            .eq('id', productId)
+            .maybeSingle();
+
+          if (productError) throw productError;
+
+          const availableStock = Number(productData?.stock ?? 0);
+          if (availableStock <= 0) {
+            toast.error('This item is out of stock');
+            return false;
+          }
+
+          const item = {
+            productId: productData?.id || productId,
+            productIndex: -1,
+            title: productData?.title || 'Product',
+            price: String(productData?.price ?? '0'),
+            image: productData?.cover_image_url || '',
+            quantity: Math.max(1, quantity),
+          } as any;
+
+          const ok = addToLocalCart(item);
+          if (ok) {
+            toast.success('Added to cart');
+            return true;
+          }
+          toast.error('Failed to add to cart');
+          return false;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to add to cart';
+          toast.error(message);
+          console.error('Error adding to local cart:', err);
+          return false;
+        }
       }
 
       try {
@@ -245,7 +282,45 @@ export function useSupabaseCart(userId: string | null) {
 
   // Auto-fetch on userId change
   useEffect(() => {
-    fetchCart();
+    let cancelled = false;
+    (async () => {
+      try {
+        if (typeof window !== 'undefined') {
+          const w = window as any;
+          // Prefer promise-based migration handshake when available
+          if (w.__cartMigrationPromise) {
+            await w.__cartMigrationPromise;
+            if (cancelled) return;
+          } else if (localStorage.getItem('isMigratingCart')) {
+            // Fallback to event-based listener for older flows
+            await new Promise<void>((resolve) => {
+              const onMerged = () => {
+                resolve();
+                try { window.removeEventListener('cartMerged', onMerged); } catch (e) {}
+              };
+              window.addEventListener('cartMerged', onMerged);
+              // Safety timeout
+              setTimeout(() => {
+                try { window.removeEventListener('cartMerged', onMerged); } catch (e) {}
+                resolve();
+              }, 3000);
+            });
+            if (cancelled) return;
+          }
+        }
+
+        if (cancelled) return;
+        await fetchCart();
+      } catch (e) {
+        if (!cancelled) {
+          try { fetchCart(); } catch (_) {}
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId, fetchCart]);
 
   return {
@@ -269,8 +344,16 @@ export function useSupabaseWishlist(userId: string | null) {
   // Fetch wishlist
   const fetchWishlist = useCallback(async () => {
     if (!userId) {
-      setItems([]);
-      setWishedProductIds(new Set());
+      // Guest: load wishlist from localStorage
+      try {
+        const { readWishlistFromStorage } = await import('@/lib/cart');
+        const ids = readWishlistFromStorage();
+        setItems([]);
+        setWishedProductIds(new Set(ids));
+      } catch (e) {
+        setItems([]);
+        setWishedProductIds(new Set());
+      }
       return;
     }
 
@@ -300,8 +383,19 @@ export function useSupabaseWishlist(userId: string | null) {
   const addToWishlist = useCallback(
     async (productId: string) => {
       if (!userId) {
-        toast.error('Please sign in to save items');
-        return false;
+        try {
+          const { readWishlistFromStorage, writeWishlistToStorage } = await import('@/lib/cart');
+          const list = readWishlistFromStorage();
+          if (!list.includes(productId)) list.push(productId);
+          writeWishlistToStorage(list);
+          toast.success('Added to wishlist');
+          setWishedProductIds(new Set(list));
+          return true;
+        } catch (e) {
+          toast.error('Failed to add to wishlist');
+          console.error(e);
+          return false;
+        }
       }
 
       try {
@@ -330,7 +424,20 @@ export function useSupabaseWishlist(userId: string | null) {
   // Remove from wishlist
   const removeFromWishlist = useCallback(
     async (productId: string) => {
-      if (!userId) return false;
+      if (!userId) {
+        try {
+          const { readWishlistFromStorage, writeWishlistToStorage } = await import('@/lib/cart');
+          const list = readWishlistFromStorage().filter((id) => id !== productId);
+          writeWishlistToStorage(list);
+          setWishedProductIds(new Set(list));
+          toast.success('Removed from wishlist');
+          return true;
+        } catch (e) {
+          toast.error('Failed to remove from wishlist');
+          console.error(e);
+          return false;
+        }
+      }
 
       try {
         const { error: supabaseError } = await supabase

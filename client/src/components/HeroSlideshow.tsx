@@ -119,10 +119,8 @@ export function HeroSlideshow() {
           </p>
 
           {/* CTA Button */}
-          <Link href={activeSlide.ctaLink}>
-            <a className="inline-block px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl">
-              {activeSlide.cta}
-            </a>
+          <Link href={activeSlide.ctaLink} className="inline-block px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl">
+            {activeSlide.cta}
           </Link>
         </div>
       </div>

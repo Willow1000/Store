@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { readCartFromStorage } from '@/lib/cart';
 
 const PENDING_AUTH_ACTION_KEY = 'pending_auth_action';
 const pendingAuthStorage = typeof window !== 'undefined' ? window.localStorage : null;
@@ -117,27 +118,162 @@ async function upsertCartItem(userId: string, productId: string, quantity: numbe
   if (insertError) throw insertError;
 }
 
+/**
+ * Merge guest cart items from localStorage with authenticated user's database cart.
+ * Strategy: For each product, add the guest quantity to the existing database quantity.
+ * This ensures no cart items are lost when switching from guest to authenticated mode.
+ * 
+ * @param userId - The authenticated user's ID
+ * @throws Error if merging fails or stock is insufficient
+ */
+async function mergeGuestCartWithUserCart(userId: string): Promise<void> {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('isMigratingCart', '1');
+      const w = window as any;
+      if (!w.__cartMigrationPromise) {
+        w.__cartMigrationPromise = new Promise<void>((resolve) => {
+          w.__resolveCartMigration = resolve;
+        });
+      }
+    } catch (e) {}
+  }
+
+  const localCartJson = typeof window !== 'undefined' ? localStorage.getItem('cart') : null;
+  const guestCartItems = readCartFromStorage(localCartJson);
+  
+  if (guestCartItems.length === 0) {
+    // No guest cart items to merge
+    return;
+  }
+
+  // Process each guest cart item
+  for (const guestItem of guestCartItems) {
+    if (!guestItem.productId) continue;
+
+    try {
+      // Merge strategy: add quantities
+      // This ensures guest items don't overwrite but accumulate
+      await upsertCartItem(userId, guestItem.productId, guestItem.quantity);
+    } catch (error) {
+      console.warn(
+        `[CartMerge] Failed to merge item ${guestItem.productId}:`,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      // Continue merging other items even if one fails
+      // This prevents one out-of-stock item from blocking the entire merge
+    }
+  }
+
+  // Clear localStorage cart after successful merge to prevent duplication
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('cart');
+    try { localStorage.removeItem('isMigratingCart'); } catch (e) {}
+    try {
+      const w = window as any;
+      if (w.__resolveCartMigration) {
+        try { w.__resolveCartMigration(); } catch (e) {}
+        try { delete w.__resolveCartMigration; } catch (e) {}
+        try { delete w.__cartMigrationPromise; } catch (e) {}
+      }
+    } catch (e) {}
+    window.dispatchEvent(new Event('cartMerged'));
+  }
+
+  // Notify UI that cart has been updated
+  window.dispatchEvent(new Event('cartUpdated'));
+}
+
+/**
+ * Wait for any in-progress cart migration to complete.
+ * Returns an already-resolved promise if no migration is in progress.
+ */
+export function waitForCartMigration(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  const w = window as any;
+  if (w.__cartMigrationPromise) return w.__cartMigrationPromise as Promise<void>;
+  return Promise.resolve();
+}
+
+async function upsertWishlistItem(userId: string, productId: string) {
+  const { data: existing, error: existingError } = await supabase
+    .from('wishlists')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('product_id', productId)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing && existing.id) return; // already exists
+
+  const { error: insertError } = await supabase
+    .from('wishlists')
+    .insert({ user_id: userId, product_id: productId });
+
+  if (insertError) throw insertError;
+}
+
+async function mergeGuestWishlistWithUserWishlist(userId: string): Promise<void> {
+  const raw = typeof window !== 'undefined' ? localStorage.getItem('wishlist') : null;
+  if (!raw) return;
+  let ids: string[] = [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) ids = parsed.filter((x) => typeof x === 'string');
+  } catch (e) {
+    return;
+  }
+
+  if (ids.length === 0) return;
+
+  for (const pid of ids) {
+    try {
+      await upsertWishlistItem(userId, pid);
+    } catch (err) {
+      console.warn(`[WishlistMerge] Failed to merge ${pid}:`, err instanceof Error ? err.message : err);
+      // continue
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('wishlist');
+    try { localStorage.removeItem('isMigratingCart'); } catch (e) {}
+    window.dispatchEvent(new Event('cartMerged'));
+  }
+
+  window.dispatchEvent(new Event('wishlistUpdated'));
+}
+
 export async function executePendingAuthAction(
   userId: string,
   navigate: (to: string) => void
 ): Promise<boolean> {
   const action = getPendingAuthAction();
-  if (!action) return false;
-
+  
   try {
-    if ((action.type === 'cart' || action.type === 'checkout') && action.productId) {
-      await ensureProfile(userId);
-      await upsertCartItem(userId, action.productId, Math.max(1, action.quantity || 1));
-      window.dispatchEvent(new Event('cartUpdated'));
+    // Always merge guest cart with authenticated user's cart
+    await ensureProfile(userId);
+    await mergeGuestCartWithUserCart(userId);
+    await mergeGuestWishlistWithUserWishlist(userId);
+    
+    // Handle specific pending actions
+    if (action) {
+      if ((action.type === 'cart' || action.type === 'checkout') && action.productId) {
+        // Add the specific product if it's different from merge
+        await upsertCartItem(userId, action.productId, Math.max(1, action.quantity || 1));
+        window.dispatchEvent(new Event('cartUpdated'));
+      }
+
+      if (action.type === 'checkout') {
+        navigate('/checkout');
+      } else if (action.redirectTo) {
+        navigate(action.redirectTo);
+      }
+
+      return true;
     }
 
-    if (action.type === 'checkout') {
-      navigate('/checkout');
-    } else if (action.redirectTo) {
-      navigate(action.redirectTo);
-    }
-
-    return true;
+    return false;
   } finally {
     clearPendingAuthAction();
   }

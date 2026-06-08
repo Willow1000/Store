@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Mail, Lock, User as UserIcon, Phone, MapPin, Eye, EyeOff } from 'lucide-react';
+import { useState } from 'react';
+import { X } from 'lucide-react';
 import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -9,45 +9,13 @@ import { toast } from 'sonner';
 import { useLocation } from 'wouter';
 import { executePendingAuthAction, getPendingAuthAction } from '@/lib/authPendingAction';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
-import { COUNTRY_PHONE_OPTIONS, DEFAULT_PHONE_COUNTRY, buildInternationalPhoneNumber, getCountryPhoneLabel, normalizeLocalPhoneDigits, formatLocalPhoneNumber } from '@/lib/countryPhone';
-import currencyClient from '@/lib/currencyClient';
-import { sanitizeEmail, sanitizeName, sanitizePhone, sanitizeText } from '@shared/sanitize';
 
 export default function AuthModal() {
-  const { isOpen, mode, actionType, closeAuthModal, setMode } = useAuthModal();
+  const { isOpen, actionType, closeAuthModal } = useAuthModal();
   const { refresh } = useAuth();
   const [, navigate] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginCaptchaToken, setLoginCaptchaToken] = useState<string | null>(null);
-  const [signupCaptchaToken, setSignupCaptchaToken] = useState<string | null>(null);
-
-  const [loginData, setLoginData] = useState({
-    email: '',
-    password: '',
-  });
-
-  const [signupData, setSignupData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phone: '',
-    country: DEFAULT_PHONE_COUNTRY,
-    address: '',
-  });
-
-  // Autofill country code and phone country from cached geo-location
-  useEffect(() => {
-    if (mode !== 'signup') return;
-    const geo = currencyClient.getGeoData();
-    if (geo && geo.location) {
-      const cc = geo.location.country_code2 || geo.location.country_code || '';
-      if (cc && signupData.country !== cc) {
-        setSignupData((prev) => ({ ...prev, country: cc }));
-      }
-    }
-  }, [mode]);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -81,10 +49,7 @@ export default function AuthModal() {
   })();
 
   const handleGoogleSignIn = async () => {
-    // Check captcha before proceeding
-    const captchaToken = mode === 'login' ? loginCaptchaToken : signupCaptchaToken;
     if (!captchaToken) {
-      // Scroll to captcha and show message
       const captchaEl = document.querySelector('.recaptcha-checkbox, .RecaptchaCheckbox, [data-testid="recaptcha"]');
       if (captchaEl && typeof captchaEl.scrollIntoView === 'function') {
         captchaEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -94,11 +59,8 @@ export default function AuthModal() {
     }
     setIsLoading(true);
     try {
-      // Get the authModal's pending action (which may have been set by openAuthModal call)
-      // to determine where to redirect after OAuth completes
       const pendingAction = getPendingAuthAction();
       const returnToPath = pendingAction?.redirectTo || `${window.location.pathname}${window.location.search}`;
-      // Store the redirect target in localStorage so auth callback can retrieve it after OAuth redirect
       if (typeof window !== 'undefined') {
         localStorage.setItem('oauth_return_to', returnToPath);
       }
@@ -118,172 +80,6 @@ export default function AuthModal() {
     }
   };
 
-
-
-  const syncUserToBackend = async (userId: string, email: string, name?: string) => {
-    try {
-      const response = await fetch('/api/trpc/auth.syncOAuthUser', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          json: {
-            id: userId,
-            email,
-            name,
-            loginMethod: 'email',
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        console.warn('Failed to sync user to backend:', response.status);
-      }
-    } catch (error) {
-      console.warn('Error syncing user to backend:', error);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!loginData.email || !loginData.password) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-
-    if (!loginCaptchaToken) {
-      toast.error('Please complete the reCAPTCHA before signing in.');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: sanitizeEmail(loginData.email, 255),
-        password: loginData.password,
-      });
-
-      if (error) {
-        toast.error(error.message);
-      } else if (data.user) {
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData?.user) {
-          toast.error('Login session not found. Please try again.');
-          return;
-        }
-
-        // Sync user to backend
-        await syncUserToBackend(data.user.id, data.user.email || '', data.user.user_metadata?.name);
-        
-        // Wait a moment for backend to process, then refresh auth state
-        await new Promise(resolve => setTimeout(resolve, 500));
-        refresh();
-
-        const hadPendingAction = Boolean(getPendingAuthAction());
-        if (hadPendingAction) {
-          try {
-            await executePendingAuthAction(data.user.id, navigate);
-          } catch (pendingActionError) {
-            const message = pendingActionError instanceof Error
-              ? pendingActionError.message
-              : 'The product is out of stock.';
-            toast.error(message);
-          }
-        }
-        
-        toast.success('Signed in successfully!');
-        closeAuthModal();
-        setLoginData({ email: '', password: '' });
-        setLoginCaptchaToken(null);
-      }
-    } catch (error) {
-      toast.error('Login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!signupData.email || !signupData.password || !signupData.name) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    if (!signupCaptchaToken) {
-      toast.error('Please complete the reCAPTCHA before creating an account.');
-      return;
-    }
-
-    if (signupData.password !== signupData.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: sanitizeEmail(signupData.email, 255),
-        password: signupData.password,
-        options: {
-          data: {
-            name: sanitizeName(signupData.name, 100),
-            phone: sanitizePhone(signupData.phone, 24),
-            country: signupData.country,
-            address: sanitizeText(signupData.address, 255),
-          },
-        },
-      });
-
-      if (error) {
-        toast.error(error.message);
-      } else if (data.user) {
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData?.user) {
-          // Do not show confusing error; just return silently
-          return;
-        }
-
-        // Sync user to backend immediately (even before email verification)
-        await syncUserToBackend(data.user.id, data.user.email || '', signupData.name);
-        
-        // Wait a moment for backend to process, then refresh auth state
-        await new Promise(resolve => setTimeout(resolve, 500));
-        refresh();
-
-        const hadPendingAction = Boolean(getPendingAuthAction());
-        if (hadPendingAction) {
-          try {
-            await executePendingAuthAction(data.user.id, navigate);
-          } catch (pendingActionError) {
-            const message = pendingActionError instanceof Error
-              ? pendingActionError.message
-              : 'The product is out of stock.';
-            toast.error(message);
-          }
-        }
-        
-        toast.success(`Account created! Please check your email (${signupData.email}) and verify it to complete your registration.`);
-        setTimeout(() => closeAuthModal(), 1000);
-        setSignupData({
-          name: '',
-          email: '',
-          password: '',
-          confirmPassword: '',
-          phone: '',
-          country: DEFAULT_PHONE_COUNTRY,
-          address: '',
-        });
-        setSignupCaptchaToken(null);
-      }
-    } catch (error) {
-      toast.error('Signup failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const actionMessages = {
     cart: 'Sign in to add items to your cart',
     wishlist: 'Sign in to save items to your wishlist',
@@ -293,15 +89,12 @@ export default function AuthModal() {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={closeAuthModal}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-md max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-visible animate-in fade-in zoom-in-95 duration-300 flex flex-col">
-        {/* Close Button */}
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-visible animate-in fade-in zoom-in-95 duration-300 flex flex-col">
         <button
           onClick={closeAuthModal}
           className="absolute right-4 top-4 z-10 rounded-full bg-gray-100 hover:bg-gray-200 p-2 transition-colors"
@@ -309,49 +102,22 @@ export default function AuthModal() {
           <X className="w-5 h-5" />
         </button>
 
-        {/* Header */}
         <div className="bg-gradient-to-r from-black to-gray-800 px-6 md:px-8 pt-6 md:pt-8 pb-4 md:pb-6 flex-shrink-0">
           <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
-            {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+            Sign In
           </h2>
           <p className="text-gray-300 text-xs md:text-sm">
-            {actionType ? actionMessages[actionType] : (mode === 'login' ? 'Sign in to your account' : 'Join us to get started')}
+            {actionType ? actionMessages[actionType] : 'Sign in with your Google account'}
           </p>
         </div>
 
-        {/* Content - Scrollable */}
-        <div className="px-6 md:px-8 py-6 md:py-8 overflow-y-auto flex-1">
-          {/* Tab Switcher */}
-          <div className="flex gap-2 mb-4 md:mb-6 bg-gray-100 p-1 rounded-lg">
-            <button
-              onClick={() => setMode('login')}
-              className={`flex-1 py-2 px-3 md:px-4 rounded-md font-medium text-xs md:text-sm transition-all duration-200 ${
-                mode === 'login'
-                  ? 'bg-white text-black shadow-sm'
-                  : 'text-gray-600 hover:text-black'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => setMode('signup')}
-              className={`flex-1 py-2 px-3 md:px-4 rounded-md font-medium text-xs md:text-sm transition-all duration-200 ${
-                mode === 'signup'
-                  ? 'bg-white text-black shadow-sm'
-                  : 'text-gray-600 hover:text-black'
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
-
-          {/* Google OAuth Button - Priority */}
+        <div className="px-6 md:px-8 py-6 md:py-8 flex-1">
           <button
-            disabled={isLoading || (mode === 'login' ? !loginCaptchaToken : !signupCaptchaToken)}
+            disabled={isLoading || !captchaToken}
             type="button"
-            className="w-full flex items-center justify-center gap-2 md:gap-3 border border-gray-300 hover:border-gray-400 hover:disabled:border-gray-300 rounded-lg py-2.5 md:py-3 font-medium text-xs md:text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+            className="w-full flex items-center justify-center gap-2 md:gap-3 border border-gray-300 hover:border-gray-400 hover:disabled:border-gray-300 rounded-lg py-2.5 md:py-3 font-medium text-xs md:text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleGoogleSignIn}
-            title={mode === 'login' ? (!loginCaptchaToken ? 'Please complete the security check first' : '') : (!signupCaptchaToken ? 'Please complete the security check first' : '')}
+            title={!captchaToken ? 'Please complete the security check first' : ''}
           >
             <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24">
               <path fill="#EA4335" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -362,247 +128,15 @@ export default function AuthModal() {
             {isLoading ? 'Signing in...' : 'Continue with Google'}
           </button>
 
-          {/* Divider */}
-          <div className="relative my-4 md:my-5">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-xs md:text-sm">
-              <span className="px-2 bg-white text-gray-600">or continue with email</span>
-            </div>
-          </div>
-          {mode === 'login' && (
-            <form onSubmit={handleLogin} className="space-y-3">
-              <div>
-                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-                  <input
-                    type="email"
-                    value={loginData.email}
-                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    placeholder="you@example.com"
-                    className="w-full pl-10 pr-4 py-2 md:py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                  />
-                </div>
-              </div>
+          <RecaptchaCheckbox
+            onChange={setCaptchaToken}
+            className="rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 sm:px-4 py-3 sm:py-4 mt-4"
+            helperText={!captchaToken ? 'Please complete this security check to continue' : ''}
+          />
 
-              <div>
-                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2 md:py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4 md:w-5 md:h-5" /> : <Eye className="w-4 h-4 md:w-5 md:h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading || !loginCaptchaToken}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 md:py-2.5 rounded-lg text-sm md:text-base transition-all duration-200 mt-4 md:mt-6"
-                title={!loginCaptchaToken ? 'Please complete the security check first' : ''}
-              >
-                {isLoading ? 'Signing In...' : !loginCaptchaToken ? 'Complete security check to sign in' : 'Sign In'}
-              </button>
-
-              <RecaptchaCheckbox
-                onChange={setLoginCaptchaToken}
-                className="rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 sm:px-4 py-3 sm:py-4 mt-4"
-                helperText={!loginCaptchaToken ? 'Please complete this security check to continue' : ''}
-              />
-
-              <p className="text-center text-xs md:text-sm text-gray-600 mt-3">
-                Forgot your password?{' '}
-                <button className="text-blue-600 hover:text-blue-700 font-medium text-xs md:text-sm">
-                  Reset it
-                </button>
-              </p>
-            </form>
-          )}
-
-          {/* Signup Form */}
-          {mode === 'signup' && (
-            <form onSubmit={handleSignup} className="space-y-3">
-              <div>
-                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={signupData.name}
-                    onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
-                    placeholder="John Doe"
-                    className="w-full pl-10 pr-4 py-2 md:py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-                  <input
-                    type="email"
-                    value={signupData.email}
-                    onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                    placeholder="you@example.com"
-                    className="w-full pl-10 pr-4 py-2 md:py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">
-                  Phone (optional)
-                </label>
-                <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)]">
-                  <select
-                    value={signupData.country}
-                    onChange={(e) => setSignupData({ ...signupData, country: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 md:py-2.5 text-sm focus:border-black focus:outline-none focus:ring-2 focus:ring-black"
-                    aria-label="Select phone country code"
-                  >
-                    {COUNTRY_PHONE_OPTIONS.map((countryOption) => (
-                      <option key={countryOption.value} value={countryOption.value}>
-                        {getCountryPhoneLabel(countryOption.value)}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-                    <input
-                      type="tel"
-                      value={signupData.phone}
-                      onChange={(e) => setSignupData({ ...signupData, phone: formatLocalPhoneNumber(normalizeLocalPhoneDigits(e.target.value, signupData.country, 15), signupData.country) })}
-                      placeholder="555 123 4567"
-                      className="w-full pl-10 pr-4 py-2 md:py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">
-                  Address (optional)
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={signupData.address}
-                    onChange={(e) => setSignupData({ ...signupData, address: e.target.value })}
-                    placeholder="123 Main St, City"
-                    className="w-full pl-10 pr-4 py-2 md:py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={signupData.password}
-                    onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2 md:py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4 md:w-5 md:h-5" /> : <Eye className="w-4 h-4 md:w-5 md:h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">
-                  Confirm Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={signupData.confirmPassword}
-                    onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2 md:py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading || !signupCaptchaToken}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 md:py-2.5 rounded-lg text-sm md:text-base transition-all duration-200 mt-4 md:mt-6"
-                title={!signupCaptchaToken ? 'Please complete the security check first' : ''}
-              >
-                {isLoading ? 'Creating Account...' : !signupCaptchaToken ? 'Complete security check to sign up' : 'Create Account'}
-              </button>
-
-              <RecaptchaCheckbox
-                onChange={setSignupCaptchaToken}
-                className="rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 sm:px-4 py-3 sm:py-4 mt-4"
-                helperText={!signupCaptchaToken ? 'Please complete this security check to continue' : ''}
-              />
-
-              <p className="text-center text-xs md:text-xs text-gray-600 mt-3">
-                By signing up, you agree to our Terms of Service and Privacy Policy
-              </p>
-            </form>
-          )}
-
-
-        </div>
-
-        {/* Footer Note */}
-        <div className="border-t border-gray-200 px-6 md:px-8 py-3 md:py-4 bg-gray-50 text-center text-xs md:text-sm text-gray-600 flex-shrink-0">
-          {mode === 'login' ? (
-            <>
-              Don't have an account?{' '}
-              <button
-                onClick={() => setMode('signup')}
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Sign up here
-              </button>
-            </>
-          ) : (
-            <>
-              Already have an account?{' '}
-              <button
-                onClick={() => setMode('login')}
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Sign in here
-              </button>
-            </>
-          )}
+          <p className="text-center text-xs md:text-sm text-gray-600 mt-4">
+            Google OAuth is our secure sign-in method.
+          </p>
         </div>
       </div>
     </div>

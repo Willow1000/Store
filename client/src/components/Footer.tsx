@@ -21,9 +21,7 @@ export default function Footer() {
             <h4 className="mb-3 sm:mb-4 font-semibold text-sm sm:text-base">{t('footer.browse', 'Browse')}</h4>
             <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-400">
               <li>
-                <Link href="/products">
-                  <a className="hover:text-white">{t('footer.allProducts', 'All Products')}</a>
-                </Link>
+                <Link href="/products" className="hover:text-white">{t('footer.allProducts', 'All Products')}</Link>
               </li>
             </ul>
           </div>
@@ -33,29 +31,19 @@ export default function Footer() {
             <h4 className="mb-3 sm:mb-4 font-semibold text-sm sm:text-base">{t('footer.support', 'Support')}</h4>
             <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-400">
               <li>
-                <Link href="/help">
-                  <a className="hover:text-white transition-colors">{t('footer.helpCenter', 'Help Center')}</a>
-                </Link>
+                <Link href="/help" className="hover:text-white transition-colors">{t('footer.helpCenter', 'Help Center')}</Link>
               </li>
               <li>
-                <Link href="/faq">
-                  <a className="hover:text-white transition-colors">{t('footer.faq', 'FAQ')}</a>
-                </Link>
+                <Link href="/faq" className="hover:text-white transition-colors">{t('footer.faq', 'FAQ')}</Link>
               </li>
               <li>
-                <Link href="/contact">
-                  <a className="hover:text-white transition-colors">{t('footer.contactUs', 'Contact Us')}</a>
-                </Link>
+                <Link href="/contact" className="hover:text-white transition-colors">{t('footer.contactUs', 'Contact Us')}</Link>
               </li>
               <li>
-                <Link href="/shipping">
-                  <a className="hover:text-white transition-colors">{t('footer.shippingInfo', 'Shipping Info')}</a>
-                </Link>
+                <Link href="/shipping" className="hover:text-white transition-colors">{t('footer.shippingInfo', 'Shipping Info')}</Link>
               </li>
               <li>
-                <Link href="/returns">
-                  <a className="hover:text-white transition-colors">{t('footer.returns', 'Returns')}</a>
-                </Link>
+                <Link href="/returns" className="hover:text-white transition-colors">{t('footer.returns', 'Returns')}</Link>
               </li>
             </ul>
           </div>
@@ -65,24 +53,16 @@ export default function Footer() {
             <h4 className="mb-3 sm:mb-4 font-semibold text-sm sm:text-base">{t('footer.legal', 'Legal')}</h4>
             <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-400">
               <li>
-                <Link href="/privacy">
-                  <a className="hover:text-white transition-colors">{t('footer.privacyPolicy', 'Privacy Policy')}</a>
-                </Link>
+                <Link href="/privacy" className="hover:text-white transition-colors">{t('footer.privacyPolicy', 'Privacy Policy')}</Link>
               </li>
               <li>
-                <Link href="/terms">
-                  <a className="hover:text-white transition-colors">{t('footer.termsOfService', 'Terms of Service')}</a>
-                </Link>
+                <Link href="/terms" className="hover:text-white transition-colors">{t('footer.termsOfService', 'Terms of Service')}</Link>
               </li>
               <li>
-                <Link href="/cookies">
-                  <a className="hover:text-white transition-colors">{t('footer.cookiePolicy', 'Cookie Policy')}</a>
-                </Link>
+                <Link href="/cookies" className="hover:text-white transition-colors">{t('footer.cookiePolicy', 'Cookie Policy')}</Link>
               </li>
               <li>
-                <Link href="/accessibility">
-                  <a className="hover:text-white transition-colors">{t('footer.accessibility', 'Accessibility')}</a>
-                </Link>
+                <Link href="/accessibility" className="hover:text-white transition-colors">{t('footer.accessibility', 'Accessibility')}</Link>
               </li>
             </ul>
           </div>

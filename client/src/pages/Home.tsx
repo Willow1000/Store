@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import { useProducts, useCategories } from '@/hooks/useSupabaseProducts';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useIsMobile } from '@/hooks/useMobile';
 import { useState, useEffect, useMemo } from 'react';
 import currencyClient from '@/lib/currencyClient';
@@ -31,7 +30,6 @@ export default function Home() {
       }
     }, []);
   const { user, isAuthenticated } = useAuth();
-  const { openAuthModal } = useAuthModal();
   const { products, isLoading } = useProducts(1, 100); // Fetch 100 products for best deals selection
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
   const { categories, isLoading: categoriesLoading } = useCategories();
@@ -167,10 +165,8 @@ export default function Home() {
           <div className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-3xl font-extrabold text-gray-900">Your Recently Viewed</h2>
-              <Link href="/products">
-                <a className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                  View all <ChevronRight className="w-4 h-4" />
-                </a>
+              <Link href="/products" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                View all <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
 
@@ -186,8 +182,7 @@ export default function Home() {
                 const displayCode = currencyCode;
 
                 return (
-                  <Link key={product.id} href={`/product/${product.id}`}>
-                    <a className="product-card group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition-shadow">
+                  <Link key={product.id} href={`/product/${product.id}`} className="product-card group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition-shadow">
                       {/* Image Container */}
                       <div className="relative w-full pt-[100%] bg-white group-hover:opacity-75 transition-opacity">
                         <img
@@ -213,10 +208,6 @@ export default function Home() {
                         <button
                           onClick={(e) => {
                             e.preventDefault();
-                            if (!isAuthenticated || !user?.id) {
-                              openAuthModal('login', 'wishlist');
-                              return;
-                            }
                             toggleWishlist(product.id);
                             toast.success(isWished ? 'Removed from wishlist' : 'Added to wishlist!');
                           }}
@@ -284,8 +275,7 @@ export default function Home() {
                           </button>
                         </div>
                       </div>
-                    </a>
-                  </Link>
+                </Link>
                 );
               })}
             </div>
@@ -346,10 +336,6 @@ export default function Home() {
                         <button
                           onClick={(e) => {
                             e.preventDefault();
-                            if (!isAuthenticated || !user?.id) {
-                              openAuthModal('login', 'wishlist');
-                              return;
-                            }
                             toggleWishlist(product.id);
                             toast.success(isWished ? 'Removed from wishlist' : 'Added to wishlist!');
                           }}
@@ -426,10 +412,8 @@ export default function Home() {
 
           {/* View All Button */}
           <div className="mt-12 text-center">
-            <Link href="/products">
-              <a className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors">
-                Browse More Deals
-              </a>
+            <Link href="/products" className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors">
+              Browse More Deals
             </Link>
           </div>
         </div>
@@ -440,10 +424,8 @@ export default function Home() {
         <div className="max-w-screen-xl mx-auto px-2 sm:px-3 md:px-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Shop by Category</h2>
-            <Link href="/products">
-              <a className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                View all <ChevronRight className="w-4 h-4" />
-              </a>
+            <Link href="/products" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+              View all <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
 

@@ -58,3 +58,57 @@ export function readCartFromStorage(raw: string | null): LocalCartItem[] {
     return [];
   }
 }
+
+export function writeCartToStorage(items: LocalCartItem[]) {
+  try {
+    localStorage.setItem('cart', JSON.stringify(items));
+    window.dispatchEvent(new Event('cartUpdated'));
+  } catch (e) {
+    // ignore
+  }
+}
+
+export function addToLocalCart(item: LocalCartItem) {
+  try {
+    const raw = localStorage.getItem('cart');
+    const existing = readCartFromStorage(raw);
+
+    // Merge: additive quantities if same productId/productIndex
+    let merged = false;
+    const next = existing.map((it) => {
+      if (item.productId && it.productId && it.productId === item.productId) {
+        merged = true;
+        return { ...it, quantity: Math.max(1, it.quantity + item.quantity) };
+      }
+      if (!item.productId && it.productIndex === item.productIndex) {
+        merged = true;
+        return { ...it, quantity: Math.max(1, it.quantity + item.quantity) };
+      }
+      return it;
+    });
+
+    if (!merged) next.push(item);
+    writeCartToStorage(next);
+    return true;
+  } catch (e) {
+    console.error('addToLocalCart error', e);
+    return false;
+  }
+}
+
+export function readWishlistFromStorage(): string[] {
+  try {
+    const raw = localStorage.getItem('wishlist');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.filter((x) => typeof x === 'string');
+  } catch (e) {}
+  return [];
+}
+
+export function writeWishlistToStorage(items: string[]) {
+  try {
+    localStorage.setItem('wishlist', JSON.stringify(items));
+    window.dispatchEvent(new Event('wishlistUpdated'));
+  } catch (e) {}
+}

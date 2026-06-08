@@ -5,10 +5,9 @@ import { Route, Switch } from "wouter";
 import { useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { AuthModalProvider } from "./contexts/AuthModalContext";
+// Auth modal removed: auth is handled inline in checkout
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import AuthModal from "./components/AuthModal";
 import Home from "./pages/Home";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -70,10 +69,10 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
-        <AuthModalProvider>
+        
           <TooltipProvider>
             <Toaster />
-            <AuthModal />
+            
             <div className="flex min-h-screen flex-col bg-background w-full overflow-x-hidden">
               <Header />
               <main className={`flex-1 w-full overflow-x-hidden ${isHomePage ? '' : 'pt-0'}`}>
@@ -82,7 +81,6 @@ function App() {
               <Footer />
             </div>
           </TooltipProvider>
-        </AuthModalProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

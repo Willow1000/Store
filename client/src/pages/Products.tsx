@@ -16,7 +16,6 @@ import { useProducts, useCategories, useProductsBySlug } from '@/hooks/useSupaba
 import { useBrands } from '@/hooks/useBrands';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import { getHighResImageUrl } from '@/lib/images';
 import { getBrandSuggestions, getModelSuggestions, getSimilarProducts, searchProducts } from '@/lib/productSearch';
 import { Product } from '@/types/supabase';
@@ -86,7 +85,6 @@ export default function Products() {
   const [fallbackResult, setFallbackResult] = useState<FallbackResult | null>(null);
 
   const { user, isAuthenticated } = useAuth();
-  const { openAuthModal } = useAuthModal();
   const { products: allProducts, isLoading } = useProducts(1, -1);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
   const { categories, isLoading: categoriesLoading } = useCategories();
@@ -1196,14 +1194,6 @@ export default function Products() {
                             <button
                               onClick={async (e) => {
                                 e.preventDefault();
-
-                                if (!isAuthenticated || !user?.id) {
-                                  openAuthModal('login', 'wishlist', {
-                                    type: 'wishlist',
-                                    productId: product.id,
-                                  });
-                                  return;
-                                }
 
                                 try {
                                   await toggleWishlist(product.id);

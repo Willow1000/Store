@@ -145,3 +145,4 @@ tools/scraper/node_modules/
 **/.cache/ms-playwright/
 
 scraper.txt
+*.md

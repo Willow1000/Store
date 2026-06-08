@@ -1,5 +1,4 @@
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { ArrowLeft, Clock, CheckCircle, Truck, Package } from 'lucide-react';
@@ -8,7 +7,6 @@ import { supabase } from '@/lib/supabase';
 
 export default function OrderDetail({ params }: { params: { id: string } }) {
   const { user, isAuthenticated, sessionRestored, loading } = useAuth();
-  const { openAuthModal } = useAuthModal();
   const authPromptedRef = useRef(false);
   const [location, setLocation] = useLocation();
   const orderId = params.id;
@@ -24,15 +22,8 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
   });
 
   useEffect(() => {
-    if (!sessionRestored || loading) return;
-    if (isAuthenticated) {
-      authPromptedRef.current = false;
-      return;
-    }
-    if (authPromptedRef.current) return;
-    authPromptedRef.current = true;
-    openAuthModal('login', undefined, { redirectTo: location });
-  }, [isAuthenticated, sessionRestored, loading, location, openAuthModal]);
+    // do not force-open auth modal; allow blank order detail for guests
+  }, [isAuthenticated, sessionRestored, loading]);
 
   // Initialize order from orders array - moved before conditional returns
   const order = orders?.find((o) => String(o.id) === String(orderId));
@@ -147,7 +138,12 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
   }
 
   if (!isAuthenticated) {
-    return null;
+    return (
+      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
+        <h1 className="mb-6 text-2xl font-bold">Order</h1>
+        <div className="rounded-lg border border-border bg-white p-6">{/* blank for guests */}</div>
+      </div>
+    );
   }
 
   if (isLoading) {

@@ -6,7 +6,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { readCartFromStorage } from '@/lib/cart';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useSupabaseCart } from '@/hooks/useSupabaseCart';
 import { useProducts } from '@/hooks/useSupabaseProducts';
 import { getHighResImageUrl } from '@/lib/images';
@@ -35,7 +34,6 @@ type ProductLookup = {
 export default function Cart() {
   const [, navigate] = useLocation();
   const { user, isAuthenticated } = useAuth();
-  const { openAuthModal } = useAuthModal();
   const {
     items: supabaseCartItems,
     isLoading: isSupabaseLoading,
@@ -339,14 +337,7 @@ export default function Cart() {
 
             <button
               onClick={() => {
-                if (!isAuthenticated) {
-                  openAuthModal('login', 'checkout', {
-                    type: 'checkout',
-                    redirectTo: '/checkout',
-                  });
-                  toast.error(t('checkout.signInToCheckout', 'Please sign in to checkout'));
-                  return;
-                }
+                // Always allow navigating to checkout; inline auth will be shown on the checkout page
                 navigate('/checkout');
               }}
               className="w-full py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base"

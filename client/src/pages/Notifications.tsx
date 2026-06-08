@@ -1,5 +1,4 @@
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Bell, CheckCircle, AlertCircle, Package, Trash2 } from 'lucide-react';
@@ -8,7 +7,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Notifications() {
   const { isAuthenticated, sessionRestored } = useAuth();
-  const { openAuthModal } = useAuthModal();
   const authPromptedRef = useRef(false);
   const [location] = useLocation();
   const { data: notifications, isLoading } = trpc.notifications.list.useQuery(undefined, {
@@ -16,18 +14,20 @@ export default function Notifications() {
   });
 
   useEffect(() => {
-    if (!sessionRestored) return;
-    if (isAuthenticated) {
-      authPromptedRef.current = false;
-      return;
-    }
-    if (authPromptedRef.current) return;
-    authPromptedRef.current = true;
-    openAuthModal('login', undefined, { redirectTo: location });
-  }, [isAuthenticated, sessionRestored, location, openAuthModal]);
+    // do not force-open auth modal; allow rendering an empty notifications page for guests
+  }, [isAuthenticated, sessionRestored]);
 
   if (!sessionRestored) {
     return null;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
+        <h1 className="mb-8 text-4xl font-bold">Notifications</h1>
+        <div className="rounded-lg border border-border bg-white p-6">{/* blank for guests */}</div>
+      </div>
+    );
   }
 
   if (isLoading) {

@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ShoppingCart, Menu, X, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import { toast } from 'sonner';
 import { BrandLogo } from '@/components/BrandLogo';
 import { readCartFromStorage } from '@/lib/cart';
@@ -17,7 +16,6 @@ export default function Header() {
   const [cartCount, setCartCount] = useState(0);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const { user, isAuthenticated, logout } = useAuth();
-  const { openAuthModal } = useAuthModal();
   const [, navigate] = useLocation();
 
   const handleLogout = async () => {
@@ -78,33 +76,23 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center gap-8 flex-1 justify-center mx-4">
-          <Link href="/products">
-            <a className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Products</a>
-          </Link>
-          <Link href="/about">
-            <a className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">About</a>
-          </Link>
-          <Link href="/contact">
-            <a className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Contact</a>
-          </Link>
+          <Link href="/products" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Products</Link>
+          <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">About</Link>
+          <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Contact</Link>
         </div>
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-          {/* Cart Icon - Only show if authenticated */}
-          {isAuthenticated && (
-            <Link href="/cart">
-              <a className="relative flex items-center gap-1 sm:gap-2 text-sm font-medium hover:text-gray-600">
-                <ShoppingCart size={20} className="sm:w-5 sm:h-5" />
-                <span className="hidden sm:inline">{t('common.cart', 'Cart')}</span>
-                {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                    {cartCount}
-                  </span>
-                )}
-              </a>
-            </Link>
-          )}
+          {/* Cart Icon - always show for guests and authenticated users */}
+          <Link href="/cart" className="relative flex items-center gap-1 sm:gap-2 text-sm font-medium hover:text-gray-600">
+            <ShoppingCart size={20} className="sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">{t('common.cart', 'Cart')}</span>
+            {cartCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                {cartCount}
+              </span>
+            )}
+          </Link>
 
           {/* User Menu */}
           {isAuthenticated && user ? (
@@ -119,29 +107,14 @@ export default function Header() {
                 <span className="hidden sm:inline">{user.name || t('header.account', 'Account')}</span>
               </button>
               <div className={`absolute right-0 mt-2 w-40 sm:w-48 rounded-lg border border-gray-200 bg-white shadow-lg z-[60] ${isAccountMenuOpen ? 'block' : 'hidden'}`}>
-                <Link href="/account">
-                  <a
-                    onClick={() => setIsAccountMenuOpen(false)}
-                    className="block px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-100"
-                  >
-                    {t('header.myAccount', 'My Account')}
-                  </a>
+                <Link href="/account" className="block px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-100" onClick={() => setIsAccountMenuOpen(false)}>
+                  {t('header.myAccount', 'My Account')}
                 </Link>
-                <Link href="/orders">
-                  <a
-                    onClick={() => setIsAccountMenuOpen(false)}
-                    className="block px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-100"
-                  >
-                    {t('header.myOrders', 'My Orders')}
-                  </a>
+                <Link href="/orders" className="block px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-100" onClick={() => setIsAccountMenuOpen(false)}>
+                  {t('header.myOrders', 'My Orders')}
                 </Link>
-                <Link href="/tickets">
-                  <a
-                    onClick={() => setIsAccountMenuOpen(false)}
-                    className="block px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-100"
-                  >
-                    {t('header.tickets', 'My Tickets')}
-                  </a>
+                <Link href="/tickets" className="block px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-100" onClick={() => setIsAccountMenuOpen(false)}>
+                  {t('header.tickets', 'My Tickets')}
                 </Link>
                 <button
                   onClick={handleLogout}
@@ -152,23 +125,7 @@ export default function Header() {
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => openAuthModal('login')}
-                className="text-xs sm:text-sm font-medium hover:text-gray-600 transition-colors"
-              >
-                {t('auth.signIn', 'Sign In')}
-              </button>
-              <span className="text-gray-300">|</span>
-              <button
-                onClick={() => openAuthModal('signup')}
-                className="text-xs sm:text-sm font-medium hover:text-gray-600 transition-colors"
-              >
-                {t('auth.signUp', 'Sign Up')}
-              </button>
-            </div>
-          )}
+          ) : null}
 
           {/* Mobile Menu Button */}
           <button
@@ -184,55 +141,37 @@ export default function Header() {
       {isMenuOpen && (
         <div className="lg:hidden border-t border-gray-200 bg-white">
           <div className="px-3 sm:px-4 py-4 space-y-3">
-            <Link href="/">
-              <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                Home
-              </a>
+            <Link href="/" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+              Home
             </Link>
-            <Link href="/products">
-              <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                Products
-              </a>
+            <Link href="/products" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+              Products
             </Link>
             {isAuthenticated && (
               <>
-                <Link href="/cart">
-                  <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                    Cart {cartCount > 0 && `(${cartCount})`}
-                  </a>
+                <Link href="/cart" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                  Cart {cartCount > 0 && `(${cartCount})`}
                 </Link>
-                <Link href="/orders">
-                  <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                    My Orders
-                  </a>
+                <Link href="/orders" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                  My Orders
                 </Link>
-                <Link href="/tickets">
-                  <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                    My Tickets
-                  </a>
+                <Link href="/tickets" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                  My Tickets
                 </Link>
               </>
             )}
-            <Link href="/about">
-              <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                About
-              </a>
+            <Link href="/about" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+              About
             </Link>
-            <Link href="/contact">
-              <a className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                Contact
-              </a>
+            <Link href="/contact" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+              Contact
             </Link>
             <div className="border-t border-gray-200 pt-3">
-              <Link href="/help">
-                <a className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                  Help
-                </a>
+              <Link href="/help" className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                Help
               </Link>
-              <Link href="/faq">
-                <a className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                  FAQ
-                </a>
+              <Link href="/faq" className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                FAQ
               </Link>
             </div>
           </div>

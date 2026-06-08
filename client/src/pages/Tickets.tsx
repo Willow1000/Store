@@ -2,14 +2,12 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import { supabase } from '@/lib/supabase';
 import { COUNTRY_PHONE_OPTIONS, DEFAULT_PHONE_COUNTRY, buildInternationalPhoneNumber, formatLocalPhoneNumber, getCountryPhoneLabel, normalizeLocalPhoneDigits } from '@/lib/countryPhone';
 import { sanitizeEmail, sanitizeMultilineText, sanitizeMultilineTextInput, sanitizePhone, sanitizePhoneInput, sanitizeText, sanitizeTextInput } from '@shared/sanitize';
 
 export default function TicketsPage() {
   const { user, isAuthenticated, sessionRestored } = useAuth() as any;
-  const { openAuthModal } = useAuthModal();
   const canCreateTicket = Boolean(user?.id);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [title, setTitle] = useState('');
@@ -45,11 +43,8 @@ export default function TicketsPage() {
 
   useEffect(() => {
     if (!sessionRestored) return;
-
-    if (!isAuthenticated) {
-      openAuthModal('login', 'tickets');
-    }
-  }, [isAuthenticated, openAuthModal, sessionRestored]);
+    // do not auto-open auth modal; allow page to render and show message when actions require login
+  }, [isAuthenticated, sessionRestored]);
 
   const setSelectedFilesFromInput = (files: File[]) => {
     setFileWarning(null);

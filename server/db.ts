@@ -399,7 +399,8 @@ export async function getOfferByCode(code: string) {
   if (!db) return undefined;
 
   const normalizedCode = code.trim().toUpperCase();
-  const result = await db.select().from(offers).where(eq(offers.code, normalizedCode)).limit(1);
+  // Compare codes case-insensitively in the database to tolerate mixed-case storage
+  const result = await db.select().from(offers).where(sql`upper(${offers.code}) = ${normalizedCode}`).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 

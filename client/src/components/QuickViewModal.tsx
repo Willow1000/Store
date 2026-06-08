@@ -10,7 +10,6 @@ import { Link } from 'wouter';
 import { useProductById } from '@/hooks/useSupabaseProducts';
 import { useSupabaseCart, useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import { getHighResImageUrl } from '@/lib/images';
 
 interface QuickViewModalProps {
@@ -33,7 +32,6 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
   const dragStartRef = useRef({ x: 0, y: 0 });
 
   const { user, isAuthenticated } = useAuth();
-  const { openAuthModal } = useAuthModal();
   const { product, images, isLoading } = useProductById(productId);
   // Use centralized currency client for symbol, code and rate
   const currencyCode = currencyClient.getCurrencyCode();
@@ -172,18 +170,7 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
       return;
     }
 
-    if (!isAuthenticated || !user?.id) {
-      console.warn('[QuickViewModal] AddToCart blocked: user not authenticated');
-      onClose();
-      setTimeout(() =>
-        openAuthModal('login', 'cart', {
-          type: 'cart',
-          productId: product?.id,
-          quantity,
-        }),
-      0);
-      return;
-    }
+    // Allow guests to add to cart via hook (hook handles localStorage when no user)
 
     if (!product?.id) {
       console.error('[QuickViewModal] AddToCart blocked: missing product id');
@@ -207,12 +194,6 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
   };
 
   const handleWishlist = async () => {
-    if (!isAuthenticated || !user?.id) {
-      onClose();
-      setTimeout(() => openAuthModal('login', 'wishlist'), 0);
-      return;
-    }
-
     if (product?.id) {
       try {
         setIsTogglingWishlist(true);
@@ -422,13 +403,8 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                       </div>
                     ))}
                   </div>
-                  <Link href={`/product/${product.id}`}>
-                    <button
-                      onClick={onClose}
-                      className="mt-3 text-xs font-semibold text-blue-700 hover:text-blue-800 underline"
-                    >
-                      View full item specifics
-                    </button>
+                  <Link href={`/product/${product.id}`} className="mt-3 text-xs font-semibold text-blue-700 hover:text-blue-800 underline" onClick={onClose}>
+                    View full item specifics
                   </Link>
                 </div>
               )}
@@ -502,14 +478,8 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                 >
                   <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
                 </button>
-                <Link href={`/product/${product.id}`}>
-                  <a
-                    onClick={onClose}
-                    type="button"
-                    className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-center transition-colors"
-                  >
-                    View Details
-                  </a>
+                <Link href={`/product/${product.id}`} className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-center transition-colors" onClick={onClose}>
+                  View Details
                 </Link>
               </div>
             </div>

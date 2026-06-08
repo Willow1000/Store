@@ -7,7 +7,6 @@ import { SEOHead } from '@/components/SEOHead';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useProductById, useProducts } from '@/hooks/useSupabaseProducts';
 import { useSupabaseCart, useSupabaseWishlist } from '@/hooks/useSupabaseCart';
-import { useAuthModal } from '@/contexts/AuthModalContext';
 import { useState, useEffect, useRef } from 'react';
 import currencyClient from '@/lib/currencyClient';
 import { getHighResImageUrl } from '@/lib/images';
@@ -30,7 +29,6 @@ export default function ProductDetail() {
   const dragStartRef = useRef({ x: 0, y: 0 });
 
   const { user, isAuthenticated } = useAuth();
-  const { openAuthModal } = useAuthModal();
   const { product, images, isLoading, error } = useProductById(productId || '');
   const { products: allProducts } = useProducts(1, 200); // Fetch products for similar items
   const { addToCart } = useSupabaseCart(user?.id || null);
@@ -177,15 +175,7 @@ export default function ProductDetail() {
       return;
     }
 
-    if (!isAuthenticated || !user?.id) {
-      console.warn('[ProductDetail] AddToCart blocked: user not authenticated');
-      openAuthModal('login', 'cart', {
-        type: 'cart',
-        productId: product?.id,
-        quantity,
-      });
-      return;
-    }
+    // Allow guest users to add to local cart; use addToCart hook which supports guest localStorage
 
     if (!product?.id) {
       console.error('[ProductDetail] AddToCart blocked: missing product id');
@@ -226,14 +216,7 @@ export default function ProductDetail() {
       return;
     }
 
-    if (!isAuthenticated || !user?.id) {
-      openAuthModal('login', 'checkout', {
-        type: 'checkout',
-        productId: product?.id,
-        quantity,
-      });
-      return;
-    }
+    // Allow guest users to add to cart then navigate to checkout (Inline auth appears there)
 
     try {
       if (!product?.id) {
@@ -265,11 +248,6 @@ export default function ProductDetail() {
   };
 
   const handleWishlistClick = async () => {
-    if (!isAuthenticated || !user?.id) {
-      openAuthModal('login', 'wishlist');
-      return;
-    }
-    
     if (product?.id) {
       try {
         await toggleWishlist(product.id);
