@@ -1,0 +1,15 @@
+def equilateral_triangle(n):
+    try:
+        n = int(n)
+        if n <= 0:
+            raise ValueError("Input must be a positive integer.")
+    except (ValueError, TypeError):
+        print("Invalid input. Please enter a positive integer.")
+        return
+
+    for i in range(n):
+        print(' ' * (n - i - 1) + '*' * (2 * i + 1))
+
+# Usage
+n = -1
+equilateral_triangle(n)

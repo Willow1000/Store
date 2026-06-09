@@ -14,20 +14,20 @@ const slides: Slide[] = [
   {
     id: 1,
     image: '/images/hero/ADD_HUMAN_PROFESSIONAL_ACTIVITY_HERE_202605101659.jpeg',
-    title: 'Professional Excellence',
-    subtitle: 'Committed to quality and expertise',
+    title: 'Global Auto Parts Sourcing',
+    subtitle: 'Connecting customers worldwide with trusted OEM and aftermarket vehicle parts',
   },
   {
     id: 2,
     image: '/images/hero/ADD_HUMAN_PROFESSIONAL_ACTIVITY_HERE_202605101700.jpeg',
-    title: 'Trusted Partnership',
-    subtitle: 'Building relationships with our customers',
+    title: 'Worldwide Shipping Solutions',
+    subtitle: 'Fast, reliable international delivery for new and used automotive spare parts',
   },
   {
     id: 3,
-    image: '/images/hero/now_an_images_of_people_202605101659.jpeg',
-    title: 'Community Driven',
-    subtitle: 'Serving automotive enthusiasts worldwide',
+    image: '/images/hero/Hero2.jpeg',
+    title: 'Trusted Automotive Network',
+    subtitle: 'Helping drivers, garages, and dealers source quality vehicle components globally',
   },
 ];
 
