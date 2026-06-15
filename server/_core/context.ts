@@ -38,7 +38,6 @@ export async function createContext(
     }
   } catch (sdkError) {
     // SDK auth failed (expected for Supabase users), try Supabase token next
-    console.debug('[Auth] SDK session cookie not found (expected for Supabase users)');
   }
 
   // Method 2: Try Supabase token from Authorization header
@@ -53,7 +52,7 @@ export async function createContext(
         const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(token);
         
         if (error) {
-          console.debug('[Auth] Supabase token verification failed:', error.message);
+          // Token verification failed; continue to unauthenticated context.
         } else if (supabaseUser?.id) {
           if (db.isDatabaseConfigured()) {
             // Look up user in our database by Supabase user ID
@@ -91,21 +90,18 @@ export async function createContext(
               console.error("[Auth] Failed to sync Supabase user:", syncError);
             }
           } else {
-            console.debug('[Auth] Database sync disabled - skipping Supabase user hydration');
+            // Database sync disabled - skip user hydration.
           }
         }
       } else {
         console.warn('[Auth] Supabase client not configured - check VITE_SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables');
       }
-    } else {
-      console.debug('[Auth] No Authorization header found');
     }
   } catch (supabaseError) {
     console.error("[Auth] Supabase token verification error:", supabaseError);
   }
 
   // No authentication method succeeded - user is unauthenticated (public access allowed)
-  console.debug('[Auth] User is unauthenticated (public access)');
   return {
     req: opts.req,
     res: opts.res,

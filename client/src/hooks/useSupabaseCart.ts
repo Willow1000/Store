@@ -57,8 +57,9 @@ export function useSupabaseCart(userId: string | null) {
 
       const profileReady = await ensureProfile();
       if (!profileReady) {
-        setItems([]);
-        return;
+        // Profile upsert may lag briefly right after OAuth completion; continue
+        // and rely on cart query result instead of hard-failing to an empty cart.
+        console.warn('[useSupabaseCart] Profile not ready yet; continuing cart fetch');
       }
 
       const { data, error: supabaseError } = await supabase
@@ -320,6 +321,22 @@ export function useSupabaseCart(userId: string | null) {
 
     return () => {
       cancelled = true;
+    };
+  }, [userId, fetchCart]);
+
+  useEffect(() => {
+    if (!userId || typeof window === 'undefined') return;
+
+    const onCartChanged = () => {
+      void fetchCart();
+    };
+
+    window.addEventListener('cartMerged', onCartChanged);
+    window.addEventListener('cartUpdated', onCartChanged);
+
+    return () => {
+      window.removeEventListener('cartMerged', onCartChanged);
+      window.removeEventListener('cartUpdated', onCartChanged);
     };
   }, [userId, fetchCart]);
 

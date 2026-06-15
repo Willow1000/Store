@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
-import { 
-  ChevronRight, Lock, Truck, AlertCircle, Check, 
+import {
+  ChevronRight, Lock, Truck, AlertCircle, Check,
   CreditCard, Apple, Globe, Eye, EyeOff
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,12 +15,42 @@ import { supabase } from '@/lib/supabase';
 import { getHighResImageUrl } from '@/lib/images';
 import { COUNTRY_PHONE_OPTIONS, DEFAULT_PHONE_COUNTRY, buildInternationalPhoneNumber, formatLocalPhoneNumber, getCountryPhoneLabel, normalizeLocalPhoneDigits } from '@/lib/countryPhone';
 import { calculateShipping } from '@shared/shipping';
+import { calculateVariableVat } from '@/lib/vat';
 import currencyClient from '@/lib/currencyClient';
 import { isMetaCheckoutRequest, parseMetaCouponPercent, parseMetaCheckoutParams, parseMetaProductsParam } from '@/lib/metaCheckout';
 import { sanitizeEmail, sanitizePhone, sanitizePhoneInput, sanitizePostalCode, sanitizeText, sanitizeTextInput, sanitizeName, sanitizeNameInput } from '@shared/sanitize';
 import { InlineCheckoutAuth } from '@/components/InlineCheckoutAuth';
 
 const CHECKOUT_CART_SNAPSHOT_KEY = 'checkout-cart-snapshot-v1';
+
+type CartItem = {
+  product_id: string;
+  title: string;
+  price: string;
+  image: string;
+  quantity: number;
+};
+
+type CheckoutFormData = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  phoneCountry: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+};
+
+type PaymentMethod = {
+  id: 'visa' | 'mastercard' | 'applePay';
+  name: string;
+  icon: ReactNode;
+  description: string;
+  disabled?: boolean;
+};
 
 function readCheckoutSnapshot(): CartItem[] {
   try {
@@ -364,8 +394,9 @@ export default function Checkout() {
   const [appliedOfferData, setAppliedOfferData] = useState<any | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
+  const paymentCallbackHandledRef = useRef(false);
 
-  const [formData, setFormData] = useState<FormData>(() => {
+  const [formData, setFormData] = useState<CheckoutFormData>(() => {
     try {
       const saved = localStorage.getItem('checkout-form-data');
       if (saved) {
@@ -490,21 +521,95 @@ export default function Checkout() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    if (paymentCallbackHandledRef.current) return;
+
     const params = new URLSearchParams(window.location.search);
     const paymentState = params.get('payment');
     const reference = params.get('reference');
+    const rawStatus = params.get('status');
 
     if (paymentState === 'failed') {
+      paymentCallbackHandledRef.current = true;
       toast.error(reference ? `Payment failed for reference ${reference}` : 'Payment failed');
       setStep('review');
       return;
     }
 
+    if (paymentState === 'pending') {
+      paymentCallbackHandledRef.current = true;
+      const statusLabel = rawStatus ? ` (${rawStatus})` : '';
+      toast.error(`Payment is not completed yet${statusLabel}. Please complete payment and try again.`);
+      setStep('review');
+      return;
+    }
+
+    if (paymentState === 'needs_auth') {
+      paymentCallbackHandledRef.current = true;
+      toast.error('Please sign in to complete your order for this verified payment.');
+      setStep('shipping');
+      return;
+    }
+
     if (paymentState === 'success') {
+      paymentCallbackHandledRef.current = true;
+      (async () => {
+        if (isAuthenticated) {
+          try {
+            await clearSupabaseCart();
+          } catch (err) {
+            console.warn('[Checkout] Failed to clear Supabase cart after success callback:', err);
+          }
+        }
+        localStorage.removeItem('cart');
+        localStorage.removeItem(CHECKOUT_CART_SNAPSHOT_KEY);
+        window.dispatchEvent(new Event('cartUpdated'));
+      })();
       toast.success('Payment completed successfully');
       navigate('/orders');
+      return;
     }
-  }, [navigate]);
+
+    // Fallback: if Paystack returns only `reference` without our `payment` state,
+    // verify the transaction and map to the same UX states.
+    if (!paymentState && reference) {
+      paymentCallbackHandledRef.current = true;
+      (async () => {
+        try {
+          const verification = await trpcClient.paystack.transactions.verify.query({ reference });
+          const status = String((verification as any)?.data?.status || '').toLowerCase();
+
+          if (status === 'success') {
+            if (isAuthenticated) {
+              try {
+                await clearSupabaseCart();
+              } catch (err) {
+                console.warn('[Checkout] Failed to clear Supabase cart after verified reference:', err);
+              }
+            }
+            localStorage.removeItem('cart');
+            localStorage.removeItem(CHECKOUT_CART_SNAPSHOT_KEY);
+            window.dispatchEvent(new Event('cartUpdated'));
+            toast.success('Payment completed successfully');
+            navigate('/orders');
+            return;
+          }
+
+          if (['ongoing', 'pending', 'processing', 'queued'].includes(status)) {
+            toast.error(`Payment is not completed yet (${status}). Please complete payment and try again.`);
+            setStep('review');
+            return;
+          }
+
+          toast.error(reference ? `Payment failed for reference ${reference}` : 'Payment failed');
+          setStep('review');
+        } catch (verifyErr) {
+          console.error('[Checkout] Failed to verify payment reference from URL:', verifyErr);
+          toast.error('Unable to verify payment reference. Please try again.');
+          setStep('review');
+        }
+      })();
+    }
+  }, [navigate, clearSupabaseCart, isAuthenticated]);
 
   // Persist formData to localStorage
   useEffect(() => {
@@ -664,6 +769,15 @@ export default function Checkout() {
   ) / 100;
 
   const shipping = calculateShipping(subtotal);
+  const vatSummary = calculateVariableVat(
+    cartItems.map((item) => ({
+      productId: item.product_id,
+      title: item.title,
+      unitPrice: parseFloat(item.price.replace(/[^\d.]/g, '') || '0'),
+      quantity: item.quantity,
+    }))
+  );
+  const vat = vatSummary.totalVat;
 
   const resolvedOffer = trpc.offers.resolve.useQuery(
     { code: metaCoupon || '', subtotal },
@@ -684,7 +798,8 @@ export default function Checkout() {
     : legacyCouponPercent > 0 && metaCoupon
       ? `Coupon (${metaCoupon})`
       : null;
-  const total = Math.round((subtotal + shipping - offerDiscountAmount) * 100) / 100; // Ensure final total is precise
+  const cartGrandTotal = Math.round((subtotal + vat) * 100) / 100;
+  const total = Math.round((subtotal + shipping + vat - offerDiscountAmount) * 100) / 100; // Ensure final total is precise
 
   const paymentMethods: PaymentMethod[] = [
     {
@@ -944,18 +1059,34 @@ export default function Checkout() {
 
       // Tutorial 2: Generate unique reference (Tutorial 3 UUID approach)
       const paymentReference = generateUUID();
+      const provisionalOrderId = `ORD-${Date.now()}`;
 
-      // Tutorial 2: Initialize transaction on server first
-      const initResponse = await trpcClient.paystack.transactions.initialize.mutate({
+      const paystackInitPayload = {
         email: sanitizeEmail(formData.email, 255),
-        amount: Math.round(total * 100), // Convert USD total to cents
+        amount: Math.round(total * 100), // Convert USD total to cents (Paystack expects cents for USD)
         reference: paymentReference,
-        currency: 'USD',
+        currency: 'USD', // Always USD
+        channels: ['card'],
         description: `Order from Modern E-commerce - ${cartItems.length} items`,
         metadata: {
+          userDbId: typeof user?.id === 'number' ? user.id : undefined,
+          userOpenId:
+            typeof (user as any)?.openId === 'string'
+              ? (user as any).openId
+              : typeof user?.id === 'string'
+                ? user.id
+                : undefined,
+          custom_fields: [
+            {
+              display_name: 'Order ID',
+              variable_name: 'order_id',
+              value: provisionalOrderId,
+            },
+          ],
+          orderId: provisionalOrderId,
           subtotal,
           shipping,
-          tax: 0,
+          tax: vat,
           discountAmount: offerDiscountAmount,
           total,
           name: `${sanitizeName(formData.firstName, 60)} ${sanitizeName(formData.lastName, 60)}`.trim(),
@@ -985,7 +1116,10 @@ export default function Checkout() {
           utmCampaign: metaParams.utm_campaign,
           utmContent: metaParams.utm_content,
         },
-      });
+      };
+
+      // Tutorial 2: Initialize transaction on server first
+      const initResponse = await trpcClient.paystack.transactions.initialize.mutate(paystackInitPayload);
 
 
 
@@ -1826,13 +1960,17 @@ export default function Checkout() {
                     {shipping === 0 ? t('checkout.free', 'FREE') : `${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(shipping).toFixed(2)}`}
                   </span>
                 </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">{t('checkout.vat', 'V.A.T')}</span>
+                  <span className="font-medium text-gray-900">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(vat).toFixed(2)}`}</span>
+                </div>
               </div>
 
               {/* Total */}
               <div className="mb-8">
                 <div className="flex justify-between items-baseline">
                   <span className="text-gray-600">{t('checkout.total', 'Total')}</span>
-                    <span className="text-3xl font-bold text-black">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(total).toFixed(2)}`}</span>
+                    <span className="text-3xl font-bold text-black">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(cartGrandTotal).toFixed(2)}`}</span>
                 </div>
               </div>
 

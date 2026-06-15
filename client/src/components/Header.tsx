@@ -7,16 +7,18 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { toast } from 'sonner';
 import { BrandLogo } from '@/components/BrandLogo';
 import { readCartFromStorage } from '@/lib/cart';
-
-const t = (_key: string, fallback: string) => fallback;
+import { SITE_LANGUAGE_CHANGED_EVENT, SUPPORTED_SITE_LANGUAGES, getSiteLanguage, setSiteLanguage, translateText, type SiteLanguageCode } from '@/lib/language';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [language, setLanguage] = useState<SiteLanguageCode>(() => getSiteLanguage());
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const { user, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
+
+  const t = (key: string, fallback: string) => translateText(language, key, fallback);
 
   const handleLogout = async () => {
     try {
@@ -65,6 +67,16 @@ export default function Header() {
     };
   }, []);
 
+  useEffect(() => {
+    const onLanguageChanged = () => setLanguage(getSiteLanguage());
+    window.addEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
+    window.addEventListener('storage', onLanguageChanged);
+    return () => {
+      window.removeEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
+      window.removeEventListener('storage', onLanguageChanged);
+    };
+  }, []);
+
   return (
     <header className="sticky top-0 left-0 right-0 z-50 border-b border-gray-200 bg-white shadow-sm w-full">
       {/* Top Navigation */}
@@ -76,13 +88,33 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center gap-8 flex-1 justify-center mx-4">
-          <Link href="/products" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Products</Link>
-          <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">About</Link>
-          <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Contact</Link>
+          <Link href="/products" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">{t('header.products', 'Products')}</Link>
+          <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">{t('header.about', 'About')}</Link>
+          <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">{t('header.contact', 'Contact')}</Link>
         </div>
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          <label className="hidden sm:flex items-center gap-2 text-xs text-gray-700">
+            <span>Lang</span>
+            <select
+              value={language}
+              onChange={(e) => {
+                const next = e.target.value as SiteLanguageCode;
+                setSiteLanguage(next);
+                setLanguage(next);
+              }}
+              className="rounded border border-gray-300 bg-white px-2 py-1 text-xs"
+              aria-label="Select language"
+            >
+              {SUPPORTED_SITE_LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.nativeName}
+                </option>
+              ))}
+            </select>
+          </label>
+
           {/* Cart Icon - always show for guests and authenticated users */}
           <Link href="/cart" className="relative flex items-center gap-1 sm:gap-2 text-sm font-medium hover:text-gray-600">
             <ShoppingCart size={20} className="sm:w-5 sm:h-5" />
@@ -145,7 +177,7 @@ export default function Header() {
               Home
             </Link>
             <Link href="/products" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-              Products
+              {t('header.products', 'Products')}
             </Link>
             {isAuthenticated && (
               <>
@@ -161,11 +193,30 @@ export default function Header() {
               </>
             )}
             <Link href="/about" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-              About
+              {t('header.about', 'About')}
             </Link>
             <Link href="/contact" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-              Contact
+              {t('header.contact', 'Contact')}
             </Link>
+            <div className="px-3 py-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Language</label>
+              <select
+                value={language}
+                onChange={(e) => {
+                  const next = e.target.value as SiteLanguageCode;
+                  setSiteLanguage(next);
+                  setLanguage(next);
+                }}
+                className="w-full rounded border border-gray-300 bg-white px-2 py-2 text-sm"
+                aria-label="Select language"
+              >
+                {SUPPORTED_SITE_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.nativeName}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="border-t border-gray-200 pt-3">
               <Link href="/help" className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
                 Help

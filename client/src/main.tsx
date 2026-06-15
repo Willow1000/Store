@@ -15,12 +15,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import currencyClient from './lib/currencyClient';
+import { initializeSiteLanguage } from './lib/language';
 import superjson from "superjson";
 import App from "./App";
 import { supabase } from "@/lib/supabase";
 import "./index.css";
 
 const queryClient = new QueryClient();
+let authBootstrapComplete = false;
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
@@ -30,13 +32,25 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
-  window.dispatchEvent(
-    new CustomEvent('auth:required', {
-      detail: {
-        redirectTo: `${window.location.pathname}${window.location.search}`,
-      },
-    })
-  );
+  // During refresh or third-party redirects, tRPC requests can race ahead of
+  // session restoration. Avoid forcing auth UI until bootstrap confirms
+  // whether a session truly exists.
+  if (!authBootstrapComplete) return;
+
+  void supabase.auth.getSession().then(({ data: { session } }) => {
+    // If a session exists, this unauthorized state is transient; let the app recover.
+    if (session?.access_token) {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('auth:required', {
+        detail: {
+          redirectTo: `${window.location.pathname}${window.location.search}`,
+        },
+      })
+    );
+  });
 };
 
 queryClient.getQueryCache().subscribe(event => {
@@ -90,17 +104,19 @@ const trpcClient = trpc.createClient({
 
 (async () => {
   try {
+    // Restore auth session before mounting so protected requests do not fire
+    // in a transient unauthenticated state after refresh.
+    try {
+      await supabase.auth.getSession();
+    } catch (sessionErr) {
+      console.warn('[auth] initial session bootstrap failed', sessionErr);
+    } finally {
+      authBootstrapComplete = true;
+    }
+
     // Initialize currency/geolocation once before mounting the app
     await currencyClient.init();
-    // Dev helper: report detected currency and rate to console for debugging
-    try {
-      console.info('[currencyClient] detected', {
-        code: currencyClient.getCurrencyCode(),
-        rate: currencyClient.getCurrencyRate(),
-      });
-    } catch (e) {
-      // ignore
-    }
+    initializeSiteLanguage(currencyClient.getGeoData());
   } catch (e) {
     console.warn('[currencyClient] initialization failed', e);
   }

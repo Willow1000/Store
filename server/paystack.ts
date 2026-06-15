@@ -14,6 +14,7 @@ interface PaystackInitializeTransactionPayload {
   currency?: string;
   description?: string;
   metadata?: Record<string, unknown>;
+  channels?: string[];
   callback_url?: string;
 }
 
@@ -48,7 +49,21 @@ async function paystackRequest<T>(path: string, init: RequestInit = {}): Promise
     },
   });
 
-  const data = await response.json();
+  let data: any;
+  try {
+    const text = await response.text();
+    if (!text) {
+      throw new Error('Empty response body');
+    }
+    data = JSON.parse(text);
+  } catch (parseError) {
+    const statusText = response.statusText || `HTTP ${response.status}`;
+    console.error('[Paystack] Response parse error:', parseError);
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Paystack API error (${statusText}): Invalid JSON response`,
+    });
+  }
 
   if (!response.ok) {
     throw new TRPCError({
@@ -86,8 +101,9 @@ export async function initializeTransaction(
       email: payload.email,
       amount: payload.amount,
       reference,
+      currency: payload.currency || 'USD',
       callback_url: payload.callback_url || process.env.PAYSTACK_CALLBACK_URL || undefined,
-      ...(payload.currency ? { currency: payload.currency } : {}),
+      ...(payload.channels && payload.channels.length > 0 ? { channels: payload.channels } : {}),
       ...(payload.description ? { description: payload.description } : {}),
       ...(payload.metadata ? { metadata: payload.metadata } : {}),
     }),

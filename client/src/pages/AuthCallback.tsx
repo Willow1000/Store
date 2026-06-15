@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { supabase } from '@/lib/supabase';
+import { trpcClient } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { executePendingAuthAction, getPendingAuthAction } from '@/lib/authPendingAction';
 
@@ -36,25 +37,12 @@ export default function AuthCallback() {
         
         // Sync OAuth user to backend database
         try {
-          const response = await fetch('/api/trpc/auth.syncOAuthUser', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              json: {
-                id: user.id,
-                email: user.email,
-                name: user.user_metadata?.name,
-                loginMethod: user.user_metadata?.provider === 'google' ? 'google' : user.user_metadata?.provider || 'email',
-              },
-            }),
+          await trpcClient.auth.syncOAuthUser.mutate({
+            id: user.id,
+            email: user.email,
+            name: user.user_metadata?.name,
+            loginMethod: user.user_metadata?.provider === 'google' ? 'google' : user.user_metadata?.provider || 'email',
           });
-
-          if (!response.ok) {
-            console.warn('Failed to sync user to backend:', response.status);
-            // Continue anyway - user is authenticated with Supabase
-          }
         } catch (syncError) {
           console.warn('Error syncing user to backend:', syncError);
           // Continue anyway - user is authenticated with Supabase

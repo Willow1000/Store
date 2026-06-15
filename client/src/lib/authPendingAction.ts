@@ -107,6 +107,8 @@ async function upsertCartItem(userId: string, productId: string, quantity: numbe
     return;
   }
 
+  // Attempt atomic insert; if a concurrent request inserted it first,
+  // catch the constraint violation and update instead
   const { error: insertError } = await supabase
     .from('cart_items')
     .insert({
@@ -115,7 +117,30 @@ async function upsertCartItem(userId: string, productId: string, quantity: numbe
       quantity: nextQuantity,
     });
 
-  if (insertError) throw insertError;
+  // If insert failed due to unique constraint, another request beat us to the insert
+  // Fetch the current quantity and add our quantity to it
+  if (insertError) {
+    if (insertError.code === '23505') {
+      const { data: updateItem, error: refetchError } = await supabase
+        .from('cart_items')
+        .select('id, quantity')
+        .eq('user_id', userId)
+        .eq('product_id', productId)
+        .maybeSingle();
+
+      if (refetchError) throw refetchError;
+      if (!updateItem?.id) throw new Error('Cart item not found after concurrent insert');
+
+      const { error: updateError } = await supabase
+        .from('cart_items')
+        .update({ quantity: (updateItem.quantity || 0) + nextQuantity })
+        .eq('id', updateItem.id);
+
+      if (updateError) throw updateError;
+      return;
+    }
+    throw insertError;
+  }
 }
 
 /**
@@ -126,6 +151,9 @@ async function upsertCartItem(userId: string, productId: string, quantity: numbe
  * @param userId - The authenticated user's ID
  * @throws Error if merging fails or stock is insufficient
  */
+// Guard to prevent concurrent merge operations
+let mergeInProgress = false;
+
 async function mergeGuestCartWithUserCart(userId: string): Promise<void> {
   if (typeof window !== 'undefined') {
     try {
@@ -139,8 +167,15 @@ async function mergeGuestCartWithUserCart(userId: string): Promise<void> {
     } catch (e) {}
   }
 
-  const localCartJson = typeof window !== 'undefined' ? localStorage.getItem('cart') : null;
-  const guestCartItems = readCartFromStorage(localCartJson);
+  // Prevent concurrent merges - if already in progress, wait for it
+  if (mergeInProgress) {
+    return;
+  }
+
+  mergeInProgress = true;
+  try {
+    const localCartJson = typeof window !== 'undefined' ? localStorage.getItem('cart') : null;
+    const guestCartItems = readCartFromStorage(localCartJson);
   
   if (guestCartItems.length === 0) {
     // No guest cart items to merge
@@ -165,23 +200,26 @@ async function mergeGuestCartWithUserCart(userId: string): Promise<void> {
     }
   }
 
-  // Clear localStorage cart after successful merge to prevent duplication
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('cart');
-    try { localStorage.removeItem('isMigratingCart'); } catch (e) {}
-    try {
-      const w = window as any;
-      if (w.__resolveCartMigration) {
-        try { w.__resolveCartMigration(); } catch (e) {}
-        try { delete w.__resolveCartMigration; } catch (e) {}
-        try { delete w.__cartMigrationPromise; } catch (e) {}
-      }
-    } catch (e) {}
-    window.dispatchEvent(new Event('cartMerged'));
-  }
+    // Clear localStorage cart after successful merge to prevent duplication
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('cart');
+      try { localStorage.removeItem('isMigratingCart'); } catch (e) {}
+      try {
+        const w = window as any;
+        if (w.__resolveCartMigration) {
+          try { w.__resolveCartMigration(); } catch (e) {}
+          try { delete w.__resolveCartMigration; } catch (e) {}
+          try { delete w.__cartMigrationPromise; } catch (e) {}
+        }
+      } catch (e) {}
+      window.dispatchEvent(new Event('cartMerged'));
+    }
 
-  // Notify UI that cart has been updated
-  window.dispatchEvent(new Event('cartUpdated'));
+    // Notify UI that cart has been updated
+    window.dispatchEvent(new Event('cartUpdated'));
+  } finally {
+    mergeInProgress = false;
+  }
 }
 
 /**
