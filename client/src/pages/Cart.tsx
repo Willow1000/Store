@@ -11,8 +11,8 @@ import { useProducts } from '@/hooks/useSupabaseProducts';
 import { getHighResImageUrl } from '@/lib/images';
 import { calculateShipping } from '@shared/shipping';
 import currencyClient from '@/lib/currencyClient';
-
-const t = (_key: string, fallback: string) => fallback;
+import { calculateVariableVat } from '@/lib/vat';
+import { SITE_LANGUAGE_CHANGED_EVENT, getSiteLanguage, translateText, type SiteLanguageCode } from '@/lib/language';
 
 interface CartItem {
   productId?: string;
@@ -44,6 +44,9 @@ export default function Cart() {
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [language, setLanguage] = useState<SiteLanguageCode>(() => getSiteLanguage());
+
+  const t = (key: string, fallback: string) => translateText(language, key, fallback);
 
   // Load cart items from localStorage
   useEffect(() => {
@@ -57,6 +60,16 @@ export default function Cart() {
     setCartItems(items);
     setIsLoading(false);
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    const onLanguageChanged = () => setLanguage(getSiteLanguage());
+    window.addEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
+    window.addEventListener('storage', onLanguageChanged);
+    return () => {
+      window.removeEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
+      window.removeEventListener('storage', onLanguageChanged);
+    };
+  }, []);
 
   const effectiveCartItems: CartItem[] = isAuthenticated
     ? supabaseCartItems.map((item) => ({
@@ -137,7 +150,15 @@ export default function Cart() {
   }, 0);
 
   const shipping = calculateShipping(subtotal);
-  const vat = subtotal * 0.08;
+  const vatSummary = calculateVariableVat(
+    effectiveCartItems.map((item) => ({
+      productId: item.productId ? String(item.productId) : String(item.productIndex),
+      title: item.title,
+      unitPrice: parseFloat(item.price.replace(/[^\d.]/g, '') || '0'),
+      quantity: item.quantity,
+    }))
+  );
+  const vat = vatSummary.totalVat;
   const total = subtotal + shipping + vat;
 
   if (isLoading || (isAuthenticated && isSupabaseLoading)) {
@@ -200,6 +221,35 @@ export default function Cart() {
         <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-secondary py-12 sm:py-16">
           <p className="mb-4 text-lg sm:text-xl font-semibold text-gray-900">{t('cart.empty', 'Your cart is empty')}</p>
           <p className="mb-8 text-sm sm:text-base text-gray-600 text-center max-w-sm">{t('cart.startShopping', 'Start shopping to add items to your cart')}</p>
+
+          {!isAuthenticated && (
+            <div className="mb-6 w-full max-w-md flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+              <p className="text-sm text-blue-900 text-center">
+                Sign in to access your account cart and saved items.
+              </p>
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.setItem('oauth_return_to', '/cart');
+                  } catch {
+                    // ignore storage issues
+                  }
+                  window.dispatchEvent(
+                    new CustomEvent('auth:required', {
+                      detail: {
+                        actionType: 'cart',
+                        redirectTo: '/cart',
+                      },
+                    })
+                  );
+                }}
+                className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+              >
+                Login to Access Cart
+              </button>
+            </div>
+          )}
+
           <Link href="/products">
             <a className="inline-flex items-center gap-2 px-6 py-3 sm:py-3.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base">
               {t('header.browseProducts', 'Browse Products')}
@@ -215,6 +265,34 @@ export default function Cart() {
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <div className="container px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <h1 className="mb-6 sm:mb-8 text-3xl sm:text-4xl font-bold text-gray-900">{t('common.cart', 'Shopping Cart')}</h1>
+
+        {!isAuthenticated && (
+          <div className="mb-6 flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-blue-900">
+              Sign in to access your account cart and saved items.
+            </p>
+            <button
+              onClick={() => {
+                try {
+                  localStorage.setItem('oauth_return_to', '/cart');
+                } catch {
+                  // ignore storage issues
+                }
+                window.dispatchEvent(
+                  new CustomEvent('auth:required', {
+                    detail: {
+                      actionType: 'cart',
+                      redirectTo: '/cart',
+                    },
+                  })
+                );
+              }}
+              className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+            >
+              Login to Access Cart
+            </button>
+          </div>
+        )}
 
         <div className="grid gap-6 md:gap-8 md:grid-cols-3">
           {/* Cart Items */}
@@ -244,7 +322,7 @@ export default function Cart() {
                   {/* Product Info */}
                   <div className="flex-1">
                     <Link href={`/product/${item.productId || item.productIndex}`}>
-                      <a className="font-semibold hover:text-blue-600 line-clamp-2">{item.title}</a>
+                      <span className="font-semibold hover:text-blue-600 line-clamp-2">{item.title}</span>
                     </Link>
                     <p className="mb-3 text-sm text-gray-600">
                       {currencyClient.formatUSD(parseFloat(item.price.replace(/[^\d.]/g, '') || '0'))}
@@ -319,7 +397,9 @@ export default function Cart() {
                 </span>
               </div>
               <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-600">{t('checkout.vat', 'V.A.T')} (8%)</span>
+                <span className="text-gray-600">
+                  {t('checkout.vat', 'V.A.T')} ({(vatSummary.weightedAverageRate * 100).toFixed(2)}%, max {(vatSummary.maxRate * 100).toFixed(0)}%)
+                </span>
                 <span className="font-semibold">{currencyClient.formatUSD(vat)}</span>
               </div>
             </div>

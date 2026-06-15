@@ -5,6 +5,7 @@ import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getProducts, getProductById, getFeaturedProducts, getNewArrivals, getDeals, getTrendingProducts, getUserCart, addToCart, getUserOrders, createOrder, getCategories, createNotification, getUserNotifications, getUserWishlist, addToWishlist, removeFromWishlist, upsertUser, resolveOfferByCode } from "./db";
 import { initializeTransaction, verifyTransaction } from "./paystack";
+import { TRPCError } from "@trpc/server";
 
 function getRequestOrigin(req: { header: (name: string) => string | undefined; protocol?: string }): string | null {
   const forwardedProto = req.header('x-forwarded-proto')?.split(',')[0]?.trim();
@@ -149,6 +150,7 @@ export const appRouter = router({
           reference: z.string().optional(),
           currency: z.string().optional(),
           description: z.string().optional(),
+          channels: z.array(z.string()).optional(),
           metadata: z.record(z.string(), z.unknown()).optional(),
         }))
         .mutation(async ({ input, ctx }) => {
@@ -160,7 +162,7 @@ export const appRouter = router({
             });
           } catch (err: any) {
             console.error("[Paystack Initialize] Error:", err && (err.message || String(err)));
-            throw new TRPCError4({
+            throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
               message: err instanceof Error ? err.message : "Paystack initialization failed",
             });

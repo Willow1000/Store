@@ -9,10 +9,8 @@ import { createContext } from "./context";
 import { registerOAuthRoutes } from "./oauth";
 import { verifyTransaction, initializeTransaction } from "../paystack";
 import { sdk } from "./sdk";
-import { COOKIE_NAME } from "@shared/const";
-import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
-import { getDb, createOrder, createPayment, getUserById, resolveOfferByCode, recordProductSearchTrackingEvent, recentSimilarTrackingExists } from "../db";
+import { getDb, createOrder, createPayment, getUserById, getUserByOpenId, resolveOfferByCode, recordProductSearchTrackingEvent, recentSimilarTrackingExists, clearUserCart } from "../db";
 import { sendContactConfirmationEmail, sendTicketConfirmationEmail, sendContactAdminNotification } from "./emailService";
 import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeName, sanitizePhone, sanitizeText } from "@shared/sanitize";
 
@@ -405,30 +403,9 @@ export function createApp() {
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 
-  // Dev-only debug endpoint to inspect session cookie and verification.
-  if (process.env.NODE_ENV !== 'production') {
-    app.get('/api/debug/session', async (req, res) => {
-      try {
-        const cookieHeader = req.headers.cookie ?? null;
-        const parsed = cookieHeader ? parseCookieHeader(cookieHeader) : {};
-        const sessionCookie = parsed[COOKIE_NAME];
-        const verified = await sdk.verifySession(sessionCookie ?? null);
-        return res.json({
-          cookieHeader,
-          parsedCookies: parsed,
-          sessionCookie: Boolean(sessionCookie),
-          verifiedSession: verified,
-        });
-      } catch (err) {
-        console.error('[Debug] /api/debug/session error', err);
-        return res.status(500).json({ error: 'debug endpoint failed' });
-      }
-    });
-  }
-
   // Paystack redirect callback: verify reference and create order for authenticated user
   app.get('/payment/callback', async (req: express.Request, res: express.Response) => {
-    const reference = String(req.query.reference ?? req.query.reference ?? '');
+    const reference = String(req.query.reference ?? '');
     if (!reference) {
       return res.status(400).send('Missing reference');
     }
@@ -441,13 +418,25 @@ export function createApp() {
         return res.status(502).send('Failed to verify transaction');
       }
 
-      const status = (verification.data as any).status;
+      const status = String((verification.data as any).status || '').toLowerCase();
       if (status !== 'success') {
+        const pendingStatuses = new Set(['ongoing', 'pending', 'processing', 'queued']);
+        const failedStatuses = new Set(['abandoned', 'failed', 'reversed']);
+        const paymentState = pendingStatuses.has(status)
+          ? 'pending'
+          : failedStatuses.has(status)
+            ? 'failed'
+            : 'failed';
         console.warn('[Paystack] Transaction not successful:', reference, status);
-        return res.redirect(`/checkout?payment=failed&reference=${encodeURIComponent(reference)}`);
+        return res.redirect(`/checkout?payment=${paymentState}&reference=${encodeURIComponent(reference)}&status=${encodeURIComponent(status)}`);
       }
 
-      // Try to authenticate the user via SDK session cookie
+      const paystackData = verification.data as any;
+      const paymentMetadata = (paystackData.metadata && typeof paystackData.metadata === 'object') ? paystackData.metadata : {};
+
+      // Try to authenticate the user via SDK session cookie first.
+      // If the browser session is not available after third-party redirects,
+      // fall back to verified metadata identifiers attached at initialization.
       let userId: number | null = null;
       try {
         const user = await sdk.authenticateRequest(req as any);
@@ -457,14 +446,31 @@ export function createApp() {
       }
 
       if (!userId) {
+        const metadataDbUserId = Number((paymentMetadata as any).userDbId ?? (paymentMetadata as any).userId ?? NaN);
+        if (Number.isFinite(metadataDbUserId) && metadataDbUserId > 0) {
+          userId = metadataDbUserId;
+        }
+      }
+
+      if (!userId) {
+        const metadataUserOpenId = String((paymentMetadata as any).userOpenId || '').trim();
+        if (metadataUserOpenId) {
+          try {
+            const dbUser = await getUserByOpenId(metadataUserOpenId);
+            if (dbUser?.id) userId = dbUser.id;
+          } catch (lookupErr) {
+            console.warn('[Payment Callback] Failed metadata openId user lookup:', lookupErr);
+          }
+        }
+      }
+
+      if (!userId) {
         console.error('[Payment Callback] Cannot create order without authenticated user');
         return res.redirect(`/checkout?payment=needs_auth&reference=${encodeURIComponent(reference)}`);
       }
 
-      const paystackData = verification.data as any;
       const amountCents = paystackData.amount as number;
       const totalAmount = Number((amountCents / 100).toFixed(2));
-      const paymentMetadata = (paystackData.metadata && typeof paystackData.metadata === 'object') ? paystackData.metadata : {};
       const subtotalAmount = Number(paymentMetadata.subtotal ?? totalAmount);
       const shippingCost = Number(paymentMetadata.shipping ?? 0);
       const taxAmount = Number(paymentMetadata.tax ?? 0);
@@ -553,6 +559,13 @@ export function createApp() {
         return res.status(500).send('Payment recorded but failed to create order');
       }
 
+      // STEP 3: Clear cart after confirmed payment and successful order creation.
+      try {
+        await clearUserCart(userId);
+      } catch (clearCartErr) {
+        console.error('[Payment Callback] Failed to clear cart:', clearCartErr);
+      }
+
       // Redirect to a success page (client can show order details by reference)
       return res.redirect(`/checkout?payment=success&reference=${encodeURIComponent(reference)}`);
     } catch (err) {
@@ -630,7 +643,6 @@ export function createApp() {
       });
 
       if (isRecentDuplicate) {
-        console.info('[Track] Skipping recent duplicate event');
         return res.status(200).json({ success: true });
       }
 

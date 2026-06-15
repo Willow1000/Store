@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 import { clearPendingAuthAction } from "@/lib/authPendingAction";
-import { SESSION_DURATION_MS } from "@/const";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -41,22 +40,9 @@ export function useAuth(options?: UseAuthOptions) {
   const expireIfNeeded = useCallback(async (session: any) => {
     if (!session) return;
 
-    const now = Date.now();
-    const startedAt = getSessionStartedAt() ?? now;
-
+    // Keep refresh/session continuity stable and rely on Supabase token expiry/refresh.
     if (!getSessionStartedAt()) {
-      setSessionStartedAt(startedAt);
-      return;
-    }
-
-    if (now - startedAt <= SESSION_DURATION_MS) {
-      return;
-    }
-
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.warn('[useAuth] Failed to sign out after session expiry window', error);
+      setSessionStartedAt(Date.now());
     }
   }, []);
 
@@ -109,6 +95,8 @@ export function useAuth(options?: UseAuthOptions) {
           if (isMounted) {
             setSessionRestored(true);
           }
+          // Ensure auth.me runs again after Supabase restores session on refresh.
+          utils.auth.me.invalidate();
         }
 
         if (event === 'SIGNED_OUT') {
@@ -184,7 +172,9 @@ export function useAuth(options?: UseAuthOptions) {
     retry: true,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     refetchOnWindowFocus: true,
-    enabled: true, // Always fetch me() so cookie-based server sessions are respected
+    // Avoid firing protected auth checks before the initial session restore
+    // completes, which can look like a logout during refresh.
+    enabled: sessionRestored,
     staleTime: 0, // Always consider it stale so it refetches
   });
 

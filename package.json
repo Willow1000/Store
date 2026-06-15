@@ -4,7 +4,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "sh -c \"vite --config vite.config.ts & NODE_ENV=development tsx watch server/_core/index.ts\"",
+    "dev": "sh -c \"vite --config vite.config.ts & PORT=3001 NODE_ENV=development pnpm exec tsx watch server/_core/index.ts\"",
     "build": "vite build && esbuild server/_core/prod.ts --platform=node --bundle --format=cjs --outfile=dist/index.cjs --external:better-sqlite3 --external:sqlite3",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc --noEmit",

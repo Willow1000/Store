@@ -146,3 +146,6 @@ tools/scraper/node_modules/
 
 scraper.txt
 *.md
+.claude
+*graphify*
+*.md

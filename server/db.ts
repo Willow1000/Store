@@ -242,6 +242,12 @@ export async function addToCart(userId: number, productId: number, variantId?: n
   return result;
 }
 
+export async function clearUserCart(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  return db.delete(cartItems).where(eq(cartItems.userId, userId));
+}
+
 // Order queries
 export async function getUserOrders(userId: number) {
   const db = await getDb();
