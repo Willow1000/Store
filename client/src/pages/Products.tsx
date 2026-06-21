@@ -91,6 +91,9 @@ export default function Products() {
   const { brands, isLoading: brandsLoading, error: brandsError } = useBrands();
   const { products: categoryProducts, isLoading: isCategoryLoading } = useProductsBySlug(categoryFilter);
   const categoryQueryValue = normalizeCategoryValue(getCategoryFromUrl());
+  const canonicalUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/products`
+    : '/products';
 
   const brandsWithLogos = useMemo(
     () => brands.filter((brand) => Boolean(brand.image_url && brand.image_url.trim())),
@@ -711,6 +714,13 @@ export default function Products() {
   ]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const paginationPages = useMemo<(number | string)[]>(() => {
+    if (totalPages <= 8) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    return [1, 2, 3, 4, 5, 6, 7, 'ellipsis', totalPages];
+  }, [totalPages]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -736,11 +746,28 @@ export default function Products() {
     (categoryFilter && isCategoryLoading && categoryProducts.length === 0);
 
   if (shouldShowPageSkeleton) {
-    return <ProductsPageSkeleton />;
+    return (
+      <>
+        <SEOHead
+          title="MotorVault Products | OEM & Aftermarket Automotive Parts"
+          description="Browse MotorVault's complete catalog of automotive parts and accessories. Filter by brand, model, category, condition, price, and availability."
+          keywords={['automotive parts', 'car parts', 'OEM parts', 'aftermarket parts', 'auto accessories']}
+          canonical={canonicalUrl}
+        />
+        <ProductsPageSkeleton />
+      </>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-white w-full overflow-x-hidden">
+    <>
+      <SEOHead
+        title="MotorVault Products | OEM & Aftermarket Automotive Parts"
+        description="Browse MotorVault's complete catalog of automotive parts and accessories. Filter by brand, model, category, condition, price, and availability."
+        keywords={['automotive parts', 'car parts', 'OEM parts', 'aftermarket parts', 'auto accessories']}
+        canonical={canonicalUrl}
+      />
+      <div className="min-h-screen bg-white w-full overflow-x-hidden">
       {/* Header */}
       <div className="border-b border-gray-200 py-6 md:py-8">
         <div className="w-full max-w-full mx-auto px-2 sm:px-3 md:px-4 lg:px-2">
@@ -1274,20 +1301,7 @@ export default function Products() {
                       />
                     </PaginationItem>
 
-                    {Array.from({ length: totalPages }, (_, index) => index + 1)
-                      .filter((page) => {
-                        if (totalPages <= 7) return true;
-                        return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
-                      })
-                      .reduce<Array<number | string>>((acc, page, _, array) => {
-                        const previous = acc[acc.length - 1];
-                        if (typeof previous === 'number' && typeof page === 'number' && page - previous > 1) {
-                          acc.push('ellipsis');
-                        }
-                        acc.push(page);
-                        return acc;
-                      }, [])
-                      .map((page, index) => (
+                    {paginationPages.map((page, index) => (
                         <PaginationItem key={`${page}-${index}`}>
                           {page === 'ellipsis' ? (
                             <span className="flex h-9 w-9 items-center justify-center text-sm text-gray-500">...</span>
@@ -1334,6 +1348,7 @@ export default function Products() {
           onClose={() => setQuickViewProductId(null)}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

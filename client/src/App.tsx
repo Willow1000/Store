@@ -31,6 +31,8 @@ import About from "./pages/About";
 import Accessibility from "./pages/Accessibility";
 import FAQ from "./pages/FAQ";
 import Tickets from "./pages/Tickets";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailed from "./pages/PaymentFailed";
 import { SITE_LANGUAGE_CHANGED_EVENT, getSiteLanguage, getSiteLanguageSource, translateText, type SiteLanguageCode } from "./lib/language";
 import { preloadTranslations, useGlobalAutoTranslation } from "./lib/autoTranslate";
 import currencyClient from "./lib/currencyClient";
@@ -39,6 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { HomePageSkeleton } from "@/components/skeletons/HomePageSkeleton";
 import { ProductsPageSkeleton } from "@/components/skeletons/ProductsPageSkeleton";
 import { ProductDetailSkeleton } from "@/components/skeletons/ProductDetailSkeleton";
+import { AboutPageSkeleton } from "@/components/skeletons/AboutPageSkeleton";
 
 const PRELOAD_DONE_KEY_PREFIX = 'site-translation-preload-done';
 
@@ -89,6 +92,8 @@ function Router() {
       <Route path={"/tickets"} component={Tickets} />
       <Route path={"/accessibility"} component={Accessibility} />
       <Route path={"/faq"} component={FAQ} />
+      <Route path={"/payment/success"} component={PaymentSuccess} />
+      <Route path={"/payment/failed"} component={PaymentFailed} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -107,6 +112,10 @@ function RouteTranslationSkeleton({ path }: { path: string }) {
 
   if (path.startsWith('/product/')) {
     return <ProductDetailSkeleton />;
+  }
+
+  if (path === '/about') {
+    return <AboutPageSkeleton />;
   }
 
   if (path === '/cart') {
@@ -283,8 +292,8 @@ function App() {
       };
     }
 
-    const timer = window.setTimeout(run, 150);
-    return () => window.clearTimeout(timer);
+    const timer = globalThis.setTimeout(run, 150);
+    return () => globalThis.clearTimeout(timer);
   }, [language, preloadedLanguage]);
 
   useEffect(() => {

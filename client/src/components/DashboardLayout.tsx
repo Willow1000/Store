@@ -26,6 +26,7 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { requestAuthenticationForPath } from "@/lib/authRequired";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Page 1", path: "/" },
@@ -47,11 +48,17 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user, isAuthenticated, sessionRestored } = useAuth();
-  const [, setLocation] = useLocation();
+  const authPromptedRef = useRef(false);
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
+
+  useEffect(() => {
+    if (!sessionRestored || loading || isAuthenticated || authPromptedRef.current) return;
+    authPromptedRef.current = true;
+    requestAuthenticationForPath();
+  }, [isAuthenticated, loading, sessionRestored]);
 
   if (loading || !sessionRestored) {
     return <DashboardLayoutSkeleton />
@@ -70,7 +77,7 @@ export default function DashboardLayout({
             </p>
           </div>
           <Button
-            onClick={() => setLocation('/account')}
+            onClick={() => requestAuthenticationForPath()}
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
           >

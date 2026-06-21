@@ -4,14 +4,15 @@ import { supabase } from '@/lib/supabase';
 import { trpcClient } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { executePendingAuthAction, getPendingAuthAction } from '@/lib/authPendingAction';
+import { consumeAuthRedirect, sanitizeInternalRedirect } from '@/lib/authRedirect';
 
 export default function AuthCallback() {
   const [, navigate] = useLocation();
   const [isProcessing, setIsProcessing] = useState(true);
 
-  const clearUrlFragment = () => {
+  const clearCallbackUrl = () => {
     if (typeof window === 'undefined') return;
-    const cleanUrl = `${window.location.pathname}${window.location.search}`;
+    const cleanUrl = window.location.pathname;
     window.history.replaceState({}, document.title, cleanUrl);
   };
 
@@ -19,9 +20,17 @@ export default function AuthCallback() {
     const handleCallback = async () => {
       try {
         // Check if Supabase successfully processed the OAuth callback
-        // Do NOT clear the URL fragment before calling `getSession()` —
-        // Supabase parses tokens from the fragment/hash.
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Do NOT clear the callback URL before calling `getSession()` —
+        // Supabase parses tokens/codes from the current URL.
+        const sessionResult = await supabase.auth.getSession();
+        let session = sessionResult.data.session;
+        let error = sessionResult.error;
+
+        if (!session && typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('code')) {
+          const exchangeResult = await supabase.auth.exchangeCodeForSession(window.location.href);
+          session = exchangeResult.data.session;
+          error = exchangeResult.error;
+        }
         
         if (error || !session) {
           console.error('Auth callback error:', error);
@@ -50,53 +59,47 @@ export default function AuthCallback() {
 
         toast.success(`Welcome, ${user.user_metadata?.name || user.email}!`);
 
-        const handledPendingAction = getPendingAuthAction()
-          ? await executePendingAuthAction(user.id, navigate).catch((pendingActionError) => {
-              const message = pendingActionError instanceof Error
-                ? pendingActionError.message
-                : 'The product is out of stock.';
-              toast.error(message);
-              return false;
-            })
-          : false;
+        const pendingAction = getPendingAuthAction();
+        const savedRedirectTarget = consumeAuthRedirect('/');
+        let pendingActionTarget: string | null = null;
 
-        // If pending action was handled, it already navigated to the correct place
-        if (handledPendingAction) {
-          setIsProcessing(false);
-          return;
+        if (pendingAction) {
+          await executePendingAuthAction(user.id, (to) => {
+            pendingActionTarget = sanitizeInternalRedirect(to);
+          }).catch((pendingActionError) => {
+            const message = pendingActionError instanceof Error
+              ? pendingActionError.message
+              : 'The product is out of stock.';
+            toast.error(message);
+          });
         }
 
-        // Otherwise, determine where to redirect based on oauth_return_to
-        let finalTarget = '/';
-        try {
-          // Check localStorage for oauth_return_to (stored before OAuth flow)
-          const storedReturnTo = typeof window !== 'undefined' 
-            ? localStorage.getItem('oauth_return_to')
-            : null;
-          
-          if (storedReturnTo) {
-            if (storedReturnTo.startsWith('/')) {
-              finalTarget = storedReturnTo;
-            } else {
-              try {
-                const parsed = new URL(storedReturnTo, window.location.origin);
-                if (parsed.origin === window.location.origin) {
-                  finalTarget = parsed.pathname + parsed.search + parsed.hash;
-                }
-              } catch (e) {
-                // ignore invalid URLs
-              }
+        let finalTarget =
+          sanitizeInternalRedirect(pendingActionTarget) ||
+          sanitizeInternalRedirect(pendingAction?.redirectTo) ||
+          savedRedirectTarget;
+
+        if ((!finalTarget || finalTarget === '/') && typeof window !== 'undefined') {
+          try {
+            if (window.sessionStorage.getItem('cart-auth-redirect-pending-v1') === '1') {
+              finalTarget = '/cart';
             }
-            // Clear it so it's not reused
-            localStorage.removeItem('oauth_return_to');
+          } catch {
+            // ignore storage issues
           }
-        } catch (e) {
-          // ignore and fall back to '/'
         }
 
-        // Clear the fragment after session has been read to avoid removing
-        // the token before Supabase can parse it.
-        clearUrlFragment();
+        // Clear callback query/hash after the session has been read to avoid
+        // removing tokens or auth codes before Supabase can parse them.
+        clearCallbackUrl();
+
+        if (finalTarget === '/cart' && typeof window !== 'undefined') {
+          try {
+            sessionStorage.setItem('cart-auth-redirect-pending-v1', '1');
+          } catch {
+            // ignore storage issues
+          }
+        }
 
         setIsProcessing(false);
         navigate(finalTarget, { replace: true });
@@ -105,7 +108,7 @@ export default function AuthCallback() {
         toast.error('Authentication failed. Please try again.');
         setIsProcessing(false);
         setTimeout(() => {
-          clearUrlFragment();
+          clearCallbackUrl();
           navigate('/', { replace: true });
         }, 2000);
       }

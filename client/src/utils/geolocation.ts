@@ -119,7 +119,7 @@ function buildCacheKey(ip?: string): string {
 function cleanupCache(): void {
   const now = Date.now();
 
-  for (const [key, entry] of cache.entries()) {
+  for (const [key, entry] of Array.from(cache.entries())) {
     if (entry.expiresAt <= now) {
       cache.delete(key);
     }

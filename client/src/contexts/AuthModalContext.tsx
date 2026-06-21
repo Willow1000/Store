@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { PendingAuthAction, savePendingAuthAction, clearPendingAuthAction } from '@/lib/authPendingAction';
+import { saveAuthRedirect, sanitizeInternalRedirect } from '@/lib/authRedirect';
 
 interface AuthModalContextType {
   isOpen: boolean;
@@ -27,7 +28,7 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
     pendingAction?: PendingAuthAction
   ) => {
     setMode(newMode);
-    if (newActionType) setActionType(newActionType);
+    setActionType(newActionType ?? null);
 
     const currentPath = typeof window !== 'undefined'
       ? `${window.location.pathname}${window.location.search}`
@@ -41,10 +42,29 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
           redirectTo: pendingAction.redirectTo || currentPath,
         }
       : (newActionType
-          ? { type: newActionType as PendingAuthAction['type'], redirectTo: currentPath }
+          ? {
+              type: newActionType as PendingAuthAction['type'],
+              redirectTo:
+                newActionType === 'cart'
+                  ? '/cart'
+                  : newActionType === 'checkout'
+                    ? '/checkout'
+                    : currentPath,
+            }
           : undefined);
 
     if (normalizedPendingAction) savePendingAuthAction(normalizedPendingAction);
+    const safeRedirectTo = sanitizeInternalRedirect(normalizedPendingAction?.redirectTo);
+    if (typeof window !== 'undefined' && safeRedirectTo) {
+      try {
+        saveAuthRedirect(safeRedirectTo);
+        if (safeRedirectTo === '/cart') {
+          sessionStorage.setItem('cart-auth-redirect-pending-v1', '1');
+        }
+      } catch {
+        // ignore storage issues
+      }
+    }
     setIsOpen(true);
   };
 

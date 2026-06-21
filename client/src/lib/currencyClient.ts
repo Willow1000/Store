@@ -175,7 +175,8 @@ export function getGeoData(): GeolocationData | null {
         const parsed: CacheShape = (parsedRaw && typeof parsedRaw === 'object') ? parsedRaw : null;
         if (parsed) {
           // geo may be double-encoded or nested differently; try multiple fallbacks
-          const possibleGeo = parsed.geo || parsed.g || parsed.location || null;
+          const looseParsed = parsed as CacheShape & { g?: unknown; location?: unknown };
+          const possibleGeo = parsed.geo || looseParsed.g || looseParsed.location || null;
           if (possibleGeo) {
             // If possibleGeo is a string, try to parse
             if (typeof possibleGeo === 'string') {
@@ -205,7 +206,7 @@ export function getGeoData(): GeolocationData | null {
 
 export function getCountryCode(): string | null {
   const g = getGeoData();
-  return (g && g.location && (g.location.country_code2 || g.location.country_code)) || null;
+  return (g && g.location && g.location.country_code2) || null;
 }
 
 export function getPreferredLocale(): string | null {

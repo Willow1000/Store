@@ -1,0 +1,38 @@
+# MotorVault LLM Index
+
+## Overview
+MotorVault is an automotive parts marketplace with verified sellers, product browsing, checkout, account management, and support content.
+
+## Primary Pages
+- https://motorvault.shop/
+- https://motorvault.shop/products
+- https://motorvault.shop/cart
+- https://motorvault.shop/checkout
+- https://motorvault.shop/about
+- https://motorvault.shop/help
+- https://motorvault.shop/contact
+- https://motorvault.shop/shipping
+- https://motorvault.shop/returns
+- https://motorvault.shop/privacy
+- https://motorvault.shop/terms
+
+## Product Discovery
+- Search and filter product catalog by brand, model, category, condition, price, and availability.
+- Product detail pages include pricing, availability, images, and related items.
+- Checkout supports cart totals, shipping, and payment processing.
+
+## Structured Data
+- Organization
+- WebSite
+- Product
+- BreadcrumbList
+- LocalBusiness
+
+## Crawl Targets
+- Sitemap: https://motorvault.shop/sitemap.xml
+- Product sitemap: https://motorvault.shop/sitemap-products.xml
+- Robots: https://motorvault.shop/robots.txt
+
+## Notes
+- Public pages are intended for indexing.
+- Authenticated pages should not be crawled or indexed.

@@ -13,16 +13,31 @@ export function useMetaPixel() {
   };
 }
 
+function canTrack(): boolean {
+  return typeof window !== 'undefined' && typeof (window as any).fbq === 'function';
+}
+
+function roundMoney(value: number): number | null {
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.round(value * 100) / 100;
+}
+
+function normalizeCurrency(currency: string | null | undefined): string | null {
+  const normalized = currency?.trim().toUpperCase();
+  return normalized && /^[A-Z]{3}$/.test(normalized) ? normalized : null;
+}
+
 /**
  * Track a ViewContent event
  * Call this when a user views a product page
  */
 export function trackViewContent(productId: string, title: string, price: number) {
-  if (typeof window !== 'undefined' && (window as any).fbq) {
+  const value = roundMoney(price);
+  if (canTrack() && productId && value !== null) {
     (window as any).fbq('track', 'ViewContent', {
-      content_id: productId,
+      content_ids: [productId],
       content_name: title,
-      value: price,
+      value,
       currency: 'USD',
       content_type: 'product',
     });
@@ -34,14 +49,17 @@ export function trackViewContent(productId: string, title: string, price: number
  * Call this when a user adds an item to their cart
  */
 export function trackAddToCart(productId: string, title: string, price: number, quantity = 1) {
-  if (typeof window !== 'undefined' && (window as any).fbq) {
+  const safeQuantity = Math.max(1, Math.floor(Number(quantity) || 1));
+  const value = roundMoney(price * safeQuantity);
+  if (canTrack() && productId && value !== null) {
     (window as any).fbq('track', 'AddToCart', {
-      content_id: productId,
+      content_ids: [productId],
       content_name: title,
-      value: price * quantity,
+      value,
       currency: 'USD',
       content_type: 'product',
-      quantity,
+      contents: [{ id: productId, quantity: safeQuantity, item_price: roundMoney(price) ?? price }],
+      num_items: safeQuantity,
     });
   }
 }
@@ -54,14 +72,17 @@ export function trackInitiateCheckout(
   contentIds: string[],
   contentNames: string[],
   value: number,
-  numItems: number
+  numItems: number,
+  currency = 'USD'
 ) {
-  if (typeof window !== 'undefined' && (window as any).fbq) {
+  const safeValue = roundMoney(value);
+  const safeCurrency = normalizeCurrency(currency);
+  if (canTrack() && contentIds.length > 0 && safeValue !== null && safeCurrency) {
     (window as any).fbq('track', 'InitiateCheckout', {
       content_ids: contentIds,
       content_names: contentNames,
-      value,
-      currency: 'USD',
+      value: safeValue,
+      currency: safeCurrency,
       content_type: 'product',
       num_items: numItems,
     });
@@ -70,23 +91,27 @@ export function trackInitiateCheckout(
 
 /**
  * Track a Purchase event
- * Call this when a user completes a purchase
+ * Call this when a user completes a purchase with the confirmed order total.
  */
 export function trackPurchase(
   contentIds: string[],
   contentNames: string[],
   value: number,
   numItems: number,
-  orderId?: string
+  orderId?: string,
+  currency = 'USD'
 ) {
-  if (typeof window !== 'undefined' && (window as any).fbq) {
+  const safeValue = roundMoney(value);
+  const safeCurrency = normalizeCurrency(currency);
+  if (canTrack() && contentIds.length > 0 && safeValue !== null && safeCurrency && numItems > 0) {
     (window as any).fbq('track', 'Purchase', {
       content_ids: contentIds,
       content_names: contentNames,
-      value,
-      currency: 'USD',
+      value: safeValue,
+      currency: safeCurrency,
       content_type: 'product',
       num_items: numItems,
+      contents: contentIds.map((id) => ({ id, quantity: 1 })),
       ...(orderId && { order_id: orderId }),
     });
   }

@@ -16,13 +16,6 @@ export const supabase = createClient(
       persistSession: true,
       detectSessionInUrl: true,
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      // Refresh token 60 seconds before expiry to avoid race conditions
-      shouldRefreshToken: (expiresAt: number) => {
-        const expiryMs = expiresAt * 1000;
-        const nowMs = Date.now();
-        const refreshThresholdMs = 60 * 1000; // 60 seconds before expiry
-        return expiryMs - nowMs < refreshThresholdMs;
-      },
     },
   }
 );

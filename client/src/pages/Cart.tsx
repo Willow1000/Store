@@ -13,6 +13,7 @@ import { calculateShipping } from '@shared/shipping';
 import currencyClient from '@/lib/currencyClient';
 import { calculateVariableVat } from '@/lib/vat';
 import { SITE_LANGUAGE_CHANGED_EVENT, getSiteLanguage, translateText, type SiteLanguageCode } from '@/lib/language';
+import { savePendingAuthAction } from '@/lib/authPendingAction';
 
 interface CartItem {
   productId?: string;
@@ -33,7 +34,7 @@ type ProductLookup = {
 
 export default function Cart() {
   const [, navigate] = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, sessionRestored } = useAuth();
   const {
     items: supabaseCartItems,
     isLoading: isSupabaseLoading,
@@ -45,6 +46,13 @@ export default function Cart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [language, setLanguage] = useState<SiteLanguageCode>(() => getSiteLanguage());
+  const [awaitingCartHydration, setAwaitingCartHydration] = useState(() => {
+    try {
+      return typeof window !== 'undefined' && sessionStorage.getItem('cart-auth-redirect-pending-v1') === '1';
+    } catch {
+      return false;
+    }
+  });
 
   const t = (key: string, fallback: string) => translateText(language, key, fallback);
 
@@ -81,6 +89,31 @@ export default function Cart() {
         quantity: item.quantity,
       }))
     : cartItems;
+
+  useEffect(() => {
+    if (!awaitingCartHydration) return;
+    if (!isAuthenticated) return;
+    if (effectiveCartItems.length > 0) {
+      setAwaitingCartHydration(false);
+      try {
+        sessionStorage.removeItem('cart-auth-redirect-pending-v1');
+      } catch {
+        // ignore storage issues
+      }
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setAwaitingCartHydration(false);
+      try {
+        sessionStorage.removeItem('cart-auth-redirect-pending-v1');
+      } catch {
+        // ignore storage issues
+      }
+    }, 2500);
+
+    return () => window.clearTimeout(timer);
+  }, [awaitingCartHydration, isAuthenticated, effectiveCartItems.length]);
 
   const productsById = useMemo(() => {
     return new Map((dbProducts as ProductLookup[]).map((product) => [product.id, product]));
@@ -161,7 +194,9 @@ export default function Cart() {
   const vat = vatSummary.totalVat;
   const total = subtotal + shipping + vat;
 
-  if (isLoading || (isAuthenticated && isSupabaseLoading)) {
+  const shouldShowLoadingState = !sessionRestored || authLoading || awaitingCartHydration || (isAuthenticated && isSupabaseLoading);
+
+  if (isLoading || shouldShowLoadingState) {
     return (
       <div className="min-h-screen bg-background w-full overflow-x-hidden">
         <div className="container px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12 space-y-6">
@@ -231,6 +266,10 @@ export default function Cart() {
                 onClick={() => {
                   try {
                     localStorage.setItem('oauth_return_to', '/cart');
+                    savePendingAuthAction({
+                      type: 'cart',
+                      redirectTo: '/cart',
+                    });
                   } catch {
                     // ignore storage issues
                   }
@@ -275,6 +314,10 @@ export default function Cart() {
               onClick={() => {
                 try {
                   localStorage.setItem('oauth_return_to', '/cart');
+                  savePendingAuthAction({
+                    type: 'cart',
+                    redirectTo: '/cart',
+                  });
                 } catch {
                   // ignore storage issues
                 }

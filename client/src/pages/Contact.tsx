@@ -1,45 +1,24 @@
-              // List of all supported locations (must match select options exactly)
-              const SUPPORTED_LOCATIONS = [
-                'United States', 'Canada',
-                'Albania', 'Andorra', 'Austria', 'Belarus', 'Belgium', 'Bosnia and Herzegovina', 'Bulgaria',
-                'Croatia', 'Cyprus', 'Czech Republic', 'Denmark', 'Estonia', 'Finland', 'France', 'Germany',
-                'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy', 'Kosovo', 'Latvia', 'Liechtenstein',
-                'Lithuania', 'Luxembourg', 'Malta', 'Moldova', 'Monaco', 'Montenegro', 'Netherlands',
-                'North Macedonia', 'Norway', 'Poland', 'Portugal', 'Romania', 'San Marino', 'Serbia',
-                'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'United Kingdom',
-              ];
-              // ...existing code...
-              <div>
-                <h3 className="font-semibold mb-2">Facebook</h3>
-                <a
-                  href="https://www.facebook.com/profile.php?id=61590090897198"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors mt-2"
-                  title="Visit our Facebook page"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5 mr-2">
-                    <path d="M22.675 0h-21.35C.595 0 0 .592 0 1.326v21.348C0 23.406.595 24 1.325 24h11.495v-9.294H9.691v-3.622h3.129V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.797.143v3.24l-1.918.001c-1.504 0-1.797.715-1.797 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116C23.406 24 24 23.406 24 22.674V1.326C24 .592 23.406 0 22.675 0" />
-                  </svg>
-                  Visit us on Facebook
-                </a>
-              </div>
 'use client';
 
 import { useState, useEffect } from 'react';
 import currencyClient from '@/lib/currencyClient';
-import { fetchGeolocation } from '@/utils/geolocation';
 import { toast } from 'sonner';
 import { useSearch } from 'wouter';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
 import { SEOHead } from '@/components/SEOHead';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeMultilineTextInput, sanitizeName, sanitizeNameInput, sanitizeText, sanitizeTextInput } from '@shared/sanitize';
+import { Country } from 'country-state-city';
 
 // Input length constraints
 const MAX_NAME_LENGTH = 100;
 const MAX_EMAIL_LENGTH = 255;
 const MAX_MESSAGE_LENGTH = 5000;
+const SUPPORT_EMAIL = 'support@motorvault.shop';
+const LOCATION_OPTIONS = Country.getAllCountries()
+  .map((country) => country.name)
+  .filter((name, index, all) => name && all.indexOf(name) === index)
+  .sort((a, b) => a.localeCompare(b));
 
 // Validate email format
 function isValidEmail(email: string): boolean {
@@ -58,12 +37,11 @@ interface ContactFormData {
   subject: string;
   location: string;
   message: string;
+  website: string;
   geo?: any | null;
 }
 
 export default function Contact() {
-  // Use centralized geo data (populated by currencyClient.init on app startup)
-  const geo = currencyClient.getGeoData();
   const searchParams = useSearch();
   const { user } = useAuth();
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -74,6 +52,7 @@ export default function Contact() {
     subject: '',
     location: '',
     message: '',
+    website: '',
     geo: null,
   });
 
@@ -157,7 +136,7 @@ export default function Contact() {
           try {
             const g = geoObj;
             const ip = (g && g.ip) ? g.ip : '';
-            const cc2 = (g.location && (g.location.country_code2 || g.location.country_code)) || '';
+            const cc2 = (g.location && g.location.country_code2) || '';
             const country = (g.location && (g.location.country_name || g.location.country)) || '';
             const city = (g.location && g.location.city) || '';
             const lat = (g.location && g.location.latitude) || '';
@@ -185,7 +164,7 @@ export default function Contact() {
       setFormData((prev) => {
         // Only set location if it matches a supported option
         let loc = sanitizeLocation(displayLocation);
-        if (!SUPPORTED_LOCATIONS.includes(loc)) loc = '';
+        if (!LOCATION_OPTIONS.includes(loc)) loc = '';
         return {
           ...prev,
           name: prev.name || sanitizeName(queryName || userName, MAX_NAME_LENGTH),
@@ -203,9 +182,9 @@ export default function Contact() {
   useEffect(() => {
     const geo = currencyClient.getGeoData();
     if (geo && geo.location) {
-      const cc = geo.location.country_name || geo.location.country_code2 || geo.location.country_code || '';
+      const cc = geo.location.country_name || geo.location.country_code2 || '';
       let loc = sanitizeLocation(cc);
-      if (!SUPPORTED_LOCATIONS.includes(loc)) loc = '';
+      if (!LOCATION_OPTIONS.includes(loc)) loc = '';
       setFormData(prev => ({ ...prev, location: loc, geo: prev.geo || geo }));
     }
   }, []);
@@ -227,6 +206,8 @@ export default function Contact() {
       // Do not sanitize location; use exact dropdown value
     } else if (field === 'message') {
       value = sanitizeMultilineTextInput(value, MAX_MESSAGE_LENGTH);
+    } else if (field === 'website') {
+      value = sanitizeTextInput(value, 120);
     }
 
     setFormData((prev) => ({
@@ -259,8 +240,8 @@ export default function Contact() {
         return;
       }
 
-      if (!formData.location) {
-        toast.error('Please select a location');
+      if (!formData.subject.trim()) {
+        toast.error('Subject is required');
         setIsLoading(false);
         return;
       }
@@ -294,6 +275,8 @@ export default function Contact() {
           location: sanitizeLocation(formData.location),
           subject: sanitizeText(formData.subject, 200),
           message: sanitizeMultilineText(formData.message, MAX_MESSAGE_LENGTH),
+          website: sanitizeText(formData.website, 120),
+          recaptchaToken: captchaToken,
           geo: formData.geo || null,
         }),
       });
@@ -301,7 +284,7 @@ export default function Contact() {
       const responseBody = await response.json().catch(() => null);
 
       if (!response.ok) {
-        toast.error('Failed to send message. Please try again later.');
+        toast.error(responseBody?.error || 'We were unable to send your message. Please try again.');
         console.error('Contact form error:', responseBody);
         setIsLoading(false);
         return;
@@ -315,11 +298,12 @@ export default function Contact() {
         subject: '',
         location: '',
         message: '',
+        website: '',
         geo: null,
       });
       setCaptchaToken(null);
     } catch (error) {
-      toast.error('An unexpected error occurred. Please try again.');
+      toast.error('We were unable to send your message. Please try again.');
       console.error('Contact form submission error:', error);
     } finally {
       setIsLoading(false);
@@ -346,7 +330,7 @@ export default function Contact() {
                 <h3 className="font-semibold mb-2">Email</h3>
                 <p className="text-gray-600">
                   <a href="mailto:support.motorvault@gmail.com" className="text-blue-600 hover:underline">
-                    support.motorvault@gmail.com
+                    {SUPPORT_EMAIL}
                   </a>
                 </p>
               </div>
@@ -431,74 +415,32 @@ export default function Contact() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Subject</label>
+                <label className="block text-sm font-medium mb-2">Subject <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={formData.subject}
                   onChange={(e) => handleInputChange(e, 'subject')}
                   placeholder="What is this about?"
                   maxLength={200}
+                  required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                 />
                 <p className="text-xs text-gray-500 mt-1">{formData.subject.length}/200</p>
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Location <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium mb-2">Location</label>
                 <select
                   value={formData.location}
                   onChange={(e) => handleInputChange(e, 'location')}
-                  required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                 >
                   <option value="">Select your location</option>
-                  <option value="United States">United States</option>
-                  <option value="Canada">Canada</option>
-
-                  {/* European countries */}
-                  <option value="Albania">Albania</option>
-                  <option value="Andorra">Andorra</option>
-                  <option value="Austria">Austria</option>
-                  <option value="Belarus">Belarus</option>
-                  <option value="Belgium">Belgium</option>
-                  <option value="Bosnia and Herzegovina">Bosnia and Herzegovina</option>
-                  <option value="Bulgaria">Bulgaria</option>
-                  <option value="Croatia">Croatia</option>
-                  <option value="Cyprus">Cyprus</option>
-                  <option value="Czech Republic">Czech Republic</option>
-                  <option value="Denmark">Denmark</option>
-                  <option value="Estonia">Estonia</option>
-                  <option value="Finland">Finland</option>
-                  <option value="France">France</option>
-                  <option value="Germany">Germany</option>
-                  <option value="Greece">Greece</option>
-                  <option value="Hungary">Hungary</option>
-                  <option value="Iceland">Iceland</option>
-                  <option value="Ireland">Ireland</option>
-                  <option value="Italy">Italy</option>
-                  <option value="Kosovo">Kosovo</option>
-                  <option value="Latvia">Latvia</option>
-                  <option value="Liechtenstein">Liechtenstein</option>
-                  <option value="Lithuania">Lithuania</option>
-                  <option value="Luxembourg">Luxembourg</option>
-                  <option value="Malta">Malta</option>
-                  <option value="Moldova">Moldova</option>
-                  <option value="Monaco">Monaco</option>
-                  <option value="Montenegro">Montenegro</option>
-                  <option value="Netherlands">Netherlands</option>
-                  <option value="North Macedonia">North Macedonia</option>
-                  <option value="Norway">Norway</option>
-                  <option value="Poland">Poland</option>
-                  <option value="Portugal">Portugal</option>
-                  <option value="Romania">Romania</option>
-                  <option value="San Marino">San Marino</option>
-                  <option value="Serbia">Serbia</option>
-                  <option value="Slovakia">Slovakia</option>
-                  <option value="Slovenia">Slovenia</option>
-                  <option value="Spain">Spain</option>
-                  <option value="Sweden">Sweden</option>
-                  <option value="Switzerland">Switzerland</option>
-                  <option value="United Kingdom">United Kingdom</option>
+                  {LOCATION_OPTIONS.map((location) => (
+                    <option key={location} value={location}>
+                      {location}
+                    </option>
+                  ))}
                 </select>
               </div>
               
@@ -519,6 +461,18 @@ export default function Contact() {
                     <p className="text-xs text-red-500">Message must be at least 10 characters</p>
                   )}
                 </div>
+              </div>
+
+              <div className="hidden" aria-hidden="true">
+                <label htmlFor="contact-website">Website</label>
+                <input
+                  id="contact-website"
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={formData.website}
+                  onChange={(e) => handleInputChange(e, 'website')}
+                />
               </div>
 
               <RecaptchaCheckbox

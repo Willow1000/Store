@@ -36,17 +36,35 @@ interface SEOHeadProps {
   }>;
 }
 
+function normalizeCanonicalUrl(canonical?: string): string | undefined {
+  if (!canonical) return undefined;
+  if (typeof window === 'undefined') return canonical;
+
+  const currentOrigin = window.location.origin.replace(/\/$/, '');
+
+  try {
+    const parsed = new URL(canonical, currentOrigin);
+    const path = `${parsed.pathname}${parsed.search}${parsed.hash}` || '/';
+    return `${currentOrigin}${path.startsWith('/') ? path : `/${path}`}`;
+  } catch {
+    const fallbackPath = canonical.startsWith('/') ? canonical : `/${canonical}`;
+    return `${currentOrigin}${fallbackPath}`;
+  }
+}
+
 export function SEOHead({
   title = 'MotorVault - Premium Motor Products from Verified Sellers',
   description = 'Discover thousands of premium motor products from verified sellers. Quality guaranteed, fast shipping, and secure checkout on every purchase.',
   canonical,
-  ogImage = 'https://motorvault.com/og-image.png',
+  ogImage = 'https://motorvault.shop/og-image.png',
   ogType = 'website',
   keywords = [],
   productData,
   articleData,
   breadcrumbs,
 }: SEOHeadProps) {
+  const effectiveCanonical = normalizeCanonicalUrl(canonical);
+
   // Update document title
   if (typeof document !== 'undefined') {
     document.title = title;
@@ -83,7 +101,7 @@ export function SEOHead({
   setMetaTag('og:description', description, true);
   setMetaTag('og:image', ogImage, true);
   setMetaTag('og:type', ogType, true);
-  setMetaTag('og:url', canonical || window.location.href, true);
+  setMetaTag('og:url', effectiveCanonical || window.location.href, true);
 
   // Twitter
   setMetaTag('twitter:title', title, true);
@@ -91,14 +109,14 @@ export function SEOHead({
   setMetaTag('twitter:image', ogImage, true);
 
   // Canonical URL
-  if (canonical) {
+  if (effectiveCanonical) {
     let canonicalLink = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
     if (!canonicalLink) {
       canonicalLink = document.createElement('link');
       canonicalLink.rel = 'canonical';
       document.head.appendChild(canonicalLink);
     }
-    canonicalLink.href = canonical;
+    canonicalLink.href = effectiveCanonical;
   }
 
   // Generate and inject structured data
@@ -155,7 +173,7 @@ export function SEOHead({
     structuredData['@type'] = 'WebPage';
     structuredData.name = title;
     structuredData.description = description;
-    structuredData.url = canonical || (typeof window !== 'undefined' ? window.location.href : '');
+    structuredData.url = effectiveCanonical || (typeof window !== 'undefined' ? window.location.href : '');
   }
 
   // Add breadcrumb structured data

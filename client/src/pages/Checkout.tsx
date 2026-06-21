@@ -17,11 +17,16 @@ import { COUNTRY_PHONE_OPTIONS, DEFAULT_PHONE_COUNTRY, buildInternationalPhoneNu
 import { calculateShipping } from '@shared/shipping';
 import { calculateVariableVat } from '@/lib/vat';
 import currencyClient from '@/lib/currencyClient';
+import { City, Country, State } from 'country-state-city';
 import { isMetaCheckoutRequest, parseMetaCouponPercent, parseMetaCheckoutParams, parseMetaProductsParam } from '@/lib/metaCheckout';
 import { sanitizeEmail, sanitizePhone, sanitizePhoneInput, sanitizePostalCode, sanitizeText, sanitizeTextInput, sanitizeName, sanitizeNameInput } from '@shared/sanitize';
 import { InlineCheckoutAuth } from '@/components/InlineCheckoutAuth';
+import { trackInitiateCheckout, trackPurchase } from '@/hooks/useMetaPixel';
+import { TrustSignals } from '@/components/TrustSignals';
+import { getSiteLanguage, translateText } from '@/lib/language';
 
 const CHECKOUT_CART_SNAPSHOT_KEY = 'checkout-cart-snapshot-v1';
+const META_PURCHASE_TRACKED_PREFIX = 'meta-purchase-tracked-v1:';
 
 type CartItem = {
   product_id: string;
@@ -71,6 +76,22 @@ function writeCheckoutSnapshot(items: CartItem[]) {
   }
 }
 
+function hasTrackedMetaPurchase(reference: string): boolean {
+  try {
+    return Boolean(localStorage.getItem(`${META_PURCHASE_TRACKED_PREFIX}${reference}`));
+  } catch {
+    return false;
+  }
+}
+
+function markTrackedMetaPurchase(reference: string) {
+  try {
+    localStorage.setItem(`${META_PURCHASE_TRACKED_PREFIX}${reference}`, new Date().toISOString());
+  } catch {
+    // Ignore persistence issues; duplicate prevention is best effort.
+  }
+}
+
 const t = (_key: string, fallback: string) => fallback;
 
 type StateOption = {
@@ -79,170 +100,16 @@ type StateOption = {
 };
 
 type RegionData = { label: string; cities: string[] };
+const COUNTRY_REGION_VALUE = '__COUNTRY__';
 
-// USA states + major cities and European country regions + cities.
-const US_STATES_AND_CITIES: Record<string, RegionData> = {
-  'AL': { label: 'Alabama', cities: ['Birmingham', 'Montgomery', 'Mobile', 'Huntsville', 'Tuscaloosa'] },
-  'AK': { label: 'Alaska', cities: ['Anchorage', 'Juneau', 'Fairbanks', 'Whitehorse', 'Ketchikan'] },
-  'AZ': { label: 'Arizona', cities: ['Phoenix', 'Tucson', 'Mesa', 'Chandler', 'Scottsdale'] },
-  'AR': { label: 'Arkansas', cities: ['Little Rock', 'Fort Smith', 'Fayetteville', 'Springdale', 'Jonesboro'] },
-  'CA': { label: 'California', cities: ['Los Angeles', 'San Francisco', 'San Diego', 'Sacramento', 'Long Beach'] },
-  'CO': { label: 'Colorado', cities: ['Denver', 'Colorado Springs', 'Aurora', 'Fort Collins', 'Lakewood'] },
-  'CT': { label: 'Connecticut', cities: ['Hartford', 'New Haven', 'Bridgeport', 'Waterbury', 'Stamford'] },
-  'DE': { label: 'Delaware', cities: ['Wilmington', 'Dover', 'Newark', 'Middletown', 'Smyrna'] },
-  'FL': { label: 'Florida', cities: ['Jacksonville', 'Miami', 'Tampa', 'Orlando', 'St. Petersburg'] },
-  'GA': { label: 'Georgia', cities: ['Atlanta', 'Augusta', 'Columbus', 'Savannah', 'Athens'] },
-  'HI': { label: 'Hawaii', cities: ['Honolulu', 'Pearl City', 'Hilo', 'Kailua', 'Kaneohe'] },
-  'ID': { label: 'Idaho', cities: ['Boise', 'Nampa', 'Pocatello', 'Idaho Falls', 'Coeur d\'Alene'] },
-  'IL': { label: 'Illinois', cities: ['Chicago', 'Aurora', 'Rockford', 'Joliet', 'Naperville'] },
-  'IN': { label: 'Indiana', cities: ['Indianapolis', 'Fort Wayne', 'Evansville', 'South Bend', 'Bloomington'] },
-  'IA': { label: 'Iowa', cities: ['Des Moines', 'Cedar Rapids', 'Davenport', 'Sioux City', 'Iowa City'] },
-  'KS': { label: 'Kansas', cities: ['Kansas City', 'Wichita', 'Topeka', 'Overland Park', 'Olathe'] },
-  'KY': { label: 'Kentucky', cities: ['Louisville', 'Lexington', 'Bowling Green', 'Owensboro', 'Covington'] },
-  'LA': { label: 'Louisiana', cities: ['New Orleans', 'Baton Rouge', 'Shreveport', 'Lafayette', 'Lake Charles'] },
-  'ME': { label: 'Maine', cities: ['Portland', 'Lewiston', 'Bangor', 'Augusta', 'Waterville'] },
-  'MD': { label: 'Maryland', cities: ['Baltimore', 'Frederick', 'Gaithersburg', 'Bowie', 'College Park'] },
-  'MA': { label: 'Massachusetts', cities: ['Boston', 'Worcester', 'Springfield', 'Lowell', 'Cambridge'] },
-  'MI': { label: 'Michigan', cities: ['Detroit', 'Grand Rapids', 'Warren', 'Sterling Heights', 'Ann Arbor'] },
-  'MN': { label: 'Minnesota', cities: ['Minneapolis', 'St. Paul', 'Rochester', 'Duluth', 'Bloomington'] },
-  'MS': { label: 'Mississippi', cities: ['Jackson', 'Gulfport', 'Biloxi', 'Hattiesburg', 'Greenville'] },
-  'MO': { label: 'Missouri', cities: ['Kansas City', 'St. Louis', 'Springfield', 'Independence', 'Columbia'] },
-  'MT': { label: 'Montana', cities: ['Billings', 'Missoula', 'Great Falls', 'Bozeman', 'Helena'] },
-  'NE': { label: 'Nebraska', cities: ['Omaha', 'Lincoln', 'Bellevue', 'Grand Island', 'Kearney'] },
-  'NV': { label: 'Nevada', cities: ['Las Vegas', 'Henderson', 'Reno', 'North Las Vegas', 'Sparks'] },
-  'NH': { label: 'New Hampshire', cities: ['Manchester', 'Nashua', 'Concord', 'Rochester', 'Dover'] },
-  'NJ': { label: 'New Jersey', cities: ['Newark', 'Jersey City', 'Paterson', 'Elizabeth', 'Trenton'] },
-  'NM': { label: 'New Mexico', cities: ['Albuquerque', 'Santa Fe', 'Las Cruces', 'Rio Rancho', 'Roswell'] },
-  'NY': { label: 'New York', cities: ['New York City', 'Buffalo', 'Rochester', 'Yonkers', 'Syracuse'] },
-  'NC': { label: 'North Carolina', cities: ['Charlotte', 'Raleigh', 'Greensboro', 'Durham', 'Winston-Salem'] },
-  'ND': { label: 'North Dakota', cities: ['Bismarck', 'Fargo', 'Grand Forks', 'Minot', 'Williston'] },
-  'OH': { label: 'Ohio', cities: ['Columbus', 'Cleveland', 'Cincinnati', 'Toledo', 'Akron'] },
-  'OK': { label: 'Oklahoma', cities: ['Oklahoma City', 'Tulsa', 'Norman', 'Broken Arrow', 'Lawton'] },
-  'OR': { label: 'Oregon', cities: ['Portland', 'Eugene', 'Salem', 'Gresham', 'Hillsboro'] },
-  'PA': { label: 'Pennsylvania', cities: ['Philadelphia', 'Pittsburgh', 'Allentown', 'Erie', 'Reading'] },
-  'RI': { label: 'Rhode Island', cities: ['Providence', 'Warwick', 'Cranston', 'Pawtucket', 'East Providence'] },
-  'SC': { label: 'South Carolina', cities: ['Charleston', 'Columbia', 'Greenville', 'Summerville', 'Rock Hill'] },
-  'SD': { label: 'South Dakota', cities: ['Sioux Falls', 'Rapid City', 'Aberdeen', 'Brookings', 'Watertown'] },
-  'TN': { label: 'Tennessee', cities: ['Memphis', 'Nashville', 'Knoxville', 'Chattanooga', 'Clarksville'] },
-  'TX': { label: 'Texas', cities: ['Houston', 'Dallas', 'Austin', 'San Antonio', 'Fort Worth'] },
-  'UT': { label: 'Utah', cities: ['Salt Lake City', 'West Valley City', 'Provo', 'West Jordan', 'Orem'] },
-  'VT': { label: 'Vermont', cities: ['Burlington', 'Rutland', 'Barre', 'Montpelier', 'St. Johnsbury'] },
-  'VA': { label: 'Virginia', cities: ['Virginia Beach', 'Richmond', 'Arlington', 'Alexandria', 'Roanoke'] },
-  'WA': { label: 'Washington', cities: ['Seattle', 'Spokane', 'Tacoma', 'Vancouver', 'Bellevue'] },
-  'WV': { label: 'West Virginia', cities: ['Charleston', 'Huntington', 'Parkersburg', 'Morgantown', 'Wheeling'] },
-  'WI': { label: 'Wisconsin', cities: ['Milwaukee', 'Madison', 'Green Bay', 'Kenosha', 'Racine'] },
-  'WY': { label: 'Wyoming', cities: ['Cheyenne', 'Laramie', 'Gillette', 'Rock Springs', 'Sheridan'] },
-};
-
-const EUROPE_REGIONS_AND_CITIES: Record<string, Record<string, RegionData>> = {
-  GB: {
-    ENG: { label: 'England', cities: ['London', 'Manchester', 'Birmingham', 'Leeds', 'Liverpool'] },
-    SCT: { label: 'Scotland', cities: ['Edinburgh', 'Glasgow', 'Aberdeen', 'Dundee', 'Inverness'] },
-    WLS: { label: 'Wales', cities: ['Cardiff', 'Swansea', 'Newport', 'Wrexham', 'Bangor'] },
-    NIR: { label: 'Northern Ireland', cities: ['Belfast', 'Derry', 'Lisburn', 'Newry', 'Armagh'] },
-  },
-  DE: {
-    BE: { label: 'Berlin', cities: ['Berlin'] },
-    BY: { label: 'Bavaria', cities: ['Munich', 'Nuremberg', 'Augsburg', 'Regensburg', 'Wurzburg'] },
-    HH: { label: 'Hamburg', cities: ['Hamburg'] },
-    HE: { label: 'Hesse', cities: ['Frankfurt', 'Wiesbaden', 'Kassel', 'Darmstadt', 'Offenbach'] },
-    NW: { label: 'North Rhine-Westphalia', cities: ['Cologne', 'Dusseldorf', 'Dortmund', 'Essen', 'Bonn'] },
-  },
-  FR: {
-    IDF: { label: 'Ile-de-France', cities: ['Paris', 'Boulogne-Billancourt', 'Saint-Denis', 'Versailles', 'Nanterre'] },
-    ARA: { label: 'Auvergne-Rhone-Alpes', cities: ['Lyon', 'Grenoble', 'Saint-Etienne', 'Annecy', 'Clermont-Ferrand'] },
-    PAC: { label: 'Provence-Alpes-Cote d\'Azur', cities: ['Marseille', 'Nice', 'Toulon', 'Aix-en-Provence', 'Cannes'] },
-    OCC: { label: 'Occitanie', cities: ['Toulouse', 'Montpellier', 'Nimes', 'Perpignan', 'Beziers'] },
-    NAQ: { label: 'Nouvelle-Aquitaine', cities: ['Bordeaux', 'Limoges', 'Poitiers', 'Pau', 'La Rochelle'] },
-  },
-  ES: {
-    MD: { label: 'Community of Madrid', cities: ['Madrid', 'Mostoles', 'Alcala de Henares', 'Fuenlabrada', 'Leganes'] },
-    CT: { label: 'Catalonia', cities: ['Barcelona', 'Girona', 'Lleida', 'Tarragona', 'Sabadell'] },
-    AN: { label: 'Andalusia', cities: ['Seville', 'Malaga', 'Cordoba', 'Granada', 'Cadiz'] },
-    VC: { label: 'Valencian Community', cities: ['Valencia', 'Alicante', 'Elche', 'Castellon', 'Torrevieja'] },
-    GA: { label: 'Galicia', cities: ['Vigo', 'A Coruna', 'Ourense', 'Lugo', 'Santiago de Compostela'] },
-  },
-  IT: {
-    LAZ: { label: 'Lazio', cities: ['Rome', 'Latina', 'Frosinone', 'Viterbo', 'Rieti'] },
-    LOM: { label: 'Lombardy', cities: ['Milan', 'Bergamo', 'Brescia', 'Monza', 'Como'] },
-    CAM: { label: 'Campania', cities: ['Naples', 'Salerno', 'Caserta', 'Avellino', 'Benevento'] },
-    SIC: { label: 'Sicily', cities: ['Palermo', 'Catania', 'Messina', 'Syracuse', 'Ragusa'] },
-    VEN: { label: 'Veneto', cities: ['Venice', 'Verona', 'Padua', 'Vicenza', 'Treviso'] },
-  },
-  PT: {
-    LX: { label: 'Lisbon', cities: ['Lisbon', 'Sintra', 'Cascais', 'Oeiras', 'Loures'] },
-    PO: { label: 'Porto', cities: ['Porto', 'Vila Nova de Gaia', 'Matosinhos', 'Maia', 'Gondomar'] },
-    BR: { label: 'Braga', cities: ['Braga', 'Guimaraes', 'Barcelos', 'Vila Nova de Famalicao', 'Esposende'] },
-    AV: { label: 'Aveiro', cities: ['Aveiro', 'Ilhavo', 'Agueda', 'Ovar', 'Estarreja'] },
-    ST: { label: 'Setubal', cities: ['Setubal', 'Almada', 'Barreiro', 'Seixal', 'Palmela'] },
-  },
-  NL: {
-    NH: { label: 'North Holland', cities: ['Amsterdam', 'Haarlem', 'Alkmaar', 'Hilversum', 'Zaandam'] },
-    ZH: { label: 'South Holland', cities: ['The Hague', 'Rotterdam', 'Leiden', 'Dordrecht', 'Delft'] },
-    UT: { label: 'Utrecht', cities: ['Utrecht', 'Amersfoort', 'Nieuwegein', 'Veenendaal', 'Zeist'] },
-    NB: { label: 'North Brabant', cities: ['Eindhoven', 'Tilburg', 'Breda', 's-Hertogenbosch', 'Helmond'] },
-    GE: { label: 'Gelderland', cities: ['Arnhem', 'Nijmegen', 'Apeldoorn', 'Ede', 'Doetinchem'] },
-  },
-  BE: {
-    BRU: { label: 'Brussels-Capital', cities: ['Brussels', 'Anderlecht', 'Ixelles', 'Schaerbeek', 'Molenbeek'] },
-    VLG: { label: 'Flemish Region', cities: ['Antwerp', 'Ghent', 'Bruges', 'Leuven', 'Hasselt'] },
-    WAL: { label: 'Walloon Region', cities: ['Liege', 'Namur', 'Charleroi', 'Mons', 'Tournai'] },
-  },
-  IE: {
-    LE: { label: 'Leinster', cities: ['Dublin', 'Bray', 'Kilkenny', 'Drogheda', 'Athlone'] },
-    MU: { label: 'Munster', cities: ['Cork', 'Limerick', 'Waterford', 'Tralee', 'Clonmel'] },
-    CO: { label: 'Connacht', cities: ['Galway', 'Sligo', 'Castlebar', 'Tuam', 'Ballina'] },
-    UL: { label: 'Ulster', cities: ['Letterkenny', 'Monaghan', 'Cavan', 'Buncrana', 'Carrickmacross'] },
-  },
-  PL: {
-    MZ: { label: 'Masovian', cities: ['Warsaw', 'Radom', 'Plock', 'Siedlce', 'Ostroleka'] },
-    SL: { label: 'Silesian', cities: ['Katowice', 'Gliwice', 'Czestochowa', 'Sosnowiec', 'Bytom'] },
-    WP: { label: 'Greater Poland', cities: ['Poznan', 'Kalisz', 'Konin', 'Pila', 'Gniezno'] },
-    MA: { label: 'Lesser Poland', cities: ['Krakow', 'Tarnow', 'Nowy Sacz', 'Oswiecim', 'Bochnia'] },
-    PM: { label: 'Pomeranian', cities: ['Gdansk', 'Gdynia', 'Sopot', 'Slupsk', 'Tczew'] },
-  },
-  SE: {
-    AB: { label: 'Stockholm County', cities: ['Stockholm', 'Solna', 'Sodertalje', 'Nacka', 'Sollentuna'] },
-    O: { label: 'Vastra Gotaland', cities: ['Gothenburg', 'BorAs', 'Trollhattan', 'Skovde', 'Uddevalla'] },
-    M: { label: 'Skane County', cities: ['Malmo', 'Helsingborg', 'Lund', 'Kristianstad', 'Ystad'] },
-    C: { label: 'Uppsala County', cities: ['Uppsala', 'Enkoping', 'BAlsta', 'Tierp', 'Osthammar'] },
-    D: { label: 'Sodermanland County', cities: ['Eskilstuna', 'Nykoping', 'Katrineholm', 'Flen', 'Strangnas'] },
-  },
-  NO: {
-    OSL: { label: 'Oslo', cities: ['Oslo'] },
-    VIK: { label: 'Viken', cities: ['Drammen', 'Fredrikstad', 'Sarpsborg', 'Moss', 'Halden'] },
-    ROG: { label: 'Rogaland', cities: ['Stavanger', 'Haugesund', 'Sandnes', 'Eigersund', 'Sola'] },
-    VES: { label: 'Vestland', cities: ['Bergen', 'Fyllingsdalen', 'Askoy', 'Osteroy', 'Voss'] },
-    TRD: { label: 'Trondelag', cities: ['Trondheim', 'Steinkjer', 'Levanger', 'Verdal', 'Namsos'] },
-  },
-  CH: {
-    ZH: { label: 'Zurich', cities: ['Zurich', 'Winterthur', 'Uster', 'Duebendorf', 'Wetzikon'] },
-    BE: { label: 'Bern', cities: ['Bern', 'Thun', 'Biel/Bienne', 'Kandersteg', 'Langnau'] },
-    GE: { label: 'Geneva', cities: ['Geneva', 'Carouge', 'Lancy', 'Vernier', 'Meyrin'] },
-    VD: { label: 'Vaud', cities: ['Lausanne', 'Yverdon-les-Bains', 'Nyon', 'Vevey', 'Montreux'] },
-    VS: { label: 'Valais', cities: ['Sion', 'Sierre', 'Martigny', 'Brig', 'Visp'] },
-  },
-  SG: {
-    SG: { label: 'Singapore', cities: ['Central', 'North', 'North-East', 'East', 'West'] },
-  },
-};
-
-// Canada provinces + major cities
-const CANADA_PROVINCES: Record<string, RegionData> = {
-  ON: { label: 'Ontario', cities: ['Toronto', 'Ottawa', 'Mississauga', 'Brampton', 'Hamilton'] },
-  QC: { label: 'Quebec', cities: ['Montreal', 'Quebec City', 'Laval', 'Gatineau', 'Longueuil'] },
-  BC: { label: 'British Columbia', cities: ['Vancouver', 'Victoria', 'Surrey', 'Burnaby', 'Richmond'] },
-  AB: { label: 'Alberta', cities: ['Calgary', 'Edmonton', 'Red Deer', 'Lethbridge', 'St. Albert'] },
-  MB: { label: 'Manitoba', cities: ['Winnipeg', 'Brandon', 'Steinbach', 'Thompson', 'Portage la Prairie'] },
-  NS: { label: 'Nova Scotia', cities: ['Halifax', 'Sydney', 'Truro', 'New Glasgow', 'Glace Bay'] },
-  NB: { label: 'New Brunswick', cities: ['Moncton', 'Saint John', 'Fredericton', 'Bathurst', 'Miramichi'] },
-  SK: { label: 'Saskatchewan', cities: ['Saskatoon', 'Regina', 'Prince Albert', 'Moose Jaw', 'Swift Current'] },
-  NL: { label: 'Newfoundland and Labrador', cities: ['St. John\'s', 'Corner Brook', 'Gander', 'Mount Pearl', 'Happy Valley-Goose Bay'] },
-  PE: { label: 'Prince Edward Island', cities: ['Charlottetown', 'Summerside', 'Cornwall', 'Montague', 'Souris'] },
-  NT: { label: 'Northwest Territories', cities: ['Yellowknife'] },
-  YT: { label: 'Yukon', cities: ['Whitehorse'] },
-  NU: { label: 'Nunavut', cities: ['Iqaluit'] },
-};
+const COUNTRY_OPTIONS = Country.getAllCountries()
+  .map((country) => ({
+    value: country.isoCode,
+    label: country.name,
+    flag: country.flag || '',
+  }))
+  .filter((country) => country.value && country.label)
+  .sort((a, b) => a.label.localeCompare(b.label));
 
 const POSTAL_LABEL_BY_COUNTRY: Record<string, string> = {
   US: 'ZIP Code',
@@ -257,8 +124,7 @@ function getStateLabel(country: string | undefined | null): string {
   if (c === 'CA') return 'Province';
   if (c === 'GB') return 'Region';
   if (c === 'IE') return 'County';
-  // Generic fallback
-  return 'State';
+  return 'State/Province';
 }
 
 function getPostalCodeLabel(country: string | undefined | null): string {
@@ -268,21 +134,55 @@ function getPostalCodeLabel(country: string | undefined | null): string {
 }
 
 function getRegionMap(country: string): Record<string, RegionData> {
-  if (!country) return {};
-  if (country === 'US') return US_STATES_AND_CITIES;
-  if (country === 'CA') return CANADA_PROVINCES;
-  if (EUROPE_REGIONS_AND_CITIES[country]) return EUROPE_REGIONS_AND_CITIES[country];
-  return {};
+  const countryCode = String(country || '').toUpperCase();
+  if (!countryCode) return {};
+
+  return State.getStatesOfCountry(countryCode).reduce<Record<string, RegionData>>((regions, state) => {
+    const cities = City.getCitiesOfState(countryCode, state.isoCode)
+      .map((city) => city.name)
+      .filter((city, index, allCities) => city && allCities.indexOf(city) === index)
+      .sort((a, b) => a.localeCompare(b));
+
+    regions[state.isoCode] = {
+      label: state.name,
+      cities,
+    };
+
+    return regions;
+  }, {});
+}
+
+function normalizeRegionCode(country: string, value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  const regionMap = getRegionMap(String(country || '').toUpperCase());
+  if (regionMap[trimmed]) return trimmed;
+
+  const normalized = trimmed.toLocaleLowerCase();
+  const match = Object.entries(regionMap).find(([, data]) => data.label.toLocaleLowerCase() === normalized);
+  return match?.[0] || trimmed;
 }
 
 const getStateOptions = (country: string): StateOption[] => {
-  const regionMap = getRegionMap(country);
+  const countryCode = String(country || '').toUpperCase();
+  const regionMap = getRegionMap(countryCode);
   const entries = Object.entries(regionMap);
   // If we have explicit region mappings, return them.
   if (entries.length > 0) {
     return [
       { value: '', label: 'Select state' },
-      ...entries.map(([code, data]) => ({ value: code, label: data.label })),
+      ...entries
+        .map(([code, data]) => ({ value: code, label: data.label }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    ];
+  }
+
+  const countryName = Country.getCountryByCode(countryCode)?.name;
+  const countryCities = City.getCitiesOfCountry(countryCode) || [];
+  if (countryName && countryCities.length > 0) {
+    return [
+      { value: '', label: 'Select state' },
+      { value: COUNTRY_REGION_VALUE, label: countryName },
     ];
   }
 
@@ -293,7 +193,7 @@ const getStateOptions = (country: string): StateOption[] => {
     const geo = currencyClient.getGeoData();
     const geoCountry = geo?.location?.country_code2?.toUpperCase();
     const geoState = geo?.location?.state_prov;
-    if (geo && geoCountry === country && geoState) {
+    if (geo && geoCountry === countryCode && geoState) {
       return [
         { value: '', label: 'Select state' },
         { value: 'GEO_STATE', label: geoState },
@@ -306,13 +206,33 @@ const getStateOptions = (country: string): StateOption[] => {
   return [{ value: '', label: 'Select state' }];
 };
 
+const usesManualLocationFields = (country: string): boolean => {
+  const countryCode = String(country || '').toUpperCase();
+  if (!countryCode) return false;
+
+  const hasRegions = Object.keys(getRegionMap(countryCode)).length > 0;
+  const hasCities = (City.getCitiesOfCountry(countryCode) || []).length > 0;
+
+  return !hasRegions && !hasCities;
+};
+
 const getCityOptions = (country: string, state: string): string[] => {
   if (!state) {
     return [];
   }
-  const regionMap = getRegionMap(country);
+  const countryCode = String(country || '').toUpperCase();
+  const regionMap = getRegionMap(countryCode);
   if (regionMap[state]?.cities && regionMap[state].cities.length > 0) {
     return regionMap[state].cities;
+  }
+
+  const countryCities = City.getCitiesOfCountry(countryCode) || [];
+  const fallbackCities = countryCities
+    .map((city) => city.name)
+    .filter((city, index, allCities) => city && allCities.indexOf(city) === index)
+    .sort((a, b) => a.localeCompare(b));
+  if (state === COUNTRY_REGION_VALUE && fallbackCities.length > 0) {
+    return fallbackCities;
   }
 
   // If state is our synthetic GEO_STATE, return the cached geo city.
@@ -321,7 +241,7 @@ const getCityOptions = (country: string, state: string): string[] => {
       const geo = currencyClient.getGeoData();
       const geoCountry = geo?.location?.country_code2?.toUpperCase();
       const geoCity = geo?.location?.city;
-      if (geo && geoCountry === country && geoCity) return [geoCity];
+      if (geo && geoCountry === countryCode && geoCity) return [geoCity];
     } catch (e) {
       // ignore
     }
@@ -332,7 +252,7 @@ const getCityOptions = (country: string, state: string): string[] => {
     const geo = currencyClient.getGeoData();
     const geoCountry = geo?.location?.country_code2?.toUpperCase();
     const geoCity = geo?.location?.city;
-    if (geo && geoCountry === country && geoCity) return [geoCity];
+    if (geo && geoCountry === countryCode && geoCity) return [geoCity];
   } catch (e) {
     // ignore
   }
@@ -341,6 +261,8 @@ const getCityOptions = (country: string, state: string): string[] => {
 };
 
 export default function Checkout() {
+  const activeLanguage = getSiteLanguage();
+  const checkoutText = (key: string, fallback: string) => translateText(activeLanguage, key, fallback);
   // Get geo data from currencyClient
   const geo = currencyClient.getGeoData();
   // Auto-fill country, state, and city from geolocation if available and not already set
@@ -350,7 +272,7 @@ export default function Checkout() {
         const next: typeof prev = { ...prev };
         // Always sync with detected location for all geo fields
         const country = geo.location?.country_code2?.toUpperCase();
-        const state = geo.location?.state_prov || '';
+        const state = normalizeRegionCode(country || '', geo.location?.state_prov || '');
         const city = geo.location?.city || '';
         // Find phone country code from COUNTRY_PHONE_OPTIONS
         const phoneCountry = country && COUNTRY_PHONE_OPTIONS.find(opt => opt.value === country) ? country : prev.phoneCountry;
@@ -387,7 +309,6 @@ export default function Checkout() {
     }
   });
   const [isProcessing, setIsProcessing] = useState(false);
-  
   const [selectedPayment, setSelectedPayment] = useState<'visa' | 'mastercard' | 'applePay'>('visa');
   // Coupon code UI state
   const [couponCodeInput, setCouponCodeInput] = useState<string>('');
@@ -553,19 +474,46 @@ export default function Checkout() {
     if (paymentState === 'success') {
       paymentCallbackHandledRef.current = true;
       (async () => {
-        if (isAuthenticated) {
-          try {
-            await clearSupabaseCart();
-          } catch (err) {
-            console.warn('[Checkout] Failed to clear Supabase cart after success callback:', err);
+        try {
+          const verification = reference
+            ? await trpcClient.paystack.transactions.verify.query({ reference })
+            : null;
+          const verifiedData = (verification as any)?.data || {};
+          const amountValue = Number(verifiedData.amount);
+          const purchaseAmount = Number.isFinite(amountValue) ? Number((amountValue / 100).toFixed(2)) : total;
+          const purchaseCurrency = String(verifiedData.currency || 'USD');
+
+          trackConfirmedPurchase(reference, reference, purchaseAmount, purchaseCurrency);
+
+          if (isAuthenticated) {
+            try {
+              await clearSupabaseCart();
+            } catch (err) {
+              console.warn('[Checkout] Failed to clear Supabase cart after success callback:', err);
+            }
           }
+          localStorage.removeItem('cart');
+          localStorage.removeItem(CHECKOUT_CART_SNAPSHOT_KEY);
+          window.dispatchEvent(new Event('cartUpdated'));
+          toast.success('Payment completed successfully');
+          navigate('/orders');
+        } catch (err) {
+          console.error('[Checkout] Failed to confirm successful payment:', err);
+          trackConfirmedPurchase(reference, reference, total, 'USD');
+          if (isAuthenticated) {
+            try {
+              await clearSupabaseCart();
+            } catch (clearErr) {
+              console.warn('[Checkout] Failed to clear Supabase cart after success callback:', clearErr);
+            }
+          }
+          localStorage.removeItem('cart');
+          localStorage.removeItem(CHECKOUT_CART_SNAPSHOT_KEY);
+          window.dispatchEvent(new Event('cartUpdated'));
+          toast.success('Payment completed successfully');
+          navigate('/orders');
         }
-        localStorage.removeItem('cart');
-        localStorage.removeItem(CHECKOUT_CART_SNAPSHOT_KEY);
-        window.dispatchEvent(new Event('cartUpdated'));
       })();
-      toast.success('Payment completed successfully');
-      navigate('/orders');
       return;
     }
 
@@ -579,6 +527,13 @@ export default function Checkout() {
           const status = String((verification as any)?.data?.status || '').toLowerCase();
 
           if (status === 'success') {
+            const verifiedData = (verification as any)?.data || {};
+            const amountValue = Number(verifiedData.amount);
+            const purchaseAmount = Number.isFinite(amountValue) ? Number((amountValue / 100).toFixed(2)) : total;
+            const purchaseCurrency = String(verifiedData.currency || 'USD');
+
+            trackConfirmedPurchase(reference, reference, purchaseAmount, purchaseCurrency);
+
             if (isAuthenticated) {
               try {
                 await clearSupabaseCart();
@@ -722,7 +677,7 @@ export default function Checkout() {
       setFormData((prev) => ({
         ...prev,
         address: prev.address || parsed.address,
-        state: prev.state || parsed.state,
+        state: prev.state || normalizeRegionCode(data.country || prev.country || 'US', parsed.state),
         city: prev.city || data.city || '',
         zip: prev.zip || data.postal_code || '',
         country: prev.country || data.country || 'US',
@@ -739,7 +694,17 @@ export default function Checkout() {
       return;
     }
     
-    const validCities = getCityOptions(formData.country, formData.state);
+    const normalizedState = normalizeRegionCode(formData.country, formData.state);
+    if (normalizedState && normalizedState !== formData.state) {
+      setFormData((prev) => ({
+        ...prev,
+        state: normalizedState,
+        city: '',
+      }));
+      return;
+    }
+
+    const validCities = getCityOptions(formData.country, normalizedState);
     if (formData.city && !validCities.includes(formData.city)) {
       // City is not in the new state, clear it
       setFormData((prev) => ({
@@ -798,8 +763,73 @@ export default function Checkout() {
     : legacyCouponPercent > 0 && metaCoupon
       ? `Coupon (${metaCoupon})`
       : null;
-  const cartGrandTotal = Math.round((subtotal + vat) * 100) / 100;
   const total = Math.round((subtotal + shipping + vat - offerDiscountAmount) * 100) / 100; // Ensure final total is precise
+  const cartGrandTotal = total;
+
+  useEffect(() => {
+    if (cartItems.length === 0 || total <= 0) return;
+    const signature = cartItems
+      .map((item) => `${item.product_id}:${item.quantity}`)
+      .sort()
+      .join('|');
+    const key = `motorvault_initiate_checkout:${signature}:${total.toFixed(2)}`;
+    try {
+      if (sessionStorage.getItem(key) === '1') return;
+      sessionStorage.setItem(key, '1');
+    } catch {
+      // Continue tracking if storage is unavailable.
+    }
+
+    trackInitiateCheckout(
+      cartItems.map((item) => item.product_id),
+      cartItems.map((item) => item.title),
+      total,
+      cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      'USD'
+    );
+  }, [cartItems, total]);
+
+  const trackConfirmedPurchase = (
+    reference: string | null | undefined,
+    orderId: string | null | undefined,
+    amount: number | null | undefined,
+    currency: string | null | undefined
+  ) => {
+    const purchaseItems = cartItems.length > 0 ? cartItems : readCheckoutSnapshot();
+    const purchaseReference = reference?.trim() || '';
+    if (purchaseReference && hasTrackedMetaPurchase(purchaseReference)) {
+      return;
+    }
+
+    const resolvedAmount = Number(amount);
+    const resolvedCurrency = currency?.trim().toUpperCase();
+    if (
+      !Number.isFinite(resolvedAmount) ||
+      resolvedAmount <= 0 ||
+      !resolvedCurrency ||
+      !/^[A-Z]{3}$/.test(resolvedCurrency) ||
+      purchaseItems.length === 0
+    ) {
+      return;
+    }
+
+    const contentIds = purchaseItems.map((item) => item.product_id);
+    const contentNames = purchaseItems.map((item) => item.title);
+    const numItems = purchaseItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    trackPurchase(
+      contentIds,
+      contentNames,
+      Math.round(resolvedAmount * 100) / 100,
+      numItems,
+      orderId || purchaseReference || undefined,
+      resolvedCurrency
+    );
+
+    if (purchaseReference) {
+      markTrackedMetaPurchase(purchaseReference);
+    }
+  };
 
   const paymentMethods: PaymentMethod[] = [
     {
@@ -830,7 +860,7 @@ export default function Checkout() {
       if (name === 'email') return sanitizeEmail(value, 255);
       if (name === 'address') return sanitizeTextInput(value, 255);
       if (name === 'city') return sanitizeTextInput(value, 80);
-      if (name === 'state') return sanitizeTextInput(value, 32).toUpperCase();
+      if (name === 'state') return normalizeRegionCode(formData.country, sanitizeTextInput(value, 32));
       if (name === 'zip') return sanitizePostalCode(value, 16);
       if (name === 'country') return sanitizeTextInput(value, 8).toUpperCase();
       if (name === 'phoneCountry') return sanitizeTextInput(value, 8).toUpperCase();
@@ -899,6 +929,17 @@ export default function Checkout() {
     if (!formData.state) errors.state = 'State is required';
     if (!formData.zip) errors.zip = 'Zip code is required';
 
+    if (!usesManualLocationFields(formData.country)) {
+      const stateOptions = getStateOptions(formData.country).filter((option) => option.value);
+      const cityOptions = getCityOptions(formData.country, formData.state);
+      if (!stateOptions.some((option) => option.value === formData.state)) {
+        errors.state = `${getStateLabel(formData.country)} must be selected from the list`;
+      }
+      if (!cityOptions.includes(formData.city)) {
+        errors.city = 'City must be selected from the list';
+      }
+    }
+
     setFormErrors(errors);
     
     if (Object.keys(errors).length > 0) {
@@ -922,14 +963,14 @@ export default function Checkout() {
     }
 
     if (!isAuthenticated || !user?.id) {
-      toast.error('Please sign in to save your shipping address');
+      toast.error(checkoutText('checkout.addressSaveSignInRequired', 'Please sign in to save your shipping address'));
       return false;
     }
 
     setIsSavingAddress(true);
     try {
       const normalized = (value: string | null | undefined) => String(value || '').trim().toLowerCase();
-      const nextAddressLine = composeAddressLine(sanitizeText(formData.address, 255), sanitizeText(formData.state, 32).toUpperCase());
+      const nextAddressLine = composeAddressLine(sanitizeText(formData.address, 255), sanitizeText(formData.state, 32));
       const nextAddressPayload = {
         user_id: user.id,
         country: sanitizeText(formData.country, 8).toUpperCase(),
@@ -954,9 +995,9 @@ export default function Checkout() {
           .insert({
             ...nextAddressPayload,
             is_default: true,
-          });
+        });
         if (insertError) throw insertError;
-        toast.success('Shipping address saved for future checkout');
+        toast.success(checkoutText('checkout.addressSaved', 'Shipping address saved for future checkout'));
         return true;
       }
 
@@ -986,7 +1027,10 @@ export default function Checkout() {
       }
 
       const shouldUpdateDefault = window.confirm(
-        'You entered a different shipping address from your saved one. Update your saved address to this new address?'
+        checkoutText(
+          'checkout.addressUpdateConfirm',
+          'You entered a different shipping address from your saved one. Update your saved address to this new address?'
+        )
       );
 
       if (shouldUpdateDefault) {
@@ -1006,7 +1050,7 @@ export default function Checkout() {
           .eq('id', existingAddress.id);
         if (updateError) throw updateError;
 
-        toast.success('Saved shipping address updated');
+        toast.success(checkoutText('checkout.addressUpdated', 'Saved shipping address updated'));
       } else {
         const { error: insertError } = await supabase
           .from('addresses')
@@ -1016,13 +1060,13 @@ export default function Checkout() {
           });
         if (insertError) throw insertError;
 
-        toast.info('Using new address for this checkout. Saved default remains unchanged.');
+        toast.info(checkoutText('checkout.addressKept', 'Using new address for this checkout. Saved default remains unchanged.'));
       }
 
       return true;
     } catch (error) {
       console.error('[Checkout] Failed to save shipping address:', error);
-      toast.error('Failed to save shipping address');
+      toast.error(checkoutText('checkout.addressSaveFailed', 'Failed to save shipping address'));
       return false;
     } finally {
       setIsSavingAddress(false);
@@ -1094,7 +1138,7 @@ export default function Checkout() {
           phoneCountry: formData.phoneCountry,
           address: sanitizeText(formData.address, 255),
           city: sanitizeText(formData.city, 80),
-          state: sanitizeText(formData.state, 32).toUpperCase(),
+          state: sanitizeText(formData.state, 32),
           zip: sanitizePostalCode(formData.zip, 16),
           country: sanitizeText(formData.country, 8).toUpperCase(),
           items: cartItems.map((item) => ({
@@ -1120,8 +1164,6 @@ export default function Checkout() {
 
       // Tutorial 2: Initialize transaction on server first
       const initResponse = await trpcClient.paystack.transactions.initialize.mutate(paystackInitPayload);
-
-
 
       if (!initResponse.data?.authorization_url) {
         throw new Error('Server failed to return authorization URL');
@@ -1275,6 +1317,9 @@ export default function Checkout() {
         <div className="mb-6 sm:mb-8 md:mb-12 px-0">
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 sm:mb-3 text-black">{t('checkout.secureCheckout', 'Secure Checkout')}</h1>
           <p className="text-sm sm:text-base text-gray-600 leading-relaxed">{t('checkout.completeCheckoutMessage', 'Complete your purchase safely and quickly')}</p>
+          <div className="mt-5">
+            <TrustSignals compact />
+          </div>
         </div>
 
         <div className="grid gap-6 sm:gap-8 grid-cols-1 lg:grid-cols-3">
@@ -1465,40 +1510,24 @@ export default function Checkout() {
                   <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
                     <div>
                       <label className="block text-sm font-semibold text-black mb-3">{getStateLabel(formData.country)} *</label>
-                      {getStateOptions(formData.country).length > 1 ? (
-                        <select
-                          name="state"
-                          value={formData.state}
-                          onChange={handleShippingChange}
-                          className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white ${
-                            formErrors.state
-                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                              : 'border-gray-300 focus:border-black focus:ring-black'
-                          }`}
-                          required
-                        >
-                          <option value="">{t('checkout.selectState', 'Select')} {getStateLabel(formData.country).toLowerCase()}</option>
-                          {getStateOptions(formData.country).map((state) => (
-                            <option key={state.value} value={state.value}>
-                              {state.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          name="state"
-                          value={formData.state}
-                          onChange={handleShippingChange}
-                          placeholder={getStateLabel(formData.country)}
-                          className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
-                            formErrors.state
-                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                              : 'border-gray-300 focus:border-black focus:ring-black'
-                          }`}
-                          required
-                        />
-                      )}
+                      <select
+                        name="state"
+                        value={formData.state}
+                        onChange={handleShippingChange}
+                        className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white ${
+                          formErrors.state
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                            : 'border-gray-300 focus:border-black focus:ring-black'
+                        }`}
+                        required
+                      >
+                        <option value="">{t('checkout.selectState', 'Select')} {getStateLabel(formData.country).toLowerCase()}</option>
+                        {getStateOptions(formData.country).filter((state) => state.value).map((state) => (
+                          <option key={state.value} value={state.value}>
+                            {state.label}
+                          </option>
+                        ))}
+                      </select>
                       {formErrors.state && (
                         <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
                           <AlertCircle size={14} /> {formErrors.state}
@@ -1507,40 +1536,25 @@ export default function Checkout() {
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-black mb-3">{t('checkout.city', 'City')} *</label>
-                      {getCityOptions(formData.country, formData.state).length > 0 ? (
-                        <select
-                          name="city"
-                          value={formData.city}
-                          onChange={handleShippingChange}
-                          className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white ${
-                            formErrors.city
-                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                              : 'border-gray-300 focus:border-black focus:ring-black'
-                          }`}
-                          required
-                        >
-                          <option value="">{t('checkout.selectCity', 'Select city')}</option>
-                          {getCityOptions(formData.country, formData.state).map((city) => (
-                            <option key={city} value={city}>
-                              {city}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          name="city"
-                          value={formData.city}
-                          onChange={handleShippingChange}
-                          placeholder="City"
-                          className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
-                            formErrors.city
-                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                              : 'border-gray-300 focus:border-black focus:ring-black'
-                          }`}
-                          required
-                        />
-                      )}
+                      <select
+                        name="city"
+                        value={formData.city}
+                        onChange={handleShippingChange}
+                        disabled={!formData.state}
+                        className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white disabled:bg-gray-100 disabled:text-gray-500 ${
+                          formErrors.city
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                            : 'border-gray-300 focus:border-black focus:ring-black'
+                        }`}
+                        required
+                      >
+                        <option value="">{t('checkout.selectCity', 'Select city')}</option>
+                        {getCityOptions(formData.country, formData.state).map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </select>
                       {formErrors.city && (
                         <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
                           <AlertCircle size={14} /> {formErrors.city}
@@ -1579,52 +1593,12 @@ export default function Checkout() {
                       className="w-full px-4 py-3 border border-gray-300 rounded focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-colors text-base bg-white"
                       required
                     >
-                                      {/* US, Canada, and all European countries */}
-                                      <option value="">Select country</option>
-                                      <option value="US">United States</option>
-                                      <option value="CA">Canada</option>
-                                      <option value="AL">Albania</option>
-                                      <option value="AD">Andorra</option>
-                                      <option value="AT">Austria</option>
-                                      <option value="BY">Belarus</option>
-                                      <option value="BE">Belgium</option>
-                                      <option value="BA">Bosnia and Herzegovina</option>
-                                      <option value="BG">Bulgaria</option>
-                                      <option value="HR">Croatia</option>
-                                      <option value="CY">Cyprus</option>
-                                      <option value="CZ">Czech Republic</option>
-                                      <option value="DK">Denmark</option>
-                                      <option value="EE">Estonia</option>
-                                      <option value="FI">Finland</option>
-                                      <option value="FR">France</option>
-                                      <option value="DE">Germany</option>
-                                      <option value="GR">Greece</option>
-                                      <option value="HU">Hungary</option>
-                                      <option value="IS">Iceland</option>
-                                      <option value="IE">Ireland</option>
-                                      <option value="IT">Italy</option>
-                                      <option value="LV">Latvia</option>
-                                      <option value="LI">Liechtenstein</option>
-                                      <option value="LT">Lithuania</option>
-                                      <option value="LU">Luxembourg</option>
-                                      <option value="MT">Malta</option>
-                                      <option value="MD">Moldova</option>
-                                      <option value="MC">Monaco</option>
-                                      <option value="ME">Montenegro</option>
-                                      <option value="NL">Netherlands</option>
-                                      <option value="MK">North Macedonia</option>
-                                      <option value="NO">Norway</option>
-                                      <option value="PL">Poland</option>
-                                      <option value="PT">Portugal</option>
-                                      <option value="RO">Romania</option>
-                                      <option value="SM">San Marino</option>
-                                      <option value="RS">Serbia</option>
-                                      <option value="SK">Slovakia</option>
-                                      <option value="SI">Slovenia</option>
-                                      <option value="ES">Spain</option>
-                                      <option value="SE">Sweden</option>
-                                      <option value="CH">Switzerland</option>
-                                      <option value="GB">United Kingdom</option>
+                      <option value="">Select country</option>
+                      {COUNTRY_OPTIONS.map((countryOption) => (
+                        <option key={countryOption.value} value={countryOption.value}>
+                          {countryOption.flag ? `${countryOption.flag} ` : ''}{countryOption.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
 

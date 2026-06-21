@@ -58,7 +58,7 @@ export function sanitizeName(input: string | null | undefined, maxLength = 100):
 }
 
 export function sanitizeLocation(input: string | null | undefined): string {
-  return sanitizeText(input, 32).toLowerCase();
+  return sanitizeText(input, 120);
 }
 
 export function sanitizePhone(input: string | null | undefined, maxLength = 24): string {

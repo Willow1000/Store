@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getProducts, getProductById, getFeaturedProducts, getNewArrivals, getDeals, getTrendingProducts, getUserCart, addToCart, getUserOrders, createOrder, getCategories, createNotification, getUserNotifications, getUserWishlist, addToWishlist, removeFromWishlist, upsertUser, resolveOfferByCode } from "./db";
-import { initializeTransaction, verifyTransaction } from "./paystack";
+import { initializeTransaction, verifyTransaction, buildPaystackCallbackUrl } from "./paystack";
 import { TRPCError } from "@trpc/server";
 
 function getRequestOrigin(req: { header: (name: string) => string | undefined; protocol?: string }): string | null {
@@ -137,7 +137,7 @@ export const appRouter = router({
         stripePaymentIntentId: z.string().optional(),
         paystackPaymentId: z.string().optional(),
       }))
-      .mutation(({ ctx, input }) => createOrder(ctx.user.id, input as any, ctx.user.email, ctx.user.name))
+      .mutation(({ ctx, input }) => createOrder(ctx.user.id, input as any, ctx.user.email ?? undefined, ctx.user.name ?? undefined))
   }),
 
   // Paystack procedures
@@ -158,7 +158,7 @@ export const appRouter = router({
           try {
             return await initializeTransaction({
               ...input,
-              callback_url: process.env.PAYSTACK_CALLBACK_URL || (requestOrigin ? `${requestOrigin}/payment/callback` : undefined),
+              callback_url: buildPaystackCallbackUrl(requestOrigin),
             });
           } catch (err: any) {
             console.error("[Paystack Initialize] Error:", err && (err.message || String(err)));

@@ -1,4 +1,4 @@
-# ModernMart Robots.txt - Comprehensive SEO & LLM Discoverability
+# MotorVault Robots.txt - Comprehensive SEO & LLM Discoverability
 # This file optimizes crawling for search engines and AI models
 
 User-agent: *
@@ -84,5 +84,5 @@ User-agent: DotBot
 Disallow: /
 
 # Sitemaps for comprehensive indexing
-Sitemap: https://modernmart.manus.space/sitemap.xml
-Sitemap: https://modernmart.manus.space/sitemap-products.xml
+Sitemap: https://motorvault.shop/sitemap.xml
+Sitemap: https://motorvault.shop/sitemap-products.xml

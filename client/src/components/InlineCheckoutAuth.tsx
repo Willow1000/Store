@@ -5,6 +5,8 @@ import { Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
+import { savePendingAuthAction } from '@/lib/authPendingAction';
+import { saveAuthRedirect } from '@/lib/authRedirect';
 
 /**
  * InlineCheckoutAuth: Embedded authentication component for the checkout flow.
@@ -68,7 +70,11 @@ export function InlineCheckoutAuth({ onAuthSuccess }: InlineCheckoutAuthProps) {
     try {
       // Store the current checkout location so we redirect back after OAuth
       if (typeof window !== 'undefined') {
-        localStorage.setItem('oauth_return_to', '/checkout');
+        saveAuthRedirect('/checkout');
+        savePendingAuthAction({
+          type: 'checkout',
+          redirectTo: '/checkout',
+        });
       }
 
       const { error } = await supabase.auth.signInWithOAuth({

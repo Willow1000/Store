@@ -18,6 +18,12 @@ interface PaystackInitializeTransactionPayload {
   callback_url?: string;
 }
 
+export function buildPaystackCallbackUrl(requestOrigin?: string | null): string | undefined {
+  const origin = String(requestOrigin || '').trim().replace(/\/$/, '');
+  if (!origin) return undefined;
+  return `${origin}/payment/callback`;
+}
+
 interface PaystackInitializeResponse {
   authorization_url: string;
   access_code: string;

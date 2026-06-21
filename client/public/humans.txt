@@ -1,10 +1,10 @@
-# ModernMart Humans.txt - About This Site
+# MotorVault Humans.txt - About This Site
 # humanstxt.org
 
 ## INFO
 
-Site Name: ModernMart
-Site URL: https://modernmart.manus.space
+Site Name: MotorVault
+Site URL: https://motorvault.shop
 Description: Premium e-commerce marketplace with verified sellers and quality products
 
 ## TECHNOLOGY COLOPHON
@@ -41,9 +41,9 @@ Description: Premium e-commerce marketplace with verified sellers and quality pr
 ## TEAM
 
 ### Project Leadership
-- Name: ModernMart Team
-- Organization: ModernMart
-- Email: support@modernmart.manus.space
+- Name: MotorVault Team
+- Organization: MotorVault
+- Email: support@motorvault.shop
 
 ### Development
 - Frontend Team: React specialists
@@ -71,7 +71,7 @@ Description: Premium e-commerce marketplace with verified sellers and quality pr
 
 ## SEO & DISCOVERABILITY
 
-ModernMart is optimized for:
+MotorVault is optimized for:
 - Search engine crawlers (Google, Bing, Yandex, Baidu)
 - LLM indexing (GPTBot, Claude, Cohere, PaLM)
 - Semantic web standards (Schema.org)

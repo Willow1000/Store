@@ -16,24 +16,24 @@
     <meta name="revisit-after" content="7 days" />
     
     <!-- Canonical URL -->
-    <link rel="canonical" href="https://modernmart.manus.space/" />
+    <link rel="canonical" href="%VITE_APP_URL%/" />
     
     <!-- Open Graph / Facebook -->
     <meta name="facebook-domain-verification" content="16lb10oe1o0vrmh95u3mo9qiuf77ca" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://modernmart.manus.space/" />
+    <meta property="og:url" content="%VITE_APP_URL%/" />
     <meta property="og:title" content="MotorVault - Premium Motor Products from Verified Sellers" />
     <meta property="og:description" content="Discover thousands of premium motor products from verified sellers. Quality guaranteed, fast shipping, and secure checkout." />
-    <meta property="og:image" content="https://modernmart.manus.space/og-image.png" />
+    <meta property="og:image" content="%VITE_APP_URL%/og-image.png" />
     <meta property="og:site_name" content="MotorVault" />
     <meta property="og:locale" content="en_US" />
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://modernmart.manus.space/" />
+    <meta property="twitter:url" content="%VITE_APP_URL%/" />
     <meta property="twitter:title" content="MotorVault - Premium Motor Products from Verified Sellers" />
     <meta property="twitter:description" content="Discover thousands of premium motor products from verified sellers. Quality guaranteed, fast shipping, and secure checkout." />
-    <meta property="twitter:image" content="https://modernmart.manus.space/og-image.png" />
+    <meta property="twitter:image" content="%VITE_APP_URL%/og-image.png" />
     
     <!-- Additional Meta Tags -->
     <meta name="theme-color" content="#000000" />
@@ -57,18 +57,18 @@
       "@context": "https://schema.org",
       "@type": "Organization",
       "name": "MotorVault",
-      "url": "https://modernmart.manus.space",
-      "logo": "https://modernmart.manus.space/logo.png",
+      "url": "%VITE_APP_URL%",
+      "logo": "%VITE_APP_URL%/logo.png",
       "description": "Premium e-commerce marketplace with verified sellers and quality products",
       "sameAs": [
-        "https://www.facebook.com/modernmart",
-        "https://www.twitter.com/modernmart",
-        "https://www.instagram.com/modernmart"
+        "https://www.facebook.com/motorvault",
+        "https://www.twitter.com/motorvault",
+        "https://www.instagram.com/motorvault"
       ],
       "contactPoint": {
         "@type": "ContactPoint",
         "contactType": "Customer Support",
-        "email": "support@modernmart.manus.space",
+        "email": "support@motorvault.shop",
         "availableLanguage": "en"
       }
     }
@@ -79,13 +79,13 @@
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
-      "name": "ModernMart",
-      "url": "https://modernmart.manus.space",
+      "name": "MotorVault",
+      "url": "%VITE_APP_URL%",
       "potentialAction": {
         "@type": "SearchAction",
         "target": {
           "@type": "EntryPoint",
-          "urlTemplate": "https://modernmart.manus.space/products?q={search_term_string}"
+          "urlTemplate": "%VITE_APP_URL%/products?q={search_term_string}"
         },
         "query-input": "required name=search_term_string"
       }
@@ -97,10 +97,10 @@
     {
       "@context": "https://schema.org",
       "@type": "LocalBusiness",
-      "name": "ModernMart",
+      "name": "MotorVault",
       "description": "Premium e-commerce marketplace with verified sellers",
-      "url": "https://modernmart.manus.space",
-      "image": "https://modernmart.manus.space/logo.png",
+      "url": "%VITE_APP_URL%",
+      "image": "%VITE_APP_URL%/logo.png",
       "priceRange": "$0-$10000",
       "areaServed": "US",
       "availableLanguage": "en"
@@ -109,6 +109,24 @@
     
     <!-- Sitemap and Robots -->
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+    <script>
+      (function () {
+        try {
+          var origin = window.location.origin.replace(/\/$/, '');
+          var path = window.location.pathname + window.location.search + window.location.hash;
+          var canonical = document.querySelector('link[rel="canonical"]');
+          var ogUrl = document.querySelector('meta[property="og:url"]');
+          var twitterUrl = document.querySelector('meta[property="twitter:url"]');
+
+          if (canonical) canonical.href = origin + path;
+          if (ogUrl) ogUrl.setAttribute('content', origin + path);
+          if (twitterUrl) twitterUrl.setAttribute('content', origin + path);
+        } catch (e) {
+          // ignore
+        }
+      })();
+    </script>
     
     <!-- Preload Critical Resources -->
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" />

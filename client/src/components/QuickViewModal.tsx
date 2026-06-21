@@ -11,6 +11,7 @@ import { useProductById } from '@/hooks/useSupabaseProducts';
 import { useSupabaseCart, useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getHighResImageUrl } from '@/lib/images';
+import { trackAddToCart } from '@/hooks/useMetaPixel';
 
 interface QuickViewModalProps {
   productId: string;
@@ -67,7 +68,7 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
     ['Condition', String(product?.condition || '')],
     ['Part Number', String(product?.part_number || '')],
     ['Category', String(product?.category_name || '')],
-  ].filter(([, value]) => value && value.trim() !== '');
+  ].filter((entry): entry is [string, string] => Boolean(entry[1] && entry[1].trim() !== ''));
 
   const existingSpecificKeys = new Set(baseSpecifics.map(([key]) => normalizeSpecificKey(key)));
   const rawItemSpecifics =
@@ -184,6 +185,7 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
         toast.error('Failed to add to cart');
         return;
       }
+      trackAddToCart(product.id, product.title, Number(product.price) || 0, quantity);
       toast.success(`Added ${quantity} item(s) to cart!`);
       setQuantity(1);
       onClose();
@@ -254,7 +256,6 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                         alt={product.title}
                         className="w-full h-full object-contain select-none pointer-events-none will-change-transform"
                         style={{
-                          imageRendering: 'high-quality',
                           transform: `translate3d(${panX}px, ${panY}px, 0) scale(${zoom})`,
                           transformOrigin: 'center center'
                         }}
@@ -341,7 +342,7 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                             src={getHighResImageUrl(img.image_url)}
                             alt={`${product.title} thumbnail ${actualImageIndex}`}
                             className="w-full h-full object-contain bg-gray-100"
-                            style={{ imageRendering: 'high-quality' }}
+                            style={{}}
                             crossOrigin="anonymous"
                             loading="lazy"
                             decoding="async"
