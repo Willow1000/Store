@@ -1,20 +1,21 @@
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useEffect, useRef } from 'react';
-import { useLocation } from 'wouter';
 import { Bell, CheckCircle, AlertCircle, Package, Trash2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
+import { requestAuthenticationForPath } from '@/lib/authRequired';
 
 export default function Notifications() {
   const { isAuthenticated, sessionRestored } = useAuth();
   const authPromptedRef = useRef(false);
-  const [location] = useLocation();
   const { data: notifications, isLoading } = trpc.notifications.list.useQuery(undefined, {
     enabled: sessionRestored && isAuthenticated,
   });
 
   useEffect(() => {
-    // do not force-open auth modal; allow rendering an empty notifications page for guests
+    if (!sessionRestored || isAuthenticated || authPromptedRef.current) return;
+    authPromptedRef.current = true;
+    requestAuthenticationForPath();
   }, [isAuthenticated, sessionRestored]);
 
   if (!sessionRestored) {

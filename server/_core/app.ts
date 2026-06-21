@@ -7,7 +7,8 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { registerOAuthRoutes } from "./oauth";
-import { verifyTransaction, initializeTransaction } from "../paystack";
+import { verifyTransaction, initializeTransaction, buildPaystackCallbackUrl } from "../paystack";
+import { generateSitemap } from "../sitemap";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
 import { getDb, createOrder, createPayment, getUserById, getUserByOpenId, resolveOfferByCode, recordProductSearchTrackingEvent, recentSimilarTrackingExists, clearUserCart } from "../db";
@@ -33,6 +34,219 @@ function getRequestOrigin(req: express.Request): string | null {
 
   if (!protocol || !host) return null;
   return `${protocol}://${host}`;
+}
+
+function getSiteOrigin(req: express.Request): string {
+  return (getRequestOrigin(req) || ENV.siteUrl || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+}
+
+function buildRobotsTxt(origin: string): string {
+  const normalizedOrigin = origin.replace(/\/$/, '');
+  return [
+    'User-agent: *',
+    'Allow: /',
+    'Disallow: /api/',
+    'Disallow: /admin/',
+    'Disallow: /account',
+    'Disallow: /orders',
+    'Disallow: /checkout',
+    'Disallow: /cart',
+    'Sitemap: ' + `${normalizedOrigin}/sitemap.xml`,
+    'Sitemap: ' + `${normalizedOrigin}/sitemap-products.xml`,
+    '',
+  ].join('\n');
+}
+
+function buildLlmsTxt(origin: string): string {
+  const normalizedOrigin = origin.replace(/\/$/, '');
+  return [
+    '# MotorVault LLM Index',
+    '',
+    '## Overview',
+    'MotorVault is an automotive parts marketplace with product browsing, checkout, support pages, and authenticated account areas.',
+    '',
+    '## Primary Pages',
+    `- ${normalizedOrigin}/`,
+    `- ${normalizedOrigin}/products`,
+    `- ${normalizedOrigin}/cart`,
+    `- ${normalizedOrigin}/checkout`,
+    `- ${normalizedOrigin}/about`,
+    `- ${normalizedOrigin}/help`,
+    `- ${normalizedOrigin}/contact`,
+    `- ${normalizedOrigin}/shipping`,
+    `- ${normalizedOrigin}/returns`,
+    `- ${normalizedOrigin}/privacy`,
+    `- ${normalizedOrigin}/terms`,
+    '',
+    '## Structured Data',
+    '- Organization',
+    '- WebSite',
+    '- Product',
+    '- BreadcrumbList',
+    '- LocalBusiness',
+    '',
+    '## Crawl Targets',
+    `- Sitemap: ${normalizedOrigin}/sitemap.xml`,
+    `- Product Sitemap: ${normalizedOrigin}/sitemap-products.xml`,
+    `- Robots: ${normalizedOrigin}/robots.txt`,
+    '',
+    '## Notes',
+    '- Public pages are intended for indexing.',
+    '- Authenticated pages should not be crawled or indexed.',
+    '',
+  ].join('\n');
+}
+
+type RateBucket = { count: number; resetAt: number };
+const rateBuckets = new Map<string, RateBucket>();
+
+function isStaticAssetPath(pathname: string): boolean {
+  return /\.(?:css|js|mjs|map|png|jpg|jpeg|gif|webp|svg|ico|txt|xml|woff2?)$/i.test(pathname) ||
+    pathname.startsWith('/assets/') ||
+    pathname.startsWith('/images/');
+}
+
+function createRateLimitMiddleware(opts: { windowMs: number; max: number; pathPrefix?: string[] }) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.method === 'OPTIONS' || isStaticAssetPath(req.path)) {
+      return next();
+    }
+
+    if (opts.pathPrefix && !opts.pathPrefix.some((prefix) => req.path.startsWith(prefix))) {
+      return next();
+    }
+
+    const key = `${req.ip || req.socket.remoteAddress || 'unknown'}:${opts.pathPrefix?.[0] || 'global'}`;
+    const now = Date.now();
+    const current = rateBuckets.get(key);
+
+    if (!current || current.resetAt <= now) {
+      rateBuckets.set(key, { count: 1, resetAt: now + opts.windowMs });
+      return next();
+    }
+
+    current.count += 1;
+    if (current.count > opts.max) {
+      res.setHeader('Retry-After', Math.ceil((current.resetAt - now) / 1000).toString());
+      return res.status(429).json({ error: 'Too many requests' });
+    }
+
+    return next();
+  };
+}
+
+function isValidEmailAddress(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function verifyRecaptchaToken(token: string | undefined, remoteIp: string | undefined): Promise<boolean> {
+  const secret = process.env.RECAPTCHA_SECRET_KEY?.trim();
+  if (!secret) {
+    console.warn('[Contact] RECAPTCHA_SECRET_KEY not configured; skipping server-side CAPTCHA verification');
+    return true;
+  }
+
+  if (!token) return false;
+
+  const params = new URLSearchParams({
+    secret,
+    response: token,
+  });
+  if (remoteIp) params.set('remoteip', remoteIp);
+
+  try {
+    const captchaRes = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    const body = await captchaRes.json().catch(() => null);
+    if (!captchaRes.ok || !body?.success) {
+      console.warn('[Contact] CAPTCHA verification failed:', body || captchaRes.status);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('[Contact] CAPTCHA verification error:', error);
+    return false;
+  }
+}
+
+function isSameOriginRequest(req: express.Request): boolean {
+  const originHeader = req.header('origin');
+  if (!originHeader) return true;
+
+  const requestOrigin = getRequestOrigin(req);
+  if (!requestOrigin) return false;
+
+  try {
+    const originUrl = new URL(originHeader);
+    const requestUrl = new URL(requestOrigin);
+    if (originUrl.origin === requestUrl.origin) return true;
+
+    const configuredOrigins = [
+      ENV.siteUrl,
+      process.env.VITE_APP_URL,
+      process.env.APP_URL,
+      process.env.VITE_SITE_URL,
+      process.env.SITE_URL,
+    ]
+      .filter(Boolean)
+      .map((value) => {
+        try {
+          return new URL(String(value)).origin;
+        } catch {
+          return '';
+        }
+      })
+      .filter(Boolean);
+
+    if (configuredOrigins.includes(originUrl.origin)) return true;
+
+    const loopbackHosts = new Set(['localhost', '127.0.0.1', '::1']);
+    const originLoopback = loopbackHosts.has(originUrl.hostname);
+    const requestLoopback = loopbackHosts.has(requestUrl.hostname);
+    const samePort = originUrl.port === requestUrl.port;
+
+    // Allow localhost/127.0.0.1 interchangeably during local checkout testing.
+    if (originLoopback && requestLoopback && samePort) return true;
+    if (!ENV.isProduction && originLoopback && requestLoopback) return true;
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function applySecurityHeaders(req: express.Request, res: express.Response, next: express.NextFunction) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self), payment=(self)');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+  if (req.secure || req.header('x-forwarded-proto') === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+
+  const csp = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "form-action 'self' https://*.supabase.co https://checkout.paystack.com",
+    "img-src 'self' data: blob: https:",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net https://www.facebook.com https://www.googletagmanager.com https://www.google.com",
+    "connect-src 'self' https: wss:",
+    "media-src 'self' https: data: blob:",
+    "object-src 'none'",
+    "upgrade-insecure-requests",
+  ].join('; ');
+
+  res.setHeader('Content-Security-Policy', csp);
+  next();
 }
 
 function isValidConfiguredOrigin(value: string | undefined): boolean {
@@ -366,10 +580,27 @@ async function getFeedProducts(): Promise<FeedProduct[]> {
 
 export function createApp() {
   const app = express();
+  app.disable('x-powered-by');
 
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(applySecurityHeaders);
+  app.use(createRateLimitMiddleware({ windowMs: 10 * 60 * 1000, max: 600 }));
+  app.use(createRateLimitMiddleware({ windowMs: 10 * 60 * 1000, max: 90, pathPrefix: ['/api/trpc', '/api/track', '/initialize-payment', '/payment/callback'] }));
+  app.use(createRateLimitMiddleware({ windowMs: 10 * 60 * 1000, max: 8, pathPrefix: ['/api/contact-us'] }));
+  app.use((req, res, next) => {
+    const unsafeMethod = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+    if (!unsafeMethod) {
+      return next();
+    }
+
+    if (!isSameOriginRequest(req)) {
+      return res.status(403).json({ error: 'Blocked cross-site request' });
+    }
+
+    return next();
+  });
 
   app.use((req, res, next) => {
     const originalPath = getOriginalPath(req);
@@ -400,6 +631,38 @@ export function createApp() {
     return next();
   });
 
+  app.get('/robots.txt', (req, res) => {
+    const origin = getSiteOrigin(req);
+    res.type('text/plain').send(buildRobotsTxt(origin));
+  });
+
+  app.get('/llms.txt', (req, res) => {
+    const origin = getSiteOrigin(req);
+    res.type('text/plain').send(buildLlmsTxt(origin));
+  });
+
+  app.get('/sitemap.xml', async (req, res) => {
+    const origin = getSiteOrigin(req);
+    try {
+      const xml = await generateSitemap(origin);
+      res.type('application/xml').send(xml);
+    } catch (error) {
+      console.error('[Sitemap] Failed to generate sitemap.xml:', error);
+      res.status(500).type('text/plain').send('Failed to generate sitemap');
+    }
+  });
+
+  app.get('/sitemap-products.xml', async (req, res) => {
+    const origin = getSiteOrigin(req);
+    try {
+      const xml = await generateSitemap(origin);
+      res.type('application/xml').send(xml);
+    } catch (error) {
+      console.error('[Sitemap] Failed to generate sitemap-products.xml:', error);
+      res.status(500).type('text/plain').send('Failed to generate sitemap');
+    }
+  });
+
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 
@@ -428,7 +691,7 @@ export function createApp() {
             ? 'failed'
             : 'failed';
         console.warn('[Paystack] Transaction not successful:', reference, status);
-        return res.redirect(`/checkout?payment=${paymentState}&reference=${encodeURIComponent(reference)}&status=${encodeURIComponent(status)}`);
+        return res.redirect(`/payment/failed?payment=${paymentState}&reference=${encodeURIComponent(reference)}&status=${encodeURIComponent(status)}`);
       }
 
       const paystackData = verification.data as any;
@@ -567,7 +830,7 @@ export function createApp() {
       }
 
       // Redirect to a success page (client can show order details by reference)
-      return res.redirect(`/checkout?payment=success&reference=${encodeURIComponent(reference)}`);
+      return res.redirect(`/payment/success?payment=success&reference=${encodeURIComponent(reference)}`);
     } catch (err) {
       console.error('[Payment Callback] Verification error:', err);
       return res.status(500).send('Payment verification failed');
@@ -588,13 +851,67 @@ export function createApp() {
       const paymentData = await initializeTransaction({
         email: String(email),
         amount: Number(amount),
-        callback_url: process.env.PAYSTACK_CALLBACK_URL || (requestOrigin ? `${requestOrigin}/payment/callback` : undefined),
+        callback_url: buildPaystackCallbackUrl(requestOrigin),
       });
 
       return res.status(200).json(paymentData);
     } catch (error: any) {
       console.error('[Initialize Payment] Error initializing transaction:', error?.message ?? error);
       return res.status(500).json({ error: error?.message ?? 'Failed to initialize payment' });
+    }
+  });
+
+  app.get('/api/debug/paystack/probe', async (req: express.Request, res: express.Response) => {
+    const email = String(req.query.email ?? '').trim();
+    const amount = Number(req.query.amount ?? 0);
+    const reference = String(req.query.reference ?? '').trim() || undefined;
+    const currency = String(req.query.currency ?? 'USD').trim() || 'USD';
+    const description = String(req.query.description ?? '').trim() || undefined;
+
+    if (!email || !amount) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Missing email or amount query parameter',
+      });
+    }
+
+    try {
+      const requestOrigin = getRequestOrigin(req);
+      const response = await initializeTransaction({
+        email,
+        amount,
+        reference,
+        currency,
+        description,
+        callback_url: buildPaystackCallbackUrl(requestOrigin),
+      });
+
+      return res.status(200).json({
+        ok: true,
+        request: {
+          email,
+          amount,
+          reference: reference || null,
+          currency,
+          description: description || null,
+          callbackUrl: buildPaystackCallbackUrl(requestOrigin) || null,
+        },
+        response,
+      });
+    } catch (error: any) {
+      const message = error?.message ?? 'Failed to probe Paystack initialization';
+      console.error('[Paystack Debug Probe] Error:', message);
+      return res.status(500).json({
+        ok: false,
+        request: {
+          email,
+          amount,
+          reference: reference || null,
+          currency,
+          description: description || null,
+        },
+        error: message,
+      });
     }
   });
 
@@ -795,7 +1112,7 @@ export function createApp() {
           ticket_description: String(ticket?.description || entry.description || ''),
           contact_email: sanitizeEmail(payload.contactEmail || authenticatedUserEmail || '', 255),
           contact_phone: sanitizePhone(payload.contactPhone || '', 24),
-          support_email: process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com',
+          support_email: process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop',
         });
 
         if (!ticketEmailSent) {
@@ -822,18 +1139,44 @@ export function createApp() {
       const location = sanitizeLocation(payload.location || '');
       const subject = sanitizeText(payload.subject || '', 200);
       const message = sanitizeMultilineText(payload.message || '', 5000);
+      const honeypot = sanitizeText(payload.website || '', 120);
+      const supportEmail = process.env.CONTACT_SUPPORT_EMAIL || 'support@motorvault.shop';
 
-      if (!name || !email || !location || !message) {
-        return res.status(400).json({ error: 'Missing required contact fields' });
+      if (honeypot) {
+        console.warn('[Contact] Honeypot submission blocked', { ip: req.ip });
+        return res.status(400).json({ error: 'We were unable to send your message. Please try again.' });
+      }
+
+      if (!name || !email || !subject || !message) {
+        console.warn('[Contact] Validation failed: missing required fields', {
+          hasName: Boolean(name),
+          hasEmail: Boolean(email),
+          hasSubject: Boolean(subject),
+          hasMessage: Boolean(message),
+        });
+        return res.status(400).json({ error: 'Please complete all required fields.' });
+      }
+
+      if (!isValidEmailAddress(email)) {
+        console.warn('[Contact] Validation failed: invalid email format', { email });
+        return res.status(400).json({ error: 'Please enter a valid email address.' });
+      }
+
+      if (message.length < 10) {
+        console.warn('[Contact] Validation failed: message too short', { email });
+        return res.status(400).json({ error: 'Message must be at least 10 characters.' });
+      }
+
+      const captchaOk = await verifyRecaptchaToken(
+        typeof payload.recaptchaToken === 'string' ? payload.recaptchaToken : undefined,
+        req.ip,
+      );
+      if (!captchaOk) {
+        return res.status(400).json({ error: 'Please complete the security check before sending your message.' });
       }
 
       const supabaseUrl = process.env.VITE_SUPABASE_URL?.replace(/\/rest\/v1\/?$/, '') || 'https://dormxdlqbstebbsumdjj.supabase.co';
       const serviceKey = process.env.SUPABASE_SERVICE_KEY;
-
-      if (!serviceKey) {
-        console.error('[Contact] SUPABASE_SERVICE_KEY not configured');
-        return res.status(500).json({ error: 'Service key not configured' });
-      }
 
       const contactPayload = {
         name,
@@ -843,21 +1186,34 @@ export function createApp() {
         message,
       };
 
-      const contactRes = await fetch(`${supabaseUrl}/rest/v1/contactus`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceKey}`,
-          'apikey': serviceKey,
-          'Prefer': 'return=representation',
-        },
-        body: JSON.stringify(contactPayload),
-      });
+      let created: unknown = null;
+      let stored = false;
 
-      const resText = await contactRes.text();
-      if (!contactRes.ok) {
-        console.error('[Contact] Supabase API error:', contactRes.status, resText);
-        return res.status(502).json({ error: 'Failed to send contact message' });
+      if (!serviceKey) {
+        console.warn('[Contact] SUPABASE_SERVICE_KEY not configured; continuing with email-only processing');
+      } else {
+        try {
+          const contactRes = await fetch(`${supabaseUrl}/rest/v1/contactus`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceKey}`,
+              'apikey': serviceKey,
+              'Prefer': 'return=representation',
+            },
+            body: JSON.stringify(contactPayload),
+          });
+
+          const resText = await contactRes.text();
+          if (!contactRes.ok) {
+            console.error('[Contact] Supabase API error:', contactRes.status, resText);
+          } else {
+            stored = true;
+            created = JSON.parse(resText || 'null');
+          }
+        } catch (storageError) {
+          console.error('[Contact] Supabase storage exception:', storageError);
+        }
       }
 
 
@@ -867,11 +1223,10 @@ export function createApp() {
         contact_subject: subject || 'General support request',
         contact_location: location,
         contact_message: message,
-        support_email: process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com',
+        support_email: supportEmail,
       });
 
-      // Send an official admin notification for every inquiry/lead
-      await sendContactAdminNotification('wilkinsondari7@gmail.com', {
+      const adminEmailSent = await sendContactAdminNotification(supportEmail, {
         name,
         email,
         location,
@@ -883,15 +1238,21 @@ export function createApp() {
         console.warn('[Contact] Confirmation email was not sent');
       }
 
-      const created = JSON.parse(resText || 'null');
+      if (!adminEmailSent) {
+        console.error('[Contact] Support notification email was not sent');
+        return res.status(502).json({ error: 'We were unable to send your message. Please try again.' });
+      }
+
       return res.status(201).json({
         success: true,
         emailSent: contactEmailSent,
+        supportEmailSent: adminEmailSent,
+        stored,
         message: Array.isArray(created) ? created[0] : created,
       });
     } catch (err) {
       console.error('[Contact] create error:', err);
-      return res.status(500).json({ error: 'internal' });
+      return res.status(500).json({ error: 'We were unable to send your message. Please try again.' });
     }
   });
 

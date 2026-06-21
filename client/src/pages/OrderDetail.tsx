@@ -4,11 +4,12 @@ import { useLocation } from 'wouter';
 import { ArrowLeft, Clock, CheckCircle, Truck, Package } from 'lucide-react';
 import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
 import { supabase } from '@/lib/supabase';
+import { requestAuthenticationForPath } from '@/lib/authRequired';
 
 export default function OrderDetail({ params }: { params: { id: string } }) {
   const { user, isAuthenticated, sessionRestored, loading } = useAuth();
   const authPromptedRef = useRef(false);
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const orderId = params.id;
   const { orders, isLoading } = useSupabaseOrders(user?.id ?? null);
   const [shippingInfo, setShippingInfo] = useState({
@@ -22,7 +23,9 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
   });
 
   useEffect(() => {
-    // do not force-open auth modal; allow blank order detail for guests
+    if (!sessionRestored || loading || isAuthenticated || authPromptedRef.current) return;
+    authPromptedRef.current = true;
+    requestAuthenticationForPath();
   }, [isAuthenticated, sessionRestored, loading]);
 
   // Initialize order from orders array - moved before conditional returns
@@ -217,13 +220,13 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
                         <span className="font-semibold text-yellow-600">Pending</span>
                       </>
                     )}
-                    {order.status === 'confirmed' && (
+                    {String(order.status) === 'confirmed' && (
                       <>
                         <CheckCircle size={18} className="text-green-600" />
                         <span className="font-semibold text-green-600">Confirmed</span>
                       </>
                     )}
-                    {order.status === 'shipped' && (
+                    {String(order.status) === 'shipped' && (
                       <>
                         <Truck size={18} className="text-blue-600" />
                         <span className="font-semibold text-blue-600">Shipped</span>

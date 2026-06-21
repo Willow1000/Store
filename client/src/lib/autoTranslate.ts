@@ -109,7 +109,7 @@ async function translateBatch(language: SiteLanguageCode, values: string[]): Pro
       const translated = await translateTextValue(language, value);
       if (!translated.ok) hasError = true;
       out.set(value, translated.text);
-    }
+      }
   });
 
   await Promise.all(workers);

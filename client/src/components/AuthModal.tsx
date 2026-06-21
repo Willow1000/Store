@@ -7,8 +7,9 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
-import { executePendingAuthAction, getPendingAuthAction } from '@/lib/authPendingAction';
+import { getPendingAuthAction } from '@/lib/authPendingAction';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
+import { getCurrentInternalPath, saveAuthRedirect } from '@/lib/authRedirect';
 
 export default function AuthModal() {
   const { isOpen, actionType, closeAuthModal } = useAuthModal();
@@ -60,9 +61,9 @@ export default function AuthModal() {
     setIsLoading(true);
     try {
       const pendingAction = getPendingAuthAction();
-      const returnToPath = pendingAction?.redirectTo || `${window.location.pathname}${window.location.search}`;
+      const returnToPath = pendingAction?.redirectTo || getCurrentInternalPath();
       if (typeof window !== 'undefined') {
-        localStorage.setItem('oauth_return_to', returnToPath);
+        saveAuthRedirect(returnToPath);
       }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',

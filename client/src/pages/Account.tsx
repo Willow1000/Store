@@ -1,16 +1,18 @@
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useEffect, useRef } from 'react';
-import { useLocation } from 'wouter';
 import { SEOHead } from '@/components/SEOHead';
 import { User, Mail, Phone, MapPin, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
+import { requestAuthenticationForPath } from '@/lib/authRequired';
 
 export default function Account() {
   const { user, isAuthenticated, sessionRestored, logout } = useAuth();
   const authPromptedRef = useRef(false);
-  const [location] = useLocation();
+
   useEffect(() => {
-    // no-op: do not force-open auth modal. allow blank profile for unauthenticated users.
+    if (!sessionRestored || isAuthenticated || authPromptedRef.current) return;
+    authPromptedRef.current = true;
+    requestAuthenticationForPath();
   }, [isAuthenticated, sessionRestored]);
 
   const handleLogout = async () => {

@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 import { clearPendingAuthAction } from "@/lib/authPendingAction";
+import { saveAuthRedirect } from "@/lib/authRedirect";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -127,34 +128,6 @@ export function useAuth(options?: UseAuthOptions) {
           // Invalidate the auth query to refetch user data
           utils.auth.me.invalidate();
 
-          // After sign-in, try to merge any guest cart/wishlist into the user's DB
-          try {
-            const { executePendingAuthAction } = await import('@/lib/authPendingAction');
-            // Use a simple navigate function that updates location
-            const nav = (to: string) => {
-              try {
-                if (typeof window !== 'undefined') {
-                  window.location.href = to;
-                }
-              } catch (e) {}
-            };
-
-            // Resolve current user id if possible
-            const { data: userData } = await supabase.auth.getUser();
-            const uid = userData?.user?.id;
-            if (uid) {
-              // executePendingAuthAction will merge cart and wishlist and handle pending navigation
-              try {
-                const { executePendingAuthAction } = await import('@/lib/authPendingAction');
-                await executePendingAuthAction(uid, nav);
-              } catch (e) {
-                console.warn('[useAuth] executePendingAuthAction failed:', e);
-              }
-            }
-          } catch (e) {
-            console.warn('[useAuth] Failed to execute pending auth actions:', e);
-          }
-
           if (!initialSessionHandled && isMounted) {
             setSessionRestored(true);
           }
@@ -259,6 +232,7 @@ export function useAuth(options?: UseAuthOptions) {
     if (typeof window === "undefined") return;
     if (window.location.pathname === redirectPath) return;
 
+    saveAuthRedirect();
     window.location.href = redirectPath
   }, [
     redirectOnUnauthenticated,

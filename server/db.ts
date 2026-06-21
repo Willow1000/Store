@@ -108,7 +108,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
       set: updateSet,
     });
   } catch (error) {
@@ -461,7 +462,7 @@ export async function createOrderItems(orderId: number, items: OrderItemInput[])
       productId: item.productId,
       variantId: item.variantId ?? null,
       quantity: item.quantity,
-      price: item.price,
+      price: String(item.price),
     }))
   );
 
@@ -476,7 +477,7 @@ export async function createOrderItems(orderId: number, items: OrderItemInput[])
 
     return {
       name: product?.name || `Product #${item.productId}`,
-      sku: product?.sku || '',
+      sku: (product as any)?.sku || '',
       description: product?.description || '',
       quantity: item.quantity,
       price: String(item.price),
@@ -523,7 +524,7 @@ export async function createOrder(
   // Send confirmation email asynchronously (don't wait for it)
   if (userEmail) {
     try {
-      const { sendOrderConfirmationEmail } = await import('../_core/emailService');
+      const { sendOrderConfirmationEmail } = await import('./_core/emailService');
       const orderDate = new Date().toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -537,8 +538,9 @@ export async function createOrder(
         order_total: data.total as string,
         currency: 'USD',
         order_url: `https://store-nine-eosin.vercel.app/orders/${orderId || userId}`,
+        support_email: process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop',
         items: enrichedItems,
-      }).catch(err => console.error('[Order Confirmation Email] Error:', err));
+      }).catch((err: unknown) => console.error('[Order Confirmation Email] Error:', err));
     } catch (error) {
       console.error('[Email Service] Failed to send confirmation email:', error);
       // Don't throw - order was created successfully, email is just a bonus

@@ -89,13 +89,16 @@ export function RecaptchaCheckbox({
           return;
         }
 
-        window.grecaptcha.ready(() => {
+        const grecaptcha = window.grecaptcha;
+        if (!grecaptcha) return;
+
+        grecaptcha.ready(() => {
           if (!isMounted || !containerRef.current || widgetIdRef.current !== null) {
             return;
           }
 
           try {
-            widgetIdRef.current = window.grecaptcha.render(containerRef.current, {
+            widgetIdRef.current = grecaptcha.render(containerRef.current, {
               sitekey: siteKey,
               theme: 'light',
               callback: (token: string) => {

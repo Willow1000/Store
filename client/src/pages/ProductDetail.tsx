@@ -8,8 +8,11 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useProductById, useProducts } from '@/hooks/useSupabaseProducts';
 import { useSupabaseCart, useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useState, useEffect, useRef } from 'react';
+import { useIsMobile } from '@/hooks/useMobile';
 import currencyClient from '@/lib/currencyClient';
 import { getHighResImageUrl } from '@/lib/images';
+import { trackAddToCart, trackViewContent } from '@/hooks/useMetaPixel';
+import { TrustSignals } from '@/components/TrustSignals';
 
 export default function ProductDetail() {
   const [, params] = useRoute('/product/:id');
@@ -29,10 +32,16 @@ export default function ProductDetail() {
   const dragStartRef = useRef({ x: 0, y: 0 });
 
   const { user, isAuthenticated } = useAuth();
+  const isMobile = useIsMobile();
   const { product, images, isLoading, error } = useProductById(productId || '');
   const { products: allProducts } = useProducts(1, 200); // Fetch products for similar items
   const { addToCart } = useSupabaseCart(user?.id || null);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
+
+  useEffect(() => {
+    if (!product?.id) return;
+    trackViewContent(product.id, product.title, Number(product.price) || 0);
+  }, [product?.id]);
 
   // Lightweight non-blocking tracker helper (same pattern as Products.tsx)
   const sendTrackingEvent = (payload: Record<string, any>) => {
@@ -43,7 +52,7 @@ export default function ProductDetail() {
           let sid = localStorage.getItem('sessionId');
           if (!sid) {
             sid = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-            try { localStorage.setItem('sessionId', sid); } catch (e) { }
+            try { localStorage.setItem('sessionId', sid || ''); } catch (e) { }
           }
           payload.sessionId = payload.sessionId || sid;
         }
@@ -190,6 +199,7 @@ export default function ProductDetail() {
         console.error('[ProductDetail] AddToCart failed: hook returned false');
         return;
       }
+      trackAddToCart(product.id, product.title, Number(product.price) || 0, quantity);
       toast.success(`Added ${quantity} item(s) to cart!`);
       setQuantity(1);
       try {
@@ -282,23 +292,63 @@ export default function ProductDetail() {
 
   if (!productId) return null;
 
+  const canonicalUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/product/${productId}`
+    : `/product/${productId}`;
+  const seoTitle = product?.title ? `${product.title} | MotorVault` : 'Product Details | MotorVault';
+  const seoDescription = product?.title
+    ? `View ${product.title} on MotorVault. Compare pricing, check availability, and shop secure automotive parts and accessories.`
+    : 'View premium automotive parts and accessories on MotorVault.';
+  const seoImage = product?.cover_image_url || images?.[0]?.image_url || 'https://motorvault.shop/og-image.png';
+  const seoKeywords = [
+    'automotive parts',
+    'car parts',
+    'OEM parts',
+    'aftermarket parts',
+    product?.brand,
+    product?.model,
+    product?.category_name,
+  ].filter((value): value is string => Boolean(value && value.trim()));
+
   if (isLoading) {
-    return <ProductDetailSkeleton />;
+    return (
+      <>
+        <SEOHead
+          title={seoTitle}
+          description={seoDescription}
+          canonical={canonicalUrl}
+          ogType="product"
+          ogImage={seoImage}
+          keywords={seoKeywords}
+        />
+        <ProductDetailSkeleton />
+      </>
+    );
   }
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
-        <div className="text-center">
-          <p className="text-red-600 font-semibold mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Reload Page
-          </button>
+      <>
+        <SEOHead
+          title={seoTitle}
+          description={seoDescription}
+          canonical={canonicalUrl}
+          ogType="product"
+          ogImage={seoImage}
+          keywords={seoKeywords}
+        />
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
+          <div className="text-center">
+            <p className="text-red-600 font-semibold mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Reload Page
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -417,10 +467,30 @@ export default function ProductDetail() {
         p.id !== product?.id &&
         p.category_name === product?.category_name
     )
-    .slice(0, 6);
+    .slice(0, isMobile ? 6 : 12);
 
   return (
-    <main role="main" className="bg-white min-h-screen w-full overflow-x-hidden">
+    <>
+      <SEOHead
+        title={seoTitle}
+        description={seoDescription}
+        canonical={canonicalUrl}
+        ogType="product"
+        ogImage={seoImage}
+        keywords={seoKeywords}
+        productData={{
+          name: product.title,
+          price: currentPrice,
+          originalPrice: originalPrice ?? undefined,
+          rating: (product as any).rating ? Number((product as any).rating) : undefined,
+          reviews: (product as any).review_count ? Number((product as any).review_count) : undefined,
+          availability: isOutOfStock ? 'OutOfStock' : 'InStock',
+          image: seoImage,
+          category: product.category_name || undefined,
+          description: productDescription || seoDescription,
+        }}
+      />
+      <main role="main" className="bg-white min-h-screen w-full overflow-x-hidden">
       <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
         {/* Product Detail Grid */}
         <div className="lg:grid lg:grid-cols-2 lg:gap-x-20 xl:gap-x-24 lg:items-start">
@@ -452,7 +522,7 @@ export default function ProductDetail() {
                               src={getHighResImageUrl(img.image_url)}
                               alt={`Product image ${actualImageIndex + 1}`}
                               className="w-full h-full object-center object-contain bg-white"
-                              style={{ imageRendering: 'high-quality' }}
+                              style={{}}
                               loading="lazy"
                               crossOrigin="anonymous"
                             />
@@ -494,7 +564,6 @@ export default function ProductDetail() {
                         decoding="async"
                         className="w-full h-full object-center object-contain p-4 transition-none select-none pointer-events-none will-change-transform"
                         style={{
-                          imageRendering: 'high-quality',
                           transform: `translate3d(${panX}px, ${panY}px, 0) scale(${zoom})`,
                           transformOrigin: 'center center',
                           backfaceVisibility: 'hidden'
@@ -626,6 +695,10 @@ export default function ProductDetail() {
               <p className="text-base text-gray-700">
                 {product.title || 'Premium quality product with excellent craftsmanship and attention to detail.'}
               </p>
+            </div>
+
+            <div className="mt-6">
+              <TrustSignals compact />
             </div>
 
             {/* Action Buttons */}
@@ -863,7 +936,7 @@ export default function ProductDetail() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
+            <div className="grid grid-cols-2 gap-y-10 gap-x-4 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
               {similarProducts.map((p) => {
                 const isWished = p.id && wishedProductIds.has(p.id);
                 return (
@@ -914,6 +987,7 @@ export default function ProductDetail() {
           </section>
         )}
       </div>
-    </main>
+      </main>
+    </>
   );
 }

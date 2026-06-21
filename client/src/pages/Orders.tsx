@@ -4,11 +4,12 @@ import { useLocation } from 'wouter';
 import { Package, Clock, CheckCircle, Truck, XCircle, ChevronDown, ChevronUp, Calendar, DollarSign, MapPin } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
+import { requestAuthenticationForPath } from '@/lib/authRequired';
 
 export default function Orders() {
   const { user, isAuthenticated, sessionRestored, loading } = useAuth();
   const authPromptedRef = useRef(false);
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const { orders, isLoading, error } = useSupabaseOrders(user?.id ?? null);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -88,7 +89,9 @@ export default function Orders() {
   });
 
   useEffect(() => {
-    // no-op: do not force-open auth modal; allow blank orders view for unauthenticated users
+    if (!sessionRestored || loading || isAuthenticated || authPromptedRef.current) return;
+    authPromptedRef.current = true;
+    requestAuthenticationForPath();
   }, [isAuthenticated, sessionRestored, loading]);
 
   if (!sessionRestored || loading) {
@@ -334,7 +337,7 @@ export default function Orders() {
                             <span>Order Shipped</span>
                           </div>
                         )}
-                        {order.status === 'delivered' && (
+                        {String(order.status) === 'delivered' && (
                           <div className="flex items-center gap-3">
                             <div className="w-3 h-3 rounded-full bg-green-500"></div>
                             <span>Order Delivered</span>

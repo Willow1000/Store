@@ -5,6 +5,7 @@ import { HomePageSkeleton } from '@/components/skeletons/HomePageSkeleton';
 import { QuickViewModal } from '@/components/QuickViewModal';
 import { SEOHead } from '@/components/SEOHead';
 import { HeroSlideshow } from '@/components/HeroSlideshow';
+import { BannerCarousel } from '@/components/BannerCarousel';
 import { toast } from 'sonner';
 import { useProducts, useCategories } from '@/hooks/useSupabaseProducts';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -14,6 +15,37 @@ import { useState, useEffect, useMemo } from 'react';
 import currencyClient from '@/lib/currencyClient';
 import { getHighResImageUrl } from '@/lib/images';
 import { calculateShipping } from '@shared/shipping';
+
+const homeBannerSlides = [
+  {
+    image: '/images/banners/Motor-parts_banner_for_Bumpers_HOmepage.jpeg',
+    title: 'Built to Bring Front Ends Back',
+    subtitle: 'Rugged bumper parts for repairs, refreshes, and the kind of fitment that keeps cars looking sharp.',
+    cta: 'Explore bumpers',
+    ctaLink: '/products',
+  },
+  {
+    image: '/images/banners/seats_banner_homepage.jpeg',
+    title: 'Comfort You Can Feel on Every Drive',
+    subtitle: 'Seat components and interior upgrades chosen to restore support, style, and everyday comfort.',
+    cta: 'Browse seats',
+    ctaLink: '/products?category=seats',
+  },
+  {
+    image: '/images/banners/Motor-parts_banner_for_Tire_Homepage.jpeg',
+    title: 'Grip the Road with Confidence',
+    subtitle: 'A tire-focused showcase for drivers who want dependable traction, better handling, and a stronger road presence.',
+    cta: 'See tire options',
+    ctaLink: '/products',
+  },
+  {
+    image: '/images/banners/Motor-parts_banner_for_Transmision_Homepage.jpeg',
+    title: 'Powertrain Parts That Keep Things Moving',
+    subtitle: 'Transmission-focused parts and support for customers who want smooth shifting and reliable performance.',
+    cta: 'View driveline parts',
+    ctaLink: '/products',
+  },
+];
 
 export default function Home() {
     // Use centralized currency client - main initializes before mount
@@ -48,10 +80,13 @@ export default function Home() {
   }, []);
 
   // Get recently viewed products from the products list
+  const mobileVisibleCount = isMobile ? 6 : 5;
+
   const recentlyViewedProducts = recentlyViewedIds
     .map(id => products?.find(p => p.id === id))
     .filter(Boolean)
-    .slice(0, 5);
+    .slice(0, mobileVisibleCount);
+  const hasRecentlyViewedProducts = recentlyViewedProducts.length > 0;
 
   // Filter deals: exactly 5 products from different categories with best offers (new or past items)
   // Shows products with: price >= 1500 (premium), 7%+ discount, or free shipping
@@ -65,7 +100,7 @@ export default function Home() {
         : 0;
       
       // Check if product has free shipping
-      const hasFreeShipping = p.freeShipping === true;
+      const hasFreeShipping = (p as any).freeShipping === true;
       
       // If free shipping, it qualifies
       if (hasFreeShipping) return true;
@@ -86,7 +121,7 @@ export default function Home() {
 
     const uniqueByCategory = new Map<string, (typeof eligibleProducts)[number]>();
     eligibleProducts.forEach((product) => {
-      const categoryKey = String(product.category_name || product.category || 'uncategorized').trim().toLowerCase();
+      const categoryKey = String(product.category_name || (product as any).category || 'uncategorized').trim().toLowerCase();
       if (!uniqueByCategory.has(categoryKey)) {
         uniqueByCategory.set(categoryKey, product);
       }
@@ -115,7 +150,7 @@ export default function Home() {
         
         return scoreB - scoreA;
       })
-      .slice(0, 5);
+      .slice(0, mobileVisibleCount);
   })();
 
   const getDiscountPercentage = (price: number | string, discount: number | null | undefined) => {
@@ -140,7 +175,7 @@ export default function Home() {
   };
 
   const displayedCategories = useMemo(() => {
-    return categories.slice(0, isMobile ? 5 : 10);
+    return categories.slice(0, isMobile ? 6 : 10);
   }, [categories, isMobile]);
 
   if (isLoading || categoriesLoading) {
@@ -160,7 +195,7 @@ export default function Home() {
         <HeroSlideshow />
 
         {/* Your Recently Viewed Items Section */}
-      {recentlyViewedProducts.length > 0 && (
+      {hasRecentlyViewedProducts && (
         <div className="bg-white border-b">
           <div className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
             <div className="flex items-center justify-between mb-4">
@@ -282,6 +317,13 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {hasRecentlyViewedProducts ? (
+        <section className="bg-gray-50 py-10 sm:py-14 lg:py-16">
+          <BannerCarousel slides={homeBannerSlides} tone="dark" />
+        </section>
+      ) : null}
+
       <div className="bg-white">
         <div className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
           <div className="mb-6">
@@ -292,7 +334,7 @@ export default function Home() {
           {/* Products Grid */}
           <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-5">
             {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
+              Array.from({ length: mobileVisibleCount }).map((_, i) => (
                 <div key={i} className="space-y-4">
                   <Skeleton className="w-full aspect-square rounded-xl" />
                   <Skeleton className="w-3/4 h-4" />
@@ -300,7 +342,7 @@ export default function Home() {
                 </div>
               ))
             ) : (
-              dealsProducts?.slice(0, 5).map((product, idx) => {
+              dealsProducts?.slice(0, mobileVisibleCount).map((product, idx) => {
                 const discountPercentage = getDiscountPercentage(product.price, product.discount);
                 const originalPrice = product.discount ? parseFloat(String(product.discount)).toFixed(2) : null;
                 const isWished = product.id && wishedProductIds.has(product.id);
@@ -308,8 +350,7 @@ export default function Home() {
                 const price = parseFloat(String(product.price ?? 0));
 
                 return (
-                  <Link key={product.id} href={`/product/${product.id}`}>
-                    <a className="product-card group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition-shadow">
+                  <Link key={product.id} href={`/product/${product.id}`} className="product-card group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition-shadow">
                       {/* Image Container */}
                       <div className="relative w-full pt-[100%] bg-white group-hover:opacity-75 transition-opacity">
                         <img
@@ -403,7 +444,6 @@ export default function Home() {
                           </button>
                         </div>
                       </div>
-                    </a>
                   </Link>
                 );
               })
@@ -418,6 +458,12 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {!hasRecentlyViewedProducts ? (
+        <section className="bg-gray-50 py-10 sm:py-14 lg:py-16">
+          <BannerCarousel slides={homeBannerSlides} tone="dark" />
+        </section>
+      ) : null}
 
       {/* Shop by Category Section */}
       <div className="bg-white py-6">

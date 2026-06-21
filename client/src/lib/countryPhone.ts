@@ -1,3 +1,5 @@
+import { Country } from 'country-state-city';
+
 export type CountryPhoneOption = {
   value: string;
   label: string;
@@ -5,29 +7,21 @@ export type CountryPhoneOption = {
   flag: string;
 };
 
-export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
-  { value: 'US', label: 'United States', dialCode: '+1', flag: '🇺🇸' },
-  { value: 'CA', label: 'Canada', dialCode: '+1', flag: '🇨🇦' },
-  { value: 'GB', label: 'United Kingdom', dialCode: '+44', flag: '🇬🇧' },
-  { value: 'DE', label: 'Germany', dialCode: '+49', flag: '🇩🇪' },
-  { value: 'FR', label: 'France', dialCode: '+33', flag: '🇫🇷' },
-  { value: 'ES', label: 'Spain', dialCode: '+34', flag: '🇪🇸' },
-  { value: 'IT', label: 'Italy', dialCode: '+39', flag: '🇮🇹' },
-  { value: 'PT', label: 'Portugal', dialCode: '+351', flag: '🇵🇹' },
-  { value: 'NL', label: 'Netherlands', dialCode: '+31', flag: '🇳🇱' },
-  { value: 'BE', label: 'Belgium', dialCode: '+32', flag: '🇧🇪' },
-  { value: 'IE', label: 'Ireland', dialCode: '+353', flag: '🇮🇪' },
-  { value: 'PL', label: 'Poland', dialCode: '+48', flag: '🇵🇱' },
-  { value: 'SE', label: 'Sweden', dialCode: '+46', flag: '🇸🇪' },
-  { value: 'NO', label: 'Norway', dialCode: '+47', flag: '🇳🇴' },
-  { value: 'CH', label: 'Switzerland', dialCode: '+41', flag: '🇨🇭' },
-  { value: 'SG', label: 'Singapore', dialCode: '+65', flag: '🇸🇬' },
-  { value: 'MX', label: 'Mexico', dialCode: '+52', flag: '🇲🇽' },
-  { value: 'AR', label: 'Argentina', dialCode: '+54', flag: '🇦🇷' },
-  { value: 'CO', label: 'Colombia', dialCode: '+57', flag: '🇨🇴' },
-  { value: 'CL', label: 'Chile', dialCode: '+56', flag: '🇨🇱' },
-  { value: 'BR', label: 'Brazil', dialCode: '+55', flag: '🇧🇷' },
-];
+const formatDialCode = (phonecode: string | undefined) => {
+  const cleaned = String(phonecode || '').trim();
+  if (!cleaned) return '';
+  return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
+};
+
+export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = Country.getAllCountries()
+  .map((country) => ({
+    value: country.isoCode,
+    label: country.name,
+    dialCode: formatDialCode(country.phonecode),
+    flag: country.flag || '',
+  }))
+  .filter((option) => option.value && option.label && option.dialCode)
+  .sort((a, b) => a.label.localeCompare(b.label));
 
 export const DEFAULT_PHONE_COUNTRY = 'US';
 

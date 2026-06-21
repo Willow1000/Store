@@ -1,7 +1,9 @@
 import { supabase } from '@/lib/supabase';
 import { readCartFromStorage } from '@/lib/cart';
+import { saveAuthRedirect, sanitizeInternalRedirect } from '@/lib/authRedirect';
 
 const PENDING_AUTH_ACTION_KEY = 'pending_auth_action';
+const CART_AUTH_REDIRECT_PENDING_KEY = 'cart-auth-redirect-pending-v1';
 const pendingAuthStorage = typeof window !== 'undefined' ? window.localStorage : null;
 
 export type PendingAuthActionType = 'cart' | 'wishlist' | 'checkout' | 'tickets';
@@ -15,7 +17,9 @@ export interface PendingAuthAction {
 
 export function savePendingAuthAction(action: PendingAuthAction) {
   try {
-    pendingAuthStorage?.setItem(PENDING_AUTH_ACTION_KEY, JSON.stringify(action));
+    const redirectTo = sanitizeInternalRedirect(action.redirectTo) || undefined;
+    pendingAuthStorage?.setItem(PENDING_AUTH_ACTION_KEY, JSON.stringify({ ...action, redirectTo }));
+    if (redirectTo) saveAuthRedirect(redirectTo);
   } catch (error) {
     console.warn('[AuthPendingAction] Failed to save pending action', error);
   }
@@ -35,8 +39,18 @@ export function getPendingAuthAction(): PendingAuthAction | null {
 export function clearPendingAuthAction() {
   try {
     pendingAuthStorage?.removeItem(PENDING_AUTH_ACTION_KEY);
+    pendingAuthStorage?.removeItem('oauth_return_to');
   } catch (error) {
     console.warn('[AuthPendingAction] Failed to clear pending action', error);
+  }
+}
+
+function markCartAuthRedirectPending() {
+  try {
+    if (typeof window === 'undefined') return;
+    window.sessionStorage.setItem(CART_AUTH_REDIRECT_PENDING_KEY, '1');
+  } catch {
+    // ignore storage issues
   }
 }
 
@@ -304,7 +318,13 @@ export async function executePendingAuthAction(
 
       if (action.type === 'checkout') {
         navigate('/checkout');
+      } else if (action.type === 'cart') {
+        markCartAuthRedirectPending();
+        navigate('/cart');
       } else if (action.redirectTo) {
+        if (action.redirectTo === '/cart') {
+          markCartAuthRedirectPending();
+        }
         navigate(action.redirectTo);
       }
 

@@ -95,8 +95,8 @@ function logEmailError(message: string, error: unknown): void {
 }
 
 /**
- * Initialize nodemailer transporter once
- * Uses Gmail SMTP configuration from environment variables
+ * Initialize nodemailer transporter once.
+ * Supports Private Email SMTP via mail.privateemail.com.
  */
 function getTransporter(): nodemailer.Transporter {
   if (transporter) {
@@ -107,15 +107,20 @@ function getTransporter(): nodemailer.Transporter {
     throw new Error('SMTP_USER or SMTP_PASSWORD is not configured');
   }
 
-  const smtpConfig: nodemailer.TransportOptions = {
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    secure: process.env.SMTP_SECURE === 'true',
+  const port = parseInt(process.env.SMTP_PORT || '465', 10);
+  const secure = process.env.SMTP_SECURE
+    ? process.env.SMTP_SECURE === 'true'
+    : port === 465;
+  const smtpConfig = {
+    host: process.env.SMTP_HOST || 'mail.privateemail.com',
+    port,
+    secure,
+    requireTLS: port === 587,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASSWORD,
     },
-  };
+  } as nodemailer.TransportOptions;
 
   transporter = nodemailer.createTransport(smtpConfig);
   return transporter;
@@ -211,6 +216,7 @@ export async function sendOrderConfirmationEmail(
       ...data,
       item_count: itemCount,
       items_html: itemsHtml,
+      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop'),
       sender_name: process.env.SENDER_NAME || 'Our Store',
     });
 
@@ -259,7 +265,7 @@ export async function sendTicketConfirmationEmail(
       ticket_description: formatTextBlock(data.ticket_description),
       contact_email: escapeHtml(data.contact_email || ''),
       contact_phone: escapeHtml(data.contact_phone || ''),
-      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com'),
+      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop'),
       sender_name: process.env.SENDER_NAME || 'Our Store',
     });
 
@@ -297,7 +303,7 @@ export async function sendContactConfirmationEmail(
       contact_subject: escapeHtml(data.contact_subject || 'General support request'),
       contact_location: escapeHtml(data.contact_location || 'Not provided'),
       contact_message: formatTextBlock(data.contact_message),
-      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com'),
+      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop'),
       sender_name: process.env.SENDER_NAME || 'Our Store',
     });
 
@@ -341,7 +347,7 @@ export async function sendContactReplyEmail(
       original_message: formatTextBlock(data.original_message),
       customer_location: escapeHtml(data.customer_location || 'Not provided'),
       reply_message: formatTextBlock(data.reply_message),
-      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.com'),
+      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop'),
       sender_name: process.env.SENDER_NAME || 'Our Store',
     });
 

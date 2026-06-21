@@ -7,7 +7,7 @@ export const SEO_CONFIG = {
   // Site Identity
   site: {
     name: 'MotorVault',
-    url: 'https://motorvault.com',
+    url: 'https://motorvault.shop',
     description: 'Premium automotive parts marketplace. Shop OEM and aftermarket auto parts from trusted sources globally. Quality guaranteed with fast shipping.',
     logo: '/images/motorvault_horizontal.svg',
     language: 'en',
@@ -16,7 +16,7 @@ export const SEO_CONFIG = {
 
   // Contact Information
   contact: {
-    email: 'support@motorvault.com',
+    email: 'support@motorvault.shop',
     phone: '+1-800-MOTORVAULT',
     address: {
       street: 'Motor Commerce Center',
@@ -35,7 +35,7 @@ export const SEO_CONFIG = {
   },
 
   // SEO Defaults
-  defaults: {
+    defaults: {
     title: 'MotorVault - Buy Automotive Parts & Accessories | OEM & Aftermarket',
     description: 'Shop thousands of automotive parts and accessories at MotorVault. Quality OEM and aftermarket parts from trusted sources worldwide. Fast shipping, verified sellers, secure checkout.',
     keywords: [
@@ -50,13 +50,13 @@ export const SEO_CONFIG = {
       'secure checkout',
       'motor parts marketplace',
     ],
-    ogImage: 'https://motorvault.com/og-image.png',
+    ogImage: 'https://motorvault.shop/og-image.png',
     twitterHandle: '@motorvault',
   },
 
   // Sitemap Configuration
   sitemap: {
-    baseUrl: 'https://modernmart.manus.space',
+    baseUrl: 'https://motorvault.shop',
     maxProductsPerFile: 50000,
     imagesPerUrl: 1000,
     changeFrequencies: {
@@ -110,7 +110,7 @@ export const SEO_CONFIG = {
     organization: {
       '@type': 'Organization',
       name: 'MotorVault',
-      url: 'https://modernmart.manus.space',
+      url: 'https://motorvault.shop',
       logo: '/images/motorvault_horizontal.svg',
       description: 'Premium motor products marketplace',
     },
