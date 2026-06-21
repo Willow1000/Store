@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { CartItem, WishlistItem, Product } from '@/types/supabase';
 import { toast } from 'sonner';
@@ -7,6 +7,8 @@ export function useSupabaseCart(userId: string | null) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fetchRequestIdRef = useRef(0);
+  const lastLocalCartJsonRef = useRef<string | null>(null);
 
   const ensureProfile = useCallback(async () => {
     if (!userId) return false;
@@ -44,10 +46,40 @@ export function useSupabaseCart(userId: string | null) {
     return true;
   }, [userId]);
 
+  const syncLocalCartSnapshot = useCallback((cartData: CartItem[]) => {
+    if (typeof window === 'undefined') return;
+
+    const localCart = cartData.map((item) => ({
+      productId: item.product_id,
+      productIndex: Number.NaN,
+      title: item.product?.title || 'Product',
+      price: String(item.product?.price ?? 0),
+      image: item.product?.cover_image_url || '',
+      quantity: Math.max(1, Number(item.quantity) || 1),
+    }));
+    const nextJson = JSON.stringify(localCart);
+
+    try {
+      if (localStorage.getItem('cart') === nextJson) {
+        lastLocalCartJsonRef.current = nextJson;
+        return;
+      }
+
+      localStorage.setItem('cart', nextJson);
+      lastLocalCartJsonRef.current = nextJson;
+      window.dispatchEvent(new Event('cartUpdated'));
+    } catch (storageError) {
+      console.warn('[useSupabaseCart] Failed to mirror cart snapshot locally:', storageError);
+    }
+  }, []);
+
   // Fetch cart items
   const fetchCart = useCallback(async () => {
+    const requestId = ++fetchRequestIdRef.current;
+
     if (!userId) {
       setItems([]);
+      setIsLoading(false);
       return;
     }
 
@@ -69,28 +101,23 @@ export function useSupabaseCart(userId: string | null) {
 
       if (supabaseError) throw supabaseError;
 
+      if (requestId !== fetchRequestIdRef.current) return;
+
       const cartData = data as CartItem[];
       setItems(cartData);
-
-      // Keep local cart snapshot in sync for header/cart badge consumers.
-      const localCart = cartData.map((item) => ({
-        productId: item.product_id,
-        productIndex: Number.NaN,
-        title: item.product?.title || 'Product',
-        price: String(item.product?.price ?? 0),
-        image: item.product?.cover_image_url || '',
-        quantity: Math.max(1, Number(item.quantity) || 1),
-      }));
-      localStorage.setItem('cart', JSON.stringify(localCart));
-      window.dispatchEvent(new Event('cartUpdated'));
+      syncLocalCartSnapshot(cartData);
     } catch (err) {
+      if (requestId !== fetchRequestIdRef.current) return;
+
       const message = err instanceof Error ? err.message : 'Failed to fetch cart';
       setError(message);
       console.error('Error fetching cart:', err);
     } finally {
-      setIsLoading(false);
+      if (requestId === fetchRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [userId, ensureProfile]);
+  }, [userId, ensureProfile, syncLocalCartSnapshot]);
 
   // Add to cart
   const addToCart = useCallback(
@@ -210,8 +237,7 @@ export function useSupabaseCart(userId: string | null) {
     async (cartItemId: string, quantity: number) => {
       try {
         if (quantity <= 0) {
-          await removeFromCart(cartItemId);
-          return true;
+          return removeFromCart(cartItemId);
         }
 
         const { error: supabaseError } = await supabase
@@ -327,16 +353,56 @@ export function useSupabaseCart(userId: string | null) {
   useEffect(() => {
     if (!userId || typeof window === 'undefined') return;
 
-    const onCartChanged = () => {
-      void fetchCart();
+    let refreshTimer: number | undefined;
+    const queueCartRefresh = () => {
+      if (refreshTimer) {
+        window.clearTimeout(refreshTimer);
+      }
+      refreshTimer = window.setTimeout(() => {
+        void fetchCart();
+      }, 75);
     };
 
-    window.addEventListener('cartMerged', onCartChanged);
-    window.addEventListener('cartUpdated', onCartChanged);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== 'cart') return;
+      if (event.newValue && event.newValue === lastLocalCartJsonRef.current) return;
+      queueCartRefresh();
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        queueCartRefresh();
+      }
+    };
+
+    const channel = supabase
+      .channel(`cart_items:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cart_items',
+          filter: `user_id=eq.${userId}`,
+        },
+        queueCartRefresh
+      )
+      .subscribe();
+
+    window.addEventListener('cartMerged', queueCartRefresh);
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', queueCartRefresh);
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
-      window.removeEventListener('cartMerged', onCartChanged);
-      window.removeEventListener('cartUpdated', onCartChanged);
+      if (refreshTimer) {
+        window.clearTimeout(refreshTimer);
+      }
+      window.removeEventListener('cartMerged', queueCartRefresh);
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', queueCartRefresh);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      void supabase.removeChannel(channel);
     };
   }, [userId, fetchCart]);
 

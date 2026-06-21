@@ -99,8 +99,20 @@ type StateOption = {
   label: string;
 };
 
-type RegionData = { label: string; cities: string[] };
 const COUNTRY_REGION_VALUE = '__COUNTRY__';
+const PRELOAD_LOCATION_COUNTRIES = ['DE', 'FR', 'IT', 'ES', 'GB', 'NL', 'PL', 'BE', 'AT', 'SE'];
+
+type CountryState = {
+  isoCode: string;
+  name: string;
+};
+
+const countryStatesCache = new Map<string, CountryState[]>();
+const stateOptionsCache = new Map<string, StateOption[]>();
+const countryCitiesCache = new Map<string, string[]>();
+const countryCityStateCodesCache = new Map<string, Set<string>>();
+const stateCitiesCache = new Map<string, string[]>();
+const stateCityAvailabilityCache = new Map<string, boolean>();
 
 const COUNTRY_OPTIONS = Country.getAllCountries()
   .map((country) => ({
@@ -118,13 +130,13 @@ const POSTAL_LABEL_BY_COUNTRY: Record<string, string> = {
 };
 
 function getStateLabel(country: string | undefined | null): string {
-  if (!country) return 'State';
+  if (!country) return 'State/Province/Region';
   const c = String(country).toUpperCase();
   if (c === 'US') return 'State';
   if (c === 'CA') return 'Province';
   if (c === 'GB') return 'Region';
   if (c === 'IE') return 'County';
-  return 'State/Province';
+  return 'State/Province/Region';
 }
 
 function getPostalCodeLabel(country: string | undefined | null): string {
@@ -133,156 +145,185 @@ function getPostalCodeLabel(country: string | undefined | null): string {
   return POSTAL_LABEL_BY_COUNTRY[c] || 'Postal code';
 }
 
-function getRegionMap(country: string): Record<string, RegionData> {
+function getCountryStates(country: string): CountryState[] {
   const countryCode = String(country || '').toUpperCase();
-  if (!countryCode) return {};
+  if (!countryCode) return [];
 
-  return State.getStatesOfCountry(countryCode).reduce<Record<string, RegionData>>((regions, state) => {
-    const cities = City.getCitiesOfState(countryCode, state.isoCode)
-      .map((city) => city.name)
-      .filter((city, index, allCities) => city && allCities.indexOf(city) === index)
-      .sort((a, b) => a.localeCompare(b));
+  const cached = countryStatesCache.get(countryCode);
+  if (cached) return cached;
 
-    regions[state.isoCode] = {
-      label: state.name,
-      cities,
-    };
+  const states = State.getStatesOfCountry(countryCode)
+    .map((state) => ({
+      isoCode: state.isoCode,
+      name: state.name,
+    }))
+    .filter((state) => state.isoCode && state.name)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-    return regions;
-  }, {});
+  countryStatesCache.set(countryCode, states);
+  return states;
 }
 
 function normalizeRegionCode(country: string, value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return '';
-  const regionMap = getRegionMap(String(country || '').toUpperCase());
-  if (regionMap[trimmed]) return trimmed;
+  const states = getCountryStates(country);
+  if (states.some((state) => state.isoCode === trimmed)) return trimmed;
 
   const normalized = trimmed.toLocaleLowerCase();
-  const match = Object.entries(regionMap).find(([, data]) => data.label.toLocaleLowerCase() === normalized);
-  return match?.[0] || trimmed;
+  const match = states.find((state) => state.name.toLocaleLowerCase() === normalized);
+  return match?.isoCode || trimmed;
 }
 
 const getStateOptions = (country: string): StateOption[] => {
   const countryCode = String(country || '').toUpperCase();
-  const regionMap = getRegionMap(countryCode);
-  const entries = Object.entries(regionMap);
-  // If we have explicit region mappings, return them.
-  if (entries.length > 0) {
-    return [
+  if (!countryCode) return [{ value: '', label: 'Select state' }];
+
+  const cached = stateOptionsCache.get(countryCode);
+  if (cached) return cached;
+
+  const states = getCountryStates(countryCode);
+  if (states.length > 0) {
+    const cityStateCodes = countryCode === 'US' ? new Set<string>() : getCountryCityStateCodes(countryCode);
+    const statesWithCityData = cityStateCodes.size > 0
+      ? states.filter((state) => cityStateCodes.has(state.isoCode))
+      : [];
+    const selectableStates = statesWithCityData.length > 0 ? statesWithCityData : states;
+    const options = [
       { value: '', label: 'Select state' },
-      ...entries
-        .map(([code, data]) => ({ value: code, label: data.label }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
+      ...selectableStates.map((state) => ({ value: state.isoCode, label: state.name })),
     ];
+    stateOptionsCache.set(countryCode, options);
+    return options;
   }
 
   const countryName = Country.getCountryByCode(countryCode)?.name;
-  const countryCities = City.getCitiesOfCountry(countryCode) || [];
+  const countryCities = getCountryCityOptions(countryCode);
   if (countryName && countryCities.length > 0) {
-    return [
+    const options = [
       { value: '', label: 'Select state' },
       { value: COUNTRY_REGION_VALUE, label: countryName },
     ];
+    stateOptionsCache.set(countryCode, options);
+    return options;
   }
 
-  // No explicit region map: if we have cached geo data for this country,
-  // expose the detected state as a selectable option so the user can still
-  // choose a region and then cities will populate from the cached city.
-  try {
-    const geo = currencyClient.getGeoData();
-    const geoCountry = geo?.location?.country_code2?.toUpperCase();
-    const geoState = geo?.location?.state_prov;
-    if (geo && geoCountry === countryCode && geoState) {
-      return [
-        { value: '', label: 'Select state' },
-        { value: 'GEO_STATE', label: geoState },
-      ];
-    }
-  } catch (e) {
-    // ignore and fall through
-  }
-
-  return [{ value: '', label: 'Select state' }];
+  const options = [{ value: '', label: 'Select state' }];
+  stateOptionsCache.set(countryCode, options);
+  return options;
 };
 
 const usesManualLocationFields = (country: string): boolean => {
   const countryCode = String(country || '').toUpperCase();
   if (!countryCode) return false;
 
-  const hasRegions = Object.keys(getRegionMap(countryCode)).length > 0;
-  const hasCities = (City.getCitiesOfCountry(countryCode) || []).length > 0;
+  const states = getCountryStates(countryCode);
+  if (states.length === 0) {
+    return getCountryCityOptions(countryCode).length === 0;
+  }
 
-  return !hasRegions && !hasCities;
+  return !hasAnyStateCityData(countryCode) && getCountryCityOptions(countryCode).length === 0;
 };
+
+function uniqueSortedCityNames(cities: Array<{ name?: string }>): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+
+  for (const city of cities) {
+    const name = city.name?.trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    names.push(name);
+  }
+
+  return names.sort((a, b) => a.localeCompare(b));
+}
+
+function getCountryCityOptions(country: string): string[] {
+  const countryCode = String(country || '').toUpperCase();
+  if (!countryCode) return [];
+
+  const cached = countryCitiesCache.get(countryCode);
+  if (cached) return cached;
+
+  const cities = uniqueSortedCityNames(City.getCitiesOfCountry(countryCode) || []);
+  countryCitiesCache.set(countryCode, cities);
+  return cities;
+}
+
+function getCountryCityStateCodes(country: string): Set<string> {
+  const countryCode = String(country || '').toUpperCase();
+  if (!countryCode) return new Set();
+
+  const cached = countryCityStateCodesCache.get(countryCode);
+  if (cached) return cached;
+
+  const stateCodes = new Set<string>();
+  for (const city of City.getCitiesOfCountry(countryCode) || []) {
+    const stateCode = (city as { stateCode?: string }).stateCode?.trim();
+    if (stateCode) stateCodes.add(stateCode);
+  }
+
+  countryCityStateCodesCache.set(countryCode, stateCodes);
+  return stateCodes;
+}
+
+function getStateCityOptions(country: string, state: string): string[] {
+  const countryCode = String(country || '').toUpperCase();
+  const stateCode = String(state || '').trim();
+  if (!countryCode || !stateCode || stateCode === COUNTRY_REGION_VALUE) return [];
+
+  const cacheKey = `${countryCode}:${stateCode}`;
+  const cached = stateCitiesCache.get(cacheKey);
+  if (cached) return cached;
+
+  const cities = uniqueSortedCityNames(City.getCitiesOfState(countryCode, stateCode) || []);
+  stateCitiesCache.set(cacheKey, cities);
+  return cities;
+}
+
+function hasAnyStateCityData(country: string): boolean {
+  const countryCode = String(country || '').toUpperCase();
+  if (!countryCode) return false;
+
+  const cached = stateCityAvailabilityCache.get(countryCode);
+  if (cached !== undefined) return cached;
+
+  const states = getCountryStates(countryCode);
+  const firstState = states[0];
+  const hasCityData = Boolean(firstState && getStateCityOptions(countryCode, firstState.isoCode).length > 0) ||
+    states.some((state) => getCountryCityStateCodes(countryCode).has(state.isoCode));
+  stateCityAvailabilityCache.set(countryCode, hasCityData);
+  return hasCityData;
+}
 
 const getCityOptions = (country: string, state: string): string[] => {
   if (!state) {
     return [];
   }
   const countryCode = String(country || '').toUpperCase();
-  const regionMap = getRegionMap(countryCode);
-  if (regionMap[state]?.cities && regionMap[state].cities.length > 0) {
-    return regionMap[state].cities;
-  }
-
-  const countryCities = City.getCitiesOfCountry(countryCode) || [];
-  const fallbackCities = countryCities
-    .map((city) => city.name)
-    .filter((city, index, allCities) => city && allCities.indexOf(city) === index)
-    .sort((a, b) => a.localeCompare(b));
-  if (state === COUNTRY_REGION_VALUE && fallbackCities.length > 0) {
-    return fallbackCities;
-  }
-
-  // If state is our synthetic GEO_STATE, return the cached geo city.
-  if (state === 'GEO_STATE') {
-    try {
-      const geo = currencyClient.getGeoData();
-      const geoCountry = geo?.location?.country_code2?.toUpperCase();
-      const geoCity = geo?.location?.city;
-      if (geo && geoCountry === countryCode && geoCity) return [geoCity];
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  // Fallback: if no mapping, but cached geo matches, return the detected city
-  try {
-    const geo = currencyClient.getGeoData();
-    const geoCountry = geo?.location?.country_code2?.toUpperCase();
-    const geoCity = geo?.location?.city;
-    if (geo && geoCountry === countryCode && geoCity) return [geoCity];
-  } catch (e) {
-    // ignore
-  }
-
-  return [];
+  if (state === COUNTRY_REGION_VALUE) return getCountryCityOptions(countryCode);
+  const stateCities = getStateCityOptions(countryCode, state);
+  if (stateCities.length > 0) return stateCities;
+  return getCountryCityOptions(countryCode);
 };
+
+const usesManualCityField = (country: string, state: string): boolean => {
+  if (usesManualLocationFields(country)) return true;
+  if (!state) return false;
+  if (state === COUNTRY_REGION_VALUE) return false;
+  return getCityOptions(country, state).length === 0;
+};
+
+PRELOAD_LOCATION_COUNTRIES.forEach((countryCode) => {
+  getCountryStates(countryCode);
+});
 
 export default function Checkout() {
   const activeLanguage = getSiteLanguage();
   const checkoutText = (key: string, fallback: string) => translateText(activeLanguage, key, fallback);
   // Get geo data from currencyClient
   const geo = currencyClient.getGeoData();
-  // Auto-fill country, state, and city from geolocation if available and not already set
-    useEffect(() => {
-      if (!geo) return;
-      setFormData((prev) => {
-        const next: typeof prev = { ...prev };
-        // Always sync with detected location for all geo fields
-        const country = geo.location?.country_code2?.toUpperCase();
-        const state = normalizeRegionCode(country || '', geo.location?.state_prov || '');
-        const city = geo.location?.city || '';
-        // Find phone country code from COUNTRY_PHONE_OPTIONS
-        const phoneCountry = country && COUNTRY_PHONE_OPTIONS.find(opt => opt.value === country) ? country : prev.phoneCountry;
-        next.country = country || prev.country;
-        next.state = state || prev.state;
-        next.city = city || prev.city;
-        next.phoneCountry = phoneCountry;
-        return next;
-      });
-    }, [geo]);
   const [, navigate] = useLocation();
   const { user, isAuthenticated, loading: authLoading, sessionRestored } = useAuth();
   const {
@@ -316,6 +357,7 @@ export default function Checkout() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
   const paymentCallbackHandledRef = useRef(false);
+  const geoPrefillAppliedRef = useRef(false);
 
   const [formData, setFormData] = useState<CheckoutFormData>(() => {
     try {
@@ -354,6 +396,77 @@ export default function Checkout() {
 
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const manualLocationFields = useMemo(
+    () => usesManualLocationFields(formData.country),
+    [formData.country]
+  );
+  const stateOptions = useMemo(
+    () => getStateOptions(formData.country),
+    [formData.country]
+  );
+  const structuredStateOptions = useMemo(
+    () => stateOptions.filter((state) => state.value),
+    [stateOptions]
+  );
+  const cityOptions = useMemo(
+    () => (manualLocationFields ? [] : getCityOptions(formData.country, formData.state)),
+    [manualLocationFields, formData.country, formData.state]
+  );
+  const manualCityField = useMemo(
+    () => usesManualCityField(formData.country, formData.state),
+    [formData.country, formData.state]
+  );
+
+  // Auto-fill country from geolocation once, but only use state/city when
+  // they belong to the same country and match the selected field mode.
+  useEffect(() => {
+    if (!geo || geoPrefillAppliedRef.current) return;
+    geoPrefillAppliedRef.current = true;
+
+    const geoCountry = geo.location?.country_code2?.toUpperCase() || '';
+    if (!geoCountry || !COUNTRY_OPTIONS.some((country) => country.value === geoCountry)) return;
+
+    setFormData((prev) => {
+      const selectedCountry = prev.country || geoCountry;
+      const shouldUseGeoCountry =
+        (!prev.address && !prev.state && !prev.city && (!prev.country || prev.country === DEFAULT_PHONE_COUNTRY)) ||
+        prev.country === geoCountry;
+      const nextCountry = shouldUseGeoCountry ? geoCountry : selectedCountry;
+      const next: CheckoutFormData = {
+        ...prev,
+        country: nextCountry,
+        phoneCountry:
+          nextCountry === geoCountry &&
+          (!prev.phoneCountry || prev.phoneCountry === prev.country || prev.phoneCountry === DEFAULT_PHONE_COUNTRY)
+            ? geoCountry
+            : prev.phoneCountry,
+      };
+
+      if (nextCountry !== geoCountry || prev.state || prev.city) return next;
+
+      const geoState = sanitizeTextInput(geo.location?.state_prov || '', 80);
+      const geoCity = sanitizeTextInput(geo.location?.city || '', 80);
+
+      if (usesManualLocationFields(geoCountry)) {
+        next.state = geoState;
+        next.city = geoCity;
+        return next;
+      }
+
+      const normalizedState = normalizeRegionCode(geoCountry, geoState);
+      const stateExists = getStateOptions(geoCountry).some((state) => state.value === normalizedState);
+      if (!stateExists) return next;
+
+      next.state = normalizedState;
+      const validCities = getCityOptions(geoCountry, normalizedState);
+      if (validCities.includes(geoCity)) {
+        next.city = geoCity;
+      }
+
+      return next;
+    });
+  }, [geo]);
 
   // Meta/Facebook checkout entry: parse products/coupon/cart_origin and build cart from product IDs.
   useEffect(() => {
@@ -480,8 +593,8 @@ export default function Checkout() {
             : null;
           const verifiedData = (verification as any)?.data || {};
           const amountValue = Number(verifiedData.amount);
-          const purchaseAmount = Number.isFinite(amountValue) ? Number((amountValue / 100).toFixed(2)) : total;
-          const purchaseCurrency = String(verifiedData.currency || 'USD');
+          const purchaseAmount = Number.isFinite(amountValue) ? Number((amountValue / 100).toFixed(2)) : null;
+          const purchaseCurrency = typeof verifiedData.currency === 'string' ? verifiedData.currency : null;
 
           trackConfirmedPurchase(reference, reference, purchaseAmount, purchaseCurrency);
 
@@ -499,7 +612,6 @@ export default function Checkout() {
           navigate('/orders');
         } catch (err) {
           console.error('[Checkout] Failed to confirm successful payment:', err);
-          trackConfirmedPurchase(reference, reference, total, 'USD');
           if (isAuthenticated) {
             try {
               await clearSupabaseCart();
@@ -529,8 +641,8 @@ export default function Checkout() {
           if (status === 'success') {
             const verifiedData = (verification as any)?.data || {};
             const amountValue = Number(verifiedData.amount);
-            const purchaseAmount = Number.isFinite(amountValue) ? Number((amountValue / 100).toFixed(2)) : total;
-            const purchaseCurrency = String(verifiedData.currency || 'USD');
+            const purchaseAmount = Number.isFinite(amountValue) ? Number((amountValue / 100).toFixed(2)) : null;
+            const purchaseCurrency = typeof verifiedData.currency === 'string' ? verifiedData.currency : null;
 
             trackConfirmedPurchase(reference, reference, purchaseAmount, purchaseCurrency);
 
@@ -583,15 +695,6 @@ export default function Checkout() {
       console.warn('[Checkout] Failed to persist checkout step');
     }
   }, [step]);
-
-  const formatPhoneNumber = (value: string): string => {
-    // Remove all non-digits
-    const digits = value.replace(/\D/g, '');
-    if (digits.length === 0) return '';
-    if (digits.length <= 3) return `(${digits}`;
-    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)} ${digits.slice(6, 10)}`;
-  };
 
   const composeAddressLine = (address: string, state: string) => `${address} | ${state}`;
   const parseAddressLine = (line: string | null) => {
@@ -674,15 +777,20 @@ export default function Checkout() {
       if (!data) return;
 
       const parsed = parseAddressLine(data.address_line);
-      setFormData((prev) => ({
-        ...prev,
-        address: prev.address || parsed.address,
-        state: prev.state || normalizeRegionCode(data.country || prev.country || 'US', parsed.state),
-        city: prev.city || data.city || '',
-        zip: prev.zip || data.postal_code || '',
-        country: prev.country || data.country || 'US',
-        phoneCountry: prev.phoneCountry || data.country || 'US',
-      }));
+      setFormData((prev) => {
+        const savedCountry = String(data.country || prev.country || 'US').toUpperCase();
+        const shouldUseSavedCountry = !prev.address && !prev.state && !prev.city;
+
+        return {
+          ...prev,
+          address: prev.address || parsed.address,
+          state: prev.state || normalizeRegionCode(savedCountry, parsed.state),
+          city: prev.city || data.city || '',
+          zip: prev.zip || data.postal_code || '',
+          country: shouldUseSavedCountry ? savedCountry : prev.country || savedCountry,
+          phoneCountry: prev.phoneCountry || savedCountry,
+        };
+      });
     };
 
     loadDefaultAddress();
@@ -691,6 +799,10 @@ export default function Checkout() {
   // Validate city when state changes
   useEffect(() => {
     if (!formData.state) {
+      return;
+    }
+
+    if (manualLocationFields) {
       return;
     }
     
@@ -704,6 +816,10 @@ export default function Checkout() {
       return;
     }
 
+    if (usesManualCityField(formData.country, normalizedState)) {
+      return;
+    }
+
     const validCities = getCityOptions(formData.country, normalizedState);
     if (formData.city && !validCities.includes(formData.city)) {
       // City is not in the new state, clear it
@@ -712,18 +828,7 @@ export default function Checkout() {
         city: '',
       }));
     }
-  }, [formData.state, formData.country]);
-
-  useEffect(() => {
-    if (formData.phoneCountry === formData.country) {
-      return;
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      phoneCountry: prev.country,
-    }));
-  }, [formData.country, formData.phoneCountry]);
+  }, [formData.state, formData.country, formData.city, manualLocationFields]);
 
   // Calculate totals (all amounts in USD, rounded to 2 decimal places)
   const subtotal = Math.round(
@@ -860,7 +965,10 @@ export default function Checkout() {
       if (name === 'email') return sanitizeEmail(value, 255);
       if (name === 'address') return sanitizeTextInput(value, 255);
       if (name === 'city') return sanitizeTextInput(value, 80);
-      if (name === 'state') return normalizeRegionCode(formData.country, sanitizeTextInput(value, 32));
+      if (name === 'state') {
+        const nextState = sanitizeTextInput(value, 80);
+        return manualLocationFields ? nextState : normalizeRegionCode(formData.country, nextState);
+      }
       if (name === 'zip') return sanitizePostalCode(value, 16);
       if (name === 'country') return sanitizeTextInput(value, 8).toUpperCase();
       if (name === 'phoneCountry') return sanitizeTextInput(value, 8).toUpperCase();
@@ -871,7 +979,7 @@ export default function Checkout() {
       setFormData(prev => ({
         ...prev,
         country: sanitizedValue,
-        phoneCountry: sanitizedValue,
+        phoneCountry: !prev.phoneCountry || prev.phoneCountry === prev.country ? sanitizedValue : prev.phoneCountry,
         state: '',
         city: '',
       }));
@@ -879,9 +987,6 @@ export default function Checkout() {
       setFormData(prev => ({
         ...prev,
         phoneCountry: sanitizedValue,
-        country: sanitizedValue,
-        state: '',
-        city: '',
       }));
     } else if (name === 'state') {
       setFormData(prev => ({
@@ -904,8 +1009,7 @@ export default function Checkout() {
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
-    const formatted = formatLocalPhoneNumber(normalizeLocalPhoneDigits(value, formData.phoneCountry, 15), formData.phoneCountry);
-    setFormData(prev => ({ ...prev, phone: formatted }));
+    setFormData(prev => ({ ...prev, phone: sanitizePhoneInput(value, 24) }));
     // Clear phone error when user starts typing
     if (formErrors.phone) {
       setFormErrors(prev => {
@@ -914,6 +1018,13 @@ export default function Checkout() {
         return updated;
       });
     }
+  };
+
+  const handlePhoneBlur = () => {
+    setFormData((prev) => ({
+      ...prev,
+      phone: formatLocalPhoneNumber(normalizeLocalPhoneDigits(prev.phone, prev.phoneCountry, 15), prev.phoneCountry),
+    }));
   };
 
   const validateShipping = () => {
@@ -930,12 +1041,13 @@ export default function Checkout() {
     if (!formData.zip) errors.zip = 'Zip code is required';
 
     if (!usesManualLocationFields(formData.country)) {
-      const stateOptions = getStateOptions(formData.country).filter((option) => option.value);
-      const cityOptions = getCityOptions(formData.country, formData.state);
-      if (!stateOptions.some((option) => option.value === formData.state)) {
+      const availableStateOptions = getStateOptions(formData.country).filter((option) => option.value);
+      const selectedStateUsesManualCity = usesManualCityField(formData.country, formData.state);
+      const availableCityOptions = getCityOptions(formData.country, formData.state);
+      if (!availableStateOptions.some((option) => option.value === formData.state)) {
         errors.state = `${getStateLabel(formData.country)} must be selected from the list`;
       }
-      if (!cityOptions.includes(formData.city)) {
+      if (!selectedStateUsesManualCity && !availableCityOptions.includes(formData.city)) {
         errors.city = 'City must be selected from the list';
       }
     }
@@ -1469,7 +1581,8 @@ export default function Checkout() {
                         name="phone"
                         value={formData.phone}
                         onChange={handlePhoneChange}
-                        placeholder="555 123 4567"
+                        onBlur={handlePhoneBlur}
+                        placeholder="(555)-123-4567"
                         className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
                           formErrors.phone
                             ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -1507,27 +1620,61 @@ export default function Checkout() {
                     )}
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-semibold text-black mb-3">{t('checkout.country', 'Country')} *</label>
+                    <select
+                      name="country"
+                      value={formData.country}
+                      onChange={handleShippingChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-colors text-base bg-white"
+                      required
+                    >
+                      <option value="">Select country</option>
+                      {COUNTRY_OPTIONS.map((countryOption) => (
+                        <option key={countryOption.value} value={countryOption.value}>
+                          {countryOption.flag ? `${countryOption.flag} ` : ''}{countryOption.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
                     <div>
                       <label className="block text-sm font-semibold text-black mb-3">{getStateLabel(formData.country)} *</label>
-                      <select
-                        name="state"
-                        value={formData.state}
-                        onChange={handleShippingChange}
-                        className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white ${
-                          formErrors.state
-                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                            : 'border-gray-300 focus:border-black focus:ring-black'
-                        }`}
-                        required
-                      >
-                        <option value="">{t('checkout.selectState', 'Select')} {getStateLabel(formData.country).toLowerCase()}</option>
-                        {getStateOptions(formData.country).filter((state) => state.value).map((state) => (
-                          <option key={state.value} value={state.value}>
-                            {state.label}
-                          </option>
-                        ))}
-                      </select>
+                      {manualLocationFields ? (
+                        <input
+                          type="text"
+                          name="state"
+                          value={formData.state}
+                          onChange={handleShippingChange}
+                          placeholder={getStateLabel(formData.country)}
+                          className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
+                            formErrors.state
+                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                              : 'border-gray-300 focus:border-black focus:ring-black'
+                          }`}
+                          required
+                        />
+                      ) : (
+                        <select
+                          name="state"
+                          value={formData.state}
+                          onChange={handleShippingChange}
+                          className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white ${
+                            formErrors.state
+                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                              : 'border-gray-300 focus:border-black focus:ring-black'
+                          }`}
+                          required
+                        >
+                          <option value="">{t('checkout.selectState', 'Select')} {getStateLabel(formData.country).toLowerCase()}</option>
+                          {structuredStateOptions.map((state) => (
+                            <option key={state.value} value={state.value}>
+                              {state.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       {formErrors.state && (
                         <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
                           <AlertCircle size={14} /> {formErrors.state}
@@ -1536,25 +1683,41 @@ export default function Checkout() {
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-black mb-3">{t('checkout.city', 'City')} *</label>
-                      <select
-                        name="city"
-                        value={formData.city}
-                        onChange={handleShippingChange}
-                        disabled={!formData.state}
-                        className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white disabled:bg-gray-100 disabled:text-gray-500 ${
-                          formErrors.city
-                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                            : 'border-gray-300 focus:border-black focus:ring-black'
-                        }`}
-                        required
-                      >
-                        <option value="">{t('checkout.selectCity', 'Select city')}</option>
-                        {getCityOptions(formData.country, formData.state).map((city) => (
-                          <option key={city} value={city}>
-                            {city}
-                          </option>
-                        ))}
-                      </select>
+                      {manualCityField ? (
+                        <input
+                          type="text"
+                          name="city"
+                          value={formData.city}
+                          onChange={handleShippingChange}
+                          placeholder={t('checkout.city', 'City')}
+                          className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
+                            formErrors.city
+                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                              : 'border-gray-300 focus:border-black focus:ring-black'
+                          }`}
+                          required
+                        />
+                      ) : (
+                        <select
+                          name="city"
+                          value={formData.city}
+                          onChange={handleShippingChange}
+                          disabled={!formData.state}
+                          className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white disabled:bg-gray-100 disabled:text-gray-500 ${
+                            formErrors.city
+                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                              : 'border-gray-300 focus:border-black focus:ring-black'
+                          }`}
+                          required
+                        >
+                          <option value="">{t('checkout.selectCity', 'Select city')}</option>
+                          {cityOptions.map((city) => (
+                            <option key={city} value={city}>
+                              {city}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       {formErrors.city && (
                         <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
                           <AlertCircle size={14} /> {formErrors.city}
@@ -1582,24 +1745,6 @@ export default function Checkout() {
                         </p>
                       )}
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-black mb-3">{t('checkout.country', 'Country')} *</label>
-                    <select
-                      name="country"
-                      value={formData.country}
-                      onChange={handleShippingChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-colors text-base bg-white"
-                      required
-                    >
-                      <option value="">Select country</option>
-                      {COUNTRY_OPTIONS.map((countryOption) => (
-                        <option key={countryOption.value} value={countryOption.value}>
-                          {countryOption.flag ? `${countryOption.flag} ` : ''}{countryOption.label}
-                        </option>
-                      ))}
-                    </select>
                   </div>
 
                   {isAuthenticated && (
