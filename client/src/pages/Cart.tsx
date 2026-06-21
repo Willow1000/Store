@@ -13,7 +13,7 @@ import { calculateShipping } from '@shared/shipping';
 import currencyClient from '@/lib/currencyClient';
 import { calculateVariableVat } from '@/lib/vat';
 import { SITE_LANGUAGE_CHANGED_EVENT, getSiteLanguage, translateText, type SiteLanguageCode } from '@/lib/language';
-import { savePendingAuthAction } from '@/lib/authPendingAction';
+import { savePendingAuthAction, waitForCartMigration } from '@/lib/authPendingAction';
 
 interface CartItem {
   productId?: string;
@@ -40,6 +40,7 @@ export default function Cart() {
     isLoading: isSupabaseLoading,
     updateQuantity: updateSupabaseQuantity,
     removeFromCart: removeSupabaseItem,
+    refetch: refetchSupabaseCart,
   } = useSupabaseCart(user?.id || null);
   const { products: dbProducts } = useProducts(1, 500);
 
@@ -93,6 +94,7 @@ export default function Cart() {
   useEffect(() => {
     if (!awaitingCartHydration) return;
     if (!isAuthenticated) return;
+
     if (effectiveCartItems.length > 0) {
       setAwaitingCartHydration(false);
       try {
@@ -103,6 +105,13 @@ export default function Cart() {
       return;
     }
 
+    let cancelled = false;
+    void waitForCartMigration().then(() => {
+      if (!cancelled) {
+        void refetchSupabaseCart();
+      }
+    });
+
     const timer = window.setTimeout(() => {
       setAwaitingCartHydration(false);
       try {
@@ -112,8 +121,11 @@ export default function Cart() {
       }
     }, 2500);
 
-    return () => window.clearTimeout(timer);
-  }, [awaitingCartHydration, isAuthenticated, effectiveCartItems.length]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [awaitingCartHydration, isAuthenticated, effectiveCartItems.length, refetchSupabaseCart]);
 
   const productsById = useMemo(() => {
     return new Map((dbProducts as ProductLookup[]).map((product) => [product.id, product]));

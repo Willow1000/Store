@@ -38,6 +38,10 @@ export function getCountryDialCode(country: string) {
   return getCountryPhoneOption(country).dialCode;
 }
 
+function usesNanpFormat(country: string) {
+  return getCountryDialCode(country) === '+1';
+}
+
 export function normalizeLocalPhoneDigits(input: string | null | undefined, country: string, maxLength = 15) {
   const digits = String(input ?? '').replace(/\D/g, '');
   const dialDigits = getCountryDialCode(country).replace(/\D/g, '');
@@ -47,6 +51,12 @@ export function normalizeLocalPhoneDigits(input: string | null | undefined, coun
 
 export function formatLocalPhoneNumber(input: string | null | undefined, country: string) {
   const digits = normalizeLocalPhoneDigits(input, country, 15);
+  if (usesNanpFormat(country)) {
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)})-${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)})-${digits.slice(3, 6)}-${digits.slice(6, 10)}`.trim();
+  }
+
   if (digits.length <= 3) return digits;
   if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
   return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)}`.trim();

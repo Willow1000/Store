@@ -54,6 +54,29 @@ function markCartAuthRedirectPending() {
   }
 }
 
+function finishCartMigration() {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.removeItem('isMigratingCart');
+  } catch {
+    // ignore storage issues
+  }
+
+  try {
+    const w = window as any;
+    if (w.__resolveCartMigration) {
+      w.__resolveCartMigration();
+    }
+    delete w.__resolveCartMigration;
+    delete w.__cartMigrationPromise;
+  } catch {
+    // ignore storage issues
+  }
+
+  window.dispatchEvent(new Event('cartMerged'));
+}
+
 async function ensureProfile(userId: string) {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData?.user) {
@@ -183,6 +206,10 @@ async function mergeGuestCartWithUserCart(userId: string): Promise<void> {
 
   // Prevent concurrent merges - if already in progress, wait for it
   if (mergeInProgress) {
+    if (typeof window !== 'undefined') {
+      const existingMigration = (window as any).__cartMigrationPromise;
+      if (existingMigration) await existingMigration;
+    }
     return;
   }
 
@@ -190,49 +217,39 @@ async function mergeGuestCartWithUserCart(userId: string): Promise<void> {
   try {
     const localCartJson = typeof window !== 'undefined' ? localStorage.getItem('cart') : null;
     const guestCartItems = readCartFromStorage(localCartJson);
-  
-  if (guestCartItems.length === 0) {
-    // No guest cart items to merge
-    return;
-  }
 
-  // Process each guest cart item
-  for (const guestItem of guestCartItems) {
-    if (!guestItem.productId) continue;
-
-    try {
-      // Merge strategy: add quantities
-      // This ensures guest items don't overwrite but accumulate
-      await upsertCartItem(userId, guestItem.productId, guestItem.quantity);
-    } catch (error) {
-      console.warn(
-        `[CartMerge] Failed to merge item ${guestItem.productId}:`,
-        error instanceof Error ? error.message : 'Unknown error'
-      );
-      // Continue merging other items even if one fails
-      // This prevents one out-of-stock item from blocking the entire merge
+    if (guestCartItems.length === 0) {
+      return;
     }
-  }
+
+    // Process each guest cart item
+    for (const guestItem of guestCartItems) {
+      if (!guestItem.productId) continue;
+
+      try {
+        // Merge strategy: add quantities
+        // This ensures guest items don't overwrite but accumulate
+        await upsertCartItem(userId, guestItem.productId, guestItem.quantity);
+      } catch (error) {
+        console.warn(
+          `[CartMerge] Failed to merge item ${guestItem.productId}:`,
+          error instanceof Error ? error.message : 'Unknown error'
+        );
+        // Continue merging other items even if one fails
+        // This prevents one out-of-stock item from blocking the entire merge
+      }
+    }
 
     // Clear localStorage cart after successful merge to prevent duplication
     if (typeof window !== 'undefined') {
       localStorage.removeItem('cart');
-      try { localStorage.removeItem('isMigratingCart'); } catch (e) {}
-      try {
-        const w = window as any;
-        if (w.__resolveCartMigration) {
-          try { w.__resolveCartMigration(); } catch (e) {}
-          try { delete w.__resolveCartMigration; } catch (e) {}
-          try { delete w.__cartMigrationPromise; } catch (e) {}
-        }
-      } catch (e) {}
-      window.dispatchEvent(new Event('cartMerged'));
     }
 
     // Notify UI that cart has been updated
     window.dispatchEvent(new Event('cartUpdated'));
   } finally {
     mergeInProgress = false;
+    finishCartMigration();
   }
 }
 

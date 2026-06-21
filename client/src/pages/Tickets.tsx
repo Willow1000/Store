@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { COUNTRY_PHONE_OPTIONS, DEFAULT_PHONE_COUNTRY, buildInternationalPhoneNumber, formatLocalPhoneNumber, getCountryPhoneLabel, normalizeLocalPhoneDigits } from '@/lib/countryPhone';
-import { sanitizeEmail, sanitizeMultilineText, sanitizeMultilineTextInput, sanitizePhone, sanitizePhoneInput, sanitizeText, sanitizeTextInput } from '@shared/sanitize';
+import { sanitizeEmail, sanitizeMultilineText, sanitizeMultilineTextInput, sanitizePhone, sanitizeText, sanitizeTextInput } from '@shared/sanitize';
 import { requestAuthenticationForPath } from '@/lib/authRequired';
 
 export default function TicketsPage() {
@@ -217,7 +217,7 @@ export default function TicketsPage() {
               className="border p-2 w-full"
               value={phone}
               onChange={(e) => setPhone(formatLocalPhoneNumber(normalizeLocalPhoneDigits(e.target.value, country, 15), country))}
-              placeholder="555 123 4567"
+              placeholder="(555)-123-4567"
             />
           </div>
         </div>
