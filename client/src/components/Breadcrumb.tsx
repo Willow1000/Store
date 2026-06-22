@@ -5,6 +5,7 @@
 
 import { Link } from 'wouter';
 import { ChevronRight, Home } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface BreadcrumbItem {
   label: string;
@@ -14,9 +15,10 @@ interface BreadcrumbItem {
 interface BreadcrumbProps {
   items: BreadcrumbItem[];
   className?: string;
+  includeStructuredData?: boolean;
 }
 
-export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
+export function Breadcrumb({ items, className = '', includeStructuredData = true }: BreadcrumbProps) {
   // Include home in the breadcrumb
   const allItems: BreadcrumbItem[] = [
     { label: 'Home', href: '/' },
@@ -35,8 +37,9 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
     })),
   };
 
-  // Inject structured data
-  if (typeof document !== 'undefined') {
+  useEffect(() => {
+    if (!includeStructuredData || typeof document === 'undefined') return;
+
     let scriptTag = document.querySelector('script[data-breadcrumb="true"]') as HTMLScriptElement;
     if (!scriptTag) {
       scriptTag = document.createElement('script');
@@ -45,7 +48,7 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
       document.head.appendChild(scriptTag);
     }
     scriptTag.textContent = JSON.stringify(structuredData);
-  }
+  }, [includeStructuredData, structuredData]);
 
   return (
     <nav
