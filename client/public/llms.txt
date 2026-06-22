@@ -6,8 +6,6 @@ MotorVault is an automotive parts marketplace with verified sellers, product bro
 ## Primary Pages
 - https://motorvault.shop/
 - https://motorvault.shop/products
-- https://motorvault.shop/cart
-- https://motorvault.shop/checkout
 - https://motorvault.shop/about
 - https://motorvault.shop/help
 - https://motorvault.shop/contact
@@ -19,7 +17,7 @@ MotorVault is an automotive parts marketplace with verified sellers, product bro
 ## Product Discovery
 - Search and filter product catalog by brand, model, category, condition, price, and availability.
 - Product detail pages include pricing, availability, images, and related items.
-- Checkout supports cart totals, shipping, and payment processing.
+- Category and product pages are the primary public discovery targets.
 
 ## Structured Data
 - Organization

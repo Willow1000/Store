@@ -48,19 +48,43 @@ interface SEOHeadProps {
   }>;
 }
 
-function normalizeCanonicalUrl(canonical?: string): string | undefined {
-  if (!canonical) return undefined;
-  if (typeof window === 'undefined') return canonical;
+const SITE_NAME = 'MotorVault';
+const SITE_DESCRIPTION = 'Premium automotive parts marketplace for OEM and aftermarket motor parts, accessories, secure checkout, and worldwide shipping.';
+const SITE_LOGO = '/images/motorvault_horizontal.svg';
+const DEFAULT_SITE_ORIGIN = (
+  import.meta.env.VITE_APP_URL ||
+  import.meta.env.VITE_SITE_URL ||
+  'https://motorvault.shop'
+).replace(/\/$/, '');
+
+function getRuntimeSiteOrigin(): string {
+  if (typeof window === 'undefined') return DEFAULT_SITE_ORIGIN;
 
   const currentOrigin = window.location.origin.replace(/\/$/, '');
 
   try {
-    const parsed = new URL(canonical, currentOrigin);
+    const hostname = new URL(currentOrigin).hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
+      return currentOrigin;
+    }
+  } catch {
+    return DEFAULT_SITE_ORIGIN;
+  }
+
+  return DEFAULT_SITE_ORIGIN || currentOrigin;
+}
+
+function normalizeCanonicalUrl(canonical?: string): string | undefined {
+  if (!canonical) return undefined;
+  const siteOrigin = getRuntimeSiteOrigin();
+
+  try {
+    const parsed = new URL(canonical, siteOrigin);
     const path = `${parsed.pathname}${parsed.search}${parsed.hash}` || '/';
-    return `${currentOrigin}${path.startsWith('/') ? path : `/${path}`}`;
+    return `${siteOrigin}${path.startsWith('/') ? path : `/${path}`}`;
   } catch {
     const fallbackPath = canonical.startsWith('/') ? canonical : `/${canonical}`;
-    return `${currentOrigin}${fallbackPath}`;
+    return `${siteOrigin}${fallbackPath}`;
   }
 }
 
@@ -74,7 +98,7 @@ function toAbsoluteUrl(value?: string, baseUrl?: string): string | undefined {
   if (!trimmed || trimmed.startsWith('data:')) return undefined;
 
   try {
-    const base = baseUrl || (typeof window !== 'undefined' ? window.location.origin : undefined);
+    const base = baseUrl || getRuntimeSiteOrigin();
     return new URL(trimmed, base).href;
   } catch {
     return trimmed;
@@ -113,7 +137,7 @@ function getSchemaCondition(condition?: string): string | undefined {
 }
 
 function getStructuredDataUrl(url?: string, fallback?: string): string {
-  return toAbsoluteUrl(url || fallback, fallback) || fallback || getCurrentUrl();
+  return toAbsoluteUrl(url || fallback, fallback || getRuntimeSiteOrigin()) || fallback || getCurrentUrl();
 }
 
 function getRobotsContent(noIndex?: boolean, noFollow?: boolean, robots?: string): string {
@@ -145,11 +169,38 @@ export function SEOHead({
   const effectiveCanonical = normalizeCanonicalUrl(canonical);
   const currentUrl = getCurrentUrl();
   const pageUrl = effectiveCanonical || currentUrl;
+  const siteOrigin = getRuntimeSiteOrigin();
   const normalizedOgImage = toAbsoluteUrl(ogImage, pageUrl) || ogImage;
   const robotsContent = getRobotsContent(noIndex, noFollow, robots);
 
   // Generate and inject structured data
-  const graph: Record<string, any>[] = [];
+  const graph: Record<string, any>[] = [
+    {
+      '@type': 'Organization',
+      '@id': `${siteOrigin}#organization`,
+      name: SITE_NAME,
+      url: siteOrigin,
+      logo: toAbsoluteUrl(SITE_LOGO, siteOrigin),
+      description: SITE_DESCRIPTION,
+      contactPoint: {
+        '@type': 'ContactPoint',
+        contactType: 'Customer Support',
+        email: 'support@motorvault.shop',
+        availableLanguage: 'en',
+      },
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${siteOrigin}#website`,
+      name: SITE_NAME,
+      url: siteOrigin,
+      description: SITE_DESCRIPTION,
+      inLanguage: 'en',
+      publisher: {
+        '@id': `${siteOrigin}#organization`,
+      },
+    },
+  ];
 
   if (productData) {
     const productUrl = getStructuredDataUrl(productData.url, pageUrl);
@@ -195,7 +246,7 @@ export function SEOHead({
         '@type': 'Offer',
         url: productUrl,
         price: formattedPrice,
-        priceCurrency: productData.priceCurrency || 'USD',
+        priceCurrency: (productData.priceCurrency || 'USD').toUpperCase(),
         availability: `https://schema.org/${productData.availability || 'InStock'}`,
       };
 
@@ -205,7 +256,7 @@ export function SEOHead({
       }
     }
 
-    if (productData.rating && productData.reviews) {
+    if (productData.rating && productData.reviews && productData.reviews > 0) {
       productSchema.aggregateRating = {
         '@type': 'AggregateRating',
         ratingValue: productData.rating,

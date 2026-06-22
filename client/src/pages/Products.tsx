@@ -94,9 +94,6 @@ export default function Products() {
   const { brands, isLoading: brandsLoading, error: brandsError } = useBrands();
   const { products: categoryProducts, isLoading: isCategoryLoading } = useProductsBySlug(categoryFilter);
   const categoryQueryValue = normalizeCategoryValue(getCategoryFromUrl());
-  const canonicalUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/products`
-    : '/products';
 
   const brandsWithLogos = useMemo(
     () => brands.filter((brand) => Boolean(brand.image_url && brand.image_url.trim())),
@@ -349,6 +346,19 @@ export default function Products() {
 
   const selectedCategoryName = normalizeCategoryValue(String(selectedCategory?.name ?? ''));
   const selectedCategorySlug = normalizeCategoryValue(String(selectedCategory?.slug ?? ''));
+  const canonicalCategoryParam = selectedCategory?.slug || categoryFilter || categoryQueryValue;
+  const canonicalPath = canonicalCategoryParam
+    ? `/products?category=${encodeURIComponent(canonicalCategoryParam)}`
+    : '/products';
+  const canonicalUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}${canonicalPath}`
+    : canonicalPath;
+  const seoTitle = selectedCategory?.name
+    ? `${selectedCategory.name} Parts | MotorVault`
+    : 'MotorVault Products | OEM & Aftermarket Automotive Parts';
+  const seoDescription = selectedCategory?.description
+    ? selectedCategory.description
+    : 'Browse MotorVault\'s complete catalog of automotive parts and accessories. Filter by brand, model, category, condition, price, and availability.';
 
   const conditionOptions = useMemo(() => {
     if (!allProducts || allProducts.length === 0) return [] as string[];
@@ -803,8 +813,8 @@ export default function Products() {
     return (
       <>
         <SEOHead
-          title="MotorVault Products | OEM & Aftermarket Automotive Parts"
-          description="Browse MotorVault's complete catalog of automotive parts and accessories. Filter by brand, model, category, condition, price, and availability."
+          title={seoTitle}
+          description={seoDescription}
           keywords={['automotive parts', 'car parts', 'OEM parts', 'aftermarket parts', 'auto accessories']}
           canonical={canonicalUrl}
         />
@@ -816,8 +826,8 @@ export default function Products() {
   return (
     <>
       <SEOHead
-        title="MotorVault Products | OEM & Aftermarket Automotive Parts"
-        description="Browse MotorVault's complete catalog of automotive parts and accessories. Filter by brand, model, category, condition, price, and availability."
+        title={seoTitle}
+        description={seoDescription}
         keywords={['automotive parts', 'car parts', 'OEM parts', 'aftermarket parts', 'auto accessories']}
         canonical={canonicalUrl}
       />
