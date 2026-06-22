@@ -7,12 +7,13 @@ import { SEOHead } from '@/components/SEOHead';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useProductById, useProducts } from '@/hooks/useSupabaseProducts';
 import { useSupabaseCart, useSupabaseWishlist } from '@/hooks/useSupabaseCart';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useIsMobile } from '@/hooks/useMobile';
 import currencyClient from '@/lib/currencyClient';
 import { getHighResImageUrl } from '@/lib/images';
 import { trackAddToCart, trackViewContent } from '@/hooks/useMetaPixel';
-import { TrustSignals } from '@/components/TrustSignals';
+import { ProductRecommendationSection } from '@/components/ProductRecommendationSection';
+import { useRecommendations } from '@/hooks/useRecommendations';
 
 export default function ProductDetail() {
   const [, params] = useRoute('/product/:id');
@@ -37,11 +38,24 @@ export default function ProductDetail() {
   const { products: allProducts } = useProducts(1, 200); // Fetch products for similar items
   const { addToCart } = useSupabaseCart(user?.id || null);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
+  const recommendations = useRecommendations(user?.id || null);
+  const lastTrackedProductViewRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!product?.id) return;
     trackViewContent(product.id, product.title, Number(product.price) || 0);
   }, [product?.id]);
+
+  useEffect(() => {
+    if (!product?.id || lastTrackedProductViewRef.current === product.id) return;
+    lastTrackedProductViewRef.current = product.id;
+    recommendations.track({
+      eventType: 'product_view',
+      product,
+      productId: product.id,
+      metadata: { source: 'product_detail' },
+    });
+  }, [product?.id, recommendations.track]);
 
   // Lightweight non-blocking tracker helper (same pattern as Products.tsx)
   const sendTrackingEvent = (payload: Record<string, any>) => {
@@ -290,6 +304,21 @@ export default function ProductDetail() {
     }
   }, [isLoading, productId, product, navigate]);
 
+  const similarVehicleProducts = useMemo(() => {
+    if (!product) return [];
+    return recommendations.similarVehicleParts(allProducts || [], product, isMobile ? 6 : 12);
+  }, [allProducts, isMobile, product, recommendations]);
+
+  const completeRepairProducts = useMemo(() => {
+    if (!product) return [];
+    return recommendations.completeRepairProducts(allProducts || [], product, isMobile ? 6 : 12);
+  }, [allProducts, isMobile, product, recommendations]);
+
+  const frequentlyBoughtTogetherProducts = useMemo(() => {
+    if (!product) return [];
+    return recommendations.frequentlyBoughtTogetherProducts(allProducts || [], product, isMobile ? 6 : 12);
+  }, [allProducts, isMobile, product, recommendations]);
+
   if (!productId) return null;
 
   const canonicalUrl = typeof window !== 'undefined'
@@ -460,14 +489,20 @@ export default function ProductDetail() {
     navigate(getEnquiryContactUrl(false));
   };
 
-  // Get similar products from the same category (max 6)
-  const similarProducts = allProducts
-    .filter(
-      (p) =>
-        p.id !== product?.id &&
-        p.category_name === product?.category_name
-    )
+  const fallbackSimilarProducts = allProducts
+    .filter((p) => p.id !== product?.id && p.category_name === product?.category_name)
     .slice(0, isMobile ? 6 : 12);
+  const similarProducts = (similarVehicleProducts.length > 0 ? similarVehicleProducts : fallbackSimilarProducts)
+    .slice(0, isMobile ? 6 : 12);
+
+  const handleRecommendationClick = (source: string, recommendedProduct: typeof product) => {
+    recommendations.track({
+      eventType: 'recommendation_click',
+      product: recommendedProduct,
+      productId: recommendedProduct.id,
+      metadata: { source },
+    });
+  };
 
   return (
     <>
@@ -697,10 +732,6 @@ export default function ProductDetail() {
               </p>
             </div>
 
-            <div className="mt-6">
-              <TrustSignals compact />
-            </div>
-
             {/* Action Buttons */}
             <div className="mt-10 space-y-3">
               {/* Quick Purchase Button */}
@@ -928,7 +959,7 @@ export default function ProductDetail() {
         {similarProducts.length > 0 && (
           <section className="mt-24">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-extrabold text-gray-900">Similar Items</h2>
+              <h2 className="text-2xl font-extrabold text-gray-900">Similar Vehicle Parts</h2>
               <Link href={`/products?category=${product?.category_name || ''}`}>
                 <a className="text-sm font-semibold text-blue-600 hover:text-blue-500">
                   See all <span aria-hidden="true"> →</span>
@@ -943,6 +974,7 @@ export default function ProductDetail() {
                   <Link key={p.id} href={`/product/${p.id}`}>
                     <a
                       onClick={() => {
+                        handleRecommendationClick('product_detail_similar_vehicle', p);
                         try {
                           if (hasSearchSession()) {
                             sendTrackingEvent({
@@ -987,6 +1019,28 @@ export default function ProductDetail() {
           </section>
         )}
       </div>
+      <ProductRecommendationSection
+        title="Complete The Repair"
+        products={completeRepairProducts}
+        wishedProductIds={wishedProductIds}
+        onWishlistToggle={async (recommendedProduct) => {
+          await toggleWishlist(recommendedProduct.id);
+        }}
+        onProductClick={(recommendedProduct) => handleRecommendationClick('product_detail_complete_repair', recommendedProduct)}
+        ctaHref={`/products?category=${encodeURIComponent(product.category_name || '')}`}
+        compact
+      />
+      <ProductRecommendationSection
+        title="Frequently Bought Together"
+        products={frequentlyBoughtTogetherProducts}
+        wishedProductIds={wishedProductIds}
+        onWishlistToggle={async (recommendedProduct) => {
+          await toggleWishlist(recommendedProduct.id);
+        }}
+        onProductClick={(recommendedProduct) => handleRecommendationClick('product_detail_bought_together', recommendedProduct)}
+        ctaHref="/products"
+        compact
+      />
       </main>
     </>
   );

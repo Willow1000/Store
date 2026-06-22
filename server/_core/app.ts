@@ -268,7 +268,7 @@ function isValidConfiguredOrigin(value: string | undefined): boolean {
 async function insertProductSearchTrackingEventToSupabase(entry: {
   sessionId: string;
   userId: string | null;
-  eventType: 'search' | 'product_click';
+  eventType: string;
   searchTerm: string | null;
   filters: Record<string, unknown>;
   resultsCount: number;
@@ -929,12 +929,13 @@ export function createApp() {
   app.post('/api/track', async (req, res) => {
     try {
       const payload = req.body || {};
+      const eventType = String(payload.eventType || 'search').slice(0, 32);
 
       // Normalize payload fields
       const entry: any = {
         sessionId: String(payload.sessionId || '') || (req.headers['x-session-id'] || ''),
         userId: payload.userId || null,
-        eventType: String(payload.eventType || 'search'),
+        eventType,
         searchTerm: payload.searchTerm || null,
         filters: payload.filters || {},
         resultsCount: typeof payload.resultsCount === 'number' ? payload.resultsCount : 0,
@@ -952,7 +953,7 @@ export function createApp() {
       // Server-side dedupe safety net: if a very similar event was recorded recently, skip inserting.
       const isRecentDuplicate = await recentSimilarTrackingExists({
         sessionId: String(entry.sessionId),
-        eventType: entry.eventType === 'product_click' ? 'product_click' : 'search',
+        eventType: entry.eventType,
         searchTerm: entry.searchTerm ?? null,
         clickedProductId: entry.clickedProductId ?? null,
         resultsCount: Number(entry.resultsCount || 0),
@@ -966,7 +967,7 @@ export function createApp() {
       const recorded = await recordProductSearchTrackingEvent({
         sessionId: String(entry.sessionId),
         userId: entry.userId ? String(entry.userId) : null,
-        eventType: entry.eventType === 'product_click' ? 'product_click' : 'search',
+        eventType: entry.eventType,
         searchTerm: entry.searchTerm,
         filters: entry.filters,
         resultsCount: Number(entry.resultsCount || 0),
@@ -981,7 +982,7 @@ export function createApp() {
       const supabaseRecorded = recorded || await insertProductSearchTrackingEventToSupabase({
         sessionId: String(entry.sessionId),
         userId: entry.userId ? String(entry.userId) : null,
-        eventType: entry.eventType === 'product_click' ? 'product_click' : 'search',
+        eventType: entry.eventType,
         searchTerm: entry.searchTerm,
         filters: entry.filters,
         resultsCount: Number(entry.resultsCount || 0),

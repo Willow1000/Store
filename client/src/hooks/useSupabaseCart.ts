@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { CartItem, WishlistItem, Product } from '@/types/supabase';
 import { toast } from 'sonner';
+import { trackRecommendationEvent } from '@/lib/recommendations';
 
 export function useSupabaseCart(userId: string | null) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -125,10 +126,11 @@ export function useSupabaseCart(userId: string | null) {
       if (!userId) {
         // Guest: persist to localStorage cart
         try {
+          const nextQuantity = Math.max(1, quantity);
           const { addToLocalCart } = await import('@/lib/cart');
           const { data: productData, error: productError } = await supabase
             .from('products')
-            .select('id, title, price, cover_image_url, stock')
+            .select('id, title, price, cover_image_url, stock, category_name, brand, model, condition, discount, part_number, item_specifics, created_at')
             .eq('id', productId)
             .maybeSingle();
 
@@ -146,11 +148,19 @@ export function useSupabaseCart(userId: string | null) {
             title: productData?.title || 'Product',
             price: String(productData?.price ?? '0'),
             image: productData?.cover_image_url || '',
-            quantity: Math.max(1, quantity),
+            quantity: nextQuantity,
           } as any;
 
           const ok = addToLocalCart(item);
           if (ok) {
+            trackRecommendationEvent({
+              eventType: 'add_to_cart',
+              product: productData as Product,
+              productId,
+              quantity: nextQuantity,
+              userId: null,
+              metadata: { source: 'guest_cart' },
+            });
             toast.success('Added to cart');
             return true;
           }
@@ -175,7 +185,7 @@ export function useSupabaseCart(userId: string | null) {
 
         const { data: productData, error: productError } = await supabase
           .from('products')
-          .select('id, stock, title')
+          .select('id, title, price, cover_image_url, stock, category_name, brand, model, condition, discount, part_number, item_specifics, created_at')
           .eq('id', productId)
           .maybeSingle();
 
@@ -220,6 +230,14 @@ export function useSupabaseCart(userId: string | null) {
         }
 
         toast.success('Added to cart');
+        trackRecommendationEvent({
+          eventType: 'add_to_cart',
+          product: productData as Product,
+          productId,
+          quantity: nextQuantity,
+          userId,
+          metadata: { source: 'supabase_cart' },
+        });
         await fetchCart();
         return true;
       } catch (err) {
@@ -248,6 +266,15 @@ export function useSupabaseCart(userId: string | null) {
         if (supabaseError) throw supabaseError;
 
         toast.success('Cart updated');
+        const updatedItem = items.find((item) => item.id === cartItemId);
+        trackRecommendationEvent({
+          eventType: 'quantity_change',
+          product: updatedItem?.product || null,
+          productId: updatedItem?.product_id,
+          quantity,
+          userId,
+          metadata: { source: 'supabase_cart' },
+        });
         await fetchCart();
         return true;
       } catch (err) {
@@ -257,7 +284,7 @@ export function useSupabaseCart(userId: string | null) {
         return false;
       }
     },
-    [fetchCart]
+    [fetchCart, items, userId]
   );
 
   // Remove from cart
@@ -272,6 +299,14 @@ export function useSupabaseCart(userId: string | null) {
         if (supabaseError) throw supabaseError;
 
         toast.success('Removed from cart');
+        const removedItem = items.find((item) => item.id === cartItemId);
+        trackRecommendationEvent({
+          eventType: 'remove_from_cart',
+          product: removedItem?.product || null,
+          productId: removedItem?.product_id,
+          userId,
+          metadata: { source: 'supabase_cart' },
+        });
         await fetchCart();
         return true;
       } catch (err) {
@@ -281,7 +316,7 @@ export function useSupabaseCart(userId: string | null) {
         return false;
       }
     },
-    [fetchCart]
+    [fetchCart, items, userId]
   );
 
   // Clear cart
@@ -465,12 +500,28 @@ export function useSupabaseWishlist(userId: string | null) {
   // Add to wishlist
   const addToWishlist = useCallback(
     async (productId: string) => {
+      const loadProductForSignal = async () => {
+        const { data } = await supabase
+          .from('products')
+          .select('id, title, price, cover_image_url, stock, category_name, brand, model, condition, discount, part_number, item_specifics, created_at')
+          .eq('id', productId)
+          .maybeSingle();
+        return data as Product | null;
+      };
+
       if (!userId) {
         try {
           const { readWishlistFromStorage, writeWishlistToStorage } = await import('@/lib/cart');
           const list = readWishlistFromStorage();
           if (!list.includes(productId)) list.push(productId);
           writeWishlistToStorage(list);
+          trackRecommendationEvent({
+            eventType: 'wishlist_add',
+            product: await loadProductForSignal(),
+            productId,
+            userId: null,
+            metadata: { source: 'guest_wishlist' },
+          });
           toast.success('Added to wishlist');
           setWishedProductIds(new Set(list));
           return true;
@@ -492,6 +543,13 @@ export function useSupabaseWishlist(userId: string | null) {
         if (supabaseError) throw supabaseError;
 
         toast.success('Added to wishlist');
+        trackRecommendationEvent({
+          eventType: 'wishlist_add',
+          product: await loadProductForSignal(),
+          productId,
+          userId,
+          metadata: { source: 'supabase_wishlist' },
+        });
         await fetchWishlist();
         return true;
       } catch (err) {
@@ -507,12 +565,28 @@ export function useSupabaseWishlist(userId: string | null) {
   // Remove from wishlist
   const removeFromWishlist = useCallback(
     async (productId: string) => {
+      const loadProductForSignal = async () => {
+        const { data } = await supabase
+          .from('products')
+          .select('id, title, price, cover_image_url, stock, category_name, brand, model, condition, discount, part_number, item_specifics, created_at')
+          .eq('id', productId)
+          .maybeSingle();
+        return data as Product | null;
+      };
+
       if (!userId) {
         try {
           const { readWishlistFromStorage, writeWishlistToStorage } = await import('@/lib/cart');
           const list = readWishlistFromStorage().filter((id) => id !== productId);
           writeWishlistToStorage(list);
           setWishedProductIds(new Set(list));
+          trackRecommendationEvent({
+            eventType: 'wishlist_remove',
+            product: await loadProductForSignal(),
+            productId,
+            userId: null,
+            metadata: { source: 'guest_wishlist' },
+          });
           toast.success('Removed from wishlist');
           return true;
         } catch (e) {
@@ -532,6 +606,13 @@ export function useSupabaseWishlist(userId: string | null) {
         if (supabaseError) throw supabaseError;
 
         toast.success('Removed from wishlist');
+        trackRecommendationEvent({
+          eventType: 'wishlist_remove',
+          product: await loadProductForSignal(),
+          productId,
+          userId,
+          metadata: { source: 'supabase_wishlist' },
+        });
         await fetchWishlist();
         return true;
       } catch (err) {
