@@ -16,6 +16,7 @@ export default function PaymentSuccess() {
         title="Payment Successful - MotorVault"
         description="Your Paystack payment was completed successfully. You can review your order history or continue shopping."
         canonical="/payment/success"
+        noIndex
       />
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-slate-50 px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl rounded-[2rem] border border-emerald-100 bg-white p-8 sm:p-10 shadow-2xl">

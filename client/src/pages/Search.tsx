@@ -27,7 +27,14 @@ export default function Search() {
   }, [allProducts, query]);
 
   return (
-    <div className="min-h-screen bg-background w-full overflow-x-hidden">
+    <>
+      <SEOHead
+        title={query ? `Search results for ${query} | MotorVault` : 'Search Results | MotorVault'}
+        description="Search MotorVault's automotive parts catalog."
+        canonical="/search"
+        noIndex
+      />
+      <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8">
         <h1 className="mb-2 text-4xl font-bold">Search Results</h1>
         <p className="mb-8 text-gray-600">
@@ -97,6 +104,7 @@ export default function Search() {
           </>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

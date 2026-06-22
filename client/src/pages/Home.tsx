@@ -266,12 +266,6 @@ export default function Home() {
         </div>
       )}
 
-      {hasRecentlyViewedProducts ? (
-        <section className="bg-gray-50 py-10 sm:py-14 lg:py-16">
-          <BannerCarousel slides={homeBannerSlides} tone="dark" />
-        </section>
-      ) : null}
-
       <ProductRecommendationSection
         title="Recommended For You"
         products={recommendedForYouProducts}
@@ -282,6 +276,10 @@ export default function Home() {
         ctaHref="/products"
         compact
       />
+
+      <section className="bg-gray-50 py-10 sm:py-14 lg:py-16">
+        <BannerCarousel slides={homeBannerSlides} tone="dark" />
+      </section>
 
       <ProductRecommendationSection
         title="Deals You May Like"
@@ -294,12 +292,6 @@ export default function Home() {
         ctaLabel="Shop deals"
         compact
       />
-
-      {!hasRecentlyViewedProducts ? (
-        <section className="bg-gray-50 py-10 sm:py-14 lg:py-16">
-          <BannerCarousel slides={homeBannerSlides} tone="dark" />
-        </section>
-      ) : null}
 
       {/* Shop by Category Section */}
       <div className="bg-white py-6">

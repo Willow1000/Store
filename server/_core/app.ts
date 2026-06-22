@@ -51,6 +51,18 @@ function buildRobotsTxt(origin: string): string {
     'Disallow: /orders',
     'Disallow: /checkout',
     'Disallow: /cart',
+    'Disallow: /tickets',
+    'Disallow: /payment/',
+    'Disallow: /auth/',
+    'Disallow: /search',
+    'Disallow: /*?*sort=',
+    'Disallow: /*?*filter=',
+    'Disallow: /*?*page=',
+    'Disallow: /*?*utm_source=',
+    'Disallow: /*?*utm_medium=',
+    'Disallow: /*?*utm_campaign=',
+    'Disallow: /*?*fbclid=',
+    'Disallow: /*?*gclid=',
     'Sitemap: ' + `${normalizedOrigin}/sitemap.xml`,
     'Sitemap: ' + `${normalizedOrigin}/sitemap-products.xml`,
     '',
@@ -68,8 +80,6 @@ function buildLlmsTxt(origin: string): string {
     '## Primary Pages',
     `- ${normalizedOrigin}/`,
     `- ${normalizedOrigin}/products`,
-    `- ${normalizedOrigin}/cart`,
-    `- ${normalizedOrigin}/checkout`,
     `- ${normalizedOrigin}/about`,
     `- ${normalizedOrigin}/help`,
     `- ${normalizedOrigin}/contact`,
@@ -644,7 +654,7 @@ export function createApp() {
   app.get('/sitemap.xml', async (req, res) => {
     const origin = getSiteOrigin(req);
     try {
-      const xml = await generateSitemap(origin);
+      const xml = await generateSitemap(origin, 'site');
       res.type('application/xml').send(xml);
     } catch (error) {
       console.error('[Sitemap] Failed to generate sitemap.xml:', error);
@@ -655,7 +665,7 @@ export function createApp() {
   app.get('/sitemap-products.xml', async (req, res) => {
     const origin = getSiteOrigin(req);
     try {
-      const xml = await generateSitemap(origin);
+      const xml = await generateSitemap(origin, 'products');
       res.type('application/xml').send(xml);
     } catch (error) {
       console.error('[Sitemap] Failed to generate sitemap-products.xml:', error);

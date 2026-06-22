@@ -18,6 +18,7 @@ export default function PaymentFailed() {
         title="Payment Failed - MotorVault"
         description="Your Paystack payment did not complete. You can return to checkout or contact support for help."
         canonical="/payment/failed"
+        noIndex
       />
       <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-slate-50 px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl rounded-[2rem] border border-rose-100 bg-white p-8 sm:p-10 shadow-2xl">
