@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { readCartFromStorage } from '@/lib/cart';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useSupabaseCart } from '@/hooks/useSupabaseCart';
+import { useRecommendations } from '@/hooks/useRecommendations';
 import { useProducts } from '@/hooks/useSupabaseProducts';
 import { getHighResImageUrl } from '@/lib/images';
 import { calculateShipping } from '@shared/shipping';
@@ -42,6 +43,7 @@ export default function Cart() {
     removeFromCart: removeSupabaseItem,
     refetch: refetchSupabaseCart,
   } = useSupabaseCart(user?.id || null);
+  const recommendations = useRecommendations(user?.id || null);
   const { products: dbProducts } = useProducts(1, 500);
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -168,7 +170,15 @@ export default function Cart() {
     const updatedCart = cartItems.map(item =>
       item.productIndex === productIndex ? { ...item, quantity: newQuantity } : item
     );
+    const changedItem = cartItems.find((item) => String(item.productIndex) === String(productIndex) || String(item.productId) === String(productIndex));
     persistLocalCart(updatedCart);
+    recommendations.track({
+      eventType: 'quantity_change',
+      product: changedItem ? resolveProduct(changedItem) : null,
+      productId: changedItem?.productId || String(productIndex),
+      quantity: newQuantity,
+      metadata: { source: 'guest_cart_page' },
+    });
     toast.success(t('cart.updated', 'Cart updated!'));
   };
 
@@ -183,8 +193,15 @@ export default function Cart() {
       return;
     }
 
+    const removedItem = cartItems.find((item) => String(item.productIndex) === String(productIndex) || String(item.productId) === String(productIndex));
     const updatedCart = cartItems.filter(item => item.productIndex !== productIndex);
     persistLocalCart(updatedCart);
+    recommendations.track({
+      eventType: 'remove_from_cart',
+      product: removedItem ? resolveProduct(removedItem) : null,
+      productId: removedItem?.productId || String(productIndex),
+      metadata: { source: 'guest_cart_page' },
+    });
     toast.success(t('cart.itemRemoved', 'Item removed from cart!'));
   };
 

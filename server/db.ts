@@ -287,7 +287,7 @@ export type OrderItemEmailSummary = {
 export type ProductSearchTrackingInput = {
   sessionId: string;
   userId?: string | null;
-  eventType: 'search' | 'product_click';
+  eventType: string;
   searchTerm?: string | null;
   filters?: Record<string, unknown>;
   resultsCount?: number;
@@ -362,7 +362,7 @@ export async function recordProductSearchTrackingEvent(input: ProductSearchTrack
 
   export async function recentSimilarTrackingExists(params: {
     sessionId: string;
-    eventType: 'search' | 'product_click';
+    eventType: string;
     searchTerm?: string | null;
     clickedProductId?: string | null;
     resultsCount?: number;

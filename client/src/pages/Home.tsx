@@ -6,6 +6,7 @@ import { QuickViewModal } from '@/components/QuickViewModal';
 import { SEOHead } from '@/components/SEOHead';
 import { HeroSlideshow } from '@/components/HeroSlideshow';
 import { BannerCarousel } from '@/components/BannerCarousel';
+import { ProductRecommendationSection } from '@/components/ProductRecommendationSection';
 import { toast } from 'sonner';
 import { useProducts, useCategories } from '@/hooks/useSupabaseProducts';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -15,6 +16,8 @@ import { useState, useEffect, useMemo } from 'react';
 import currencyClient from '@/lib/currencyClient';
 import { getHighResImageUrl } from '@/lib/images';
 import { calculateShipping } from '@shared/shipping';
+import { useRecommendations } from '@/hooks/useRecommendations';
+import { Product } from '@/types/supabase';
 
 const homeBannerSlides = [
   {
@@ -48,21 +51,9 @@ const homeBannerSlides = [
 ];
 
 export default function Home() {
-    // Use centralized currency client - main initializes before mount
-    const [currencyRate, setCurrencyRate] = useState<number>(1);
-    const [currencyCode, setCurrencyCode] = useState<string>('USD');
-
-    useEffect(() => {
-      try {
-        setCurrencyCode(currencyClient.getCurrencyCode());
-        setCurrencyRate(currencyClient.getCurrencyRate());
-      } catch (e) {
-        setCurrencyCode('USD');
-        setCurrencyRate(1);
-      }
-    }, []);
-  const { user, isAuthenticated } = useAuth();
-  const { products, isLoading } = useProducts(1, 100); // Fetch 100 products for best deals selection
+  const { user } = useAuth();
+  const recommendations = useRecommendations(user?.id || null);
+  const { products, isLoading } = useProducts(1, 100); // Fetch 100 products for homepage recommendations
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
   const { categories, isLoading: categoriesLoading } = useCategories();
   const isMobile = useIsMobile();
@@ -80,78 +71,50 @@ export default function Home() {
   }, []);
 
   // Get recently viewed products from the products list
-  const mobileVisibleCount = isMobile ? 6 : 5;
+  const recentlyViewedVisibleCount = isMobile ? 6 : 5;
+  const recommendationVisibleCount = isMobile ? 6 : 12;
 
   const recentlyViewedProducts = recentlyViewedIds
     .map(id => products?.find(p => p.id === id))
     .filter(Boolean)
-    .slice(0, mobileVisibleCount);
+    .slice(0, recentlyViewedVisibleCount);
   const hasRecentlyViewedProducts = recentlyViewedProducts.length > 0;
 
-  // Filter deals: exactly 5 products from different categories with best offers (new or past items)
-  // Shows products with: price >= 1500 (premium), 7%+ discount, or free shipping
-  const dealsProducts = (() => {
-    const eligibleProducts = products?.filter((p) => {
-      const price = p.price !== null && p.price !== undefined
-        ? parseFloat(String(p.price))
-        : 0;
-      const discount = p.discount !== null && p.discount !== undefined
-        ? parseFloat(String(p.discount))
-        : 0;
-      
-      // Check if product has free shipping
-      const hasFreeShipping = (p as any).freeShipping === true;
-      
-      // If free shipping, it qualifies
-      if (hasFreeShipping) return true;
-      
-      // If price is above 1500 (premium items), it qualifies
-      if (price >= 1500) return true;
-      
-      if (discount <= 0 || isNaN(discount) || price <= 0) return false;
-      
-      // Calculate discount percentage
-      const discountPercentage = discount > 0 && price > 0
-        ? Math.round(((discount - price) / discount) * 100)
-        : 0;
-      
-      // Include products with 7%+ discount
-      return discountPercentage >= 7;
-    }) || [];
+  const recommendedForYouProducts = useMemo(() => {
+    return recommendations.recommendedProducts(products || [], recommendationVisibleCount);
+  }, [products, recommendations, recommendationVisibleCount]);
 
-    const uniqueByCategory = new Map<string, (typeof eligibleProducts)[number]>();
-    eligibleProducts.forEach((product) => {
-      const categoryKey = String(product.category_name || (product as any).category || 'uncategorized').trim().toLowerCase();
-      if (!uniqueByCategory.has(categoryKey)) {
-        uniqueByCategory.set(categoryKey, product);
-      }
+  const personalizedDealProducts = useMemo(() => {
+    return recommendations.personalizedDeals(products || [], recommendationVisibleCount);
+  }, [products, recommendations, recommendationVisibleCount]);
+
+  const handleRecommendationClick = (source: string, product: Product) => {
+    recommendations.track({
+      eventType: 'recommendation_click',
+      product,
+      productId: product.id,
+      metadata: { source },
     });
+  };
 
-    // Return exactly 5 products from different categories, sorted by combined deal score (premium + discount)
-    return Array.from(uniqueByCategory.values())
-      .sort((a, b) => {
-        const priceA = parseFloat(String(a.price ?? 0));
-        const priceB = parseFloat(String(b.price ?? 0));
-        const discountA = parseFloat(String(a.discount ?? 0));
-        const discountB = parseFloat(String(b.discount ?? 0));
-        
-        // Calculate discount percentage for both
-        const discountPercentA = discountA > 0 && priceA > 0
-          ? Math.round(((discountA - priceA) / discountA) * 100)
-          : 0;
-        const discountPercentB = discountB > 0 && priceB > 0
-          ? Math.round(((discountB - priceB) / discountB) * 100)
-          : 0;
-        
-        // Combined deal score: normalize price to score (price/1500) + discount percentage
-        // This gives premium items value while also rewarding good discounts
-        const scoreA = (priceA / 1500) + discountPercentA;
-        const scoreB = (priceB / 1500) + discountPercentB;
-        
-        return scoreB - scoreA;
-      })
-      .slice(0, mobileVisibleCount);
-  })();
+  const handleRecommendationQuickView = (source: string, productId: string) => {
+    const product = products?.find((item) => String(item.id) === String(productId));
+    if (product) {
+      recommendations.track({
+        eventType: 'product_view',
+        product,
+        productId,
+        metadata: { source, quickView: true },
+      });
+    }
+    setQuickViewProductId(productId);
+  };
+
+  const handleRecommendationWishlistToggle = async (product: Product) => {
+    const isWished = wishedProductIds.has(product.id);
+    await toggleWishlist(product.id);
+    toast.success(isWished ? 'Removed from wishlist' : 'Added to wishlist!');
+  };
 
   const getDiscountPercentage = (price: number | string, discount: number | null | undefined) => {
     if (!discount) return null;
@@ -159,19 +122,6 @@ export default function Home() {
     const discountPrice = parseFloat(String(discount));
     if (isNaN(currentPrice) || isNaN(discountPrice) || discountPrice <= currentPrice) return null;
     return Math.round(((discountPrice - currentPrice) / discountPrice) * 100);
-  };
-
-  const getOriginalPrice = (price: number | string, discount: number) => {
-    const numPrice = price !== null && price !== undefined ? parseFloat(String(price)) : 0;
-    if (isNaN(numPrice)) return '0.00';
-    return (numPrice / (1 - discount / 100)).toFixed(2);
-  };
-
-  // Format price in local currency via currencyClient
-  const formatPrice = (price: number | string | null | undefined) => {
-    const num = price === null || price === undefined ? 0 : parseFloat(String(price));
-    if (isNaN(num)) return '0.00';
-    return currencyClient.formatUSD(num);
   };
 
   const displayedCategories = useMemo(() => {
@@ -213,8 +163,6 @@ export default function Home() {
                 const isWished = product.id && wishedProductIds.has(product.id);
                 const stock = Number(product.stock ?? 0);
                 const price = parseFloat(String(product.price ?? 0));
-                const displayRate = currencyRate || 1;
-                const displayCode = currencyCode;
 
                 return (
                   <Link key={product.id} href={`/product/${product.id}`} className="product-card group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition-shadow">
@@ -324,140 +272,28 @@ export default function Home() {
         </section>
       ) : null}
 
-      <div className="bg-white">
-        <div className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
-          <div className="mb-6">
-            <h1 className="text-3xl font-extrabold text-gray-900">Best Deals</h1>
-            <p className="mt-2 text-lg text-gray-600">Premium items above $1500, 7%+ discounts, and free shipping options from different categories</p>
-          </div>
+      <ProductRecommendationSection
+        title="Recommended For You"
+        products={recommendedForYouProducts}
+        wishedProductIds={wishedProductIds}
+        onWishlistToggle={handleRecommendationWishlistToggle}
+        onQuickView={(productId) => handleRecommendationQuickView('home_recommended_for_you', productId)}
+        onProductClick={(product) => handleRecommendationClick('home_recommended_for_you', product)}
+        ctaHref="/products"
+        compact
+      />
 
-          {/* Products Grid */}
-          <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-5">
-            {isLoading ? (
-              Array.from({ length: mobileVisibleCount }).map((_, i) => (
-                <div key={i} className="space-y-4">
-                  <Skeleton className="w-full aspect-square rounded-xl" />
-                  <Skeleton className="w-3/4 h-4" />
-                  <Skeleton className="w-1/2 h-4" />
-                </div>
-              ))
-            ) : (
-              dealsProducts?.slice(0, mobileVisibleCount).map((product, idx) => {
-                const discountPercentage = getDiscountPercentage(product.price, product.discount);
-                const originalPrice = product.discount ? parseFloat(String(product.discount)).toFixed(2) : null;
-                const isWished = product.id && wishedProductIds.has(product.id);
-                const stock = Number(product.stock ?? 0);
-                const price = parseFloat(String(product.price ?? 0));
-
-                return (
-                  <Link key={product.id} href={`/product/${product.id}`} className="product-card group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition-shadow">
-                      {/* Image Container */}
-                      <div className="relative w-full pt-[100%] bg-white group-hover:opacity-75 transition-opacity">
-                        <img
-                          src={getHighResImageUrl(product.cover_image_url)}
-                          alt={product.title}
-                          className="absolute inset-0 w-full h-full object-contain p-6"
-                          loading="lazy"
-                          decoding="async"
-                          crossOrigin="anonymous"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                        {/* Discount Badge */}
-                        {discountPercentage && (
-                          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-red-600 text-white text-xs sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
-                            -{discountPercentage}%
-                          </div>
-                        )}
-                        <div className={`absolute bottom-2 sm:bottom-3 left-2 sm:left-3 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-bold ${stock === 0 ? 'bg-red-600 text-white' : 'bg-white/90 text-gray-800'}`}>
-                          {stock === 0 ? 'Out of stock' : `${stock} in stock`}
-                        </div>
-                        {/* Wishlist Button */}
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            toggleWishlist(product.id);
-                            toast.success(isWished ? 'Removed from wishlist' : 'Added to wishlist!');
-                          }}
-                          className="absolute top-3 right-3 bg-white p-2 rounded-full hover:bg-gray-100 shadow opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Heart
-                            className="w-5 h-5"
-                            fill={isWished ? 'currentColor' : 'none'}
-                            color={isWished ? '#ef4444' : '#999'}
-                          />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setQuickViewProductId(product.id);
-                          }}
-                          className="absolute top-16 right-3 bg-white p-2 rounded-full hover:bg-gray-100 shadow opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Eye className="w-5 h-5 text-gray-600" />
-                        </button>
-                      </div>
-
-                      {/* Product Info */}
-                      <div className="p-3 sm:p-4 md:p-5 flex flex-col flex-grow">
-                        {/* Title */}
-                        <h3 className="text-xs sm:text-sm md:text-base font-semibold text-gray-900 line-clamp-2 min-h-[30px] sm:min-h-[40px]">
-                          {product.title}
-                        </h3>
-
-                        {/* Price Section */}
-                                <div className="mt-2 sm:mt-4 flex items-baseline space-x-1 sm:space-x-2">
-                                  <span className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">
-                                    {currencyClient.isAfricanUser()
-                                      ? currencyClient.formatUSD(parseFloat(String(product.price || 0)))
-                                      : (() => {
-                                          const rate = currencyClient.getCurrencyRate() || 1;
-                                          const symbol = currencyClient.getCurrencySymbolLocal();
-                                          return `${symbol}${(parseFloat(String(product.price || 0)) * rate).toFixed(2)}`;
-                                        })()
-                                    }
-                                  </span>
-                                  {originalPrice && (
-                                    <span className="text-xs sm:text-sm text-gray-500 line-through">
-                                      {currencyClient.isAfricanUser()
-                                        ? currencyClient.formatUSD(parseFloat(String(originalPrice || 0)))
-                                        : (() => {
-                                            const rate = currencyClient.getCurrencyRate() || 1;
-                                            const symbol = currencyClient.getCurrencySymbolLocal();
-                                            return `${symbol}${(parseFloat(String(originalPrice || 0)) * rate).toFixed(2)}`;
-                                          })()
-                                      }
-                                    </span>
-                                  )}
-                                </div>
-
-                        {/* Shipping Info */}
-                        {calculateShipping(price) === 0 && (
-                          <p className="mt-1 text-xs sm:text-xs md:text-sm text-green-600 font-medium">Free shipping</p>
-                        )}
-
-                        {/* View Deal Button */}
-                        <div className="mt-auto pt-2 sm:pt-4">
-                          <button className="w-full bg-blue-600 text-white py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm hover:bg-blue-700 transition-colors">
-                            View Deal
-                          </button>
-                        </div>
-                      </div>
-                  </Link>
-                );
-              })
-            )}
-          </div>
-
-          {/* View All Button */}
-          <div className="mt-12 text-center">
-            <Link href="/products" className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors">
-              Browse More Deals
-            </Link>
-          </div>
-        </div>
-      </div>
+      <ProductRecommendationSection
+        title="Deals You May Like"
+        products={personalizedDealProducts}
+        wishedProductIds={wishedProductIds}
+        onWishlistToggle={handleRecommendationWishlistToggle}
+        onQuickView={(productId) => handleRecommendationQuickView('home_personalized_deals', productId)}
+        onProductClick={(product) => handleRecommendationClick('home_personalized_deals', product)}
+        ctaHref="/products"
+        ctaLabel="Shop deals"
+        compact
+      />
 
       {!hasRecentlyViewedProducts ? (
         <section className="bg-gray-50 py-10 sm:py-14 lg:py-16">
@@ -478,7 +314,7 @@ export default function Home() {
           {/* Categories Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {categoriesLoading ? (
-              Array.from({ length: isMobile ? 5 : 10 }).map((_, i) => (
+              Array.from({ length: isMobile ? 6 : 10 }).map((_, i) => (
                 <Skeleton key={i} className="h-40 w-full rounded-lg" />
               ))
             ) : displayedCategories.length > 0 ? (

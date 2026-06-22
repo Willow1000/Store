@@ -19,6 +19,7 @@ import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { getHighResImageUrl } from '@/lib/images';
 import { getBrandSuggestions, getModelSuggestions, getSimilarProducts, searchProducts } from '@/lib/productSearch';
 import { Product } from '@/types/supabase';
+import { useRecommendations } from '@/hooks/useRecommendations';
 import {
   Pagination,
   PaginationContent,
@@ -28,7 +29,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 
-type SortOption = 'newest' | 'price-low' | 'price-high' | 'popular';
+type SortOption = 'recommended' | 'newest' | 'price-low' | 'price-high' | 'popular';
 
 interface FallbackResult {
   products: Product[];
@@ -70,11 +71,12 @@ export default function Products() {
   const lastCompletedSearchTermRef = useRef<string | null>(null);
   const pendingSearchSnapshotRef = useRef<SearchSnapshot | null>(null);
   const lastSearchSnapshotRef = useRef<{ count: number; productIds: Array<string | number> }>({ count: 0, productIds: [] });
+  const lastProfiledSearchRef = useRef('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [brandFilter, setBrandFilter] = useState<string[]>([]);
   const [modelFilter, setModelFilter] = useState<string[]>([]);
   const [conditionFilter, setConditionFilter] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [sortBy, setSortBy] = useState<SortOption>('recommended');
   const [priceRange, setPriceRange] = useState([0, 20000]);
   const [showFilters, setShowFilters] = useState(false);
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
@@ -85,6 +87,7 @@ export default function Products() {
   const [fallbackResult, setFallbackResult] = useState<FallbackResult | null>(null);
 
   const { user, isAuthenticated } = useAuth();
+  const recommendations = useRecommendations(user?.id || null);
   const { products: allProducts, isLoading } = useProducts(1, -1);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
   const { categories, isLoading: categoriesLoading } = useCategories();
@@ -162,6 +165,20 @@ export default function Products() {
   const trackProductClick = (productId: string | number) => {
     try {
       const trackedSearchTerm = (activeSearchRef.current || pendingCompletedSearchRef.current || searchQuery || '').trim();
+      const clickedProduct = filteredProducts.find((product) => String(product.id) === String(productId));
+
+      recommendations.track({
+        eventType: 'product_click',
+        product: clickedProduct || null,
+        productId,
+        searchTerm: trackedSearchTerm.length > 0 ? trackedSearchTerm : null,
+        products: filteredProducts.slice(0, 50),
+        metadata: {
+          source: 'products_grid',
+          filters: getCurrentTrackingFilters(),
+        },
+      });
+
       if (!trackedSearchTerm.length) {
         return;
       }
@@ -218,6 +235,16 @@ export default function Products() {
   useEffect(() => {
     // Intentionally left blank.
   }, [allProducts]);
+
+  useEffect(() => {
+    if (!categoryFilter) return;
+    recommendations.track({
+      eventType: 'category_view',
+      category: categoryFilter,
+      metadata: { source: 'products_filter' },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFilter]);
 
   // Load recently viewed items from localStorage
   useEffect(() => {
@@ -548,6 +575,12 @@ export default function Products() {
 
     // Sort
     switch (sortBy) {
+      case 'recommended':
+        filtered = recommendations.rank(filtered, {
+          searchTerm: searchQuery,
+          newestFirst: true,
+        }) as Product[];
+        break;
       case 'price-low':
         filtered.sort((a, b) => {
           // First, prioritize by brand match if brand filter is active
@@ -581,14 +614,10 @@ export default function Products() {
         });
         break;
       case 'popular':
-        // Prioritize by brand match if active, then keep original order
-        if (brandFilter.length > 0) {
-          filtered.sort((a, b) => {
-            const aPriority = getBrandMatchPriority(a);
-            const bPriority = getBrandMatchPriority(b);
-            return bPriority - aPriority; // Higher priority first
-          });
-        }
+        filtered = recommendations.rank(filtered, {
+          searchTerm: searchQuery,
+          preserveWhenNoSignals: true,
+        }) as Product[];
         break;
       case 'newest':
       default:
@@ -617,7 +646,7 @@ export default function Products() {
     }
 
     return filtered;
-  }, [baseProducts, searchQuery, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly, brandFilter, modelFilter, conditionFilter, inStockOnly, allProducts, recentlyViewedIds]);
+  }, [baseProducts, searchQuery, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly, brandFilter, modelFilter, conditionFilter, inStockOnly, allProducts, recentlyViewedIds, recommendations]);
 
   useEffect(() => {
     lastSearchSnapshotRef.current = {
@@ -696,6 +725,30 @@ export default function Products() {
           trackedAt: new Date().toISOString(),
         },
       };
+
+      if (lastProfiledSearchRef.current !== trackingSignature) {
+        recommendations.track({
+          eventType: 'search',
+          searchTerm,
+          products: filteredProducts.slice(0, 50),
+          metadata: {
+            source: 'products_search',
+            filters: {
+              category: categoryFilter,
+              brands: brandFilter,
+              models: modelFilter,
+              conditions: conditionFilter,
+              priceRange,
+              inStockOnly,
+              dealsOnly,
+            },
+            exactMatch: Boolean(searchFeedback === null && filteredProducts.length > 0),
+            noResults: filteredProducts.length === 0,
+            fallbackShown: Boolean(fallbackResult),
+          },
+        });
+        lastProfiledSearchRef.current = trackingSignature;
+      }
     }, 700);
 
     return () => window.clearTimeout(timer);
@@ -711,6 +764,7 @@ export default function Products() {
     filteredProducts,
     searchFeedback,
     fallbackResult,
+    recommendations,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
@@ -1015,6 +1069,7 @@ export default function Products() {
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
                 >
+                  <option value="recommended">Recommended</option>
                   <option value="newest">Newest</option>
                   <option value="price-low">Price: Low to High</option>
                   <option value="price-high">Price: High to Low</option>
@@ -1239,6 +1294,12 @@ export default function Products() {
                             <button
                               onClick={(e) => {
                                 e.preventDefault();
+                                recommendations.track({
+                                  eventType: 'product_view',
+                                  product,
+                                  productId: product.id,
+                                  metadata: { source: 'products_quick_view' },
+                                });
                                 setQuickViewProductId(product.id);
                               }}
                               className="bg-white p-2 rounded-full hover:bg-gray-100 shadow"

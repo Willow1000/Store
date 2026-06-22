@@ -255,6 +255,86 @@ export const productSearchTracking = pgTable("product_search_tracking", {
 export type ProductSearchTracking = typeof productSearchTracking.$inferSelect;
 export type InsertProductSearchTracking = typeof productSearchTracking.$inferInsert;
 
+// Recommendation event stream and precomputed preference/score tables.
+// Client-side personalization can work immediately, while these tables give
+// server jobs a durable place to aggregate and cache recommendation data.
+export const userProductInteractions = pgTable("user_product_interactions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: varchar("sessionId", { length: 128 }).notNull(),
+  userId: uuid("userId"),
+  productId: text("productId").notNull(),
+  eventType: varchar("eventType", { length: 48 }).notNull(),
+  searchTerm: text("searchTerm"),
+  category: varchar("category", { length: 255 }),
+  brand: varchar("brand", { length: 255 }),
+  model: varchar("model", { length: 255 }),
+  weight: decimal("weight", { precision: 10, scale: 2 }).default("0").notNull(),
+  metadata: jsonb("metadata").default('{}'),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type UserProductInteraction = typeof userProductInteractions.$inferSelect;
+export type InsertUserProductInteraction = typeof userProductInteractions.$inferInsert;
+
+export const userBrandPreferences = pgTable("user_brand_preferences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: varchar("sessionId", { length: 128 }),
+  userId: uuid("userId"),
+  brand: varchar("brand", { length: 255 }).notNull(),
+  weight: decimal("weight", { precision: 10, scale: 2 }).default("0").notNull(),
+  interactionCount: integer("interactionCount").default(0).notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type UserBrandPreference = typeof userBrandPreferences.$inferSelect;
+export type InsertUserBrandPreference = typeof userBrandPreferences.$inferInsert;
+
+export const userCategoryPreferences = pgTable("user_category_preferences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: varchar("sessionId", { length: 128 }),
+  userId: uuid("userId"),
+  category: varchar("category", { length: 255 }).notNull(),
+  weight: decimal("weight", { precision: 10, scale: 2 }).default("0").notNull(),
+  interactionCount: integer("interactionCount").default(0).notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type UserCategoryPreference = typeof userCategoryPreferences.$inferSelect;
+export type InsertUserCategoryPreference = typeof userCategoryPreferences.$inferInsert;
+
+export const userVehiclePreferences = pgTable("user_vehicle_preferences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: varchar("sessionId", { length: 128 }),
+  userId: uuid("userId"),
+  vehicleBrand: varchar("vehicleBrand", { length: 255 }),
+  vehicleModel: varchar("vehicleModel", { length: 255 }),
+  generation: varchar("generation", { length: 128 }),
+  category: varchar("category", { length: 255 }),
+  confidence: integer("confidence").default(0).notNull(),
+  weight: decimal("weight", { precision: 10, scale: 2 }).default("0").notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type UserVehiclePreference = typeof userVehiclePreferences.$inferSelect;
+export type InsertUserVehiclePreference = typeof userVehiclePreferences.$inferInsert;
+
+export const recommendationScores = pgTable("recommendation_scores", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: varchar("sessionId", { length: 128 }),
+  userId: uuid("userId"),
+  productId: text("productId").notNull(),
+  score: decimal("score", { precision: 12, scale: 4 }).default("0").notNull(),
+  scoreBreakdown: jsonb("scoreBreakdown").default('{}'),
+  reason: varchar("reason", { length: 255 }),
+  source: varchar("source", { length: 64 }).default("profile").notNull(),
+  expiresAt: timestamp("expiresAt", { withTimezone: true }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type RecommendationScore = typeof recommendationScores.$inferSelect;
+export type InsertRecommendationScore = typeof recommendationScores.$inferInsert;
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   seller: one(sellers, {
