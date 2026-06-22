@@ -4,6 +4,7 @@ import { ProductDetailSkeleton } from '@/components/skeletons/ProductDetailSkele
 import { toast } from 'sonner';
 import { Link } from 'wouter';
 import { SEOHead } from '@/components/SEOHead';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useProductById, useProducts } from '@/hooks/useSupabaseProducts';
 import { useSupabaseCart, useSupabaseWishlist } from '@/hooks/useSupabaseCart';
@@ -390,7 +391,6 @@ export default function ProductDetail() {
   // Use centralized currency client (initialized at app bootstrap)
   // Always show USD for African users (enforced in currencyClient)
   const currencyCode = currencyClient.getCurrencyCode();
-  const currencyRate = currencyClient.getCurrencyRate();
   // Use USD for African users, else use detected currency
   const formatPrice = (n: number) => {
     if (currencyClient.isAfricanUser()) {
@@ -421,6 +421,31 @@ export default function ProductDetail() {
       : product.item_specifics && typeof product.item_specifics === 'object'
         ? JSON.stringify(product.item_specifics, null, 2)
         : '';
+  const schemaPrice = currencyClient.isAfricanUser()
+    ? currentPrice
+    : currencyClient.convertUSD(currentPrice);
+  const schemaCurrencyCode = currencyClient.isAfricanUser()
+    ? 'USD'
+    : currencyCode || 'USD';
+  const productSchemaImages = allImages
+    .map((image) => getHighResImageUrl(image.image_url))
+    .filter((image): image is string => Boolean(image));
+  const productSchemaDescription = productDescription || product.title || seoDescription;
+  const productSchemaSku = product.part_number || String(product.id);
+  const productCategoryUrl = product.category_name
+    ? `/products?category=${encodeURIComponent(product.category_name)}`
+    : '/products';
+  const productBreadcrumbSchema = [
+    { name: 'Home', url: '/' },
+    { name: 'Products', url: '/products' },
+    ...(product.category_name ? [{ name: product.category_name, url: productCategoryUrl }] : []),
+    { name: product.title, url: canonicalUrl },
+  ];
+  const productBreadcrumbItems = [
+    { label: 'Products', href: '/products' },
+    ...(product.category_name ? [{ label: product.category_name, href: productCategoryUrl }] : []),
+    { label: product.title, href: canonicalUrl },
+  ];
 
   const getEnquiryContactUrl = (outOfStockOnly: boolean = false) => {
     const params = new URLSearchParams();
@@ -515,18 +540,28 @@ export default function ProductDetail() {
         keywords={seoKeywords}
         productData={{
           name: product.title,
-          price: currentPrice,
+          price: schemaPrice,
+          priceCurrency: schemaCurrencyCode,
           originalPrice: originalPrice ?? undefined,
-          rating: (product as any).rating ? Number((product as any).rating) : undefined,
-          reviews: (product as any).review_count ? Number((product as any).review_count) : undefined,
           availability: isOutOfStock ? 'OutOfStock' : 'InStock',
-          image: seoImage,
+          image: productSchemaImages.length > 0 ? productSchemaImages : seoImage,
           category: product.category_name || undefined,
-          description: productDescription || seoDescription,
+          description: productSchemaDescription,
+          sku: productSchemaSku,
+          brand: product.brand || undefined,
+          mpn: product.part_number || undefined,
+          url: canonicalUrl,
+          condition: product.condition || undefined,
         }}
+        breadcrumbs={productBreadcrumbSchema}
       />
       <main role="main" className="bg-white min-h-screen w-full overflow-x-hidden">
       <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
+        <Breadcrumb
+          items={productBreadcrumbItems}
+          className="mb-6"
+          includeStructuredData={false}
+        />
         {/* Product Detail Grid */}
         <div className="lg:grid lg:grid-cols-2 lg:gap-x-20 xl:gap-x-24 lg:items-start">
           {/* LEFT COLUMN - Image Gallery */}
