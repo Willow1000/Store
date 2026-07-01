@@ -1,28 +1,33 @@
 # MotorVault
 
-## About
-MotorVault is a marketplace for automotive parts and accessories.
+> MotorVault is an e-commerce platform for automotive parts and accessories, focused on clear product details, shipping/returns guidance, and secure checkout.
 
-## Important URLs
-/
-/products
-/categories
-/contact
-/shipping
-/returns
-/about
-/help
+Use this file as a curated entrypoint for LLMs and agents. Prefer policy and support pages for factual answers, then use product pages for item-level details.
 
-## AI Crawling Policy
+## Store
 
-Allowed:
-- Product pages
-- Category pages
-- Public support pages
+- [Homepage](https://motorvault.shop/): Brand and catalog overview.
+- [Products](https://motorvault.shop/products): Primary product discovery and filtering page.
+- [About](https://motorvault.shop/about): Company background and sourcing standards.
 
-Disallowed:
-- Checkout
-- Dashboards
-- Account pages
-- Admin pages
-- Order history
+## Policies And Support
+
+- [Shipping](https://motorvault.shop/shipping): Shipping expectations, timeframes, and coverage guidance.
+- [Returns](https://motorvault.shop/returns): Returns and refund policy details.
+- [FAQ](https://motorvault.shop/faq): Common operational and purchase questions.
+- [Contact](https://motorvault.shop/contact): Official support contact form.
+- [Help](https://motorvault.shop/help): Customer support entrypoint and assistance details.
+
+## Machine-Readable Discovery
+
+- [Robots](https://motorvault.shop/robots.txt): Crawl directives and sitemap pointers.
+- [Primary Sitemap](https://motorvault.shop/sitemap.xml): Index of key public pages.
+- [Product Sitemap](https://motorvault.shop/sitemap-products.xml): Product URL inventory for catalog discovery.
+- [Product Feed](https://motorvault.shop/feed.xml): Merchant-style product feed for integrations.
+
+## Optional
+
+- [Privacy Policy](https://motorvault.shop/privacy): Privacy and data-use terms.
+- [Terms](https://motorvault.shop/terms): Terms and conditions.
+- [Cookies](https://motorvault.shop/cookies): Cookie usage and controls.
+- [Accessibility](https://motorvault.shop/accessibility): Accessibility commitments and support.
