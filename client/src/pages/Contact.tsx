@@ -17,6 +17,9 @@ const MAX_NAME_LENGTH = 100;
 const MAX_EMAIL_LENGTH = 255;
 const MAX_MESSAGE_LENGTH = 5000;
 const SUPPORT_EMAIL = 'support@motorvault.shop';
+const WHATSAPP_NUMBER_E164 = '31687659021';
+const WHATSAPP_DEFAULT_MESSAGE = "Hello, I'm from your website, can I get more information.";
+const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER_E164}?text=${encodeURIComponent(WHATSAPP_DEFAULT_MESSAGE)}`;
 const LOCATION_OPTIONS = Country.getAllCountries()
   .map((country) => country.name)
   .filter((name, index, all) => name && all.indexOf(name) === index)
@@ -355,7 +358,7 @@ export default function Contact() {
               <div>
                 <h3 className="font-semibold mb-2">WhatsApp</h3>
                  <a
-                   href="https://wa.me/14054379072?text=Hello%2C%20I%27m%20from%20your%20website%2C%20can%20I%20get%20more%20information."
+                   href={WHATSAPP_LINK}
                    target="_blank"
                    rel="noopener noreferrer"
                    className="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors mt-2"
