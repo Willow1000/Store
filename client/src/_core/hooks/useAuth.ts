@@ -25,6 +25,49 @@ function clearSessionStartedAt() {
   localStorage.removeItem(AUTH_SESSION_STARTED_AT_KEY);
 }
 
+function clearAppStorage() {
+  if (typeof window === 'undefined') return;
+
+  const localKeysToRemove = [
+    'manus-runtime-user-info',
+    'checkout-step',
+    'checkout-form-data',
+    'checkout-cart-snapshot-v1',
+    'oauth_return_to',
+    'cart',
+    'sessionId',
+  ];
+
+  const sessionKeysToRemove = [
+    'cart-auth-redirect-pending-v1',
+  ];
+
+  try {
+    for (const key of localKeysToRemove) {
+      localStorage.removeItem(key);
+    }
+
+    // Remove app-scoped keys while preserving third-party auth/session keys.
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('motorvault_') || key.startsWith('meta-purchase-tracked-v1:')) {
+        localStorage.removeItem(key);
+      }
+    }
+
+    for (const key of sessionKeysToRemove) {
+      sessionStorage.removeItem(key);
+    }
+
+    for (const key of Object.keys(sessionStorage)) {
+      if (key.startsWith('motorvault_')) {
+        sessionStorage.removeItem(key);
+      }
+    }
+  } catch (storageError) {
+    console.warn('[useAuth] Failed to clear app storage', storageError);
+  }
+}
+
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
   redirectPath?: string;
@@ -104,8 +147,7 @@ export function useAuth(options?: UseAuthOptions) {
           clearSessionStartedAt();
           utils.auth.me.setData(undefined, null);
           try {
-            localStorage.clear();
-            sessionStorage.clear();
+            clearAppStorage();
             clearPendingAuthAction();
             window.dispatchEvent(new Event('cartUpdated'));
           } catch (storageError) {
@@ -174,8 +216,7 @@ export function useAuth(options?: UseAuthOptions) {
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
       try {
-        localStorage.clear();
-        sessionStorage.clear();
+        clearAppStorage();
         clearPendingAuthAction();
         window.dispatchEvent(new Event('cartUpdated'));
       } catch (storageError) {
