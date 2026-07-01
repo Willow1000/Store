@@ -25,4 +25,5 @@ export const ENV = {
   // Paystack Configuration
   paystackPublicKey: process.env.VITE_PAYSTACK_PUBLIC_KEY ?? process.env.PAYSTACK_PUBLIC_KEY ?? "",
   paystackSecretKey: process.env.PAYSTACK_SECRET_KEY ?? "",
+  currencyApiKey: process.env.VITE_CURRENCY_API_KEY ?? process.env.CURRENCY_API_KEY ?? "",
 };
