@@ -425,29 +425,159 @@ function normalizePrice(value: unknown, currency: string = 'USD'): string {
 }
 
 type FeedLanguage = 'ENG' | 'ESP' | 'FRA' | 'GER' | 'ITA';
-type FeedCurrency = 'USD' | 'EUR' | 'GBP' | 'KES';
+type FeedCurrency = string;
 
 function normalizeFeedLanguage(value: unknown): FeedLanguage {
   const lang = String(value || 'ENG').trim().toUpperCase();
-  if (lang === 'ESP' || lang === 'FRA' || lang === 'GER' || lang === 'ITA') return lang;
+
+  if (lang === 'ESP' || lang === 'ES' || lang === 'SPANISH') return 'ESP';
+  if (lang === 'FRA' || lang === 'FR' || lang === 'FRENCH') return 'FRA';
+  if (lang === 'GER' || lang === 'DE' || lang === 'DEU' || lang === 'GERMAN') return 'GER';
+  if (lang === 'ITA' || lang === 'IT' || lang === 'ITALIAN') return 'ITA';
   return 'ENG';
 }
 
-function normalizeFeedCurrency(value: unknown): FeedCurrency {
+function normalizeFeedCurrency(value: unknown): string {
   const currency = String(value || 'USD').trim().toUpperCase();
-  if (currency === 'EUR' || currency === 'GBP' || currency === 'KES') return currency;
+  if (/^[A-Z]{3}$/.test(currency)) return currency;
   return 'USD';
 }
 
-function convertUsdAmount(amount: number, targetCurrency: FeedCurrency): number {
-  const rates: Record<FeedCurrency, number> = {
-    USD: 1,
-    EUR: 0.93,
-    GBP: 0.79,
-    KES: 129,
-  };
+const feedCurrencyCache = new Map<string, { rate: number; expires: number }>();
+const FEED_CURRENCY_CACHE_TTL = 1000 * 60 * 15; // 15 minutes
 
-  return Number((amount * rates[targetCurrency]).toFixed(2));
+async function fetchFeedExchangeRate(targetCurrency: string, baseCurrency = 'USD'): Promise<number | null> {
+  const target = targetCurrency.trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(target)) return null;
+  if (target === baseCurrency.toUpperCase()) return 1;
+
+  const apiKey = ENV.currencyApiKey || process.env.VITE_CURRENCY_API_KEY || process.env.CURRENCY_API_KEY || '';
+  if (apiKey) {
+    try {
+      const url = `https://api.freecurrencyapi.com/v1/latest?apikey=${encodeURIComponent(apiKey)}&currencies=${encodeURIComponent(target)}&base_currency=${encodeURIComponent(baseCurrency)}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const json = await response.json();
+        if (json && json.data && typeof json.data[target] === 'number') {
+          return Number(json.data[target]);
+        }
+      }
+    } catch {
+      // ignore and fall back
+    }
+  }
+
+  try {
+    const fallbackUrl = `https://api.exchangerate.host/latest?base=${encodeURIComponent(baseCurrency)}&symbols=${encodeURIComponent(target)}`;
+    const response = await fetch(fallbackUrl);
+    if (response.ok) {
+      const json = await response.json();
+      if (json && json.rates && typeof json.rates[target] === 'number') {
+        return Number(json.rates[target]);
+      }
+    }
+  } catch {
+    // ignore and fall back
+  }
+
+  return null;
+}
+
+async function getFeedCurrencyRate(currency: string): Promise<number> {
+  const code = normalizeFeedCurrency(currency);
+  if (code === 'USD') return 1;
+
+  const now = Date.now();
+  const cached = feedCurrencyCache.get(code);
+  if (cached && cached.expires > now) {
+    return cached.rate;
+  }
+
+  const rate = await fetchFeedExchangeRate(code, 'USD');
+  if (rate && Number.isFinite(rate) && rate > 0) {
+    feedCurrencyCache.set(code, { rate, expires: now + FEED_CURRENCY_CACHE_TTL });
+    return rate;
+  }
+
+  return 1;
+}
+
+async function convertUsdAmount(amount: number, targetCurrency: string): Promise<number> {
+  const rate = await getFeedCurrencyRate(targetCurrency);
+  return Number((amount * rate).toFixed(2));
+}
+
+function convertUsdAmountWithRate(amount: number, rate: number): number {
+  return Number((amount * rate).toFixed(2));
+}
+
+function mapFeedLanguageToTargetCode(lang: FeedLanguage): string {
+  switch (lang) {
+    case 'ESP':
+      return 'es';
+    case 'FRA':
+      return 'fr';
+    case 'GER':
+      return 'de';
+    case 'ITA':
+      return 'it';
+    default:
+      return 'en';
+  }
+}
+
+async function translateTextNode(text: string, targetLanguage: string): Promise<string> {
+  const trimmed = String(text || '').trim();
+  if (!trimmed || targetLanguage === 'en') return trimmed;
+
+  try {
+    const url = new URL('https://translate.googleapis.com/translate_a/single');
+    url.searchParams.set('client', 'gtx');
+    url.searchParams.set('sl', 'auto');
+    url.searchParams.set('tl', targetLanguage);
+    url.searchParams.set('dt', 't');
+    url.searchParams.set('q', trimmed);
+
+    const response = await fetch(url.toString());
+    if (!response.ok) return trimmed;
+
+    const json = await response.json();
+    if (!Array.isArray(json) || !Array.isArray(json[0])) return trimmed;
+
+    const translated = (json[0] as unknown[])
+      .map((segment) => (Array.isArray(segment) ? String(segment[0] ?? '') : ''))
+      .join('')
+      .trim();
+
+    return translated || trimmed;
+  } catch {
+    return trimmed;
+  }
+}
+
+async function translateFeedTexts(targetLanguage: string, values: string[]): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (targetLanguage === 'en') {
+    values.forEach((value) => result.set(value, value));
+    return result;
+  }
+
+  const uniqueValues = Array.from(new Set(values.filter((value) => typeof value === 'string' && value.trim())));
+  const batchSize = 4;
+
+  for (let i = 0; i < uniqueValues.length; i += batchSize) {
+    const batch = uniqueValues.slice(i, i + batchSize);
+    const translations = await Promise.all(batch.map((value) => translateTextNode(value, targetLanguage)));
+    translations.forEach((translated, index) => {
+      result.set(batch[index], translated);
+    });
+  }
+
+  uniqueValues.forEach((value) => {
+    if (!result.has(value)) result.set(value, value);
+  });
+
+  return result;
 }
 
 function getFeedChannelCopy(lang: FeedLanguage): { title: string; description: string } {
@@ -1464,12 +1594,20 @@ export function createApp() {
 
         try {
           const origin = getFeedOrigin(req);
-            const lang = normalizeFeedLanguage((req.query as Record<string, string>)?.lang);
-            const currency = normalizeFeedCurrency(
-              (req.query as Record<string, string>)?.curr || (req.query as Record<string, string>)?.currency,
-            );
+          const lang = normalizeFeedLanguage((req.query as Record<string, string>)?.lang);
+          const currency = normalizeFeedCurrency(
+            (req.query as Record<string, string>)?.curr || (req.query as Record<string, string>)?.currency,
+          );
+          const currencyRate = await getFeedCurrencyRate(currency);
           const products = await getFeedProducts();
           const channelCopy = getFeedChannelCopy(lang);
+          const targetLanguageCode = mapFeedLanguageToTargetCode(lang);
+          const feedTranslations = targetLanguageCode !== 'en'
+            ? await translateFeedTexts(
+                targetLanguageCode,
+                (products || []).flatMap((p) => [String(p.title || p.name || '').trim(), buildFeedDescription(p)]),
+              )
+            : new Map<string, string>();
           const items = (products || []).map((p) => {
             const imageSource = p.cover_image_url || p.image_url || (Array.isArray(p.images) ? p.images[0] : null);
             const placeholder = 'https://motorvault.shop/images/hero/premium-european-auto-parts-hero.webp';
@@ -1478,11 +1616,13 @@ export function createApp() {
             const id = rawId ?? (p.title ? `GEN-${Buffer.from(String(p.title)).toString('base64').replace(/=+$/,'').slice(0,12)}` : null);
             const title = String(p.title || p.name || '').trim();
             const titleCased = toTitleCase(title || '');
+            const translatedTitle = feedTranslations.get(title) || title;
             const brand = String(p.brand || 'MotorVault').trim() || 'MotorVault';
             const description = buildFeedDescription(p);
+            const translatedDescription = feedTranslations.get(description) || description;
             const priceAmount = Number(p.price);
             const convertedPriceAmount = Number.isFinite(priceAmount)
-              ? convertUsdAmount(priceAmount, currency)
+              ? convertUsdAmountWithRate(priceAmount, currencyRate)
               : NaN;
             const price = normalizePrice(convertedPriceAmount, currency);
             const fallbackProductPath = id ? `/product/${id}` : '';
@@ -1513,7 +1653,7 @@ export function createApp() {
             const googleProductCategory = rawCategory || 'Vehicles & Parts > Vehicle Parts & Accessories';
             const salePriceAmount = Number(p.sale_price);
             const salePrice = Number.isFinite(salePriceAmount)
-              ? normalizePrice(convertUsdAmount(salePriceAmount, currency), currency)
+              ? normalizePrice(convertUsdAmountWithRate(salePriceAmount, currencyRate), currency)
               : '';
             const itemGroupId = String(p.item_group_id || '').trim();
             const gtin = String(p.gtin || p.upc || p.ean || '').trim();
@@ -1527,7 +1667,7 @@ export function createApp() {
             const shippingService = String(p.shipping_service || 'Standard').trim() || 'Standard';
             // Keep feed shipping in lockstep with website checkout/product shipping logic.
             const derivedShippingUsd = calculateShipping(Number(p.price || 0));
-            const shippingPrice = normalizePrice(convertUsdAmount(derivedShippingUsd, currency), currency);
+            const shippingPrice = normalizePrice(convertUsdAmountWithRate(derivedShippingUsd, currencyRate), currency);
             const customLabel0 = String(p.custom_label_0 || '').trim();
 
             if (!id || !title || !price || !link) {
@@ -1537,8 +1677,8 @@ export function createApp() {
             // Build core fields (always present)
             let itemXml = `<item>
 <g:id>${escapeXml(id)}</g:id>
-<g:title>${escapeXml(titleCased || title)}</g:title>
-<g:description>${escapeXml(description)}</g:description>
+<g:title>${escapeXml(targetLanguageCode === 'en' ? (titleCased || title) : translatedTitle)}</g:title>
+<g:description>${escapeXml(targetLanguageCode === 'en' ? description : translatedDescription)}</g:description>
 <g:content_language>${escapeXml(lang)}</g:content_language>
 <g:link>${escapeXml(link)}</g:link>
 <g:image_link>${escapeXml(image)}</g:image_link>
