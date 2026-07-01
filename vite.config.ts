@@ -7,6 +7,7 @@ import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 const isFastBuild = process.env.FAST_BUILD === "1";
+const isSsrBuild = process.argv.some((arg) => arg === '--ssr');
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -188,14 +189,16 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000, // 1MB warning limit
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Split vendor libraries into separate chunks
-          'react-vendor': ['react', 'react-dom'],
-          'ui-vendor': ['lucide-react', 'sonner'],
-          'router-vendor': ['wouter'],
-          'supabase-vendor': ['@supabase/supabase-js'],
-          'form-vendor': ['react-hook-form', 'zod'],
-        },
+        manualChunks: isSsrBuild
+          ? undefined
+          : {
+              // Split vendor libraries into separate chunks for the browser build only
+              'react-vendor': ['react', 'react-dom'],
+              'ui-vendor': ['lucide-react', 'sonner'],
+              'router-vendor': ['wouter'],
+              'supabase-vendor': ['@supabase/supabase-js'],
+              'form-vendor': ['react-hook-form', 'zod'],
+            },
       },
     },
   },

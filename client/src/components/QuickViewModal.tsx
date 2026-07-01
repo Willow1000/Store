@@ -12,6 +12,8 @@ import { useSupabaseCart, useSupabaseWishlist } from '@/hooks/useSupabaseCart';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getHighResImageUrl } from '@/lib/images';
 import { trackAddToCart } from '@/hooks/useMetaPixel';
+import { buildContactHref, getEnquiryCopy } from '@/lib/enquiry';
+import { getSiteLanguage } from '@/lib/language';
 
 interface QuickViewModalProps {
   productId: string;
@@ -53,6 +55,12 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
   const isWishlisted = product?.id && wishedProductIds.has(product.id);
   const stock = Number(product?.stock ?? 0);
   const isOutOfStock = stock === 0;
+  const enquiryCopy = getEnquiryCopy(getSiteLanguage());
+  const outOfStockParams = new URLSearchParams({
+    subject: `${enquiryCopy.quickViewOutOfStockSubject} - ${product?.title || ''}`,
+    message: enquiryCopy.quickViewOutOfStockMessage(product?.title || ''),
+  });
+  const outOfStockContactHref = buildContactHref(outOfStockParams);
 
   const normalizeSpecificKey = (key: string) => key.toLowerCase().replace(/[_\s-]/g, '');
   const formatSpecificLabel = (key: string) =>
@@ -367,9 +375,11 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                 </p>
                 {product.discount && (
                   <p className="text-sm text-gray-500 line-through">
-                    {/* Discount as plain number, no symbol */}
-                    {(parseFloat(String(product.discount)) * (currencyClient.isAfricanUser() ? 1 : currencyRate)).toFixed(2)}
-                  </p>
+                  {currencyClient.isAfricanUser()
+                    ? currencyClient.formatUSD(parseFloat(String(product.discount)))
+                    : `${currencySymbol}${(parseFloat(String(product.discount)) * currencyRate).toFixed(2)}`
+                  }
+                </p>
                 )}
                 <p className="text-sm text-gray-600 mt-1">Condition: {product.condition || 'Good'}</p>
                 <p className={`mt-2 inline-block px-3 py-1 rounded text-xs font-semibold ${isOutOfStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}> 
@@ -441,7 +451,7 @@ export function QuickViewModal({ productId, isOpen, onClose }: QuickViewModalPro
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <p className="text-red-700 font-semibold text-sm mb-2">This item is currently out of stock</p>
                   <p className="text-red-600 text-sm mb-3">
-                    Please <a href={`/contact?subject=${encodeURIComponent(`Out of Stock Inquiry - ${product?.title}`)}&message=${encodeURIComponent(`I am interested in the product "${product?.title}" which is currently out of stock. Please let me know when it will be available again.`)}`} className="underline hover:text-red-700 font-medium">contact support</a> for information about when this item will be back in stock.
+                    Please <a href={outOfStockContactHref} className="underline hover:text-red-700 font-medium">contact support</a> for information about when this item will be back in stock.
                   </p>
                 </div>
               )}

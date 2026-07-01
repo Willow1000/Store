@@ -3,6 +3,7 @@ import { createServer } from "http";
 import net from "net";
 import fs from "fs";
 import path from "path";
+import { pathToFileURL } from "url";
 import { createApp } from "./app";
 
 export { createApp };
@@ -36,8 +37,48 @@ function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
+  const indexHtmlPath = path.resolve(distPath, "index.html");
+  let template = "";
+  try {
+    template = fs.readFileSync(indexHtmlPath, "utf-8");
+  } catch {
+    template = "";
+  }
+
+  const ssrEntryPath = path.resolve(__dirname, "server", "entry-server.js");
+  let render: ((url: string) => Promise<string>) | null = null;
+
+  async function getRender() {
+    if (render) return render;
+    const mod = await import(pathToFileURL(ssrEntryPath).href);
+    if (typeof mod?.render !== "function") {
+      throw new Error("SSR render function not found in dist/server/entry-server.js");
+    }
+    render = mod.render;
+    return render;
+  }
+
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const req = _req;
+    const acceptsHtml = (req.headers.accept || "").includes("text/html");
+    if (!acceptsHtml || !template) {
+      return res.sendFile(indexHtmlPath);
+    }
+
+    getRender()
+      .then((ssrRender) => {
+        if (!ssrRender) {
+          throw new Error('SSR render function unavailable');
+        }
+        return ssrRender(req.originalUrl || req.url || "/");
+      })
+      .then((appHtml) => {
+        const html = template.replace('<div id="root"></div>', `<div id="root">${appHtml}</div>`);
+        res.status(200).setHeader("Content-Type", "text/html; charset=utf-8").send(html);
+      })
+      .catch(() => {
+        res.sendFile(indexHtmlPath);
+      });
   });
 }
 

@@ -20,6 +20,8 @@ import { getHighResImageUrl } from '@/lib/images';
 import { getBrandSuggestions, getModelSuggestions, getSimilarProducts, searchProducts } from '@/lib/productSearch';
 import { Product } from '@/types/supabase';
 import { useRecommendations } from '@/hooks/useRecommendations';
+import { buildContactHref, getEnquiryCopy } from '@/lib/enquiry';
+import { getSiteLanguage } from '@/lib/language';
 import {
   Pagination,
   PaginationContent,
@@ -1184,8 +1186,9 @@ export default function Products() {
                     if (priceRange && priceRange.length === 2) activeFilters.push(`priceRange: ${priceRange[0]}-${priceRange[1]}`);
 
                     const filtersStr = activeFilters.length ? activeFilters.join('; ') : 'None';
-                    const subject = 'Product inquiry';
-                    const message = `item: ${searchQuery.trim()}\nitem specification: ${filtersStr}`;
+                    const enquiryCopy = getEnquiryCopy(getSiteLanguage());
+                    const subject = enquiryCopy.searchSubject;
+                    const message = `${enquiryCopy.searchItemLabel}: ${searchQuery.trim()}\n${enquiryCopy.searchSpecLabel}: ${filtersStr}`;
                     const country = currencyClient.getCountryCode() || '';
 
                     const params = new URLSearchParams();
@@ -1194,10 +1197,11 @@ export default function Products() {
                     if (country) params.set('location', country);
                     // Mark link as coming from enquiry CTA so contact can tailor the message template
                     params.set('enquiry', '1');
+                    params.set('includeGeo', '0');
                     params.set('subject', subject);
                     params.set('message', message);
 
-                    const href = `/contact?${params.toString()}`;
+                    const href = buildContactHref(params);
 
                     return (
                       <a
