@@ -49,8 +49,17 @@ interface SEOHeadProps {
 }
 
 const SITE_NAME = 'MotorVault';
-const SITE_DESCRIPTION = 'Premium automotive parts marketplace for OEM and aftermarket motor parts, accessories, secure checkout, and worldwide shipping.';
+const SITE_DESCRIPTION = 'Rare and hard-to-find European car parts marketplace for OEM and aftermarket components, trusted sourcing, and fast shipping.';
 const SITE_LOGO = '/images/motorvault_horizontal.svg';
+const SUPPORTED_SEO_LANGUAGES = ['en', 'de', 'it', 'fr', 'es', 'nl'] as const;
+const LANGUAGE_TO_LOCALE: Record<string, string> = {
+  en: 'en_EU',
+  de: 'de_DE',
+  it: 'it_IT',
+  fr: 'fr_FR',
+  es: 'es_ES',
+  nl: 'nl_NL',
+};
 const DEFAULT_SITE_ORIGIN = (
   import.meta.env.VITE_APP_URL ||
   import.meta.env.VITE_SITE_URL ||
@@ -90,6 +99,16 @@ function normalizeCanonicalUrl(canonical?: string): string | undefined {
 
 function getCurrentUrl(): string {
   return typeof window !== 'undefined' ? window.location.href : '';
+}
+
+function getDocumentLanguage(): string {
+  if (typeof document === 'undefined') return 'en';
+  const raw = (document.documentElement.lang || 'en').trim().toLowerCase();
+  return raw || 'en';
+}
+
+function getOgLocaleForLanguage(language: string): string {
+  return LANGUAGE_TO_LOCALE[language] || LANGUAGE_TO_LOCALE.en;
 }
 
 function toAbsoluteUrl(value?: string, baseUrl?: string): string | undefined {
@@ -153,15 +172,26 @@ function getRobotsContent(noIndex?: boolean, noFollow?: boolean, robots?: string
 }
 
 export function SEOHead({
-  title = 'MotorVault - Premium Motor Products from Verified Sellers',
-  description = 'Discover thousands of premium motor products from verified sellers. Quality guaranteed, fast shipping, and secure checkout on every purchase.',
+  title = 'Rare European Car Parts | OEM and Aftermarket Auto Parts Europe | MotorVault',
+  description = 'Shop rare and hard-to-find European car parts for BMW, Mercedes, Volkswagen, Audi, Porsche, Opel, Fiat, Peugeot, Renault, and Volvo with fast shipping across Europe.',
   canonical,
   noIndex = false,
   noFollow = false,
   robots,
-  ogImage = 'https://motorvault.shop/og-image.png',
+  ogImage = 'https://motorvault.shop/images/hero/premium-european-auto-parts-hero.webp',
   ogType = 'website',
-  keywords = [],
+  keywords = [
+    'European car parts',
+    'rare car parts Europe',
+    'hard-to-find auto parts',
+    'OEM car parts Europe',
+    'aftermarket car parts',
+    'DPF diesel particulate filter',
+    'catalytic converter',
+    'ECU engine control unit',
+    'turbocharger replacement',
+    'international car parts shipping',
+  ],
   productData,
   articleData,
   breadcrumbs,
@@ -170,6 +200,11 @@ export function SEOHead({
   const currentUrl = getCurrentUrl();
   const pageUrl = effectiveCanonical || currentUrl;
   const siteOrigin = getRuntimeSiteOrigin();
+  const currentLanguage = getDocumentLanguage();
+  const ogLocale = getOgLocaleForLanguage(currentLanguage);
+  const ogLocaleAlternates = Object.entries(LANGUAGE_TO_LOCALE)
+    .filter(([language]) => language !== currentLanguage)
+    .map(([, locale]) => locale);
   const normalizedOgImage = toAbsoluteUrl(ogImage, pageUrl) || ogImage;
   const robotsContent = getRobotsContent(noIndex, noFollow, robots);
 
@@ -186,7 +221,7 @@ export function SEOHead({
         '@type': 'ContactPoint',
         contactType: 'Customer Support',
         email: 'support@motorvault.shop',
-        availableLanguage: 'en',
+        availableLanguage: ['en', 'de', 'it', 'fr', 'es', 'nl'],
       },
     },
     {
@@ -195,7 +230,7 @@ export function SEOHead({
       name: SITE_NAME,
       url: siteOrigin,
       description: SITE_DESCRIPTION,
-      inLanguage: 'en',
+      inLanguage: currentLanguage,
       publisher: {
         '@id': `${siteOrigin}#organization`,
       },
@@ -356,11 +391,21 @@ export function SEOHead({
     setMetaTag('og:image', normalizedOgImage, true);
     setMetaTag('og:type', ogType, true);
     setMetaTag('og:url', pageUrl, true);
+    setMetaTag('og:site_name', SITE_NAME, true);
+    setMetaTag('og:locale', ogLocale, true);
+
+    document.querySelectorAll('meta[property="og:locale:alternate"]').forEach((el) => el.remove());
+    ogLocaleAlternates.forEach((locale) => {
+      const altLocale = document.createElement('meta');
+      altLocale.setAttribute('property', 'og:locale:alternate');
+      altLocale.setAttribute('content', locale);
+      document.head.appendChild(altLocale);
+    });
 
     setMetaTag('twitter:card', 'summary_large_image');
-    setMetaTag('twitter:title', title, true);
-    setMetaTag('twitter:description', description, true);
-    setMetaTag('twitter:image', normalizedOgImage, true);
+    setMetaTag('twitter:title', title);
+    setMetaTag('twitter:description', description);
+    setMetaTag('twitter:image', normalizedOgImage);
 
     if (pageUrl) {
       let canonicalLink = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
@@ -370,6 +415,20 @@ export function SEOHead({
         document.head.appendChild(canonicalLink);
       }
       canonicalLink.href = pageUrl;
+
+      document.querySelectorAll('link[rel="alternate"][hreflang]').forEach((el) => el.remove());
+      SUPPORTED_SEO_LANGUAGES.forEach((langCode) => {
+        const alt = document.createElement('link');
+        alt.rel = 'alternate';
+        alt.hreflang = langCode;
+        alt.href = pageUrl;
+        document.head.appendChild(alt);
+      });
+      const defaultAlt = document.createElement('link');
+      defaultAlt.rel = 'alternate';
+      defaultAlt.hreflang = 'x-default';
+      defaultAlt.href = pageUrl;
+      document.head.appendChild(defaultAlt);
     }
 
     let scriptTag = document.querySelector('script[data-seo-head="true"]') as HTMLScriptElement;
@@ -380,7 +439,7 @@ export function SEOHead({
       document.head.appendChild(scriptTag);
     }
     scriptTag.textContent = structuredDataJson;
-  }, [description, keywordsContent, normalizedOgImage, ogType, pageUrl, robotsContent, structuredDataJson, title]);
+  }, [description, keywordsContent, normalizedOgImage, ogType, ogLocale, ogLocaleAlternates, pageUrl, robotsContent, structuredDataJson, title]);
 
   return null;
 }

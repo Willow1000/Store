@@ -7,7 +7,7 @@ export default function Shipping() {
         title="Shipping Information - MotorVault"
         description="MotorVault shipping information. Learn about shipping rates, delivery times, and our logistics partners."
         keywords={['shipping', 'delivery', 'shipping costs', 'delivery times']}
-        canonical="https://motorvault.com/shipping"
+        canonical="https://motorvault.shop/shipping"
       />
       <div className="min-h-screen bg-background pt-20\">
       <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">

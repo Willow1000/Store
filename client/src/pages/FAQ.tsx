@@ -211,7 +211,7 @@ export default function FAQ() {
         title="FAQ - MotorVault Automotive Parts Help"
         description="Answers about sourcing, authenticity, quality checks, shipping, returns, warranties, and payment terms."
         keywords={['auto parts FAQ', 'sourcing', 'quality control', 'shipping', 'returns', 'warranty', 'contact support']}
-        canonical="https://motorvault.com/faq"
+        canonical="https://motorvault.shop/faq"
       />
 
       <div className="min-h-screen bg-background pt-6">

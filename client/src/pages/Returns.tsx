@@ -7,7 +7,7 @@ export default function Returns() {
         title="Returns & Refunds - MotorVault"
         description="MotorVault Returns & Refunds policy. Learn about our 30-day return policy, refund process, and warranty information."
         keywords={['returns', 'refunds', 'return policy', 'warranty']}
-        canonical="https://motorvault.com/returns"
+        canonical="https://motorvault.shop/returns"
       />
       <div className="min-h-screen bg-background pt-20">
       <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">

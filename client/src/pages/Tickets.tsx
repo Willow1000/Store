@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { COUNTRY_PHONE_OPTIONS, DEFAULT_PHONE_COUNTRY, buildInternationalPhoneNumber, formatLocalPhoneNumber, getCountryPhoneLabel, normalizeLocalPhoneDigits } from '@/lib/countryPhone';
+import { getSiteLanguage } from '@/lib/language';
 import { sanitizeEmail, sanitizeMultilineText, sanitizeMultilineTextInput, sanitizePhone, sanitizeText, sanitizeTextInput } from '@shared/sanitize';
 import { requestAuthenticationForPath } from '@/lib/authRequired';
 
@@ -49,6 +50,26 @@ export default function TicketsPage() {
     authPromptedRef.current = true;
     requestAuthenticationForPath('tickets');
   }, [isAuthenticated, sessionRestored]);
+
+  useEffect(() => {
+    const revalidate = () => {
+      void fetchTickets();
+    };
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) revalidate();
+    };
+
+    window.addEventListener('focus', revalidate);
+    window.addEventListener('pageshow', revalidate);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', revalidate);
+      window.removeEventListener('pageshow', revalidate);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [user?.id, isAuthenticated]);
 
   const setSelectedFilesFromInput = (files: File[]) => {
     setFileWarning(null);
@@ -137,6 +158,7 @@ export default function TicketsPage() {
         description: sanitizeMultilineText(description, 5000),
         priority,
         channel: 'web',
+        language: getSiteLanguage(),
         metadata: { createdFrom: 'tickets-ui', referenceCode },
       };
 

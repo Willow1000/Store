@@ -1,9 +1,23 @@
 import { Link } from 'wouter';
+import { useEffect, useState } from 'react';
 import { BrandLogo } from './BrandLogo';
-
-const t = (_key: string, fallback: string) => fallback;
+import { SITE_LANGUAGE_CHANGED_EVENT, getSiteLanguage, translateText, type SiteLanguageCode } from '@/lib/language';
 
 export default function Footer() {
+  const [language, setLanguage] = useState<SiteLanguageCode>(() => getSiteLanguage());
+  const t = (key: string, fallback: string) => translateText(language, key, fallback);
+
+  useEffect(() => {
+    const onLanguageChanged = () => setLanguage(getSiteLanguage());
+    window.addEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
+    window.addEventListener('storage', onLanguageChanged);
+
+    return () => {
+      window.removeEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
+      window.removeEventListener('storage', onLanguageChanged);
+    };
+  }, []);
+
   return (
     <footer className="border-t border-border bg-black text-white w-full overflow-x-hidden">
       <div className="w-full px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-16 mx-auto max-w-full lg:max-w-screen-xl lg:mx-auto">
@@ -18,51 +32,51 @@ export default function Footer() {
 
           {/* Browse */}
           <div>
-            <h4 className="mb-3 sm:mb-4 font-semibold text-sm sm:text-base">{t('footer.browse', 'Browse')}</h4>
+            <h2 className="mb-3 sm:mb-4 font-semibold text-sm sm:text-base">{t('footer.browse', 'Browse')}</h2>
             <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-400">
               <li>
-                <Link href="/products" className="hover:text-white">{t('footer.allProducts', 'All Products')}</Link>
+                <Link href="/products" className="hover:text-white inline-flex min-h-11 items-center">{t('footer.allProducts', 'All Products')}</Link>
               </li>
             </ul>
           </div>
 
           {/* Support */}
           <div>
-            <h4 className="mb-3 sm:mb-4 font-semibold text-sm sm:text-base">{t('footer.support', 'Support')}</h4>
+            <h2 className="mb-3 sm:mb-4 font-semibold text-sm sm:text-base">{t('footer.support', 'Support')}</h2>
             <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-400">
               <li>
-                <Link href="/help" className="hover:text-white transition-colors">{t('footer.helpCenter', 'Help Center')}</Link>
+                <Link href="/help" className="hover:text-white transition-colors inline-flex min-h-11 items-center">{t('footer.helpCenter', 'Help Center')}</Link>
               </li>
               <li>
-                <Link href="/faq" className="hover:text-white transition-colors">{t('footer.faq', 'FAQ')}</Link>
+                <Link href="/faq" className="hover:text-white transition-colors inline-flex min-h-11 items-center">{t('footer.faq', 'FAQ')}</Link>
               </li>
               <li>
-                <Link href="/contact" className="hover:text-white transition-colors">{t('footer.contactUs', 'Contact Us')}</Link>
+                <Link href="/contact" className="hover:text-white transition-colors inline-flex min-h-11 items-center">{t('footer.contactUs', 'Contact Us')}</Link>
               </li>
               <li>
-                <Link href="/shipping" className="hover:text-white transition-colors">{t('footer.shippingInfo', 'Shipping Info')}</Link>
+                <Link href="/shipping" className="hover:text-white transition-colors inline-flex min-h-11 items-center">{t('footer.shippingInfo', 'Shipping Info')}</Link>
               </li>
               <li>
-                <Link href="/returns" className="hover:text-white transition-colors">{t('footer.returns', 'Returns')}</Link>
+                <Link href="/returns" className="hover:text-white transition-colors inline-flex min-h-11 items-center">{t('footer.returns', 'Returns')}</Link>
               </li>
             </ul>
           </div>
 
           {/* Legal */}
           <div>
-            <h4 className="mb-3 sm:mb-4 font-semibold text-sm sm:text-base">{t('footer.legal', 'Legal')}</h4>
+            <h2 className="mb-3 sm:mb-4 font-semibold text-sm sm:text-base">{t('footer.legal', 'Legal')}</h2>
             <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-400">
               <li>
-                <Link href="/privacy" className="hover:text-white transition-colors">{t('footer.privacyPolicy', 'Privacy Policy')}</Link>
+                <Link href="/privacy" className="hover:text-white transition-colors inline-flex min-h-11 items-center">{t('footer.privacyPolicy', 'Privacy Policy')}</Link>
               </li>
               <li>
-                <Link href="/terms" className="hover:text-white transition-colors">{t('footer.termsOfService', 'Terms of Service')}</Link>
+                <Link href="/terms" className="hover:text-white transition-colors inline-flex min-h-11 items-center">{t('footer.termsOfService', 'Terms of Service')}</Link>
               </li>
               <li>
-                <Link href="/cookies" className="hover:text-white transition-colors">{t('footer.cookiePolicy', 'Cookie Policy')}</Link>
+                <Link href="/cookies" className="hover:text-white transition-colors inline-flex min-h-11 items-center">{t('footer.cookiePolicy', 'Cookie Policy')}</Link>
               </li>
               <li>
-                <Link href="/accessibility" className="hover:text-white transition-colors">{t('footer.accessibility', 'Accessibility')}</Link>
+                <Link href="/accessibility" className="hover:text-white transition-colors inline-flex min-h-11 items-center">{t('footer.accessibility', 'Accessibility')}</Link>
               </li>
             </ul>
           </div>

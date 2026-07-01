@@ -7,7 +7,7 @@ export default function Terms() {
         title="Terms of Service - MotorVault"
         description="MotorVault Terms of Service. Our terms and conditions for using the platform, shopping, returns, and more."
         keywords={['terms of service', 'terms and conditions', 'user agreement', 'legal']}
-        canonical="https://motorvault.com/terms"
+        canonical="https://motorvault.shop/terms"
       />
       <div className="min-h-screen bg-background pt-6">
       <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">

@@ -84,6 +84,7 @@ export function ProductRecommendationSection({
                       className="absolute inset-0 h-full w-full object-contain p-4"
                       loading="lazy"
                       decoding="async"
+                      sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 20vw"
                       crossOrigin="anonymous"
                       onError={(event) => {
                         event.currentTarget.style.display = 'none';

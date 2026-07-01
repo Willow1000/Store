@@ -14,7 +14,7 @@ import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
-import currencyClient from './lib/currencyClient';
+import { hydrateRoot } from "react-dom/client";
 import { initializeSiteLanguage } from './lib/language';
 import superjson from "superjson";
 import App from "./App";
@@ -115,17 +115,29 @@ const trpcClient = trpc.createClient({
     }
 
     // Initialize currency/geolocation once before mounting the app
+    const { default: currencyClient } = await import('./lib/currencyClient');
     await currencyClient.init();
     initializeSiteLanguage(currencyClient.getGeoData());
   } catch (e) {
     console.warn('[currencyClient] initialization failed', e);
   }
 
-  createRoot(document.getElementById("root")!).render(
+  const rootElement = document.getElementById("root");
+  if (!rootElement) {
+    throw new Error('Root element not found');
+  }
+
+  const appTree = (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <App />
       </QueryClientProvider>
     </trpc.Provider>
   );
+
+  if (rootElement.hasChildNodes()) {
+    hydrateRoot(rootElement, appTree);
+  } else {
+    createRoot(rootElement).render(appTree);
+  }
 })();

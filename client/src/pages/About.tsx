@@ -17,14 +17,18 @@ import { BannerCarousel } from '@/components/BannerCarousel';
 
 const aboutBannerSlides = [
   {
-    image: '/images/banners/Your_destination_for_autor_&_motor_parts_Aboutpage.jpeg',
+    image: '/images/banners/rare-european-auto-parts-about-banner.avif',
+    imageWebp: '/images/banners/rare-european-auto-parts-about-banner.webp',
+    imageAlt: 'Rare European auto parts sourcing support and buyer guidance for hard-to-find components',
     title: 'Your Destination for Hard-to-Find Parts',
     subtitle: 'A clear promise of sourcing help, straight answers, and the right part when the job cannot wait.',
     cta: 'Read FAQs',
     ctaLink: '/faq',
   },
   {
-    image: '/images/banners/we_deliver_all_over_europe_banner_for_aboutpage.jpeg',
+    image: '/images/banners/europe-wide-auto-parts-shipping-about-banner.avif',
+    imageWebp: '/images/banners/europe-wide-auto-parts-shipping-about-banner.webp',
+    imageAlt: 'Europe-wide automotive spare parts shipping and logistics coverage for fast delivery',
     title: 'Delivered Across Europe, Without the Guesswork',
     subtitle: 'We keep delivery practical and transparent so customers know what to expect before they order.',
     cta: 'Contact us',
@@ -84,7 +88,7 @@ const trustPoints = [
 const partners = [
   {
     name: 'The Scrappers Ltd',
-    logo: '/images/partners/the-scrappers.jpg',
+    logo: '/images/partners/trusted-auto-parts-recycling-partner-the-scrappers.webp',
     url: 'https://www.thescrappers.co.uk/',
   },
 ];
@@ -296,7 +300,7 @@ export default function About() {
                     <div className="flex min-h-24 items-center justify-center rounded-2xl bg-gray-50 px-4 py-5">
                       <img
                         src={partner.logo}
-                        alt={`${partner.name} logo`}
+                        alt={`${partner.name} trusted automotive recycling partner logo`}
                         className="h-auto max-h-24 w-full max-w-[320px] object-contain"
                         loading="lazy"
                       />

@@ -21,28 +21,36 @@ import { Product } from '@/types/supabase';
 
 const homeBannerSlides = [
   {
-    image: '/images/banners/Motor-parts_banner_for_Bumpers_HOmepage.jpeg',
+    image: '/images/banners/european-car-bumper-parts-banner-home.avif',
+    imageWebp: '/images/banners/european-car-bumper-parts-banner-home.webp',
+    imageAlt: 'European car bumper replacement parts for collision repair and front-end restoration',
     title: 'Built to Bring Front Ends Back',
     subtitle: 'Rugged bumper parts for repairs, refreshes, and the kind of fitment that keeps cars looking sharp.',
     cta: 'Explore bumpers',
     ctaLink: '/products',
   },
   {
-    image: '/images/banners/seats_banner_homepage.jpeg',
+    image: '/images/banners/european-car-seat-parts-banner-home.avif',
+    imageWebp: '/images/banners/european-car-seat-parts-banner-home.webp',
+    imageAlt: 'European car interior seat components and upholstery replacement parts',
     title: 'Comfort You Can Feel on Every Drive',
     subtitle: 'Seat components and interior upgrades chosen to restore support, style, and everyday comfort.',
     cta: 'Browse seats',
     ctaLink: '/products?category=seats',
   },
   {
-    image: '/images/banners/Motor-parts_banner_for_Tire_Homepage.jpeg',
+    image: '/images/banners/european-car-tire-parts-banner-home.avif',
+    imageWebp: '/images/banners/european-car-tire-parts-banner-home.webp',
+    imageAlt: 'European car tire and wheel parts focused on road grip and handling performance',
     title: 'Grip the Road with Confidence',
     subtitle: 'A tire-focused showcase for drivers who want dependable traction, better handling, and a stronger road presence.',
     cta: 'See tire options',
     ctaLink: '/products',
   },
   {
-    image: '/images/banners/Motor-parts_banner_for_Transmision_Homepage.jpeg',
+    image: '/images/banners/european-car-transmission-parts-banner-home.avif',
+    imageWebp: '/images/banners/european-car-transmission-parts-banner-home.webp',
+    imageAlt: 'European transmission and drivetrain replacement parts for smooth shifting reliability',
     title: 'Powertrain Parts That Keep Things Moving',
     subtitle: 'Transmission-focused parts and support for customers who want smooth shifting and reliable performance.',
     cta: 'View driveline parts',
@@ -138,7 +146,7 @@ export default function Home() {
         title="MotorVault - Buy Automotive Parts Online | OEM & Aftermarket"
         description="Shop automotive parts from MotorVault. Wide selection of OEM and aftermarket parts. Free shipping over $1500. Quality guaranteed. Shop now!"
         keywords={['automobile parts', 'car parts', 'auto parts', 'aftermarket parts', 'OEM parts', 'motor parts online']}
-        canonical="https://motorvault.com"
+        canonical="https://motorvault.shop"
       />
       <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
         {/* Hero Slideshow */}

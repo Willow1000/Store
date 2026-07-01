@@ -15,6 +15,7 @@ const TRANSLATE_CONCURRENCY = 6;
 const APPLY_DEBOUNCE_MS = 80;
 const TRANSLATION_CACHE_KEY = 'site-translation-cache-v1';
 const MAX_PERSISTED_TRANSLATIONS = 4000;
+const ENABLE_RUNTIME_TRANSLATION = import.meta.env.VITE_ENABLE_RUNTIME_TRANSLATION !== 'false';
 
 let persistedCacheLoaded = false;
 
@@ -64,6 +65,7 @@ async function translateTextValue(language: SiteLanguageCode, text: string): Pro
   ensurePersistedCacheLoaded();
 
   if (language === 'en') return { text, ok: true };
+  if (!ENABLE_RUNTIME_TRANSLATION) return { text, ok: true };
 
   const cacheKey = `${language}:${text}`;
   const cached = translationCache.get(cacheKey);
@@ -167,6 +169,13 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
   const [readyLanguage, setReadyLanguage] = useState<SiteLanguageCode | null>(null);
 
   useEffect(() => {
+    if (!ENABLE_RUNTIME_TRANSLATION) {
+      setIsTranslating(false);
+      setHasTranslationError(false);
+      setReadyLanguage(language);
+      return;
+    }
+
     const root = document.getElementById('root');
     if (!root) return;
 

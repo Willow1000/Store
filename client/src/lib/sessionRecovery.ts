@@ -8,6 +8,7 @@ function clearBrowserStorage() {
 
   try {
     window.localStorage.clear();
+    window.sessionStorage.clear();
   } catch (error) {
     console.warn('[sessionRecovery] Failed to clear localStorage', error);
   }

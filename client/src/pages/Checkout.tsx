@@ -14,7 +14,7 @@ import { useSupabaseCart } from '@/hooks/useSupabaseCart';
 import { supabase } from '@/lib/supabase';
 import { getHighResImageUrl } from '@/lib/images';
 import { COUNTRY_PHONE_OPTIONS, DEFAULT_PHONE_COUNTRY, buildInternationalPhoneNumber, formatLocalPhoneNumber, getCountryPhoneLabel, normalizeLocalPhoneDigits } from '@/lib/countryPhone';
-import { calculateShipping } from '@shared/shipping';
+import { calculateShipping, getFreeShippingThresholdUsd } from '@shared/shipping';
 import { calculateVariableVat } from '@/lib/vat';
 import currencyClient from '@/lib/currencyClient';
 import { City, Country, State } from 'country-state-city';
@@ -2074,11 +2074,14 @@ export default function Checkout() {
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">{t('checkout.shipping', 'Shipping')}</span>
+                  <span className="text-gray-600">{t('checkout.estimatedShipping', 'Estimated shipping')}</span>
                   <span className={shipping === 0 ? 'text-green-600 font-semibold' : 'font-medium text-gray-900'}>
                     {shipping === 0 ? t('checkout.free', 'FREE') : `${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(shipping).toFixed(2)}`}
                   </span>
                 </div>
+                <p className="text-xs text-gray-500">
+                  {t('checkout.shippingEstimateDisclaimer', 'Shipping shown is an estimate. Final shipping is confirmed at checkout.')}
+                </p>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">{t('checkout.vat', 'V.A.T')}</span>
                   <span className="font-medium text-gray-900">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(vat).toFixed(2)}`}</span>
@@ -2097,7 +2100,7 @@ export default function Checkout() {
               <div className="space-y-3 text-sm text-gray-700">
                 <div className="flex gap-3 items-start">
                   <Check size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                  <span>{t('checkout.freeShipping', `Free shipping on orders over ${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(50).toFixed(2)}`)}</span>
+                  <span>{t('checkout.freeShipping', `Free shipping on orders over ${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(getFreeShippingThresholdUsd()).toFixed(2)}`)}</span>
                 </div>
                 <div className="flex gap-3 items-start">
                   <Check size={18} className="text-green-600 flex-shrink-0 mt-0.5" />

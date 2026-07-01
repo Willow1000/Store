@@ -7,7 +7,7 @@ export default function Accessibility() {
         title="Accessibility Statement - MotorVault"
         description="MotorVault Accessibility Statement. We're committed to making our website accessible to all users."
         keywords={['accessibility', 'WCAG', 'inclusive design', 'accessibility statement']}
-        canonical="https://motorvault.com/accessibility"
+        canonical="https://motorvault.shop/accessibility"
       />
       <div className="min-h-screen bg-background pt-6">
       <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 py-12">

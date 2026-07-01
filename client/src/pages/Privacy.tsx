@@ -7,7 +7,7 @@ export default function Privacy() {
         title="Privacy Policy - MotorVault"
         description="MotorVault Privacy Policy. Learn how we collect, use, and protect your personal data. Your privacy is important to us."
         keywords={['privacy policy', 'data protection', 'personal information', 'privacy']}
-        canonical="https://motorvault.com/privacy"
+        canonical="https://motorvault.shop/privacy"
       />
       <div className="min-h-screen bg-background pt-6">
       <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">
@@ -23,7 +23,7 @@ export default function Privacy() {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
-            <p className="text-gray-600">MotorVault ("we," "us," or "our") operates the motorvault.com website. This Policy outlines the categories of personal data we may collect, the purposes for which it is processed, the safeguards we employ, and the choices available to you regarding your information.</p>
+            <p className="text-gray-600">MotorVault ("we," "us," or "our") operates the motorvault.shop website. This Policy outlines the categories of personal data we may collect, the purposes for which it is processed, the safeguards we employ, and the choices available to you regarding your information.</p>
           </section>
 
           <section>
