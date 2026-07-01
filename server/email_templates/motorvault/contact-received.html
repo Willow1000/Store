@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>We Received Your Message — MotorVault</title>
+  <title>{{page_title}}</title>
   <style>
     body{font-family:Arial,Helvetica,sans-serif;background:#f7f7f8;margin:0;padding:0;color:#111}
     .container{max-width:720px;margin:24px auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e6e6e9}
@@ -25,16 +25,17 @@
       <div class="brand">MotorVault Support</div>
     </div>
     <div class="content">
-      <h1 class="h1">We received your message</h1>
-      <p class="lead">Hi {{customer_name}}, thanks for reaching out. We have received your message and one of our team members will contact you by email as soon as possible.</p>
+      <h1 class="h1">{{heading}}</h1>
+      <p class="lead">Hi {{customer_name}}, {{intro}}</p>
 
       <div class="message-card">
-        <div><strong>Status</strong>: Received</div>
-        <div><strong>Next step</strong>: A team member will reply via your email address</div>
+        <div><strong>{{label_status}}</strong>: {{status_value}}</div>
+        <div><strong>{{label_next_step}}</strong>: {{next_step_value}}</div>
       </div>
     </div>
     <div class="footer">
-      <div>Need more help? Email <a href="mailto:{{support_email}}">{{support_email}}</a></div>
+      <div>{{help_text}} <a href="mailto:{{support_email}}">{{support_email}}</a></div>
+      <div>{{footer}}</div>
       <div class="copyright">© {{sender_name}}. All rights reserved.</div>
     </div>
   </div>

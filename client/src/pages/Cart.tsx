@@ -10,7 +10,7 @@ import { useSupabaseCart } from '@/hooks/useSupabaseCart';
 import { useRecommendations } from '@/hooks/useRecommendations';
 import { useProducts } from '@/hooks/useSupabaseProducts';
 import { getHighResImageUrl } from '@/lib/images';
-import { calculateShipping } from '@shared/shipping';
+import { calculateShipping, getFreeShippingThresholdUsd } from '@shared/shipping';
 import currencyClient from '@/lib/currencyClient';
 import { calculateVariableVat } from '@/lib/vat';
 import { SITE_LANGUAGE_CHANGED_EVENT, getSiteLanguage, translateText, type SiteLanguageCode } from '@/lib/language';
@@ -463,7 +463,7 @@ export default function Cart() {
                 <span className="font-semibold">{currencyClient.formatUSD(subtotal)}</span>
               </div>
               <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-600">{t('checkout.shipping', 'Shipping')}</span>
+                <span className="text-gray-600">{t('checkout.estimatedShipping', 'Estimated shipping')}</span>
                 <span className="font-semibold">
                   {shipping === 0 ? t('checkout.free', 'FREE') : currencyClient.formatUSD(shipping)}
                 </span>
@@ -481,9 +481,12 @@ export default function Cart() {
               <span className="text-xl sm:text-2xl font-bold">{currencyClient.formatUSD(total)}</span>
             </div>
 
+            <p className="mb-2 text-xs text-gray-600">
+              {t('checkout.shippingEstimateDisclaimer', 'Shipping shown is an estimate. Final shipping is confirmed at checkout.')}
+            </p>
             {shipping > 0 && (
               <p className="mb-4 text-xs text-gray-600">
-                {t('checkout.freeShippingNotice', 'Shipping fee is 5% for orders under $1,500')}
+                {t('checkout.freeShippingNotice', `Shipping fee is 5% for orders under $${getFreeShippingThresholdUsd().toLocaleString('en-US')}`)}
               </p>
             )}
 

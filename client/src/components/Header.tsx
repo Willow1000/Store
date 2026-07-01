@@ -96,7 +96,7 @@ export default function Header() {
         {/* Right Actions */}
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           <label className="hidden sm:flex items-center gap-2 text-xs text-gray-700">
-            <span>Lang</span>
+            <span>{t('header.language', 'Language')}</span>
             <select
               value={language}
               onChange={(e) => {
@@ -105,18 +105,18 @@ export default function Header() {
                 setLanguage(next);
               }}
               className="rounded border border-gray-300 bg-white px-2 py-1 text-xs"
-              aria-label="Select language"
+              aria-label={t('header.selectLanguage', 'Select language')}
             >
               {SUPPORTED_SITE_LANGUAGES.map((lang) => (
                 <option key={lang.code} value={lang.code}>
-                  {lang.nativeName}
+                  {t(`language.option.${lang.code}`, lang.nativeName)}
                 </option>
               ))}
             </select>
           </label>
 
           {/* Cart Icon - always show for guests and authenticated users */}
-          <Link href="/cart" className="relative flex items-center gap-1 sm:gap-2 text-sm font-medium hover:text-gray-600">
+          <Link href="/cart" aria-label="Shopping cart" className="relative flex items-center gap-1 sm:gap-2 text-sm font-medium hover:text-gray-600">
             <ShoppingCart size={20} className="sm:w-5 sm:h-5" />
             <span className="hidden sm:inline">{t('common.cart', 'Cart')}</span>
             {cartCount > 0 && (
@@ -162,7 +162,8 @@ export default function Header() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="lg:hidden"
+            className="lg:hidden min-h-11 min-w-11"
+            aria-label="Open menu"
           >
             {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -174,7 +175,7 @@ export default function Header() {
         <div className="lg:hidden border-t border-gray-200 bg-white">
           <div className="px-3 sm:px-4 py-4 space-y-3">
             <Link href="/" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-              Home
+              {t('header.home', 'Home')}
             </Link>
             <Link href="/products" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
               {t('header.products', 'Products')}
@@ -182,13 +183,13 @@ export default function Header() {
             {isAuthenticated && (
               <>
                 <Link href="/cart" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                  Cart {cartCount > 0 && `(${cartCount})`}
+                  {t('common.cart', 'Cart')} {cartCount > 0 && `(${cartCount})`}
                 </Link>
                 <Link href="/orders" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                  My Orders
+                  {t('header.myOrders', 'My Orders')}
                 </Link>
                 <Link href="/tickets" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                  My Tickets
+                  {t('header.tickets', 'My Tickets')}
                 </Link>
               </>
             )}
@@ -199,7 +200,7 @@ export default function Header() {
               {t('header.contact', 'Contact')}
             </Link>
             <div className="px-3 py-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Language</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('header.language', 'Language')}</label>
               <select
                 value={language}
                 onChange={(e) => {
@@ -208,21 +209,21 @@ export default function Header() {
                   setLanguage(next);
                 }}
                 className="w-full rounded border border-gray-300 bg-white px-2 py-2 text-sm"
-                aria-label="Select language"
+                aria-label={t('header.selectLanguage', 'Select language')}
               >
                 {SUPPORTED_SITE_LANGUAGES.map((lang) => (
                   <option key={lang.code} value={lang.code}>
-                    {lang.nativeName}
+                    {t(`language.option.${lang.code}`, lang.nativeName)}
                   </option>
                 ))}
               </select>
             </div>
             <div className="border-t border-gray-200 pt-3">
               <Link href="/help" className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                Help
+                {t('header.help', 'Help')}
               </Link>
               <Link href="/faq" className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
-                FAQ
+                {t('header.faq', 'FAQ')}
               </Link>
             </div>
           </div>

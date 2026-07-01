@@ -104,12 +104,10 @@ export function useAuth(options?: UseAuthOptions) {
           clearSessionStartedAt();
           utils.auth.me.setData(undefined, null);
           try {
-            // Clear auth data but preserve checkout progress and pending actions
-            localStorage.removeItem('manus-runtime-user-info');
-            localStorage.removeItem('supabase.auth.token');
-              localStorage.removeItem('cart');
-              clearPendingAuthAction();
-              window.dispatchEvent(new Event('cartUpdated'));
+            localStorage.clear();
+            sessionStorage.clear();
+            clearPendingAuthAction();
+            window.dispatchEvent(new Event('cartUpdated'));
           } catch (storageError) {
             console.warn('[useAuth] Failed to clear browser storage on sign out', storageError);
           }
@@ -176,9 +174,8 @@ export function useAuth(options?: UseAuthOptions) {
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
       try {
-        // Clear auth data but preserve checkout progress and pending actions
-        localStorage.removeItem('manus-runtime-user-info');
-        localStorage.removeItem('supabase.auth.token');
+        localStorage.clear();
+        sessionStorage.clear();
         clearPendingAuthAction();
         window.dispatchEvent(new Event('cartUpdated'));
       } catch (storageError) {

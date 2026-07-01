@@ -6,6 +6,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface Slide {
   id: number;
   image: string;
+  imageWebp: string;
+  imageAlt: string;
   title: string;
   subtitle: string;
 }
@@ -13,21 +15,35 @@ interface Slide {
 const slides: Slide[] = [
   {
     id: 1,
-    image: '/images/hero/ADD_HUMAN_PROFESSIONAL_ACTIVITY_HERE_202605101659.jpeg',
+    image: '/images/hero/global-auto-parts-sourcing-team-hero.avif',
+    imageWebp: '/images/hero/global-auto-parts-sourcing-team-hero.webp',
+    imageAlt: 'Automotive sourcing team handling rare European car parts procurement',
     title: 'Global Auto Parts Sourcing',
     subtitle: 'Connecting customers worldwide with trusted OEM and aftermarket vehicle parts',
   },
   {
     id: 2,
-    image: '/images/hero/ADD_HUMAN_PROFESSIONAL_ACTIVITY_HERE_202605101700.jpeg',
+    image: '/images/hero/worldwide-auto-parts-shipping-team-hero.avif',
+    imageWebp: '/images/hero/worldwide-auto-parts-shipping-team-hero.webp',
+    imageAlt: 'Worldwide shipping support team for European auto spare parts delivery',
     title: 'Worldwide Shipping Solutions',
     subtitle: 'Fast, reliable international delivery for new and used automotive spare parts',
   },
   {
     id: 3,
-    image: '/images/hero/Hero2.jpeg',
+    image: '/images/hero/trusted-automotive-parts-network-hero.avif',
+    imageWebp: '/images/hero/trusted-automotive-parts-network-hero.webp',
+    imageAlt: 'Trusted European automotive parts network supporting garages and drivers',
     title: 'Trusted Automotive Network',
     subtitle: 'Helping drivers, garages, and dealers source quality vehicle components globally',
+  },
+  {
+    id: 4,
+    image: '/images/hero/about-hero-section-last-image.avif',
+    imageWebp: '/images/hero/about-hero-section-last-image.avif',
+    imageAlt: 'MotorVault team coordinating sourcing, support, and quality checks for automotive parts',
+    title: 'Built Around Clarity and Support',
+    subtitle: 'From sourcing to delivery, our team keeps every step transparent',
   },
 ];
 
@@ -73,12 +89,18 @@ export function AboutHeroSlideshow() {
             }`}
           >
             {/* Background Image */}
-            <img
-              src={slide.image}
-              alt={slide.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
+            <picture>
+              <source srcSet={slide.image} type="image/avif" />
+              <source srcSet={slide.imageWebp} type="image/webp" />
+              <img
+                src={slide.imageWebp}
+                alt={slide.imageAlt}
+                className="w-full h-full object-cover"
+                loading={index === 0 ? 'eager' : 'lazy'}
+                fetchPriority={index === 0 ? 'high' : 'auto'}
+                decoding="async"
+              />
+            </picture>
 
             {/* Dark Overlay */}
             <div className="absolute inset-0 bg-black/50 mix-blend-multiply" />
@@ -124,13 +146,19 @@ export function AboutHeroSlideshow() {
           <button
             key={index}
             onClick={() => goToSlide(index)}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+            className={`relative p-4 -m-4 min-h-[44px] min-w-[44px] flex items-center justify-center transition-all duration-300 ${
               index === currentSlide
-                ? 'bg-white w-8'
-                : 'bg-white/50 hover:bg-white/75'
+                ? ''
+                : ''
             }`}
             aria-label={`Go to slide ${index + 1}`}
-          />
+          >
+            <span
+              className={`h-3 w-3 rounded-full transition-all duration-300 ${
+                index === currentSlide ? 'bg-white w-8' : 'bg-white/50 hover:bg-white/75'
+              }`}
+            />
+          </button>
         ))}
       </div>
 

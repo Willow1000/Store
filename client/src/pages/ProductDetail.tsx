@@ -329,7 +329,10 @@ export default function ProductDetail() {
   const seoDescription = product?.title
     ? `View ${product.title} on MotorVault. Compare pricing, check availability, and shop secure automotive parts and accessories.`
     : 'View premium automotive parts and accessories on MotorVault.';
-  const seoImage = product?.cover_image_url || images?.[0]?.image_url || 'https://motorvault.shop/og-image.png';
+  const seoImage =
+    product?.cover_image_url ||
+    images?.[0]?.image_url ||
+    'https://motorvault.shop/images/hero/premium-european-auto-parts-hero.webp';
   const seoKeywords = [
     'automotive parts',
     'car parts',

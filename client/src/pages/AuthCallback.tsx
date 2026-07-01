@@ -5,6 +5,7 @@ import { trpcClient } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { executePendingAuthAction, getPendingAuthAction } from '@/lib/authPendingAction';
 import { consumeAuthRedirect, sanitizeInternalRedirect } from '@/lib/authRedirect';
+import { SEOHead } from '@/components/SEOHead';
 
 export default function AuthCallback() {
   const [, navigate] = useLocation();
@@ -119,6 +120,13 @@ export default function AuthCallback() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background w-full overflow-x-hidden">
+      <SEOHead
+        title="Signing In | MotorVault"
+        description="Completing secure sign in to MotorVault."
+        canonical="/auth/callback"
+        noIndex
+        noFollow
+      />
       <div className="text-center">
         <div className="mb-4 flex justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>

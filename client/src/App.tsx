@@ -1,38 +1,16 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
+import { Router as WouterRouter } from "wouter";
 import { useLocation } from "wouter";
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AuthModal from "./components/AuthModal";
 import { AuthModalProvider } from "./contexts/AuthModalContext";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import Home from "./pages/Home";
-import Products from "./pages/Products";
-import ProductDetail from "./pages/ProductDetail";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import Account from "./pages/Account";
-import Orders from "./pages/Orders";
-import OrderDetail from "./pages/OrderDetail";
-import Search from "./pages/Search";
-import AuthCallback from "./pages/AuthCallback";
-import Help from "./pages/Help";
-import Contact from "./pages/Contact";
-import Shipping from "./pages/Shipping";
-import Returns from "./pages/Returns";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import Cookies from "./pages/Cookies";
-import About from "./pages/About";
-import Accessibility from "./pages/Accessibility";
-import FAQ from "./pages/FAQ";
-import Tickets from "./pages/Tickets";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import PaymentFailed from "./pages/PaymentFailed";
 import { SITE_LANGUAGE_CHANGED_EVENT, getSiteLanguage, getSiteLanguageSource, translateText, type SiteLanguageCode } from "./lib/language";
 import { preloadTranslations, useGlobalAutoTranslation } from "./lib/autoTranslate";
 import currencyClient from "./lib/currencyClient";
@@ -42,6 +20,33 @@ import { HomePageSkeleton } from "@/components/skeletons/HomePageSkeleton";
 import { ProductsPageSkeleton } from "@/components/skeletons/ProductsPageSkeleton";
 import { ProductDetailSkeleton } from "@/components/skeletons/ProductDetailSkeleton";
 import { AboutPageSkeleton } from "@/components/skeletons/AboutPageSkeleton";
+import { SEOHead } from "@/components/SEOHead";
+import { supabase } from "@/lib/supabase";
+
+const Home = lazy(() => import("./pages/Home"));
+const Products = lazy(() => import("./pages/Products"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const Cart = lazy(() => import("./pages/Cart"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const Account = lazy(() => import("./pages/Account"));
+const Orders = lazy(() => import("./pages/Orders"));
+const OrderDetail = lazy(() => import("./pages/OrderDetail"));
+const Search = lazy(() => import("./pages/Search"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const Help = lazy(() => import("./pages/Help"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Shipping = lazy(() => import("./pages/Shipping"));
+const Returns = lazy(() => import("./pages/Returns"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Cookies = lazy(() => import("./pages/Cookies"));
+const About = lazy(() => import("./pages/About"));
+const Accessibility = lazy(() => import("./pages/Accessibility"));
+const FAQ = lazy(() => import("./pages/FAQ"));
+const Tickets = lazy(() => import("./pages/Tickets"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const PaymentFailed = lazy(() => import("./pages/PaymentFailed"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PRELOAD_DONE_KEY_PREFIX = 'site-translation-preload-done';
 
@@ -67,7 +72,7 @@ function markPreloadDone(language: SiteLanguageCode): void {
   }
 }
 
-function Router() {
+function AppRoutes() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
@@ -98,6 +103,105 @@ function Router() {
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
+  );
+}
+
+function createStaticRouterHook(pathname: string) {
+  return () => [pathname, () => undefined] as [string, (path: string) => void];
+}
+
+function CenteredStatusSkeleton() {
+  return (
+    <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-10">
+      <div className="mx-auto max-w-xl rounded-2xl border border-border bg-white p-6 sm:p-8">
+        <div className="flex flex-col items-center text-center space-y-4">
+          <Skeleton className="h-14 w-14 rounded-full" />
+          <Skeleton className="h-7 w-56" />
+          <Skeleton className="h-4 w-4/5" />
+          <Skeleton className="h-4 w-3/5" />
+          <Skeleton className="h-11 w-40 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <Skeleton className="h-10 w-56 mb-6" />
+      <div className="grid gap-6 md:grid-cols-3 mb-6">
+        <Skeleton className="h-28 w-full rounded-xl" />
+        <Skeleton className="h-28 w-full rounded-xl" />
+        <Skeleton className="h-28 w-full rounded-xl" />
+      </div>
+      <div className="space-y-4">
+        <Skeleton className="h-5 w-44" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-border bg-white p-4 space-y-3">
+            <Skeleton className="h-4 w-3/5" />
+            <Skeleton className="h-4 w-2/5" />
+            <Skeleton className="h-10 w-32 rounded-lg" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OrderDetailPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <Skeleton className="h-8 w-36 mb-4" />
+      <Skeleton className="h-10 w-64 mb-6" />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-4">
+          <Skeleton className="h-28 w-full rounded-xl" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border bg-white p-4 flex gap-4">
+              <Skeleton className="h-20 w-20 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="space-y-3 rounded-xl border border-border bg-white p-4 h-fit">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-11 w-full rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContentPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <Skeleton className="h-10 w-64 mb-6" />
+      <div className="space-y-4">
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+function LegalPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <Skeleton className="h-10 w-56 mb-6" />
+      <div className="rounded-xl border border-border bg-white p-5 sm:p-6 space-y-4">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <Skeleton key={i} className={`h-4 ${i % 3 === 0 ? 'w-11/12' : i % 2 === 0 ? 'w-4/5' : 'w-full'}`} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -167,6 +271,33 @@ function RouteTranslationSkeleton({ path }: { path: string }) {
     );
   }
 
+  if (path === '/account' || path === '/orders' || path === '/tickets') {
+    return <DashboardSkeleton />;
+  }
+
+  if (path.startsWith('/orders/')) {
+    return <OrderDetailPageSkeleton />;
+  }
+
+  if (path === '/auth/callback' || path === '/payment/success' || path === '/payment/failed' || path === '/404') {
+    return <CenteredStatusSkeleton />;
+  }
+
+  if (path === '/privacy' || path === '/terms' || path === '/cookies') {
+    return <LegalPageSkeleton />;
+  }
+
+  if (
+    path === '/contact' ||
+    path === '/help' ||
+    path === '/shipping' ||
+    path === '/returns' ||
+    path === '/accessibility' ||
+    path === '/faq'
+  ) {
+    return <ContentPageSkeleton />;
+  }
+
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
       <Skeleton className="h-10 w-52 mb-6" />
@@ -179,9 +310,11 @@ function RouteTranslationSkeleton({ path }: { path: string }) {
   );
 }
 
-function App() {
+function AppContent() {
+  const queryClient = useQueryClient();
   const [location] = useLocation();
   const isHomePage = location === '/';
+  const canonicalPath = location.startsWith('/') ? location : `/${location}`;
   const [language, setLanguage] = useState<SiteLanguageCode>(() => getSiteLanguage());
   const [pendingLanguage, setPendingLanguage] = useState<SiteLanguageCode | null>(null);
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
@@ -197,10 +330,9 @@ function App() {
     readyLanguage !== pendingLanguage;
 
   const shouldBlockUntilTranslated =
-    !hasTranslationError &&
-    (isAwaitingLanguage || routePendingTranslation);
+    false;
   const showLanguageLoading = isAwaitingLanguage && showLoadingOverlay;
-  const showTranslationSkeleton = !hasTranslationError && (showLanguageLoading || showRouteSkeleton);
+  const showTranslationSkeleton = false;
   const loadingLabel = translateText(language, 'loading.selectedLanguage', 'Loading selected language...');
 
   useEffect(() => {
@@ -307,6 +439,51 @@ function App() {
     });
   }, [location, language]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.lang = language;
+    document.documentElement.setAttribute('data-language-source', getSiteLanguageSource());
+  }, [language]);
+
+  useEffect(() => {
+    let lastRun = 0;
+
+    const revalidateProtectedState = async () => {
+      const now = Date.now();
+      if (now - lastRun < 1000) return;
+      lastRun = now;
+
+      try {
+        await supabase.auth.getSession();
+      } catch {
+        // Ignore transient session refresh errors.
+      }
+
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const rootKey = String(query.queryKey?.[0] || '');
+          return rootKey.includes('auth') || rootKey.includes('order') || rootKey.includes('ticket') || rootKey.includes('account');
+        },
+      });
+    };
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        void revalidateProtectedState();
+      }
+    };
+
+    window.addEventListener('focus', revalidateProtectedState);
+    window.addEventListener('pageshow', revalidateProtectedState);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', revalidateProtectedState);
+      window.removeEventListener('pageshow', revalidateProtectedState);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [queryClient]);
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
@@ -314,6 +491,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <AuthModal />
+            <SEOHead canonical={canonicalPath} />
 
             <div
               className="flex min-h-screen flex-col bg-background w-full overflow-x-hidden"
@@ -321,7 +499,9 @@ function App() {
             >
               <Header />
               <main className={`flex-1 w-full overflow-x-hidden ${isHomePage ? '' : 'pt-0'}`}>
-                <Router />
+                <Suspense fallback={<RouteTranslationSkeleton path={location} />}>
+                  <AppRoutes />
+                </Suspense>
               </main>
               <Footer />
             </div>
@@ -337,6 +517,25 @@ function App() {
         </AuthModalProvider>
       </ThemeProvider>
     </ErrorBoundary>
+  );
+}
+
+type AppProps = {
+  initialPath?: string;
+  ssr?: boolean;
+};
+
+function App({ initialPath = '/', ssr = false }: AppProps) {
+  const shouldUseStaticRouting = ssr || typeof window === 'undefined';
+
+  if (!shouldUseStaticRouting) {
+    return <AppContent />;
+  }
+
+  return (
+    <WouterRouter hook={createStaticRouterHook(initialPath)}>
+      <AppContent />
+    </WouterRouter>
   );
 }
 

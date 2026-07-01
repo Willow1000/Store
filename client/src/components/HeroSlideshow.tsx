@@ -7,6 +7,8 @@ import { Link } from 'wouter';
 interface Slide {
   id: number;
   image: string;
+  imageWebp: string;
+  imageAlt: string;
   title: string;
   subtitle: string;
   cta: string;
@@ -17,7 +19,9 @@ interface Slide {
 const slides: Slide[] = [
   {
     id: 1,
-    image: '/images/hero/high_quality_motor_parts_2K_202605050023.jpeg',
+    image: '/images/hero/premium-european-auto-parts-hero.avif',
+    imageWebp: '/images/hero/premium-european-auto-parts-hero.webp',
+    imageAlt: 'Premium European car parts including OEM and aftermarket components',
     title: 'Premium Motor Parts Quality',
     subtitle: 'Precision-engineered components for peak performance',
     cta: 'Shop Motor Parts',
@@ -26,7 +30,9 @@ const slides: Slide[] = [
   },
   {
     id: 2,
-    image: '/images/hero/professionals_inspecting_the_motor_parts_202605050024.jpeg',
+    image: '/images/hero/certified-auto-parts-inspection-hero.avif',
+    imageWebp: '/images/hero/certified-auto-parts-inspection-hero.webp',
+    imageAlt: 'Certified technicians inspecting rare European auto parts for quality assurance',
     title: 'Expert Inspection & Certification',
     subtitle: 'Every part verified by certified professionals',
     cta: 'Learn More',
@@ -35,12 +41,25 @@ const slides: Slide[] = [
   },
   {
     id: 3,
-    image: '/images/hero/professional_installation_of_motor_parts_202605050032.jpeg',
+    image: '/images/hero/professional-auto-parts-installation-hero.avif',
+    imageWebp: '/images/hero/professional-auto-parts-installation-hero.webp',
+    imageAlt: 'Professional mechanic installing European automotive replacement parts',
     title: 'Professional Installation Support',
     subtitle: 'Expert guidance from certified mechanics',
     cta: 'Get Support',
     ctaLink: '/help',
     description: 'We help you every step of the way with installation tips and expert advice'
+  },
+  {
+    id: 4,
+    image: '/images/hero/home-hero-section-last-image.avif',
+    imageWebp: '/images/hero/home-hero-section-last-image.avif',
+    imageAlt: 'Featured European automotive parts displayed in a premium showroom setting',
+    title: 'Find the Right Part Faster',
+    subtitle: 'Curated inventory for confident repairs and upgrades',
+    cta: 'Browse inventory',
+    ctaLink: '/products',
+    description: 'Explore quality-tested parts with clear specs, fast support, and shipping estimates before checkout.'
   },
 ];
 
@@ -88,11 +107,18 @@ export function HeroSlideshow() {
             }`}
           >
             {/* Background Image */}
-            <img
-              src={slide.image}
-              alt={slide.title}
-              className="w-full h-full object-cover"
-            />
+            <picture>
+              <source srcSet={slide.image} type="image/avif" />
+              <source srcSet={slide.imageWebp} type="image/webp" />
+              <img
+                src={slide.imageWebp}
+                alt={slide.imageAlt}
+                className="w-full h-full object-cover"
+                loading={index === 0 ? 'eager' : 'lazy'}
+                fetchPriority={index === 0 ? 'high' : 'auto'}
+                decoding="async"
+              />
+            </picture>
             
             {/* Dark Overlay */}
             <div className="absolute inset-0 bg-black/40 mix-blend-multiply" />
@@ -148,13 +174,19 @@ export function HeroSlideshow() {
           <button
             key={index}
             onClick={() => goToSlide(index)}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+            className={`relative p-4 -m-4 min-h-[44px] min-w-[44px] flex items-center justify-center transition-all duration-300 ${
               index === currentSlide
-                ? 'bg-white w-8'
-                : 'bg-white/50 hover:bg-white/75'
+                ? ''
+                : ''
             }`}
             aria-label={`Go to slide ${index + 1}`}
-          />
+          >
+            <span
+              className={`h-3 w-3 rounded-full transition-all duration-300 ${
+                index === currentSlide ? 'bg-white w-8' : 'bg-white/50 hover:bg-white/75'
+              }`}
+            />
+          </button>
         ))}
       </div>
 

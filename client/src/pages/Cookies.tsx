@@ -7,7 +7,7 @@ export default function Cookies() {
         title="Cookie Policy - MotorVault"
         description="MotorVault Cookie Policy. Information about how we use cookies and similar technologies on our website."
         keywords={['cookie policy', 'cookies', 'tracking', 'web analytics']}
-        canonical="https://motorvault.com/cookies"
+        canonical="https://motorvault.shop/cookies"
       />
       <div className="min-h-screen bg-background pt-6">
       <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">

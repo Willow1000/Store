@@ -184,6 +184,257 @@ function formatTextBlock(value: string | undefined | null): string {
   return escapeHtml(String(value ?? '').trim()).replace(/\n/g, '<br />');
 }
 
+type MailLanguage = 'en' | 'es' | 'fr' | 'de' | 'it';
+
+function resolveMailLanguage(value: unknown): MailLanguage {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw.startsWith('es')) return 'es';
+  if (raw.startsWith('fr')) return 'fr';
+  if (raw.startsWith('de')) return 'de';
+  if (raw.startsWith('it')) return 'it';
+  return 'en';
+}
+
+function getTicketEmailCopy(language: MailLanguage): {
+  subject: string;
+  pageTitle: string;
+  heading: string;
+  intro: string;
+  labels: {
+    reference: string;
+    issue: string;
+    priority: string;
+    status: string;
+    createdAt: string;
+    message: string;
+    details: string;
+    contactEmail: string;
+    contactPhone: string;
+    support: string;
+  };
+  followUp: string;
+  helpText: string;
+  notProvided: string;
+  footer: string;
+} {
+  const copy: Record<MailLanguage, ReturnType<typeof getTicketEmailCopy>> = {
+    en: {
+      subject: 'We received your ticket',
+      pageTitle: 'Your Ticket Was Received - MotorVault',
+      heading: 'Ticket Received',
+      intro: 'Thanks for contacting us. We have received your support ticket.',
+      labels: {
+        reference: 'Reference',
+        issue: 'Issue',
+        priority: 'Priority',
+        status: 'Status',
+        createdAt: 'Created At',
+        message: 'Message',
+        details: 'Ticket Details',
+        contactEmail: 'Contact Email',
+        contactPhone: 'Contact Phone',
+        support: 'Support Email',
+      },
+      followUp: 'Please keep this email for your records. Reply with your reference code if you would like to share more details.',
+      helpText: 'Need help? Contact',
+      notProvided: 'Not provided',
+      footer: 'Our team will follow up with you as soon as possible.',
+    },
+    es: {
+      subject: 'Recibimos tu ticket',
+      pageTitle: 'Hemos recibido tu ticket - MotorVault',
+      heading: 'Ticket Recibido',
+      intro: 'Gracias por contactarnos. Hemos recibido tu ticket de soporte.',
+      labels: {
+        reference: 'Referencia',
+        issue: 'Problema',
+        priority: 'Prioridad',
+        status: 'Estado',
+        createdAt: 'Creado',
+        message: 'Mensaje',
+        details: 'Detalles del Ticket',
+        contactEmail: 'Correo de Contacto',
+        contactPhone: 'Telefono de Contacto',
+        support: 'Correo de Soporte',
+      },
+      followUp: 'Guarda este correo para tus registros. Responde con tu codigo de referencia si deseas compartir mas detalles.',
+      helpText: 'Necesitas ayuda? Contacta a',
+      notProvided: 'No proporcionado',
+      footer: 'Nuestro equipo te respondera lo antes posible.',
+    },
+    fr: {
+      subject: 'Nous avons recu votre ticket',
+      pageTitle: 'Votre ticket a ete recu - MotorVault',
+      heading: 'Ticket Recu',
+      intro: 'Merci de nous avoir contactes. Nous avons bien recu votre ticket.',
+      labels: {
+        reference: 'Reference',
+        issue: 'Probleme',
+        priority: 'Priorite',
+        status: 'Statut',
+        createdAt: 'Cree le',
+        message: 'Message',
+        details: 'Details du Ticket',
+        contactEmail: 'Email de Contact',
+        contactPhone: 'Telephone de Contact',
+        support: 'Email Support',
+      },
+      followUp: 'Conservez cet email pour vos dossiers. Repondez avec votre reference si vous souhaitez ajouter des details.',
+      helpText: 'Besoin d aide? Contactez',
+      notProvided: 'Non renseigne',
+      footer: 'Notre equipe vous repondra dans les plus brefs delais.',
+    },
+    de: {
+      subject: 'Wir haben Ihr Ticket erhalten',
+      pageTitle: 'Ihr Ticket wurde empfangen - MotorVault',
+      heading: 'Ticket Erhalten',
+      intro: 'Danke fur Ihre Nachricht. Wir haben Ihr Support-Ticket erhalten.',
+      labels: {
+        reference: 'Referenz',
+        issue: 'Anliegen',
+        priority: 'Prioritat',
+        status: 'Status',
+        createdAt: 'Erstellt am',
+        message: 'Nachricht',
+        details: 'Ticketdetails',
+        contactEmail: 'Kontakt E-Mail',
+        contactPhone: 'Kontakt Telefon',
+        support: 'Support E-Mail',
+      },
+      followUp: 'Bitte bewahren Sie diese E-Mail fur Ihre Unterlagen auf. Antworten Sie mit Ihrer Referenznummer, wenn Sie weitere Details teilen mochten.',
+      helpText: 'Brauchen Sie Hilfe? Kontaktieren Sie',
+      notProvided: 'Nicht angegeben',
+      footer: 'Unser Team meldet sich so schnell wie moglich bei Ihnen.',
+    },
+    it: {
+      subject: 'Abbiamo ricevuto il tuo ticket',
+      pageTitle: 'Il tuo ticket e stato ricevuto - MotorVault',
+      heading: 'Ticket Ricevuto',
+      intro: 'Grazie per averci contattato. Abbiamo ricevuto il tuo ticket di supporto.',
+      labels: {
+        reference: 'Riferimento',
+        issue: 'Problema',
+        priority: 'Priorita',
+        status: 'Stato',
+        createdAt: 'Creato il',
+        message: 'Messaggio',
+        details: 'Dettagli Ticket',
+        contactEmail: 'Email di Contatto',
+        contactPhone: 'Telefono di Contatto',
+        support: 'Email Supporto',
+      },
+      followUp: 'Conserva questa email per i tuoi archivi. Rispondi con il tuo codice di riferimento se vuoi aggiungere dettagli.',
+      helpText: 'Serve aiuto? Contatta',
+      notProvided: 'Non fornito',
+      footer: 'Il nostro team ti rispondera il prima possibile.',
+    },
+  };
+
+  return copy[language] || copy.en;
+}
+
+function getContactEmailCopy(language: MailLanguage): {
+  subject: string;
+  pageTitle: string;
+  heading: string;
+  intro: string;
+  labels: {
+    status: string;
+    nextStep: string;
+  };
+  values: {
+    status: string;
+    nextStep: string;
+  };
+  helpText: string;
+  footer: string;
+} {
+  const copy: Record<MailLanguage, ReturnType<typeof getContactEmailCopy>> = {
+    en: {
+      subject: 'Thank you for contacting MotorVault',
+      pageTitle: 'Thank You for Contacting MotorVault',
+      heading: 'Thank You for Contacting MotorVault',
+      intro: 'Your message has been received. One of our staff members will reach out to you using this email address shortly.',
+      labels: {
+        status: 'Status',
+        nextStep: 'Next step',
+      },
+      values: {
+        status: 'Received',
+        nextStep: 'A MotorVault staff member will contact you via this email address',
+      },
+      helpText: 'Need more help? Email',
+      footer: 'We appreciate your patience and will follow up as soon as possible.',
+    },
+    es: {
+      subject: 'Gracias por contactar a MotorVault',
+      pageTitle: 'Gracias por contactar a MotorVault',
+      heading: 'Gracias por contactar a MotorVault',
+      intro: 'Hemos recibido tu mensaje. Uno de nuestros colaboradores se pondra en contacto contigo usando este correo en breve.',
+      labels: {
+        status: 'Estado',
+        nextStep: 'Siguiente paso',
+      },
+      values: {
+        status: 'Recibido',
+        nextStep: 'Un miembro del equipo de MotorVault te contactara por este correo',
+      },
+      helpText: 'Necesitas mas ayuda? Escribe a',
+      footer: 'Agradecemos tu paciencia y te responderemos lo antes posible.',
+    },
+    fr: {
+      subject: 'Merci d avoir contacte MotorVault',
+      pageTitle: 'Merci d avoir contacte MotorVault',
+      heading: 'Merci d avoir contacte MotorVault',
+      intro: 'Votre message a bien ete recu. Un membre de notre equipe vous contactera bientot via cette adresse email.',
+      labels: {
+        status: 'Statut',
+        nextStep: 'Prochaine etape',
+      },
+      values: {
+        status: 'Recu',
+        nextStep: 'Un membre de l equipe MotorVault vous contactera via cet email',
+      },
+      helpText: 'Besoin d aide supplementaire? Ecrivez a',
+      footer: 'Merci pour votre patience, nous reviendrons vers vous rapidement.',
+    },
+    de: {
+      subject: 'Vielen Dank fur Ihre Nachricht an MotorVault',
+      pageTitle: 'Vielen Dank fur Ihre Nachricht an MotorVault',
+      heading: 'Vielen Dank fur Ihre Nachricht an MotorVault',
+      intro: 'Ihre Nachricht wurde empfangen. Ein Mitglied unseres Teams meldet sich in Kurze uber diese E-Mail-Adresse bei Ihnen.',
+      labels: {
+        status: 'Status',
+        nextStep: 'Nachster Schritt',
+      },
+      values: {
+        status: 'Empfangen',
+        nextStep: 'Ein MotorVault Teammitglied kontaktiert Sie uber diese E-Mail-Adresse',
+      },
+      helpText: 'Brauchen Sie weitere Hilfe? Schreiben Sie an',
+      footer: 'Vielen Dank fur Ihre Geduld. Wir melden uns so schnell wie moglich.',
+    },
+    it: {
+      subject: 'Grazie per aver contattato MotorVault',
+      pageTitle: 'Grazie per aver contattato MotorVault',
+      heading: 'Grazie per aver contattato MotorVault',
+      intro: 'Il tuo messaggio e stato ricevuto. Un membro del nostro staff ti contattera a breve tramite questo indirizzo email.',
+      labels: {
+        status: 'Stato',
+        nextStep: 'Prossimo passo',
+      },
+      values: {
+        status: 'Ricevuto',
+        nextStep: 'Un membro del team MotorVault ti contattera tramite questo indirizzo email',
+      },
+      helpText: 'Hai bisogno di altro aiuto? Scrivi a',
+      footer: 'Grazie per la pazienza, ti risponderemo al piu presto.',
+    },
+  };
+
+  return copy[language] || copy.en;
+}
+
 export interface OrderConfirmationData {
   customer_name: string;
   order_number: string;
@@ -246,6 +497,7 @@ export interface TicketConfirmationData {
   contact_email?: string;
   contact_phone?: string;
   support_email?: string;
+  language?: string;
 }
 
 export async function sendTicketConfirmationEmail(
@@ -254,25 +506,41 @@ export async function sendTicketConfirmationEmail(
 ): Promise<boolean> {
   try {
     const transporterInstance = getTransporter();
+    const language = resolveMailLanguage(data.language);
+    const copy = getTicketEmailCopy(language);
+    const supportEmail = escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop');
     const htmlContent = loadTemplate('ticket-received', {
-      ...data,
+      page_title: copy.pageTitle,
+      heading: copy.heading,
+      intro: copy.intro,
       customer_name: escapeHtml(data.customer_name),
+      label_reference: copy.labels.reference,
       ticket_reference: escapeHtml(data.ticket_reference),
+      label_subject: copy.labels.issue,
       ticket_subject: escapeHtml(data.ticket_subject),
+      label_priority: copy.labels.priority,
       ticket_priority: escapeHtml(data.ticket_priority),
+      label_status: copy.labels.status,
       ticket_status: escapeHtml(data.ticket_status),
+      label_created_at: copy.labels.createdAt,
       ticket_created_at: escapeHtml(data.ticket_created_at),
+      label_contact_email: copy.labels.contactEmail,
+      contact_email: escapeHtml(data.contact_email || copy.notProvided),
+      label_contact_phone: copy.labels.contactPhone,
+      contact_phone: escapeHtml(data.contact_phone || copy.notProvided),
+      label_details: copy.labels.details,
       ticket_description: formatTextBlock(data.ticket_description),
-      contact_email: escapeHtml(data.contact_email || ''),
-      contact_phone: escapeHtml(data.contact_phone || ''),
-      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop'),
+      follow_up: copy.followUp,
+      help_text: copy.helpText,
+      footer: copy.footer,
+      support_email: supportEmail,
       sender_name: process.env.SENDER_NAME || 'Our Store',
     });
 
     await sendMailWithRetry(transporterInstance, {
       from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
       to: recipientEmail,
-      subject: `We received your ticket — ${data.ticket_reference}`,
+      subject: `${copy.subject} - ${data.ticket_reference}`,
       html: htmlContent,
     }, `ticket confirmation to ${recipientEmail}`);
 
@@ -290,6 +558,7 @@ export interface ContactConfirmationData {
   contact_location: string;
   contact_message: string;
   support_email?: string;
+  language?: string;
 }
 
 export async function sendContactConfirmationEmail(
@@ -298,19 +567,28 @@ export async function sendContactConfirmationEmail(
 ): Promise<boolean> {
   try {
     const transporterInstance = getTransporter();
+    const language = resolveMailLanguage(data.language);
+    const copy = getContactEmailCopy(language);
+    const supportEmail = escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop');
     const htmlContent = loadTemplate('contact-received', {
+      page_title: copy.pageTitle,
+      heading: copy.heading,
+      intro: copy.intro,
       customer_name: escapeHtml(data.customer_name),
-      contact_subject: escapeHtml(data.contact_subject || 'General support request'),
-      contact_location: escapeHtml(data.contact_location || 'Not provided'),
-      contact_message: formatTextBlock(data.contact_message),
-      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop'),
+      label_status: copy.labels.status,
+      status_value: copy.values.status,
+      label_next_step: copy.labels.nextStep,
+      next_step_value: copy.values.nextStep,
+      help_text: copy.helpText,
+      support_email: supportEmail,
+      footer: copy.footer,
       sender_name: process.env.SENDER_NAME || 'Our Store',
     });
 
     await sendMailWithRetry(transporterInstance, {
       from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
       to: recipientEmail,
-      subject: 'We received your message',
+      subject: copy.subject,
       html: htmlContent,
     }, `contact confirmation to ${recipientEmail}`);
 

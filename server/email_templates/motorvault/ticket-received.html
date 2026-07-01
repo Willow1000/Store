@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Your Ticket Was Received — MotorVault</title>
+  <title>{{page_title}}</title>
   <style>
     body{font-family:Arial,Helvetica,sans-serif;background:#f7f7f8;margin:0;padding:0;color:#111}
     .container{max-width:720px;margin:24px auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e6e6e9}
@@ -27,28 +27,29 @@
       <div class="brand">MotorVault Support</div>
     </div>
     <div class="content">
-      <h1 class="h1">We received your ticket</h1>
-      <p class="lead">Hi {{customer_name}}, thanks for reaching out. Your concern has been received and our support team will review it shortly.</p>
+      <h1 class="h1">{{heading}}</h1>
+      <p class="lead">Hi {{customer_name}}, {{intro}}</p>
 
       <div class="ticket-card">
-        <div><strong>Reference</strong>: {{ticket_reference}}</div>
-        <div><strong>Subject</strong>: {{ticket_subject}}</div>
-        <div><strong>Priority</strong>: {{ticket_priority}}</div>
-        <div><strong>Status</strong>: {{ticket_status}}</div>
-        <div><strong>Created</strong>: {{ticket_created_at}}</div>
-        <div><strong>Contact email</strong>: {{contact_email}}</div>
-        <div><strong>Contact phone</strong>: {{contact_phone}}</div>
+        <div><strong>{{label_reference}}</strong>: {{ticket_reference}}</div>
+        <div><strong>{{label_subject}}</strong>: {{ticket_subject}}</div>
+        <div><strong>{{label_priority}}</strong>: {{ticket_priority}}</div>
+        <div><strong>{{label_status}}</strong>: {{ticket_status}}</div>
+        <div><strong>{{label_created_at}}</strong>: {{ticket_created_at}}</div>
+        <div><strong>{{label_contact_email}}</strong>: {{contact_email}}</div>
+        <div><strong>{{label_contact_phone}}</strong>: {{contact_phone}}</div>
       </div>
 
       <div class="detail-card">
-        <div class="detail-label">Ticket details</div>
+        <div class="detail-label">{{label_details}}</div>
         <div class="detail-value">{{ticket_description}}</div>
       </div>
 
-      <p class="lead" style="margin-top:16px">Please keep this email for your records. If you need to reply with more information, include your reference code so we can track the conversation faster.</p>
+      <p class="lead" style="margin-top:16px">{{follow_up}}</p>
     </div>
     <div class="footer">
-      <div>Need help? Contact <a href="mailto:{{support_email}}">{{support_email}}</a></div>
+      <div>{{help_text}} <a href="mailto:{{support_email}}">{{support_email}}</a></div>
+      <div>{{footer}}</div>
       <div class="copyright">© {{sender_name}}. All rights reserved.</div>
     </div>
   </div>

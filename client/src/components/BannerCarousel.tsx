@@ -13,6 +13,8 @@ import {
 
 export interface BannerSlide {
   image: string;
+  imageWebp?: string;
+  imageAlt?: string;
   title: string;
   subtitle: string;
   cta?: string;
@@ -62,13 +64,19 @@ export function BannerCarousel({ title, subtitle, slides, tone = 'dark' }: Banne
                 <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_60px_-20px_rgba(15,23,42,0.35)]">
                   <div className="grid gap-0 lg:grid-cols-[1fr_0.95fr]">
                     <div className="relative min-h-[260px] sm:min-h-[340px] lg:min-h-[440px]">
-                      <img
-                        src={slide.image}
-                        alt={slide.title}
-                        className="absolute inset-0 h-full w-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
+                      <picture>
+                        {slide.image.endsWith('.avif') && slide.imageWebp ? (
+                          <source srcSet={slide.image} type="image/avif" />
+                        ) : null}
+                        {slide.imageWebp ? <source srcSet={slide.imageWebp} type="image/webp" /> : null}
+                        <img
+                          src={slide.imageWebp || slide.image}
+                          alt={slide.imageAlt || slide.title}
+                          className="absolute inset-0 h-full w-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </picture>
                       <div
                         className={`absolute inset-0 ${
                           tone === 'dark'

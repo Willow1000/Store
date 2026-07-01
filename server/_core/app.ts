@@ -14,6 +14,7 @@ import { ENV } from "./env";
 import { getDb, createOrder, createPayment, getUserById, getUserByOpenId, resolveOfferByCode, recordProductSearchTrackingEvent, recentSimilarTrackingExists, clearUserCart } from "../db";
 import { sendContactConfirmationEmail, sendTicketConfirmationEmail, sendContactAdminNotification } from "./emailService";
 import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeName, sanitizePhone, sanitizeText } from "@shared/sanitize";
+import { calculateShipping } from "@shared/shipping";
 
 // In production, silence non-error console output to avoid leaking debug info.
 if (process.env.NODE_ENV === 'production') {
@@ -70,39 +71,32 @@ function buildRobotsTxt(origin: string): string {
 }
 
 function buildLlmsTxt(origin: string): string {
-  const normalizedOrigin = origin.replace(/\/$/, '');
   return [
-    '# MotorVault LLM Index',
+    '# MotorVault',
     '',
-    '## Overview',
-    'MotorVault is an automotive parts marketplace with product browsing, checkout, support pages, and authenticated account areas.',
+    '## About',
+    'MotorVault is a marketplace for automotive parts and accessories.',
     '',
-    '## Primary Pages',
-    `- ${normalizedOrigin}/`,
-    `- ${normalizedOrigin}/products`,
-    `- ${normalizedOrigin}/about`,
-    `- ${normalizedOrigin}/help`,
-    `- ${normalizedOrigin}/contact`,
-    `- ${normalizedOrigin}/shipping`,
-    `- ${normalizedOrigin}/returns`,
-    `- ${normalizedOrigin}/privacy`,
-    `- ${normalizedOrigin}/terms`,
+    '## Important URLs',
+    '- /products',
+    '- /categories',
+    '- /contact',
+    '- /shipping',
+    '- /returns',
     '',
-    '## Structured Data',
-    '- Organization',
-    '- WebSite',
-    '- Product',
-    '- BreadcrumbList',
-    '- LocalBusiness',
+    '## AI Crawling Policy',
     '',
-    '## Crawl Targets',
-    `- Sitemap: ${normalizedOrigin}/sitemap.xml`,
-    `- Product Sitemap: ${normalizedOrigin}/sitemap-products.xml`,
-    `- Robots: ${normalizedOrigin}/robots.txt`,
+    'Allowed:',
+    '- Product pages',
+    '- Categories',
+    '- Public support pages',
     '',
-    '## Notes',
-    '- Public pages are intended for indexing.',
-    '- Authenticated pages should not be crawled or indexed.',
+    'Disallowed:',
+    '- User dashboards',
+    '- Checkout',
+    '- Account pages',
+    '- Admin pages',
+    '- Order history',
     '',
   ].join('\n');
 }
@@ -252,6 +246,8 @@ function applySecurityHeaders(req: express.Request, res: express.Response, next:
     "connect-src 'self' https: wss:",
     "media-src 'self' https: data: blob:",
     "object-src 'none'",
+    "require-trusted-types-for 'script'",
+    "trusted-types default",
     "upgrade-insecure-requests",
   ].join('; ');
 
@@ -330,7 +326,7 @@ async function insertProductSearchTrackingEventToSupabase(entry: {
 }
 
 function getFeedOrigin(req: express.Request): string {
-  const preferredFeedOrigin = 'https://store-nine-eosin.vercel.app';
+  const preferredFeedOrigin = 'https://motorvault.shop';
   if (isValidConfiguredOrigin(preferredFeedOrigin)) {
     return preferredFeedOrigin.replace(/\/$/, '');
   }
@@ -420,6 +416,70 @@ function normalizePrice(value: unknown, currency: string = 'USD'): string {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return '';
   return `${amount.toFixed(2)} ${currency}`;
+}
+
+type FeedLanguage = 'ENG' | 'ESP' | 'FRA' | 'GER' | 'ITA';
+type FeedCurrency = 'USD' | 'EUR' | 'GBP' | 'KES';
+
+function normalizeFeedLanguage(value: unknown): FeedLanguage {
+  const lang = String(value || 'ENG').trim().toUpperCase();
+  if (lang === 'ESP' || lang === 'FRA' || lang === 'GER' || lang === 'ITA') return lang;
+  return 'ENG';
+}
+
+function normalizeFeedCurrency(value: unknown): FeedCurrency {
+  const currency = String(value || 'USD').trim().toUpperCase();
+  if (currency === 'EUR' || currency === 'GBP' || currency === 'KES') return currency;
+  return 'USD';
+}
+
+function convertUsdAmount(amount: number, targetCurrency: FeedCurrency): number {
+  const rates: Record<FeedCurrency, number> = {
+    USD: 1,
+    EUR: 0.93,
+    GBP: 0.79,
+    KES: 129,
+  };
+
+  return Number((amount * rates[targetCurrency]).toFixed(2));
+}
+
+function getFeedChannelCopy(lang: FeedLanguage): { title: string; description: string } {
+  const copy: Record<FeedLanguage, { title: string; description: string }> = {
+    ENG: {
+      title: 'MotorVault Product Feed',
+      description: 'Product catalog for Google, Facebook, TikTok, and Pinterest',
+    },
+    ESP: {
+      title: 'Feed de Productos MotorVault',
+      description: 'Catalogo de productos para Google, Facebook, TikTok y Pinterest',
+    },
+    FRA: {
+      title: 'Flux Produits MotorVault',
+      description: 'Catalogue de produits pour Google, Facebook, TikTok et Pinterest',
+    },
+    GER: {
+      title: 'MotorVault Produkt-Feed',
+      description: 'Produktkatalog fur Google, Facebook, TikTok und Pinterest',
+    },
+    ITA: {
+      title: 'Feed Prodotti MotorVault',
+      description: 'Catalogo prodotti per Google, Facebook, TikTok e Pinterest',
+    },
+  };
+
+  return copy[lang] || copy.ENG;
+}
+
+function resolvePreferredEmailLanguage(req: express.Request, explicitValue?: unknown): string {
+  const preferred = String(explicitValue || req.header('accept-language') || '').trim().toLowerCase();
+  if (!preferred) return 'en';
+
+  if (preferred.startsWith('es')) return 'es';
+  if (preferred.startsWith('fr')) return 'fr';
+  if (preferred.startsWith('de')) return 'de';
+  if (preferred.startsWith('it')) return 'it';
+  return 'en';
 }
 
 function formatLabel(key: string): string {
@@ -1110,6 +1170,7 @@ export function createApp() {
       const created = JSON.parse(resText || 'null');
 
       const recipientEmail = String(payload.contactEmail || authenticatedUserEmail || '').trim();
+      const preferredEmailLanguage = resolvePreferredEmailLanguage(req, payload.language);
       let ticketEmailSent = false;
       if (recipientEmail) {
         const ticket = Array.isArray(created) ? created[0] : created;
@@ -1124,6 +1185,7 @@ export function createApp() {
           contact_email: sanitizeEmail(payload.contactEmail || authenticatedUserEmail || '', 255),
           contact_phone: sanitizePhone(payload.contactPhone || '', 24),
           support_email: process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop',
+          language: preferredEmailLanguage,
         });
 
         if (!ticketEmailSent) {
@@ -1152,10 +1214,12 @@ export function createApp() {
       const message = sanitizeMultilineText(payload.message || '', 5000);
       const honeypot = sanitizeText(payload.website || '', 120);
       const supportEmail = process.env.CONTACT_SUPPORT_EMAIL || 'support@motorvault.shop';
+      const preferredEmailLanguage = resolvePreferredEmailLanguage(req, payload.language);
+      const validationErrorResponse = { success: false, error: 'Validation error' };
 
       if (honeypot) {
         console.warn('[Contact] Honeypot submission blocked', { ip: req.ip });
-        return res.status(400).json({ error: 'We were unable to send your message. Please try again.' });
+        return res.status(400).json(validationErrorResponse);
       }
 
       if (!name || !email || !subject || !message) {
@@ -1165,17 +1229,17 @@ export function createApp() {
           hasSubject: Boolean(subject),
           hasMessage: Boolean(message),
         });
-        return res.status(400).json({ error: 'Please complete all required fields.' });
+        return res.status(400).json(validationErrorResponse);
       }
 
       if (!isValidEmailAddress(email)) {
         console.warn('[Contact] Validation failed: invalid email format', { email });
-        return res.status(400).json({ error: 'Please enter a valid email address.' });
+        return res.status(400).json(validationErrorResponse);
       }
 
       if (message.length < 10) {
         console.warn('[Contact] Validation failed: message too short', { email });
-        return res.status(400).json({ error: 'Message must be at least 10 characters.' });
+        return res.status(400).json(validationErrorResponse);
       }
 
       const captchaOk = await verifyRecaptchaToken(
@@ -1183,7 +1247,7 @@ export function createApp() {
         req.ip,
       );
       if (!captchaOk) {
-        return res.status(400).json({ error: 'Please complete the security check before sending your message.' });
+        return res.status(400).json(validationErrorResponse);
       }
 
       const supabaseUrl = process.env.VITE_SUPABASE_URL?.replace(/\/rest\/v1\/?$/, '') || 'https://dormxdlqbstebbsumdjj.supabase.co';
@@ -1235,6 +1299,7 @@ export function createApp() {
         contact_location: location,
         contact_message: message,
         support_email: supportEmail,
+        language: preferredEmailLanguage,
       });
 
       const adminEmailSent = await sendContactAdminNotification(supportEmail, {
@@ -1251,19 +1316,15 @@ export function createApp() {
 
       if (!adminEmailSent) {
         console.error('[Contact] Support notification email was not sent');
-        return res.status(502).json({ error: 'We were unable to send your message. Please try again.' });
+        return res.status(502).json({ success: false, error: 'We were unable to send your message. Please try again.' });
       }
 
       return res.status(201).json({
         success: true,
-        emailSent: contactEmailSent,
-        supportEmailSent: adminEmailSent,
-        stored,
-        message: Array.isArray(created) ? created[0] : created,
       });
     } catch (err) {
       console.error('[Contact] create error:', err);
-      return res.status(500).json({ error: 'We were unable to send your message. Please try again.' });
+      return res.status(500).json({ success: false, error: 'We were unable to send your message. Please try again.' });
     }
   });
 
@@ -1397,10 +1458,15 @@ export function createApp() {
 
         try {
           const origin = getFeedOrigin(req);
+            const lang = normalizeFeedLanguage((req.query as Record<string, string>)?.lang);
+            const currency = normalizeFeedCurrency(
+              (req.query as Record<string, string>)?.curr || (req.query as Record<string, string>)?.currency,
+            );
           const products = await getFeedProducts();
+          const channelCopy = getFeedChannelCopy(lang);
           const items = (products || []).map((p) => {
             const imageSource = p.cover_image_url || p.image_url || (Array.isArray(p.images) ? p.images[0] : null);
-            const placeholder = 'https://store-nine-eosin.vercel.app/images/placeholder.png';
+            const placeholder = 'https://motorvault.shop/images/hero/premium-european-auto-parts-hero.webp';
             const image = resolveUrl(imageSource || placeholder, origin);
             const rawId = p.id ?? p.uuid ?? p.item_group_id ?? p.sku ?? p.part_number ?? null;
             const id = rawId ?? (p.title ? `GEN-${Buffer.from(String(p.title)).toString('base64').replace(/=+$/,'').slice(0,12)}` : null);
@@ -1408,7 +1474,11 @@ export function createApp() {
             const titleCased = toTitleCase(title || '');
             const brand = String(p.brand || 'MotorVault').trim() || 'MotorVault';
             const description = buildFeedDescription(p);
-            const price = normalizePrice(p.price);
+            const priceAmount = Number(p.price);
+            const convertedPriceAmount = Number.isFinite(priceAmount)
+              ? convertUsdAmount(priceAmount, currency)
+              : NaN;
+            const price = normalizePrice(convertedPriceAmount, currency);
             const fallbackProductPath = id ? `/product/${id}` : '';
             const link = resolveUrl(p.url || p.link || fallbackProductPath, origin);
             // Normalize condition to Facebook/Google accepted values: new, refurbished, used
@@ -1435,7 +1505,10 @@ export function createApp() {
             // Only set googleProductCategory if it's not the default fallback
             const rawCategory = String(p.google_product_category || p.category_name || p.category || '').trim();
             const googleProductCategory = rawCategory || 'Vehicles & Parts > Vehicle Parts & Accessories';
-            const salePrice = normalizePrice(p.sale_price);
+            const salePriceAmount = Number(p.sale_price);
+            const salePrice = Number.isFinite(salePriceAmount)
+              ? normalizePrice(convertUsdAmount(salePriceAmount, currency), currency)
+              : '';
             const itemGroupId = String(p.item_group_id || '').trim();
             const gtin = String(p.gtin || p.upc || p.ean || '').trim();
             const mpn = String(p.mpn || p.manufacturer_part_number || '').trim();
@@ -1444,9 +1517,11 @@ export function createApp() {
             const size = String(p.size || '').trim();
             const ageGroup = String(p.age_group || '').trim();
             const gender = String(p.gender || '').trim();
-            const shippingCountry = String(p.shipping_country || '').trim();
-            const shippingService = String(p.shipping_service || '').trim();
-            const shippingPrice = normalizePrice(p.shipping_price);
+            const shippingCountry = String(p.shipping_country || 'KE').trim() || 'KE';
+            const shippingService = String(p.shipping_service || 'Standard').trim() || 'Standard';
+            // Keep feed shipping in lockstep with website checkout/product shipping logic.
+            const derivedShippingUsd = calculateShipping(Number(p.price || 0));
+            const shippingPrice = normalizePrice(convertUsdAmount(derivedShippingUsd, currency), currency);
             const customLabel0 = String(p.custom_label_0 || '').trim();
 
             if (!id || !title || !price || !link) {
@@ -1458,6 +1533,7 @@ export function createApp() {
 <g:id>${escapeXml(id)}</g:id>
 <g:title>${escapeXml(titleCased || title)}</g:title>
 <g:description>${escapeXml(description)}</g:description>
+<g:content_language>${escapeXml(lang)}</g:content_language>
 <g:link>${escapeXml(link)}</g:link>
 <g:image_link>${escapeXml(image)}</g:image_link>
 <g:brand>${escapeXml(brand)}</g:brand>
@@ -1493,7 +1569,7 @@ export function createApp() {
           .filter(Boolean)
           .join('\n');
 
-      const xml = `<?xml version="1.0"?>\n<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">\n<channel>\n<title>MotorVault</title>\n<link>${escapeXml(origin)}</link>\n<description>Product catalog for Facebook Ads and sales</description>\n${items}\n</channel>\n</rss>`;
+      const xml = `<?xml version="1.0"?>\n<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">\n<channel>\n<title>${escapeXml(channelCopy.title)}</title>\n<link>${escapeXml(origin)}</link>\n<description>${escapeXml(channelCopy.description)}</description>\n${items}\n</channel>\n</rss>`;
 
       res.setHeader('Content-Type', 'application/xml; charset=utf-8');
       res.setHeader('X-Content-Type-Options', 'nosniff');

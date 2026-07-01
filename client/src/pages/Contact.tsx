@@ -6,7 +6,9 @@ import { toast } from 'sonner';
 import { useSearch } from 'wouter';
 import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
 import { SEOHead } from '@/components/SEOHead';
+import { GoogleMapsLocator } from '@/components/GoogleMapsLocator';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { getSiteLanguage } from '@/lib/language';
 import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeMultilineTextInput, sanitizeName, sanitizeNameInput, sanitizeText, sanitizeTextInput } from '@shared/sanitize';
 import { Country } from 'country-state-city';
 
@@ -278,6 +280,7 @@ export default function Contact() {
           website: sanitizeText(formData.website, 120),
           recaptchaToken: captchaToken,
           geo: formData.geo || null,
+          language: getSiteLanguage(),
         }),
       });
 
@@ -316,7 +319,7 @@ export default function Contact() {
         title="Contact MotorVault - Customer Support"
         description="Need help? Contact MotorVault customer support. Available via email, phone, or form. Operating in USA, Switzerland, Poland, Finland, UAE."
         keywords={['contact us', 'customer service', 'support', 'get in touch', 'motor vault help']}
-        canonical="https://motorvault.com/contact"
+        canonical="https://motorvault.shop/contact"
       />
       <div className="min-h-screen bg-background pt-6">
       <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">
@@ -379,6 +382,15 @@ export default function Contact() {
                   </svg>
                   Visit us on Facebook
                 </a>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Find Us on Google Maps</h3>
+                <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                  <div className="h-[260px] sm:h-[320px] lg:h-[360px]">
+                    <GoogleMapsLocator />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

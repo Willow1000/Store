@@ -7,7 +7,7 @@ export default function Help() {
         title="Help Center - MotorVault Support"
         description="Get help with MotorVault. Learn about creating accounts, searching products, payments, orders, and more."
         keywords={['help center', 'support', 'FAQ', 'customer support', 'how to']}
-        canonical="https://motorvault.com/help"
+        canonical="https://motorvault.shop/help"
       />
       <div className="min-h-screen bg-background pt-6">
       <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">
