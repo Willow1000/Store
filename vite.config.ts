@@ -100,6 +100,16 @@ function vitePluginManusDebugCollector(): Plugin {
     },
 
     configureServer(server: ViteDevServer) {
+      server.middlewares.use("/__manus__/debug-collector.js", (req, res, next) => {
+        if (req.method !== "GET") {
+          return next();
+        }
+
+        // Fallback no-op collector so the injected dev script path never 404s.
+        res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8" });
+        res.end("window.__manusDebugCollectorLoaded = true;\n");
+      });
+
       // POST /__manus__/logs: Browser sends logs (written directly to files)
       server.middlewares.use("/__manus__/logs", (req, res, next) => {
         if (req.method !== "POST") {
@@ -159,6 +169,7 @@ const plugins = [
 ];
 
 export default defineConfig({
+  envPrefix: ["VITE_", "GOOGLE_MAPS_"],
   plugins,
   resolve: {
     alias: {

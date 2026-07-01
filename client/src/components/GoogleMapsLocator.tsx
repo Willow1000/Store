@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type StoreLocatorElement = HTMLElement & {
   configureFromQuickBuilder?: (config: unknown) => void;
@@ -7,9 +7,16 @@ type StoreLocatorElement = HTMLElement & {
 const EXTENDED_COMPONENT_LIBRARY_SRC =
   'https://ajax.googleapis.com/ajax/libs/@googlemaps/extended-component-library/0.6.15/index.min.js';
 
-const MAPS_API_KEY =
-  import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
-  'AIzaSyDqTomDyT4kx1vag6aYDfTNHF4gZRbIUJc';
+const MAPS_API_KEY = String(
+  import.meta.env.GOOGLE_MAPS_API_KEY || import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
+).trim();
+const MAPS_MAP_ID = String(
+  import.meta.env.GOOGLE_MAPS_MAP_ID || import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || ''
+).trim();
+const GOOGLE_MAPS_PLACE_LINK = 'https://maps.google.com/?q=Nijverheidsweg+27,+Heinenoord,+Netherlands';
+// Explicit opt-in keeps local/dev clean when API billing/key restrictions are not ready.
+const MAPS_TOGGLE = String(import.meta.env.VITE_GOOGLE_MAPS_ENABLED || '').trim().toLowerCase();
+const MAPS_ENABLED = MAPS_TOGGLE ? MAPS_TOGGLE === 'true' : MAPS_API_KEY.length > 0;
 
 const LOCATOR_CONFIG = {
   locations: [
@@ -29,7 +36,9 @@ const LOCATOR_CONFIG = {
     zoom: 4,
     zoomControl: true,
     maxZoom: 17,
-    mapId: '',
+    // Force raster to avoid WebGL/3D context crashes on unsupported devices.
+    renderingType: 'RASTER',
+    ...(MAPS_MAP_ID ? { mapId: MAPS_MAP_ID } : {}),
   },
   mapsApiKey: MAPS_API_KEY,
   capabilities: {
@@ -72,8 +81,11 @@ function ensureGoogleMapsLocatorScript(): Promise<void> {
 
 export function GoogleMapsLocator() {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!MAPS_ENABLED) return;
+
     let mounted = true;
 
     const setup = async () => {
@@ -90,7 +102,9 @@ export function GoogleMapsLocator() {
         loader.setAttribute('solution-channel', 'GMP_QB_locatorplus_v11_c');
 
         const locator = document.createElement('gmpx-store-locator') as StoreLocatorElement;
-        locator.setAttribute('map-id', 'DEMO_MAP_ID');
+        if (MAPS_MAP_ID) {
+          locator.setAttribute('map-id', MAPS_MAP_ID);
+        }
         locator.style.width = '100%';
         locator.style.height = '100%';
 
@@ -102,6 +116,9 @@ export function GoogleMapsLocator() {
         }
       } catch (err) {
         console.error('Unable to initialize Google Maps locator', err);
+        if (mounted) {
+          setLoadError('Map preview is unavailable right now.');
+        }
       }
     };
 
@@ -111,6 +128,24 @@ export function GoogleMapsLocator() {
       mounted = false;
     };
   }, []);
+
+  if (!MAPS_ENABLED || loadError) {
+    return (
+      <div className="h-full w-full rounded-lg border border-gray-200 bg-gray-50 p-4 flex flex-col justify-center">
+        <p className="text-sm text-gray-700 font-medium">MotorVault</p>
+        <p className="text-sm text-gray-600">Nijverheidsweg 27, Heinenoord, Netherlands</p>
+        {loadError ? <p className="mt-2 text-xs text-gray-500">{loadError}</p> : null}
+        <a
+          href={GOOGLE_MAPS_PLACE_LINK}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex w-fit items-center rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+        >
+          Open in Google Maps
+        </a>
+      </div>
+    );
+  }
 
   return <div ref={rootRef} className="h-full w-full" />;
 }
