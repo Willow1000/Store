@@ -19,6 +19,7 @@ import { initializeSiteLanguage } from './lib/language';
 import superjson from "superjson";
 import App from "./App";
 import { supabase } from "@/lib/supabase";
+import { createHeadCollector, HeadProvider } from './lib/headManager';
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -127,12 +128,15 @@ const trpcClient = trpc.createClient({
     throw new Error('Root element not found');
   }
 
+  const headCollector = createHeadCollector();
   const appTree = (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
-    </trpc.Provider>
+    <HeadProvider collector={headCollector}>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </trpc.Provider>
+    </HeadProvider>
   );
 
   if (rootElement.hasChildNodes()) {

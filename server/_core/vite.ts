@@ -51,14 +51,17 @@ export async function setupVite(app: Express, server: Server) {
         );
         const pageTemplate = await vite.transformIndexHtml(url, template);
         const ssrModule = await vite.ssrLoadModule('/src/entry-server.tsx');
-        const render = ssrModule.render as ((requestUrl: string) => Promise<string>) | undefined;
+        const render = ssrModule.render as ((requestUrl: string) => Promise<{ html: string; head: string }>) | undefined;
 
         if (typeof render !== 'function') {
           throw new Error('SSR render function not found in /src/entry-server.tsx');
         }
 
-        const appHtml = await render(url);
-        const page = pageTemplate.replace('<div id="root"></div>', `<div id="root">${appHtml}</div>`);
+        const renderResult = await render(url);
+        const appHtml = renderResult.html;
+        const headHtml = renderResult.head || '';
+        let page = pageTemplate.replace('<!--SSR_HEAD-->', headHtml);
+        page = page.replace('<div id="root"></div>', `<div id="root">${appHtml}</div>`);
         res.status(200).set({ "Content-Type": "text/html" }).end(page);
       } catch (e) {
         vite.ssrFixStacktrace(e as Error);

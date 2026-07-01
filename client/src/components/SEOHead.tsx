@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useHeadCollector } from '@/lib/headManager';
 
 /**
  * Dynamic SEO Head component for per-page meta tags and structured data
@@ -171,6 +172,81 @@ function getRobotsContent(noIndex?: boolean, noFollow?: boolean, robots?: string
   ].join(', ');
 }
 
+function escapeHtml(value?: string): string {
+  if (!value) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildHeadMarkup(props: {
+  title: string;
+  description: string;
+  pageUrl: string;
+  normalizedOgImage: string;
+  ogType: string;
+  keywordsContent: string;
+  ogLocale: string;
+  ogLocaleAlternates: string[];
+  robotsContent: string;
+  structuredDataJson: string;
+}) {
+  const {
+    title,
+    description,
+    pageUrl,
+    normalizedOgImage,
+    ogType,
+    keywordsContent,
+    ogLocale,
+    ogLocaleAlternates,
+    robotsContent,
+    structuredDataJson,
+  } = props;
+
+  const headTags: string[] = [];
+
+  headTags.push(`<title>${escapeHtml(title)}</title>`);
+  headTags.push(`<meta name="description" content="${escapeHtml(description)}" />`);
+  headTags.push(`<meta name="robots" content="${escapeHtml(robotsContent)}" />`);
+  if (keywordsContent) {
+    headTags.push(`<meta name="keywords" content="${escapeHtml(keywordsContent)}" />`);
+  }
+  headTags.push(`<meta property="og:title" content="${escapeHtml(title)}" />`);
+  headTags.push(`<meta property="og:description" content="${escapeHtml(description)}" />`);
+  headTags.push(`<meta property="og:image" content="${escapeHtml(normalizedOgImage)}" />`);
+  headTags.push(`<meta property="og:type" content="${escapeHtml(ogType)}" />`);
+  headTags.push(`<meta property="og:url" content="${escapeHtml(pageUrl)}" />`);
+  headTags.push(`<meta property="og:site_name" content="${escapeHtml(SITE_NAME)}" />`);
+  headTags.push(`<meta property="og:locale" content="${escapeHtml(ogLocale)}" />`);
+  ogLocaleAlternates.forEach((locale) => {
+    headTags.push(`<meta property="og:locale:alternate" content="${escapeHtml(locale)}" />`);
+  });
+  headTags.push(`<meta name="twitter:card" content="summary_large_image" />`);
+  headTags.push(`<meta name="twitter:title" content="${escapeHtml(title)}" />`);
+  headTags.push(`<meta name="twitter:description" content="${escapeHtml(description)}" />`);
+  headTags.push(`<meta name="twitter:image" content="${escapeHtml(normalizedOgImage)}" />`);
+
+  if (pageUrl) {
+    headTags.push(`<link rel="canonical" href="${escapeHtml(pageUrl)}" />`);
+
+    const supportedLanguages = ['en', 'de', 'it', 'fr', 'es', 'nl'];
+    supportedLanguages.forEach((langCode) => {
+      headTags.push(
+        `<link rel="alternate" hreflang="${escapeHtml(langCode)}" href="${escapeHtml(pageUrl)}" />`
+      );
+    });
+    headTags.push(`<link rel="alternate" hreflang="x-default" href="${escapeHtml(pageUrl)}" />`);
+  }
+
+  headTags.push(`<script type="application/ld+json">${structuredDataJson}</script>`);
+
+  return headTags.join('\n');
+}
+
 export function SEOHead({
   title = 'Rare European Car Parts | OEM and Aftermarket Auto Parts Europe | MotorVault',
   description = 'Shop rare and hard-to-find European car parts for BMW, Mercedes, Volkswagen, Audi, Porsche, Opel, Fiat, Peugeot, Renault, and Volvo with fast shipping across Europe.',
@@ -208,7 +284,9 @@ export function SEOHead({
   const normalizedOgImage = toAbsoluteUrl(ogImage, pageUrl) || ogImage;
   const robotsContent = getRobotsContent(noIndex, noFollow, robots);
 
-  // Generate and inject structured data
+  const headCollector = useHeadCollector();
+
+  // Generate structured data and head markup
   const graph: Record<string, any>[] = [
     {
       '@type': 'Organization',
@@ -357,6 +435,23 @@ export function SEOHead({
       : { '@context': 'https://schema.org/', '@graph': graph };
   const structuredDataJson = JSON.stringify(structuredData);
   const keywordsContent = keywords.join(', ');
+
+  const headMarkup = buildHeadMarkup({
+    title,
+    description,
+    pageUrl,
+    normalizedOgImage,
+    ogType,
+    keywordsContent,
+    ogLocale,
+    ogLocaleAlternates,
+    robotsContent,
+    structuredDataJson,
+  });
+
+  if (typeof window === 'undefined' && headCollector) {
+    headCollector.addMarkup(headMarkup);
+  }
 
   useEffect(() => {
     if (typeof document === 'undefined') return;

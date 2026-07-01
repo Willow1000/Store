@@ -4,6 +4,7 @@ import { renderToReadableStream } from 'react-dom/server';
 import superjson from 'superjson';
 import App from './App';
 import { trpc } from './lib/trpc';
+import { createHeadCollector, HeadProvider } from './lib/headManager';
 
 type MemoryStorage = {
   getItem: (key: string) => string | null;
@@ -39,7 +40,7 @@ function ensureServerPolyfills(): void {
   }
 }
 
-export async function render(url: string): Promise<string> {
+export async function render(url: string): Promise<{ html: string; head: string }> {
   ensureServerPolyfills();
 
   const queryClient = new QueryClient();
@@ -52,12 +53,16 @@ export async function render(url: string): Promise<string> {
     ],
   });
 
+  const headCollector = createHeadCollector();
+
   const app = (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <App initialPath={url} ssr />
-      </QueryClientProvider>
-    </trpc.Provider>
+    <HeadProvider collector={headCollector}>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <App initialPath={url} ssr />
+        </QueryClientProvider>
+      </trpc.Provider>
+    </HeadProvider>
   );
 
   const stream = await renderToReadableStream(app, {
@@ -77,5 +82,8 @@ export async function render(url: string): Promise<string> {
   }
 
   html += decoder.decode();
-  return html;
+  return {
+    html,
+    head: headCollector.getMarkup(),
+  };
 }
