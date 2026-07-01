@@ -72,9 +72,17 @@ export async function generateSitemap(baseUrl: string, kind: SitemapKind = 'site
 }
 
 function generateBasicSitemap(baseUrl: string, kind: SitemapKind): string {
+  const now = new Date().toISOString().split('T')[0];
   let xml = createUrlsetOpen(false);
 
   if (kind === 'products') {
+    // Fallback product sitemap when product data is unavailable.
+    xml += renderUrl({
+      loc: `${baseUrl}/products`,
+      lastmod: now,
+      changefreq: 'daily',
+      priority: '0.7',
+    });
     xml += '</urlset>';
     return xml;
   }
@@ -90,7 +98,6 @@ function generateBasicSitemap(baseUrl: string, kind: SitemapKind): string {
     { loc: '/faq', priority: '0.6', changefreq: 'monthly' },
   ];
 
-  const now = new Date().toISOString().split('T')[0];
   pages.forEach((page) => {
     xml += renderUrl({
       loc: `${baseUrl}${page.loc}`,

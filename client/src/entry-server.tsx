@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
-import { renderToString } from 'react-dom/server';
+import { renderToReadableStream } from 'react-dom/server';
 import superjson from 'superjson';
 import App from './App';
 import { trpc } from './lib/trpc';
@@ -52,11 +52,30 @@ export async function render(url: string): Promise<string> {
     ],
   });
 
-  return renderToString(
+  const app = (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <App initialPath={url} ssr />
       </QueryClientProvider>
     </trpc.Provider>
   );
+
+  const stream = await renderToReadableStream(app, {
+    onError(error) {
+      console.error('[SSR] render error:', error);
+    },
+  });
+
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let html = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    html += decoder.decode(value, { stream: true });
+  }
+
+  html += decoder.decode();
+  return html;
 }

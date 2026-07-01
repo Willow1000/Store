@@ -15,6 +15,8 @@ import { getHighResImageUrl } from '@/lib/images';
 import { trackAddToCart, trackViewContent } from '@/hooks/useMetaPixel';
 import { ProductRecommendationSection } from '@/components/ProductRecommendationSection';
 import { useRecommendations } from '@/hooks/useRecommendations';
+import { buildContactHref, getEnquiryCopy } from '@/lib/enquiry';
+import { getSiteLanguage } from '@/lib/language';
 
 export default function ProductDetail() {
   const [, params] = useRoute('/product/:id');
@@ -404,13 +406,15 @@ export default function ProductDetail() {
     return `${symbol}${(n * rate).toFixed(2)}`;
   };
 
-  // Calculate accurate discount percentage: (discount - price) / discount * 100
+  // Calculate accurate discount percentage and local discount amount
   let discountPercentage = 0;
   let discountAmount = 0;
 
   if (product.discount && Number(product.discount) > currentPrice) {
     const discountValue = Number(product.discount);
-    discountAmount = discountValue - currentPrice;
+    const currentLocalPrice = currencyClient.convertUSD(currentPrice);
+    const discountLocalValue = currencyClient.convertUSD(discountValue);
+    discountAmount = discountLocalValue - currentLocalPrice;
     discountPercentage = Math.round(((discountValue - currentPrice) / discountValue) * 100);
   }
 
@@ -451,28 +455,29 @@ export default function ProductDetail() {
   ];
 
   const getEnquiryContactUrl = (outOfStockOnly: boolean = false) => {
+    const enquiryCopy = getEnquiryCopy(getSiteLanguage());
     const params = new URLSearchParams();
-    const subjectPrefix = outOfStockOnly ? 'Out of Stock Inquiry' : 'Product Enquiry';
+    const subjectPrefix = outOfStockOnly ? enquiryCopy.outOfStockSubject : enquiryCopy.productSubject;
     const subject = `${subjectPrefix} - ${product.title}`;
 
     const lines = [
       'Hello Support,',
       '',
       outOfStockOnly
-        ? `I am interested in the product "${product.title}" which is currently out of stock.`
-        : `I would like to enquire about this product: "${product.title}".`,
+        ? enquiryCopy.outOfStockLine(product.title)
+        : enquiryCopy.productEnquiryLine(product.title),
       '',
-      `Product: ${product.title}`,
-      product.part_number ? `Part Number: ${product.part_number}` : '',
-      product.brand ? `Brand: ${product.brand}` : '',
-      product.model ? `Model: ${product.model}` : '',
-      product.category_name ? `Category: ${product.category_name}` : '',
-      Number.isFinite(Number(product.price)) ? `Price: ${Number(product.price).toFixed(2)}` : '',
-      `Product Link: ${window.location.origin}/product/${product.id}`,
+      `${enquiryCopy.productLabel}: ${product.title}`,
+      product.part_number ? `${enquiryCopy.partNumberLabel}: ${product.part_number}` : '',
+      product.brand ? `${enquiryCopy.brandLabel}: ${product.brand}` : '',
+      product.model ? `${enquiryCopy.modelLabel}: ${product.model}` : '',
+      product.category_name ? `${enquiryCopy.categoryLabel}: ${product.category_name}` : '',
+      Number.isFinite(Number(product.price)) ? `${enquiryCopy.priceLabel}: ${Number(product.price).toFixed(2)}` : '',
+      `${enquiryCopy.productLinkLabel}: ${window.location.origin}/product/${product.id}`,
       '',
       outOfStockOnly
-        ? 'Please let me know when this item becomes available again.'
-        : 'Please share availability, compatibility details, and next steps to order.',
+        ? enquiryCopy.productOutOfStockAsk
+        : enquiryCopy.productGeneralAsk,
     ].filter(Boolean);
 
     params.set('subject', subject);
@@ -498,7 +503,7 @@ export default function ProductDetail() {
       params.set('location', userLocation.trim().toLowerCase());
     }
 
-    return `/contact?${params.toString()}`;
+    return buildContactHref(params);
   };
 
   const handleEnquireItem = () => {
@@ -750,16 +755,16 @@ export default function ProductDetail() {
                   </p>
                 )}
               </div>
-              {discountPercentage > 0 && (
+              {discountPercentage > 0 && discountAmount > 0 && (
                 <div className="mt-2 inline-block bg-red-100 text-red-800 px-3 py-1 rounded text-sm font-semibold">
-                  Save {discountPercentage}% - {discountAmount.toFixed(2)}
+                  Save {discountPercentage}% - {formatPrice(discountAmount)}
                 </div>
               )}
               <div className={`mt-2 inline-block px-3 py-1 rounded text-sm font-semibold ${isOutOfStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                 {isOutOfStock ? 'Out of stock' : `${stock} in stock`}
               </div>
               <span className="text-sm font-normal text-gray-500 block mt-2">
-                {discountPercentage > 0 ? `(You save ${discountAmount.toFixed(2)})` : '(Estimated Price)'}
+                {discountPercentage > 0 && discountAmount > 0 ? `(You save ${formatPrice(discountAmount)})` : '(Estimated Price)'}
               </span>
             </div>
 
@@ -950,7 +955,7 @@ export default function ProductDetail() {
                   <div className="flex justify-between items-center py-2">
                     <dt className="text-sm font-medium text-gray-700">Discount:</dt>
                     <dd className="text-sm font-semibold text-green-600">
-                      {discountPercentage}% ({discountAmount.toFixed(2)})
+                      {discountPercentage}% ({formatPrice(discountAmount)})
                     </dd>
                   </div>
                 )}

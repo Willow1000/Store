@@ -8,7 +8,8 @@ import { RecaptchaCheckbox } from '@/components/RecaptchaCheckbox';
 import { SEOHead } from '@/components/SEOHead';
 import { GoogleMapsLocator } from '@/components/GoogleMapsLocator';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { getSiteLanguage } from '@/lib/language';
+import { getSiteLanguage, type SiteLanguageCode } from '@/lib/language';
+import { getEnquiryCopy } from '@/lib/enquiry';
 import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeMultilineTextInput, sanitizeName, sanitizeNameInput, sanitizeText, sanitizeTextInput } from '@shared/sanitize';
 import { Country } from 'country-state-city';
 
@@ -34,6 +35,93 @@ function isValidEmail(email: string): boolean {
 // For select, store/display the value as shown in the dropdown (no normalization)
 function normalizeLocation(value: string): string {
   return value.trim();
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getLocalizedEnquirySections(language: SiteLanguageCode) {
+  switch (language) {
+    case 'de':
+      return {
+        item: 'Artikel',
+        specification: 'Artikelspezifikation',
+        none: 'Keine',
+        location: 'Standort',
+        detectedGeolocation: 'Erkannte Geolokalisierung',
+        countryCode: 'Laendercode',
+        country: 'Land',
+        city: 'Stadt',
+        coordinates: 'Koordinaten',
+        additionalDetails: 'Zusaetzliche Details',
+      };
+    case 'it':
+      return {
+        item: 'Articolo',
+        specification: 'Specifiche articolo',
+        none: 'Nessuno',
+        location: 'Posizione',
+        detectedGeolocation: 'Geolocalizzazione rilevata',
+        countryCode: 'Codice paese',
+        country: 'Paese',
+        city: 'Citta',
+        coordinates: 'Coordinate',
+        additionalDetails: 'Dettagli aggiuntivi',
+      };
+    case 'fr':
+      return {
+        item: 'Article',
+        specification: 'Specifications article',
+        none: 'Aucun',
+        location: 'Localisation',
+        detectedGeolocation: 'Geolocalisation detectee',
+        countryCode: 'Code pays',
+        country: 'Pays',
+        city: 'Ville',
+        coordinates: 'Coordonnees',
+        additionalDetails: 'Details supplementaires',
+      };
+    case 'es':
+      return {
+        item: 'Articulo',
+        specification: 'Especificaciones del articulo',
+        none: 'Ninguno',
+        location: 'Ubicacion',
+        detectedGeolocation: 'Geolocalizacion detectada',
+        countryCode: 'Codigo de pais',
+        country: 'Pais',
+        city: 'Ciudad',
+        coordinates: 'Coordenadas',
+        additionalDetails: 'Detalles adicionales',
+      };
+    case 'nl':
+      return {
+        item: 'Artikel',
+        specification: 'Artikelspecificatie',
+        none: 'Geen',
+        location: 'Locatie',
+        detectedGeolocation: 'Gedetecteerde geolocatie',
+        countryCode: 'Landcode',
+        country: 'Land',
+        city: 'Stad',
+        coordinates: 'Coordinaten',
+        additionalDetails: 'Aanvullende details',
+      };
+    default:
+      return {
+        item: 'Item',
+        specification: 'Item specification',
+        none: 'None',
+        location: 'Location',
+        detectedGeolocation: 'Detected geolocation',
+        countryCode: 'Country Code',
+        country: 'Country',
+        city: 'City',
+        coordinates: 'Coordinates',
+        additionalDetails: 'Additional details',
+      };
+  }
 }
 
 interface ContactFormData {
@@ -78,6 +166,7 @@ export default function Contact() {
     const querySubject = params.get('subject') || '';
     const queryMessage = params.get('message') || '';
     const isEnquiry = params.get('enquiry') === '1';
+    const includeGeoInMessage = params.get('includeGeo') !== '0';
     const productName = params.get('product') || '';
 
     const userName = typeof user?.name === 'string' ? user.name : '';
@@ -96,16 +185,26 @@ export default function Contact() {
 
     if (hasPrefillData) {
       // Format message nicely if it contains item/spec info or if productName present
-      const formatMessage = (raw: string, geoObj?: any) => {
+      const formatMessage = (raw: string, geoObj?: any, includeGeo: boolean = true) => {
+        const language = getSiteLanguage();
+        const copy = getEnquiryCopy(language);
+        const sections = getLocalizedEnquirySections(language);
         const rawLower = (raw || '').toLowerCase();
         let item = '';
         let specs: string[] = [];
 
-        // Try to extract known patterns like "item name:" or "item:"
-        const itemMatch = raw.match(/item(?: name)?\s*:\s*([^\n\r]+)/i);
+        // Parse both English and localized item/spec labels.
+        const itemLabels = ['item', 'item name', copy.searchItemLabel]
+          .filter(Boolean)
+          .map((label) => escapeRegExp(label));
+        const specLabels = ['item specification', 'items specification', copy.searchSpecLabel]
+          .filter(Boolean)
+          .map((label) => escapeRegExp(label));
+
+        const itemMatch = raw.match(new RegExp(`(?:${itemLabels.join('|')})\\s*:\\s*([^\\n\\r]+)`, 'i'));
         if (itemMatch && itemMatch[1]) item = itemMatch[1].trim();
 
-        const specMatch = raw.match(/items? specification\s*:\s*([^\n\r]+)/i) || raw.match(/item specification\s*:\s*([^\n\r]+)/i);
+        const specMatch = raw.match(new RegExp(`(?:${specLabels.join('|')})\\s*:\\s*([^\\n\\r]+)`, 'i'));
         if (specMatch && specMatch[1]) {
           specs = specMatch[1].split(/;|,|\|/).map(s => s.trim()).filter(Boolean);
         }
@@ -122,22 +221,22 @@ export default function Contact() {
 
         // Build nice template
         let out = '';
-        if (item) out += `Item: ${item}\n\n`;
-        out += 'Item specification:\n';
+        if (item) out += `${sections.item}: ${item}\n\n`;
+        out += `${sections.specification}:\n`;
         if (specs.length) {
           out += specs.map(s => `- ${s}`).join('\n') + '\n\n';
         } else if (raw && raw.trim()) {
           out += raw.trim() + '\n\n';
         } else {
-          out += 'None\n\n';
+          out += `${sections.none}\n\n`;
         }
 
         // Add detected country if available
         const detectedCountry = displayLocation || userLocation || '';
-        if (detectedCountry) out += `Location: ${detectedCountry}\n\n`;
+        if (includeGeo && detectedCountry) out += `${sections.location}: ${detectedCountry}\n\n`;
 
         // If geo object available, append compact geo details
-        if (geoObj) {
+        if (includeGeo && geoObj) {
           try {
             const g = geoObj;
             const ip = (g && g.ip) ? g.ip : '';
@@ -147,24 +246,26 @@ export default function Contact() {
             const lat = (g.location && g.location.latitude) || '';
             const lon = (g.location && g.location.longitude) || '';
 
-            out += 'Detected geolocation:\n';
+            out += `${sections.detectedGeolocation}:\n`;
             if (ip) out += `- IP: ${ip}\n`;
-            if (cc2) out += `- Country Code: ${cc2}\n`;
-            if (country) out += `- Country: ${country}\n`;
-            if (city) out += `- City: ${city}\n`;
-            if (lat || lon) out += `- Coordinates: ${lat}, ${lon}\n`;
+            if (cc2) out += `- ${sections.countryCode}: ${cc2}\n`;
+            if (country) out += `- ${sections.country}: ${country}\n`;
+            if (city) out += `- ${sections.city}: ${city}\n`;
+            if (lat || lon) out += `- ${sections.coordinates}: ${lat}, ${lon}\n`;
             out += '\n';
           } catch (e) {}
         }
 
-        out += 'Additional details:\n';
+        out += `${sections.additionalDetails}:\n`;
 
         return out.trim();
       };
 
       // Attach cached geo when available
       const cachedGeo = currencyClient.getGeoData() || null;
-      const finalMessage = isEnquiry ? formatMessage(queryMessage, cachedGeo) : (queryMessage || '');
+      const finalMessage = isEnquiry
+        ? formatMessage(queryMessage, cachedGeo, includeGeoInMessage)
+        : (queryMessage || '');
 
       setFormData((prev) => {
         // Only set location if it matches a supported option
