@@ -247,7 +247,7 @@ function applySecurityHeaders(req: express.Request, res: express.Response, next:
     "img-src 'self' data: blob: https:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net https://www.facebook.com https://www.googletagmanager.com https://www.google.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net https://www.facebook.com https://www.googletagmanager.com https://www.google.com https://maps.googleapis.com https://maps.gstatic.com",
     "connect-src 'self' https: wss:",
     "media-src 'self' https: data: blob:",
     "object-src 'none'",
