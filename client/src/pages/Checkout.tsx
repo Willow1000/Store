@@ -17,7 +17,6 @@ import { COUNTRY_PHONE_OPTIONS, DEFAULT_PHONE_COUNTRY, buildInternationalPhoneNu
 import { calculateShipping, getFreeShippingThresholdUsd } from '@shared/shipping';
 import { calculateVariableVat } from '@/lib/vat';
 import currencyClient from '@/lib/currencyClient';
-import { City, Country, State } from 'country-state-city';
 import { isMetaCheckoutRequest, parseMetaCouponPercent, parseMetaCheckoutParams, parseMetaProductsParam } from '@/lib/metaCheckout';
 import { sanitizeEmail, sanitizePhone, sanitizePhoneInput, sanitizePostalCode, sanitizeText, sanitizeTextInput, sanitizeName, sanitizeNameInput } from '@shared/sanitize';
 import { InlineCheckoutAuth } from '@/components/InlineCheckoutAuth';
@@ -99,6 +98,12 @@ type StateOption = {
   label: string;
 };
 
+type CountryOption = {
+  value: string;
+  label: string;
+  flag: string;
+};
+
 const COUNTRY_REGION_VALUE = '__COUNTRY__';
 const PRELOAD_LOCATION_COUNTRIES = ['DE', 'FR', 'IT', 'ES', 'GB', 'NL', 'PL', 'BE', 'AT', 'SE'];
 
@@ -114,14 +119,36 @@ const countryCityStateCodesCache = new Map<string, Set<string>>();
 const stateCitiesCache = new Map<string, string[]>();
 const stateCityAvailabilityCache = new Map<string, boolean>();
 
-const COUNTRY_OPTIONS = Country.getAllCountries()
-  .map((country) => ({
-    value: country.isoCode,
-    label: country.name,
-    flag: country.flag || '',
-  }))
-  .filter((country) => country.value && country.label)
-  .sort((a, b) => a.label.localeCompare(b.label));
+let locationDataModule: typeof import('country-state-city') | null = null;
+let locationDataModulePromise: Promise<typeof import('country-state-city')> | null = null;
+let countryOptionsCache: CountryOption[] | null = null;
+
+async function ensureLocationDataModule(): Promise<typeof import('country-state-city')> {
+  if (locationDataModule) return locationDataModule;
+  if (!locationDataModulePromise) {
+    locationDataModulePromise = import('country-state-city').then((module) => {
+      locationDataModule = module;
+      return module;
+    });
+  }
+  return locationDataModulePromise;
+}
+
+function getCountryOptions(): CountryOption[] {
+  if (countryOptionsCache) return countryOptionsCache;
+  if (!locationDataModule) return [];
+
+  countryOptionsCache = locationDataModule.Country.getAllCountries()
+    .map((country) => ({
+      value: country.isoCode,
+      label: country.name,
+      flag: country.flag || '',
+    }))
+    .filter((country) => country.value && country.label)
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  return countryOptionsCache;
+}
 
 const POSTAL_LABEL_BY_COUNTRY: Record<string, string> = {
   US: 'ZIP Code',
@@ -148,11 +175,12 @@ function getPostalCodeLabel(country: string | undefined | null): string {
 function getCountryStates(country: string): CountryState[] {
   const countryCode = String(country || '').toUpperCase();
   if (!countryCode) return [];
+  if (!locationDataModule) return [];
 
   const cached = countryStatesCache.get(countryCode);
   if (cached) return cached;
 
-  const states = State.getStatesOfCountry(countryCode)
+  const states = locationDataModule.State.getStatesOfCountry(countryCode)
     .map((state) => ({
       isoCode: state.isoCode,
       name: state.name,
@@ -197,7 +225,7 @@ const getStateOptions = (country: string): StateOption[] => {
     return options;
   }
 
-  const countryName = Country.getCountryByCode(countryCode)?.name;
+  const countryName = locationDataModule?.Country.getCountryByCode(countryCode)?.name;
   const countryCities = getCountryCityOptions(countryCode);
   if (countryName && countryCities.length > 0) {
     const options = [
@@ -242,11 +270,12 @@ function uniqueSortedCityNames(cities: Array<{ name?: string }>): string[] {
 function getCountryCityOptions(country: string): string[] {
   const countryCode = String(country || '').toUpperCase();
   if (!countryCode) return [];
+  if (!locationDataModule) return [];
 
   const cached = countryCitiesCache.get(countryCode);
   if (cached) return cached;
 
-  const cities = uniqueSortedCityNames(City.getCitiesOfCountry(countryCode) || []);
+  const cities = uniqueSortedCityNames(locationDataModule.City.getCitiesOfCountry(countryCode) || []);
   countryCitiesCache.set(countryCode, cities);
   return cities;
 }
@@ -254,12 +283,13 @@ function getCountryCityOptions(country: string): string[] {
 function getCountryCityStateCodes(country: string): Set<string> {
   const countryCode = String(country || '').toUpperCase();
   if (!countryCode) return new Set();
+  if (!locationDataModule) return new Set();
 
   const cached = countryCityStateCodesCache.get(countryCode);
   if (cached) return cached;
 
   const stateCodes = new Set<string>();
-  for (const city of City.getCitiesOfCountry(countryCode) || []) {
+  for (const city of locationDataModule.City.getCitiesOfCountry(countryCode) || []) {
     const stateCode = (city as { stateCode?: string }).stateCode?.trim();
     if (stateCode) stateCodes.add(stateCode);
   }
@@ -277,7 +307,9 @@ function getStateCityOptions(country: string, state: string): string[] {
   const cached = stateCitiesCache.get(cacheKey);
   if (cached) return cached;
 
-  const cities = uniqueSortedCityNames(City.getCitiesOfState(countryCode, stateCode) || []);
+  if (!locationDataModule) return [];
+
+  const cities = uniqueSortedCityNames(locationDataModule.City.getCitiesOfState(countryCode, stateCode) || []);
   stateCitiesCache.set(cacheKey, cities);
   return cities;
 }
@@ -314,10 +346,6 @@ const usesManualCityField = (country: string, state: string): boolean => {
   if (state === COUNTRY_REGION_VALUE) return false;
   return getCityOptions(country, state).length === 0;
 };
-
-PRELOAD_LOCATION_COUNTRIES.forEach((countryCode) => {
-  getCountryStates(countryCode);
-});
 
 export default function Checkout() {
   const activeLanguage = getSiteLanguage();
@@ -358,6 +386,30 @@ export default function Checkout() {
   const [couponError, setCouponError] = useState<string | null>(null);
   const paymentCallbackHandledRef = useRef(false);
   const geoPrefillAppliedRef = useRef(false);
+  const [locationDataVersion, setLocationDataVersion] = useState(0);
+  const countryOptions = useMemo(() => getCountryOptions(), [locationDataVersion]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    ensureLocationDataModule()
+      .then(() => {
+        if (cancelled) return;
+        PRELOAD_LOCATION_COUNTRIES.forEach((countryCode) => {
+          getCountryStates(countryCode);
+        });
+        setLocationDataVersion((value) => value + 1);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLocationDataVersion((value) => value + 1);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const [formData, setFormData] = useState<CheckoutFormData>(() => {
     try {
@@ -425,7 +477,7 @@ export default function Checkout() {
     geoPrefillAppliedRef.current = true;
 
     const geoCountry = geo.location?.country_code2?.toUpperCase() || '';
-    if (!geoCountry || !COUNTRY_OPTIONS.some((country) => country.value === geoCountry)) return;
+    if (!geoCountry || !countryOptions.some((country) => country.value === geoCountry)) return;
 
     setFormData((prev) => {
       const selectedCountry = prev.country || geoCountry;
@@ -466,7 +518,7 @@ export default function Checkout() {
 
       return next;
     });
-  }, [geo]);
+  }, [geo, countryOptions]);
 
   // Meta/Facebook checkout entry: parse products/coupon/cart_origin and build cart from product IDs.
   useEffect(() => {
@@ -1630,7 +1682,7 @@ export default function Checkout() {
                       required
                     >
                       <option value="">Select country</option>
-                      {COUNTRY_OPTIONS.map((countryOption) => (
+                      {countryOptions.map((countryOption) => (
                         <option key={countryOption.value} value={countryOption.value}>
                           {countryOption.flag ? `${countryOption.flag} ` : ''}{countryOption.label}
                         </option>
