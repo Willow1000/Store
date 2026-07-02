@@ -105,15 +105,6 @@ const trpcClient = trpc.createClient({
 
 async function bootstrapApp() {
   try {
-    // Restore auth session before mounting so Supabase queries don't timeout
-    try {
-      await supabase.auth.getSession();
-    } catch (sessionErr) {
-      console.warn('[auth] initial session bootstrap failed', sessionErr);
-    } finally {
-      authBootstrapComplete = true;
-    }
-
     const rootElement = document.getElementById("root");
     if (!rootElement) {
       throw new Error('Root element not found');
@@ -135,6 +126,16 @@ async function bootstrapApp() {
     } else {
       createRoot(rootElement).render(appTree);
     }
+
+    void (async () => {
+      try {
+        await supabase.auth.getSession();
+      } catch (sessionErr) {
+        console.warn('[auth] initial session bootstrap failed', sessionErr);
+      } finally {
+        authBootstrapComplete = true;
+      }
+    })();
 
     // Initialize currency/geolocation in the background after mounting
     try {
