@@ -14,6 +14,7 @@ import currencyClient from '@/lib/currencyClient';
 import { getHighResImageUrl } from '@/lib/images';
 import { trackAddToCart, trackViewContent } from '@/hooks/useMetaPixel';
 import { ProductRecommendationSection } from '@/components/ProductRecommendationSection';
+import { TrustindexWidget } from '@/components/TrustindexWidget';
 import { useRecommendations } from '@/hooks/useRecommendations';
 import { buildContactHref, getEnquiryCopy } from '@/lib/enquiry';
 import { getSiteLanguage } from '@/lib/language';
@@ -826,6 +827,12 @@ export default function ProductDetail() {
                 >
                   Enquire
                 </button>
+              </div>
+
+              {/* Product detail review widget for high-intent shoppers */}
+              <div className="mt-8 rounded-3xl bg-slate-50 border border-slate-200 p-5">
+                <h2 className="text-lg font-semibold text-slate-900 mb-3">Customer feedback</h2>
+                <TrustindexWidget />
               </div>
 
               {/* Out of Stock Message */}
