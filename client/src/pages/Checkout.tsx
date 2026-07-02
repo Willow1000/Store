@@ -206,6 +206,9 @@ function normalizeRegionCode(country: string, value: string): string {
 const getStateOptions = (country: string): StateOption[] => {
   const countryCode = String(country || '').toUpperCase();
   if (!countryCode) return [{ value: '', label: 'Select state' }];
+  if (!locationDataModule) {
+    return [{ value: '', label: 'Select state' }];
+  }
 
   const cached = stateOptionsCache.get(countryCode);
   if (cached) return cached;
@@ -451,11 +454,11 @@ export default function Checkout() {
 
   const manualLocationFields = useMemo(
     () => usesManualLocationFields(formData.country),
-    [formData.country]
+    [formData.country, locationDataVersion]
   );
   const stateOptions = useMemo(
     () => getStateOptions(formData.country),
-    [formData.country]
+    [formData.country, locationDataVersion]
   );
   const structuredStateOptions = useMemo(
     () => stateOptions.filter((state) => state.value),
@@ -463,11 +466,11 @@ export default function Checkout() {
   );
   const cityOptions = useMemo(
     () => (manualLocationFields ? [] : getCityOptions(formData.country, formData.state)),
-    [manualLocationFields, formData.country, formData.state]
+    [manualLocationFields, formData.country, formData.state, locationDataVersion]
   );
   const manualCityField = useMemo(
     () => usesManualCityField(formData.country, formData.state),
-    [formData.country, formData.state]
+    [formData.country, formData.state, locationDataVersion]
   );
 
   // Auto-fill country from geolocation once, but only use state/city when

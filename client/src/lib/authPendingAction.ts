@@ -191,7 +191,7 @@ async function upsertCartItem(userId: string, productId: string, quantity: numbe
 // Guard to prevent concurrent merge operations
 let mergeInProgress = false;
 
-async function mergeGuestCartWithUserCart(userId: string): Promise<void> {
+async function mergeGuestCartWithUserCart(userId: string): Promise<string[]> {
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem('isMigratingCart', '1');
@@ -210,7 +210,7 @@ async function mergeGuestCartWithUserCart(userId: string): Promise<void> {
       const existingMigration = (window as any).__cartMigrationPromise;
       if (existingMigration) await existingMigration;
     }
-    return;
+    return [];
   }
 
   mergeInProgress = true;
@@ -219,8 +219,12 @@ async function mergeGuestCartWithUserCart(userId: string): Promise<void> {
     const guestCartItems = readCartFromStorage(localCartJson);
 
     if (guestCartItems.length === 0) {
-      return;
+      return [];
     }
+
+    const mergedProductIds = guestCartItems
+      .map((item) => item.productId)
+      .filter((productId): productId is string => Boolean(productId));
 
     // Process each guest cart item
     for (const guestItem of guestCartItems) {
@@ -247,6 +251,7 @@ async function mergeGuestCartWithUserCart(userId: string): Promise<void> {
 
     // Notify UI that cart has been updated
     window.dispatchEvent(new Event('cartUpdated'));
+    return mergedProductIds;
   } finally {
     mergeInProgress = false;
     finishCartMigration();
@@ -322,14 +327,19 @@ export async function executePendingAuthAction(
   try {
     // Always merge guest cart with authenticated user's cart
     await ensureProfile(userId);
-    await mergeGuestCartWithUserCart(userId);
+    const mergedProductIds = await mergeGuestCartWithUserCart(userId);
     await mergeGuestWishlistWithUserWishlist(userId);
     
     // Handle specific pending actions
     if (action) {
-      if ((action.type === 'cart' || action.type === 'checkout') && action.productId) {
-        // Add the specific product if it's different from merge
-        await upsertCartItem(userId, action.productId, Math.max(1, action.quantity || 1));
+      const pendingProductId = typeof action.productId === 'string' ? action.productId : null;
+      const shouldAddPendingProduct =
+        (action.type === 'cart' || action.type === 'checkout') &&
+        pendingProductId &&
+        !mergedProductIds.includes(pendingProductId);
+
+      if (shouldAddPendingProduct && pendingProductId) {
+        await upsertCartItem(userId, pendingProductId, Math.max(1, action.quantity || 1));
         window.dispatchEvent(new Event('cartUpdated'));
       }
 
