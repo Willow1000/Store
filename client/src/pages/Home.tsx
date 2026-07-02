@@ -7,6 +7,7 @@ import { SEOHead } from '@/components/SEOHead';
 import { HeroSlideshow } from '@/components/HeroSlideshow';
 import { BannerCarousel } from '@/components/BannerCarousel';
 import { ProductRecommendationSection } from '@/components/ProductRecommendationSection';
+import { TrustindexWidget } from '@/components/TrustindexWidget';
 import { toast } from 'sonner';
 import { useProducts, useCategories } from '@/hooks/useSupabaseProducts';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -151,6 +152,19 @@ export default function Home() {
       <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
         {/* Hero Slideshow */}
         <HeroSlideshow />
+
+        {/* Google Reviews Widget - high-visibility homepage placement */}
+        <section className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-10 sm:py-12">
+          <div className="rounded-[2rem] bg-white border border-slate-200 shadow-sm p-6 sm:p-8">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">Trusted Reviews</p>
+                <h2 className="mt-2 text-3xl font-extrabold text-slate-900">See why customers love MotorVault</h2>
+              </div>
+            </div>
+            <TrustindexWidget />
+          </div>
+        </section>
 
         {/* Your Recently Viewed Items Section */}
       {hasRecentlyViewedProducts && (

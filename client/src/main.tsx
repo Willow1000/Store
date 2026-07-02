@@ -103,10 +103,9 @@ const trpcClient = trpc.createClient({
   ],
 });
 
-(async () => {
+async function bootstrapApp() {
   try {
-    // Restore auth session before mounting so protected requests do not fire
-    // in a transient unauthenticated state after refresh.
+    // Restore auth session before mounting so Supabase queries don't timeout
     try {
       await supabase.auth.getSession();
     } catch (sessionErr) {
@@ -115,33 +114,40 @@ const trpcClient = trpc.createClient({
       authBootstrapComplete = true;
     }
 
-    // Initialize currency/geolocation once before mounting the app
-    const { default: currencyClient } = await import('./lib/currencyClient');
-    await currencyClient.init();
-    initializeSiteLanguage(currencyClient.getGeoData());
+    const rootElement = document.getElementById("root");
+    if (!rootElement) {
+      throw new Error('Root element not found');
+    }
+
+    const headCollector = createHeadCollector();
+    const appTree = (
+      <HeadProvider collector={headCollector}>
+        <trpc.Provider client={trpcClient} queryClient={queryClient}>
+          <QueryClientProvider client={queryClient}>
+            <App />
+          </QueryClientProvider>
+        </trpc.Provider>
+      </HeadProvider>
+    );
+
+    if (rootElement.hasChildNodes()) {
+      hydrateRoot(rootElement, appTree);
+    } else {
+      createRoot(rootElement).render(appTree);
+    }
+
+    // Initialize currency/geolocation in the background after mounting
+    try {
+      const { default: currencyClient } = await import('./lib/currencyClient');
+      void currencyClient.init().then(() => {
+        initializeSiteLanguage(currencyClient.getGeoData());
+      });
+    } catch (e) {
+      console.warn('[currencyClient] initialization failed', e);
+    }
   } catch (e) {
-    console.warn('[currencyClient] initialization failed', e);
+    console.error('[bootstrap] Fatal error:', e);
   }
+}
 
-  const rootElement = document.getElementById("root");
-  if (!rootElement) {
-    throw new Error('Root element not found');
-  }
-
-  const headCollector = createHeadCollector();
-  const appTree = (
-    <HeadProvider collector={headCollector}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <App />
-        </QueryClientProvider>
-      </trpc.Provider>
-    </HeadProvider>
-  );
-
-  if (rootElement.hasChildNodes()) {
-    hydrateRoot(rootElement, appTree);
-  } else {
-    createRoot(rootElement).render(appTree);
-  }
-})();
+bootstrapApp();
