@@ -109,6 +109,63 @@ function buildLlmsTxt(origin: string): string {
 type RateBucket = { count: number; resetAt: number };
 const rateBuckets = new Map<string, RateBucket>();
 
+// Google merchant feeds expect ISO 3166-1 alpha-2 country codes.
+const FEED_SHIPPING_COUNTRIES: string[] = [
+  'US',
+  'CA',
+  'AL',
+  'AD',
+  'AM',
+  'AT',
+  'AZ',
+  'BY',
+  'BE',
+  'BA',
+  'BG',
+  'HR',
+  'CY',
+  'CZ',
+  'DK',
+  'EE',
+  'FI',
+  'FR',
+  'GE',
+  'DE',
+  'GR',
+  'HU',
+  'IS',
+  'IE',
+  'IT',
+  'KZ',
+  'XK',
+  'LV',
+  'LI',
+  'LT',
+  'LU',
+  'MT',
+  'MD',
+  'MC',
+  'ME',
+  'NL',
+  'MK',
+  'NO',
+  'PL',
+  'PT',
+  'RO',
+  'RU',
+  'SM',
+  'RS',
+  'SK',
+  'SI',
+  'ES',
+  'SE',
+  'CH',
+  'TR',
+  'UA',
+  'GB',
+  'VA',
+];
+
 function isStaticAssetPath(pathname: string): boolean {
   return /\.(?:css|js|mjs|map|png|jpg|jpeg|gif|webp|svg|ico|txt|xml|woff2?)$/i.test(pathname) ||
     pathname.startsWith('/assets/') ||
@@ -121,11 +178,21 @@ function createRateLimitMiddleware(opts: { windowMs: number; max: number; pathPr
       return next();
     }
 
+    // Keep the global limiter focused on mutating traffic; read endpoints (like feeds) can be high-volume.
+    if (!opts.pathPrefix && (req.method === 'GET' || req.method === 'HEAD')) {
+      return next();
+    }
+
+    // Feed endpoints are consumed by bots/integrations and should not be throttled by app API limits.
+    if (isFeedRequest(req)) {
+      return next();
+    }
+
     if (opts.pathPrefix && !opts.pathPrefix.some((prefix) => req.path.startsWith(prefix))) {
       return next();
     }
 
-    const key = `${req.ip || req.socket.remoteAddress || 'unknown'}:${opts.pathPrefix?.[0] || 'global'}`;
+    const key = `${getRateLimitClientKey(req)}:${opts.pathPrefix?.[0] || 'global'}`;
     const now = Date.now();
     const current = rateBuckets.get(key);
 
@@ -754,6 +821,36 @@ function getOriginalPath(req: express.Request): string {
   return req.header('x-original-url') || req.header('x-forwarded-url') || req.path || '';
 }
 
+function normalizeRequestPath(input: string | undefined | null): string {
+  if (!input) return '';
+  const normalized = String(input).trim();
+  if (!normalized) return '';
+  return normalized.split('?')[0] || '';
+}
+
+function getCandidateRequestPaths(req: express.Request): string[] {
+  const candidates = [
+    getOriginalPath(req),
+    req.originalUrl,
+    req.url,
+    req.path,
+  ]
+    .map((value) => normalizeRequestPath(value))
+    .filter(Boolean);
+
+  return Array.from(new Set(candidates));
+}
+
+function isFeedRequest(req: express.Request): boolean {
+  return getCandidateRequestPaths(req).includes('/feed.xml');
+}
+
+function getRateLimitClientKey(req: express.Request): string {
+  const forwardedFor = req.header('x-forwarded-for')?.split(',')[0]?.trim();
+  const realIp = req.header('x-real-ip')?.trim();
+  return forwardedFor || realIp || req.ip || req.socket.remoteAddress || 'unknown';
+}
+
 async function getFeedProducts(): Promise<FeedProduct[]> {
   if (!ENV.supabaseUrl) {
     console.warn('[Feed] Supabase URL is not configured');
@@ -825,7 +922,7 @@ export function createApp() {
       }
     }
 
-    if (originalPath === '/feed.xml') {
+    if (isFeedRequest(req)) {
       res.setHeader('Content-Type', 'application/xml; charset=utf-8');
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
@@ -1589,8 +1686,7 @@ export function createApp() {
       console.warn('[App] Database connection setup skipped:', err);
     });
       app.get(['/feed.xml', '/api/server'], async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-        const originalPath = getOriginalPath(req);
-        if (originalPath !== '/feed.xml') return next();
+        if (!isFeedRequest(req)) return next();
 
         try {
           const origin = getFeedOrigin(req);
@@ -1663,7 +1759,6 @@ export function createApp() {
             const size = String(p.size || '').trim();
             const ageGroup = String(p.age_group || '').trim();
             const gender = String(p.gender || '').trim();
-            const shippingCountry = String(p.shipping_country || 'KE').trim() || 'KE';
             const shippingService = String(p.shipping_service || 'Standard').trim() || 'Standard';
             // Keep feed shipping in lockstep with website checkout/product shipping logic.
             const derivedShippingUsd = calculateShipping(Number(p.price || 0));
@@ -1690,13 +1785,14 @@ export function createApp() {
             // Add optional fields only if they have values
             if (salePrice) itemXml += `\n<g:sale_price>${escapeXml(salePrice)}</g:sale_price>`;
             
-            // Add shipping if all required fields present
-            if (shippingCountry && shippingService && shippingPrice) {
-              itemXml += `\n<g:shipping>
-<g:country>${escapeXml(shippingCountry)}</g:country>
+            // Add one shipping entry per supported country.
+            if (shippingService && shippingPrice) {
+              const shippingXml = FEED_SHIPPING_COUNTRIES.map((countryCode) => `\n<g:shipping>
+<g:country>${escapeXml(countryCode)}</g:country>
 <g:service>${escapeXml(shippingService)}</g:service>
 <g:price>${escapeXml(shippingPrice)}</g:price>
-</g:shipping>`;
+</g:shipping>`).join('');
+              itemXml += shippingXml;
             }
             
             itemXml += `\n<g:google_product_category>${escapeXml(googleProductCategory)}</g:google_product_category>`;
