@@ -20,70 +20,82 @@ const aboutBannerSlides = [
     image: '/images/banners/rare-european-auto-parts-about-banner.avif',
     imageWebp: '/images/banners/rare-european-auto-parts-about-banner.webp',
     imageAlt: 'Rare European auto parts sourcing support and buyer guidance for hard-to-find components',
-    title: 'Your Destination for Hard-to-Find Parts',
-    subtitle: 'A clear promise of sourcing help, straight answers, and the right part when the job cannot wait.',
-    cta: 'Read FAQs',
+    title: 'Fitment Confidence Before Checkout',
+    subtitle: 'Start with VIN, part numbers, and compatibility guidance so you avoid wrong-part orders.',
+    cta: 'Check fitment FAQs',
     ctaLink: '/faq',
   },
   {
     image: '/images/banners/europe-wide-auto-parts-shipping-about-banner.avif',
     imageWebp: '/images/banners/europe-wide-auto-parts-shipping-about-banner.webp',
     imageAlt: 'Europe-wide automotive spare parts shipping and logistics coverage for fast delivery',
-    title: 'Delivered Across Europe, Without the Guesswork',
-    subtitle: 'We keep delivery practical and transparent so customers know what to expect before they order.',
-    cta: 'Contact us',
+    title: 'Clear Shipping, Returns, and Warranty Expectations',
+    subtitle: 'Know timing, policy coverage, and support steps before you place your order.',
+    cta: 'Talk to support',
     ctaLink: '/contact',
   },
 ];
 
 const sourcingSteps = [
   {
-    title: 'Trusted sourcing network',
+    title: 'Fitment-first sourcing',
     description:
-      'We work with vetted vendors, distributors, suppliers, and individuals when the part and market conditions make sense.',
+      'We prioritize compatibility evidence first: VIN context, part numbers, model/year/engine data, and supplier notes before recommending options.',
     icon: Globe2,
   },
   {
-    title: 'Expert scrutiny',
+    title: 'Practical quality selection',
     description:
-      'Every part is reviewed by our team for quality, condition, compatibility, and listing accuracy before it goes live.',
+      'We help customers choose between OEM, premium aftermarket, standard aftermarket, and verified used options based on risk, labor cost, and budget.',
     icon: PackageSearch,
   },
   {
-    title: 'Transparent listing details',
+    title: 'Transparent buying details',
     description:
-      'We publish origin, specifications, and any available certification details so customers can make informed decisions.',
+      'Listings are built to answer the questions buyers ask most: fitment certainty, what is included, return eligibility, and warranty expectations.',
     icon: ClipboardList,
   },
 ];
 
 const serviceHighlights = [
   {
-    title: 'Europe-first, globally open',
+    title: 'Fitment help for uncertain buyers',
     description:
-      'We mainly operate within Europe, while remaining open to sourcing parts from other regions when that benefits availability or value.',
+      'If you are not sure what to buy, we can guide you using VIN and part details so you are not forced to guess based on generic listings.',
     icon: Truck,
   },
   {
-    title: 'Warranty and support',
+    title: 'Warranty and returns clarity',
     description:
-      'We stand behind what we sell with warranty coverage and a support team that helps resolve issues promptly and fairly.',
+      'We explain return and warranty expectations clearly because policy clarity is one of the biggest concerns in auto-parts buying.',
     icon: ShieldCheck,
   },
   {
-    title: 'Customer-led inventory growth',
+    title: 'Customer-led part discovery',
     description:
-      'If a customer needs a specific part listed, we invite them to reach out so we can review the request and explore sourcing it.',
+      'When parts are hard to identify or unavailable, customers can request sourcing directly with vehicle and part references.',
     icon: Users,
   },
 ];
 
 const trustPoints = [
-  'Transparent product details and origin information',
-  'Inspection before listing, not after the fact',
-  'Clear support for shipping, returns, and warranty claims',
-  'Practical sourcing for European cars and parts platforms',
+  'VIN and fitment-minded guidance before purchase',
+  'Clear OEM vs aftermarket vs used part positioning',
+  'Upfront support on returns, warranty, and delivery timing',
+  'Practical sourcing for hard-to-find European vehicle parts',
 ];
+
+function buildFitmentCheckHref() {
+  const subject = 'VIN fitment check before purchase';
+  const message =
+    'Hello MotorVault team,\n\nPlease help confirm fitment before I buy.\n\nVehicle details:\n- VIN:\n- Make/Model/Year:\n- Engine/Trim:\n\nPart details:\n- Part name:\n- Part number (if known):\n- Photos (if available):\n\nThank you.';
+  const params = new URLSearchParams({
+    subject,
+    message,
+    enquiry: '1',
+  });
+  return `/contact?${params.toString()}`;
+}
 
 const partners = [
   {
@@ -107,10 +119,12 @@ function buildListingRequestHref() {
 
 export default function About() {
   const listingRequestHref = buildListingRequestHref();
+  const fitmentCheckHref = buildFitmentCheckHref();
 
   return (
     <>
       <SEOHead
+        pageType="about"
         title="About MotorVault - Trusted Automotive Parts Sourcing"
         description="Learn how MotorVault sources, inspects, and lists automotive parts with transparency, warranty support, and customer-first service."
         canonical="/about"
@@ -126,21 +140,21 @@ export default function About() {
                 About MotorVault
               </p>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-gray-950 leading-tight">
-                Quality parts, clear sourcing, and support you can trust.
+                Answers first: fitment, part quality, and post-purchase support.
               </h1>
               <p className="mt-6 text-lg sm:text-xl text-gray-700 leading-relaxed">
-                MotorVault exists to make buying automotive parts feel straightforward and reliable. We source from trusted vendors and suppliers, including individuals when appropriate, then inspect every item before it is listed. Our focus is transparency: product origin, specifications, and relevant certifications are presented as clearly as possible so customers know what they are buying.
+                MotorVault exists to reduce costly guesswork in auto-parts buying. We focus on fitment confidence, realistic part-option guidance (OEM vs aftermarket vs used), and transparent policy support on returns, warranty, and delivery.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
-                <Link href="/faq">
+                <Link href={fitmentCheckHref}>
                   <a className="inline-flex items-center gap-2 rounded-full bg-blue-700 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-800">
-                    Read FAQs
+                    Request VIN fitment check
                     <ArrowRight className="h-4 w-4" />
                   </a>
                 </Link>
-                <Link href={listingRequestHref}>
+                <Link href="/faq">
                   <a className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-900 transition-colors hover:border-gray-900 hover:bg-gray-50">
-                    Request a part
+                    Compare buying FAQs
                     <ArrowRight className="h-4 w-4" />
                   </a>
                 </Link>
@@ -162,7 +176,7 @@ export default function About() {
               <div className="mt-6 rounded-2xl bg-gray-950 p-6 text-white">
                 <p className="text-sm uppercase tracking-[0.25em] text-white/60 mb-3">Our promise</p>
                 <p className="text-base leading-relaxed text-white/90">
-                  We do not want customers to guess. We want them to have enough information to compare, verify, and purchase with confidence.
+                  We do not want customers to guess. We want them to know fitment confidence, part-type tradeoffs, and support terms before they pay.
                 </p>
               </div>
             </div>
@@ -191,13 +205,13 @@ export default function About() {
               <h2 className="text-3xl font-bold">Simple, careful, and accountable.</h2>
               <div className="mt-6 space-y-5 text-white/85 leading-relaxed">
                 <p>
-                  We mainly operate within Europe, but we are open to sourcing from other regions when demand, availability, or quality makes that the better option.
+                  We mainly operate within Europe, but we are open to sourcing from other regions when availability, quality, and lead time justify it.
                 </p>
                 <p>
-                  Our process is designed to reduce surprises. We verify the part, confirm condition, capture the right details, and only then publish it on the platform.
+                  Our process is designed to reduce wrong-part orders. We validate identifiers and listing details so buyers can make decisions with less uncertainty.
                 </p>
                 <p>
-                  If something goes wrong after delivery, we do not hide behind vague policies. We provide warranty support, claims handling, and practical help for shortages, fitment issues, damaged items, or incorrect shipments.
+                  If something goes wrong after delivery, we provide practical support for fitment issues, damaged shipments, and eligible returns/warranty claims.
                 </p>
               </div>
             </div>
@@ -208,14 +222,14 @@ export default function About() {
               </p>
               <h2 className="text-3xl font-bold text-gray-950">Built around transparency.</h2>
               <p className="mt-4 text-gray-700 leading-relaxed">
-                Our customers should not need to chase basic information. That is why we aim to clearly show what a part is, where it came from, how it was checked, and what support exists if they need help later.
+                Our customers should not need to chase basic answers. We structure content around the questions buyers ask most before ordering.
               </p>
               <div className="mt-8 space-y-4">
                 {[
-                  'Authenticity and quality concerns addressed up front',
-                  'Clear return and warranty expectations',
-                  'Fast response when a customer needs support',
-                  'Room for custom sourcing requests when the right part is missing',
+                  'Fitment and compatibility concerns addressed up front',
+                  'OEM vs aftermarket vs used tradeoffs explained clearly',
+                  'Return, warranty, and delivery expectations made visible early',
+                  'Direct support for custom sourcing and unknown part identification',
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-3 rounded-2xl bg-gray-50 px-4 py-3">
                     <ShieldCheck className="mt-0.5 h-5 w-5 flex-none text-blue-700" />
@@ -247,7 +261,7 @@ export default function About() {
                 </p>
                 <h2 className="text-3xl sm:text-4xl font-black">Need a part listed or want to ask a question?</h2>
                 <p className="mt-4 text-white/85 leading-relaxed">
-                  Visit the FAQs for sourcing, warranty, returns, shipping, and payment answers, or contact us directly with a specific part request and we will review it.
+                  Visit FAQs for fitment, part-quality options, pricing confidence, and returns/warranty guidance, or contact us directly for a VIN-based fitment check.
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
@@ -257,9 +271,9 @@ export default function About() {
                     <CircleHelp className="h-4 w-4" />
                   </a>
                 </Link>
-                <Link href={listingRequestHref}>
+                <Link href={fitmentCheckHref}>
                   <a className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 px-6 py-3 font-semibold text-white transition-colors hover:bg-white/10">
-                    Request listing
+                    Request fitment check
                     <ArrowRight className="h-4 w-4" />
                   </a>
                 </Link>

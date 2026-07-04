@@ -22,44 +22,44 @@ const slides: Slide[] = [
     image: '/images/hero/premium-european-auto-parts-hero.avif',
     imageWebp: '/images/hero/premium-european-auto-parts-hero.webp',
     imageAlt: 'Premium European car parts including OEM and aftermarket components',
-    title: 'Premium Motor Parts Quality',
-    subtitle: 'Precision-engineered components for peak performance',
-    cta: 'Shop Motor Parts',
+    title: 'Find The Right Part First Time',
+    subtitle: 'VIN-aware sourcing, fitment support, and clear options',
+    cta: 'Start with fitment-safe parts',
     ctaLink: '/products',
-    description: 'Discover our extensive collection of high-quality motor parts and components'
+    description: 'Not sure about exact model details? Shop with confidence using compatibility-focused listings and support.'
   },
   {
     id: 2,
     image: '/images/hero/certified-auto-parts-inspection-hero.avif',
     imageWebp: '/images/hero/certified-auto-parts-inspection-hero.webp',
     imageAlt: 'Certified technicians inspecting rare European auto parts for quality assurance',
-    title: 'Expert Inspection & Certification',
-    subtitle: 'Every part verified by certified professionals',
-    cta: 'Learn More',
-    ctaLink: '/about',
-    description: 'Trust in quality - all parts meet industry standards'
+    title: 'OEM, Aftermarket, or Used?',
+    subtitle: 'Choose by quality tier, budget, and repair priority',
+    cta: 'Compare part options',
+    ctaLink: '/faq',
+    description: 'Understand the real differences before you buy, including where premium options make the most sense.'
   },
   {
     id: 3,
     image: '/images/hero/professional-auto-parts-installation-hero.avif',
     imageWebp: '/images/hero/professional-auto-parts-installation-hero.webp',
     imageAlt: 'Professional mechanic installing European automotive replacement parts',
-    title: 'Professional Installation Support',
-    subtitle: 'Expert guidance from certified mechanics',
-    cta: 'Get Support',
+    title: 'DIY Or Mechanic?',
+    subtitle: 'Know when to install yourself and when to get pro help',
+    cta: 'See practical guidance',
     ctaLink: '/help',
-    description: 'We help you every step of the way with installation tips and expert advice'
+    description: 'Use clearer buying and installation decisions for safety-critical and specification-sensitive parts.'
   },
   {
     id: 4,
     image: '/images/hero/home-hero-section-last-image.avif',
     imageWebp: '/images/hero/home-hero-section-last-image.avif',
     imageAlt: 'Featured European automotive parts displayed in a premium showroom setting',
-    title: 'Find the Right Part Faster',
-    subtitle: 'Curated inventory for confident repairs and upgrades',
-    cta: 'Browse inventory',
+    title: 'Know Returns, Warranty, and Delivery Upfront',
+    subtitle: 'Transparent policies before you commit',
+    cta: 'Review key FAQs',
     ctaLink: '/products',
-    description: 'Explore quality-tested parts with clear specs, fast support, and shipping estimates before checkout.'
+    description: 'See fitment support, shipping expectations, and return guidance so there are fewer surprises after purchase.'
   },
 ];
 
@@ -99,31 +99,24 @@ export function HeroSlideshow() {
     <div className="relative w-full h-screen max-h-[600px] bg-gray-900 overflow-hidden -mt-0">
       {/* Slides Container */}
       <div className="relative w-full h-full">
-        {slides.map((slide, index) => (
-          <div
-            key={slide.id}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              index === currentSlide ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            {/* Background Image */}
-            <picture>
-              <source srcSet={slide.image} type="image/avif" />
-              <source srcSet={slide.imageWebp} type="image/webp" />
-              <img
-                src={slide.imageWebp}
-                alt={slide.imageAlt}
-                className="w-full h-full object-cover"
-                loading={index === 0 ? 'eager' : 'lazy'}
-                fetchPriority={index === 0 ? 'high' : 'auto'}
-                decoding="async"
-              />
-            </picture>
-            
-            {/* Dark Overlay */}
-            <div className="absolute inset-0 bg-black/40 mix-blend-multiply" />
-          </div>
-        ))}
+        <div key={activeSlide.id} className="absolute inset-0 transition-opacity duration-700 ease-in-out opacity-100">
+          {/* Background Image */}
+          <picture>
+            <source srcSet={activeSlide.image} type="image/avif" />
+            <source srcSet={activeSlide.imageWebp} type="image/webp" />
+            <img
+              src={activeSlide.imageWebp}
+              alt={activeSlide.imageAlt}
+              className="w-full h-full object-cover"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+            />
+          </picture>
+
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/40 mix-blend-multiply" />
+        </div>
       </div>
 
       {/* Content Overlay */}

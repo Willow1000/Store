@@ -19,7 +19,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://img.kleinanzeigen.de" crossorigin />
     <link rel="preconnect" href="https://dormxdlqbstebbsumdjj.supabase.co" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    </noscript>
     
     <!-- JSON-LD Structured Data for WebSite -->
     <script type="application/ld+json">
@@ -76,7 +79,6 @@
     </script>
     
     <!-- Preload Critical Resources -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" />
     
     <!-- Analytics (optional - disabled by default) -->
     <!-- To enable analytics, configure VITE_ANALYTICS_ENDPOINT and VITE_ANALYTICS_WEBSITE_ID in .env.local -->

@@ -4,6 +4,7 @@ export default function Shipping() {
   return (
     <>
       <SEOHead
+        pageType="policy"
         title="Shipping Information - MotorVault"
         description="MotorVault shipping information. Learn about shipping rates, delivery times, and our logistics partners."
         keywords={['shipping', 'delivery', 'shipping costs', 'delivery times']}

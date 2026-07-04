@@ -815,6 +815,7 @@ export default function Products() {
     return (
       <>
         <SEOHead
+          pageType="category"
           title={seoTitle}
           description={seoDescription}
           keywords={['automotive parts', 'car parts', 'OEM parts', 'aftermarket parts', 'auto accessories']}
@@ -828,6 +829,7 @@ export default function Products() {
   return (
     <>
       <SEOHead
+        pageType="category"
         title={seoTitle}
         description={seoDescription}
         keywords={['automotive parts', 'car parts', 'OEM parts', 'aftermarket parts', 'auto accessories']}

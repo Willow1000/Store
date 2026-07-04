@@ -29,6 +29,7 @@ export default function Search() {
   return (
     <>
       <SEOHead
+        pageType="search"
         title={query ? `Search results for ${query} | MotorVault` : 'Search Results | MotorVault'}
         description="Search MotorVault's automotive parts catalog."
         canonical="/search"

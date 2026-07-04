@@ -4,6 +4,7 @@ export default function Returns() {
   return (
     <>
       <SEOHead
+        pageType="policy"
         title="Returns & Refunds - MotorVault"
         description="MotorVault Returns & Refunds policy. Learn about our 30-day return policy, refund process, and warranty information."
         keywords={['returns', 'refunds', 'return policy', 'warranty']}

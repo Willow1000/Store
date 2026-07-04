@@ -420,6 +420,7 @@ export default function Contact() {
   return (
     <>
       <SEOHead
+        pageType="contact"
         title="Contact MotorVault - Customer Support"
         description="Need help? Contact MotorVault customer support. Available via email, phone, or form. Operating in USA, Switzerland, Poland, Finland, UAE."
         keywords={['contact us', 'customer service', 'support', 'get in touch', 'motor vault help']}

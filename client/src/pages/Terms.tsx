@@ -4,6 +4,7 @@ export default function Terms() {
   return (
     <>
       <SEOHead
+        pageType="policy"
         title="Terms of Service - MotorVault"
         description="MotorVault Terms of Service. Our terms and conditions for using the platform, shopping, returns, and more."
         keywords={['terms of service', 'terms and conditions', 'user agreement', 'legal']}

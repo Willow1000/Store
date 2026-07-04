@@ -4,6 +4,7 @@ export default function Cookies() {
   return (
     <>
       <SEOHead
+        pageType="policy"
         title="Cookie Policy - MotorVault"
         description="MotorVault Cookie Policy. Information about how we use cookies and similar technologies on our website."
         keywords={['cookie policy', 'cookies', 'tracking', 'web analytics']}

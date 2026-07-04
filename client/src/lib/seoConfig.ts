@@ -186,7 +186,7 @@ export const SEO_CONFIG = {
 
   // Search Console & Monitoring
   monitoring: {
-    googleAnalytics: process.env.VITE_GA_ID || '',
+    googleAnalytics: import.meta.env.VITE_GA_ID || '',
     googleSearchConsole: 'https://search.google.com/search-console',
     bingWebmasterTools: 'https://www.bing.com/webmasters',
   },

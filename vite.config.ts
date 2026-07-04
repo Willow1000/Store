@@ -8,6 +8,7 @@ import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 const isFastBuild = process.env.FAST_BUILD === "1";
 const isSsrBuild = process.argv.some((arg) => arg === '--ssr');
+const isDevServer = process.argv.some((arg) => arg === 'serve');
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -166,7 +167,7 @@ function vitePluginManusDebugCollector(): Plugin {
 const plugins = [
   react(),
   tailwindcss(),
-  ...(isFastBuild ? [] : [jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()]),
+  ...(isFastBuild || !isDevServer ? [] : [jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()]),
 ];
 
 export default defineConfig({

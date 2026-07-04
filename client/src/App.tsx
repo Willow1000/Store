@@ -43,6 +43,7 @@ const Cookies = lazy(() => import("./pages/Cookies"));
 const About = lazy(() => import("./pages/About"));
 const Accessibility = lazy(() => import("./pages/Accessibility"));
 const FAQ = lazy(() => import("./pages/FAQ"));
+const SiteMap = lazy(() => import("./pages/SiteMap.tsx"));
 const Tickets = lazy(() => import("./pages/Tickets"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const PaymentFailed = lazy(() => import("./pages/PaymentFailed"));
@@ -97,6 +98,7 @@ function AppRoutes() {
       <Route path={"/tickets"} component={Tickets} />
       <Route path={"/accessibility"} component={Accessibility} />
       <Route path={"/faq"} component={FAQ} />
+      <Route path={"/site-map"} component={SiteMap} />
       <Route path={"/payment/success"} component={PaymentSuccess} />
       <Route path={"/payment/failed"} component={PaymentFailed} />
       <Route path={"/404"} component={NotFound} />
@@ -293,7 +295,8 @@ function RouteTranslationSkeleton({ path }: { path: string }) {
     path === '/shipping' ||
     path === '/returns' ||
     path === '/accessibility' ||
-    path === '/faq'
+    path === '/faq' ||
+    path === '/site-map'
   ) {
     return <ContentPageSkeleton />;
   }

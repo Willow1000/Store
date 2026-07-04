@@ -30,6 +30,7 @@ export async function generateSitemap(baseUrl: string, kind: SitemapKind = 'site
     const priorityPages = [
       { loc: '/', changefreq: 'daily', priority: '1.0' },
       { loc: '/products', changefreq: 'daily', priority: '0.95' },
+      { loc: '/site-map', changefreq: 'weekly', priority: '0.8' },
       { loc: '/about', changefreq: 'monthly', priority: '0.7' },
       { loc: '/help', changefreq: 'monthly', priority: '0.65' },
       { loc: '/contact', changefreq: 'monthly', priority: '0.65' },
@@ -90,6 +91,7 @@ function generateBasicSitemap(baseUrl: string, kind: SitemapKind): string {
   const pages = [
     { loc: '/', priority: '1.0', changefreq: 'daily' },
     { loc: '/products', priority: '0.95', changefreq: 'daily' },
+    { loc: '/site-map', priority: '0.8', changefreq: 'weekly' },
     { loc: '/about', priority: '0.7', changefreq: 'monthly' },
     { loc: '/help', priority: '0.65', changefreq: 'monthly' },
     { loc: '/contact', priority: '0.65', changefreq: 'monthly' },

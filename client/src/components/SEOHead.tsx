@@ -1,5 +1,12 @@
 import { useEffect } from 'react';
 import { useHeadCollector } from '@/lib/headManager';
+import {
+  buildStructuredDataGraph,
+  type ArticleSchemaInput,
+  type FAQSchemaInput,
+  type ProductSchemaInput,
+  type SEOPageType,
+} from '@/lib/schemaBuilders';
 
 /**
  * Dynamic SEO Head component for per-page meta tags and structured data
@@ -7,6 +14,7 @@ import { useHeadCollector } from '@/lib/headManager';
  */
 
 interface SEOHeadProps {
+  pageType?: SEOPageType;
   title?: string;
   description?: string;
   canonical?: string;
@@ -17,31 +25,11 @@ interface SEOHeadProps {
   ogType?: 'website' | 'product' | 'article';
   keywords?: string[];
   // For product pages
-  productData?: {
-    name: string;
-    price: number | string;
-    priceCurrency?: string;
-    originalPrice?: number;
-    rating?: number;
-    reviews?: number;
-    availability?: 'InStock' | 'OutOfStock' | 'PreOrder';
-    image?: string | string[];
-    images?: string[];
-    category?: string;
-    description?: string;
-    sku?: string;
-    brand?: string;
-    mpn?: string;
-    url?: string;
-    condition?: string;
-  };
+  productData?: ProductSchemaInput;
   // For article/blog pages
-  articleData?: {
-    author?: string;
-    publishedDate?: string;
-    modifiedDate?: string;
-    image?: string;
-  };
+  articleData?: ArticleSchemaInput;
+  // For FAQ pages
+  faqData?: FAQSchemaInput[];
   // For breadcrumbs
   breadcrumbs?: Array<{
     name: string;
@@ -50,9 +38,9 @@ interface SEOHeadProps {
 }
 
 const SITE_NAME = 'MotorVault';
-const SITE_DESCRIPTION = 'Rare and hard-to-find European car parts marketplace for OEM and aftermarket components, trusted sourcing, and fast shipping.';
-const SITE_LOGO = '/images/motorvault_horizontal.svg';
 const SUPPORTED_SEO_LANGUAGES = ['en', 'de', 'it', 'fr', 'es', 'nl'] as const;
+const STRUCTURED_DATA_SCRIPT_ID = 'mv-structured-data-jsonld';
+const STRUCTURED_DATA_SCRIPT_SELECTOR = `script#${STRUCTURED_DATA_SCRIPT_ID}`;
 const LANGUAGE_TO_LOCALE: Record<string, string> = {
   en: 'en_EU',
   de: 'de_DE',
@@ -123,41 +111,6 @@ function toAbsoluteUrl(value?: string, baseUrl?: string): string | undefined {
   } catch {
     return trimmed;
   }
-}
-
-function normalizeImageList(productData: NonNullable<SEOHeadProps['productData']>, baseUrl?: string): string[] {
-  const rawImages = [
-    ...(Array.isArray(productData.image) ? productData.image : productData.image ? [productData.image] : []),
-    ...(productData.images || []),
-  ];
-
-  return Array.from(
-    new Set(
-      rawImages
-        .map((image) => toAbsoluteUrl(image, baseUrl))
-        .filter((image): image is string => Boolean(image))
-    )
-  );
-}
-
-function formatSchemaPrice(price: number | string): string | undefined {
-  const numericPrice = Number(price);
-  if (!Number.isFinite(numericPrice) || numericPrice < 0) return undefined;
-  return numericPrice.toFixed(2);
-}
-
-function getSchemaCondition(condition?: string): string | undefined {
-  if (!condition) return undefined;
-  const normalized = condition.trim().toLowerCase();
-  if (!normalized) return undefined;
-  if (normalized.includes('new')) return 'https://schema.org/NewCondition';
-  if (normalized.includes('refurb')) return 'https://schema.org/RefurbishedCondition';
-  if (normalized.includes('damaged')) return 'https://schema.org/DamagedCondition';
-  return 'https://schema.org/UsedCondition';
-}
-
-function getStructuredDataUrl(url?: string, fallback?: string): string {
-  return toAbsoluteUrl(url || fallback, fallback || getRuntimeSiteOrigin()) || fallback || getCurrentUrl();
 }
 
 function getRobotsContent(noIndex?: boolean, noFollow?: boolean, robots?: string): string {
@@ -242,12 +195,18 @@ function buildHeadMarkup(props: {
     headTags.push(`<link rel="alternate" hreflang="x-default" href="${escapeHtml(pageUrl)}" />`);
   }
 
-  headTags.push(`<script type="application/ld+json">${structuredDataJson}</script>`);
+  headTags.push(`<meta name="structured-data:format" content="application/ld+json" />`);
+  headTags.push(`<meta name="structured-data:location" content="head" />`);
+  headTags.push(`<meta name="structured-data:consumer" content="search-engines,llm-crawlers" />`);
+  headTags.push(
+    `<script id="${STRUCTURED_DATA_SCRIPT_ID}" data-schema="primary" data-schema-purpose="seo-llm" data-seo-head="true" type="application/ld+json">${structuredDataJson}</script>`
+  );
 
   return headTags.join('\n');
 }
 
 export function SEOHead({
+  pageType = 'generic',
   title = 'Rare European Car Parts | OEM and Aftermarket Auto Parts Europe | MotorVault',
   description = 'Shop rare and hard-to-find European car parts for BMW, Mercedes, Volkswagen, Audi, Porsche, Opel, Fiat, Peugeot, Renault, and Volvo with fast shipping across Europe.',
   canonical,
@@ -270,6 +229,7 @@ export function SEOHead({
   ],
   productData,
   articleData,
+  faqData,
   breadcrumbs,
 }: SEOHeadProps) {
   const effectiveCanonical = normalizeCanonicalUrl(canonical);
@@ -286,153 +246,29 @@ export function SEOHead({
 
   const headCollector = useHeadCollector();
 
-  // Generate structured data and head markup
-  const graph: Record<string, any>[] = [
-    {
-      '@type': 'Organization',
-      '@id': `${siteOrigin}#organization`,
-      name: SITE_NAME,
-      url: siteOrigin,
-      logo: toAbsoluteUrl(SITE_LOGO, siteOrigin),
-      description: SITE_DESCRIPTION,
-      contactPoint: {
-        '@type': 'ContactPoint',
-        contactType: 'Customer Support',
-        email: 'support@motorvault.shop',
-        availableLanguage: ['en', 'de', 'it', 'fr', 'es', 'nl'],
-      },
-    },
-    {
-      '@type': 'WebSite',
-      '@id': `${siteOrigin}#website`,
-      name: SITE_NAME,
-      url: siteOrigin,
-      description: SITE_DESCRIPTION,
-      inLanguage: currentLanguage,
-      publisher: {
-        '@id': `${siteOrigin}#organization`,
-      },
-    },
-  ];
+  const inferredPageType: SEOPageType =
+    pageType !== 'generic'
+      ? pageType
+      : productData
+        ? 'product'
+        : articleData
+          ? 'article'
+          : faqData && faqData.length > 0
+            ? 'faq'
+            : 'generic';
 
-  if (productData) {
-    const productUrl = getStructuredDataUrl(productData.url, pageUrl);
-    const productSchema: Record<string, any> = {
-      '@type': 'Product',
-      '@id': `${productUrl}#product`,
-      name: productData.name,
-      description: productData.description || description,
-      url: productUrl,
-      mainEntityOfPage: {
-        '@type': 'WebPage',
-        '@id': productUrl,
-      },
-    };
-
-    const imageList = normalizeImageList(productData, pageUrl);
-    if (imageList.length > 0) {
-      productSchema.image = imageList;
-    }
-
-    if (productData.sku) {
-      productSchema.sku = productData.sku;
-    }
-
-    if (productData.mpn) {
-      productSchema.mpn = productData.mpn;
-    }
-
-    if (productData.brand) {
-      productSchema.brand = {
-        '@type': 'Brand',
-        name: productData.brand,
-      };
-    }
-
-    if (productData.category) {
-      productSchema.category = productData.category;
-    }
-
-    const formattedPrice = formatSchemaPrice(productData.price);
-    if (formattedPrice) {
-      productSchema.offers = {
-        '@type': 'Offer',
-        url: productUrl,
-        price: formattedPrice,
-        priceCurrency: (productData.priceCurrency || 'USD').toUpperCase(),
-        availability: `https://schema.org/${productData.availability || 'InStock'}`,
-      };
-
-      const itemCondition = getSchemaCondition(productData.condition);
-      if (itemCondition) {
-        productSchema.offers.itemCondition = itemCondition;
-      }
-    }
-
-    if (productData.rating && productData.reviews && productData.reviews > 0) {
-      productSchema.aggregateRating = {
-        '@type': 'AggregateRating',
-        ratingValue: productData.rating,
-        reviewCount: productData.reviews,
-      };
-    }
-
-    graph.push(productSchema);
-  } else if (articleData) {
-    const articleSchema: Record<string, any> = {
-      '@type': 'Article',
-      headline: title,
-      description,
-      mainEntityOfPage: {
-        '@type': 'WebPage',
-        '@id': pageUrl,
-      },
-    };
-    
-    if (articleData.image) {
-      articleSchema.image = toAbsoluteUrl(articleData.image, pageUrl) || articleData.image;
-    }
-    if (articleData.author) {
-      articleSchema.author = {
-        '@type': 'Person',
-        name: articleData.author,
-      };
-    }
-    if (articleData.publishedDate) {
-      articleSchema.datePublished = articleData.publishedDate;
-    }
-    if (articleData.modifiedDate) {
-      articleSchema.dateModified = articleData.modifiedDate;
-    }
-
-    graph.push(articleSchema);
-  } else {
-    graph.push({
-      '@type': 'WebPage',
-      '@id': `${pageUrl}#webpage`,
-      name: title,
-      description,
-      url: pageUrl,
-    });
-  }
-
-  // Add breadcrumb structured data
-  if (breadcrumbs && breadcrumbs.length > 0) {
-    graph.push({
-      '@type': 'BreadcrumbList',
-      itemListElement: breadcrumbs.map((item, index) => ({
-        '@type': 'ListItem',
-        position: index + 1,
-        name: item.name,
-        item: getStructuredDataUrl(item.url, pageUrl),
-      })),
-    });
-  }
-
-  const structuredData =
-    graph.length === 1
-      ? { '@context': 'https://schema.org/', ...graph[0] }
-      : { '@context': 'https://schema.org/', '@graph': graph };
+  const structuredData = buildStructuredDataGraph({
+    pageType: inferredPageType,
+    title,
+    description,
+    pageUrl,
+    siteOrigin,
+    language: currentLanguage,
+    productData,
+    articleData,
+    breadcrumbs,
+    faqData,
+  });
   const structuredDataJson = JSON.stringify(structuredData);
   const keywordsContent = keywords.join(', ');
 
@@ -526,11 +362,17 @@ export function SEOHead({
       document.head.appendChild(defaultAlt);
     }
 
-    let scriptTag = document.querySelector('script[data-seo-head="true"]') as HTMLScriptElement;
+    let scriptTag = document.querySelector(STRUCTURED_DATA_SCRIPT_SELECTOR) as HTMLScriptElement;
+    if (!scriptTag) {
+      scriptTag = document.querySelector('script[data-seo-head="true"]') as HTMLScriptElement;
+    }
     if (!scriptTag) {
       scriptTag = document.createElement('script');
+      scriptTag.id = STRUCTURED_DATA_SCRIPT_ID;
       scriptTag.type = 'application/ld+json';
       scriptTag.setAttribute('data-seo-head', 'true');
+      scriptTag.setAttribute('data-schema', 'primary');
+      scriptTag.setAttribute('data-schema-purpose', 'seo-llm');
       document.head.appendChild(scriptTag);
     }
     scriptTag.textContent = structuredDataJson;

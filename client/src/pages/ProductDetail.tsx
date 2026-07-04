@@ -541,6 +541,7 @@ export default function ProductDetail() {
   return (
     <>
       <SEOHead
+        pageType="product"
         title={seoTitle}
         description={seoDescription}
         canonical={canonicalUrl}
@@ -999,6 +1000,16 @@ export default function ProductDetail() {
               ) : (
                 <p className="text-base text-gray-500">No product description available.</p>
               )}
+            </div>
+
+            <div className="mt-5 rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-800">Related internal links</p>
+              <p className="mt-2 text-sm text-gray-700">
+                Browse more in <a href={`/products?category=${encodeURIComponent(product?.category_name || '')}`} className="text-blue-700 hover:underline">{product?.category_name || 'this category'} parts</a>,
+                verify compatibility in the <a href="/faq" className="text-blue-700 hover:underline">fitment and part-quality FAQ</a>,
+                check <a href="/shipping" className="text-blue-700 hover:underline">shipping delivery timelines for auto parts</a>,
+                and review <a href="/returns" className="text-blue-700 hover:underline">returns and warranty terms</a> before purchase.
+              </p>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 declare global {
   interface Window {
@@ -30,9 +30,40 @@ function getTrustedScriptURL(url: string): string {
 
 export function TrustindexWidget() {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [shouldLoadScript, setShouldLoadScript] = useState(false);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || shouldLoadScript) return;
+
+    const scheduleLoad = () => {
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(() => setShouldLoadScript(true), { timeout: 2000 });
+        return;
+      }
+      globalThis.setTimeout(() => setShouldLoadScript(true), 600);
+    };
+
+    if (!('IntersectionObserver' in window)) {
+      scheduleLoad();
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (!entry || !entry.isIntersecting) return;
+        observer.disconnect();
+        scheduleLoad();
+      },
+      { rootMargin: '300px 0px' }
+    );
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [shouldLoadScript]);
+
+  useEffect(() => {
+    if (!containerRef.current || !shouldLoadScript) return;
 
     const container = containerRef.current;
     const existingScript = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
@@ -43,14 +74,28 @@ export function TrustindexWidget() {
       script.async = true;
       script.defer = true;
       script.src = getTrustedScriptURL(SCRIPT_SRC);
+      script.onload = () => {
+        if (typeof window.renderTrustindexWidgets === 'function') {
+          window.renderTrustindexWidgets();
+        }
+      };
       container.appendChild(script);
       return;
     }
 
     if (typeof window.renderTrustindexWidgets === 'function') {
       window.renderTrustindexWidgets();
+      return;
     }
-  }, []);
+
+    const onLoad = () => {
+      if (typeof window.renderTrustindexWidgets === 'function') {
+        window.renderTrustindexWidgets();
+      }
+    };
+    existingScript.addEventListener('load', onLoad);
+    return () => existingScript.removeEventListener('load', onLoad);
+  }, [shouldLoadScript]);
 
   return <div ref={containerRef} className="trustindex-widget" />;
 }

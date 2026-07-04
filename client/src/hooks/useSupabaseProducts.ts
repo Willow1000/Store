@@ -32,10 +32,17 @@ function writeCachedArray<T>(key: string, value: T[]) {
   }
 }
 
-export function useProducts(page = 1, limit = 20) {
+export function useProducts(
+  page = 1,
+  limit = 20,
+  options?: {
+    enableRealtime?: boolean;
+  }
+) {
   const [products, setProducts] = useState<Product[]>(() => readCachedArray<Product>(PRODUCTS_CACHE_KEY));
   const [isLoading, setIsLoading] = useState(() => readCachedArray<Product>(PRODUCTS_CACHE_KEY).length === 0);
   const [error, setError] = useState<string | null>(null);
+  const enableRealtime = options?.enableRealtime ?? true;
 
   const fetchProducts = useCallback(async (limit = 20, offset = 0) => {
     try {
@@ -92,6 +99,8 @@ export function useProducts(page = 1, limit = 20) {
 
   // Realtime subscription: update products list when DB changes occur
   useEffect(() => {
+    if (!enableRealtime) return;
+
     try {
       const channel = supabase
         .channel('public:products')
@@ -150,7 +159,7 @@ export function useProducts(page = 1, limit = 20) {
       // subscription failure shouldn't break app
       console.warn('Failed to subscribe to products realtime updates', err);
     }
-  }, []);
+  }, [enableRealtime]);
 
   useEffect(() => {
     const offset = limit === -1 ? 0 : (page - 1) * limit;

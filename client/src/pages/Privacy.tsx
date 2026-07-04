@@ -4,6 +4,7 @@ export default function Privacy() {
   return (
     <>
       <SEOHead
+        pageType="policy"
         title="Privacy Policy - MotorVault"
         description="MotorVault Privacy Policy. Learn how we collect, use, and protect your personal data. Your privacy is important to us."
         keywords={['privacy policy', 'data protection', 'personal information', 'privacy']}

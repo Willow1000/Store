@@ -1,7 +1,6 @@
 import { Link } from 'wouter';
 import { ChevronRight, Heart, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { HomePageSkeleton } from '@/components/skeletons/HomePageSkeleton';
 import { QuickViewModal } from '@/components/QuickViewModal';
 import { SEOHead } from '@/components/SEOHead';
 import { HeroSlideshow } from '@/components/HeroSlideshow';
@@ -62,12 +61,42 @@ const homeBannerSlides = [
 export default function Home() {
   const { user } = useAuth();
   const recommendations = useRecommendations(user?.id || null);
-  const { products, isLoading } = useProducts(1, 100); // Fetch 100 products for homepage recommendations
+  const isMobile = useIsMobile();
+  const homepageProductFetchLimit = isMobile ? 24 : 48;
+  const { products } = useProducts(1, homepageProductFetchLimit);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
   const { categories, isLoading: categoriesLoading } = useCategories();
-  const isMobile = useIsMobile();
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
+  const [showBelowFoldContent, setShowBelowFoldContent] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const reveal = () => {
+      if (!cancelled) {
+        setShowBelowFoldContent(true);
+      }
+    };
+
+    const onUserIntent = () => reveal();
+    window.addEventListener('scroll', onUserIntent, { once: true, passive: true });
+    window.addEventListener('pointerdown', onUserIntent, { once: true, passive: true });
+    window.addEventListener('keydown', onUserIntent, { once: true });
+
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(reveal, { timeout: 1400 });
+    } else {
+      globalThis.setTimeout(reveal, 900);
+    }
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('scroll', onUserIntent);
+      window.removeEventListener('pointerdown', onUserIntent);
+      window.removeEventListener('keydown', onUserIntent);
+    };
+  }, []);
 
   // Load recently viewed items from localStorage
   useEffect(() => {
@@ -137,13 +166,10 @@ export default function Home() {
     return categories.slice(0, isMobile ? 6 : 10);
   }, [categories, isMobile]);
 
-  if (isLoading || categoriesLoading) {
-    return <HomePageSkeleton />;
-  }
-
   return (
     <>
       <SEOHead
+        pageType="homepage"
         title="MotorVault - Buy Automotive Parts Online | OEM & Aftermarket"
         description="Shop automotive parts from MotorVault. Wide selection of OEM and aftermarket parts. Free shipping over $1500. Quality guaranteed. Shop now!"
         keywords={['automobile parts', 'car parts', 'auto parts', 'aftermarket parts', 'OEM parts', 'motor parts online']}
@@ -153,21 +179,40 @@ export default function Home() {
         {/* Hero Slideshow */}
         <HeroSlideshow />
 
-        {/* Google Reviews Widget - high-visibility homepage placement */}
         <section className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-10 sm:py-12">
           <div className="rounded-[2rem] bg-white border border-slate-200 shadow-sm p-6 sm:p-8">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">Trusted Reviews</p>
-                <h2 className="mt-2 text-3xl font-extrabold text-slate-900">See why customers love MotorVault</h2>
+                <h2 className="mt-2 text-3xl font-extrabold text-slate-900">Why buyers trust our fitment-first approach</h2>
               </div>
             </div>
             <TrustindexWidget />
           </div>
         </section>
 
+        <section className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 pb-8 sm:pb-10">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Link href="/faq" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Fitment</p>
+              <h3 className="mt-2 text-lg font-bold text-slate-900">Will this part fit my vehicle?</h3>
+              <p className="mt-2 text-sm text-slate-600">See VIN and compatibility guidance before you buy.</p>
+            </Link>
+            <Link href="/faq" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Part Quality</p>
+              <h3 className="mt-2 text-lg font-bold text-slate-900">OEM vs aftermarket vs used?</h3>
+              <p className="mt-2 text-sm text-slate-600">Compare options by quality tier, risk, and budget.</p>
+            </Link>
+            <Link href="/faq" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Post-Purchase</p>
+              <h3 className="mt-2 text-lg font-bold text-slate-900">Returns, warranty, and shipping timing</h3>
+              <p className="mt-2 text-sm text-slate-600">Get clarity on what happens after checkout.</p>
+            </Link>
+          </div>
+        </section>
+
         {/* Your Recently Viewed Items Section */}
-      {hasRecentlyViewedProducts && (
+      {showBelowFoldContent && hasRecentlyViewedProducts && (
         <div className="bg-white border-b">
           <div className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
             <div className="flex items-center justify-between mb-4">
@@ -288,89 +333,89 @@ export default function Home() {
         </div>
       )}
 
-      <ProductRecommendationSection
-        title="Recommended For You"
-        products={recommendedForYouProducts}
-        wishedProductIds={wishedProductIds}
-        onWishlistToggle={handleRecommendationWishlistToggle}
-        onQuickView={(productId) => handleRecommendationQuickView('home_recommended_for_you', productId)}
-        onProductClick={(product) => handleRecommendationClick('home_recommended_for_you', product)}
-        ctaHref="/products"
-        compact
-      />
+      {showBelowFoldContent && (
+        <>
+          <ProductRecommendationSection
+            title="Recommended For You"
+            products={recommendedForYouProducts}
+            wishedProductIds={wishedProductIds}
+            onWishlistToggle={handleRecommendationWishlistToggle}
+            onQuickView={(productId) => handleRecommendationQuickView('home_recommended_for_you', productId)}
+            onProductClick={(product) => handleRecommendationClick('home_recommended_for_you', product)}
+            ctaHref="/products"
+            compact
+          />
 
-      <section className="bg-gray-50 py-10 sm:py-14 lg:py-16">
-        <BannerCarousel slides={homeBannerSlides} tone="dark" />
-      </section>
+          <section className="bg-gray-50 py-10 sm:py-14 lg:py-16">
+            <BannerCarousel slides={homeBannerSlides} tone="dark" />
+          </section>
 
-      <ProductRecommendationSection
-        title="Deals You May Like"
-        products={personalizedDealProducts}
-        wishedProductIds={wishedProductIds}
-        onWishlistToggle={handleRecommendationWishlistToggle}
-        onQuickView={(productId) => handleRecommendationQuickView('home_personalized_deals', productId)}
-        onProductClick={(product) => handleRecommendationClick('home_personalized_deals', product)}
-        ctaHref="/products"
-        ctaLabel="Shop deals"
-        compact
-      />
+          <ProductRecommendationSection
+            title="Deals You May Like"
+            products={personalizedDealProducts}
+            wishedProductIds={wishedProductIds}
+            onWishlistToggle={handleRecommendationWishlistToggle}
+            onQuickView={(productId) => handleRecommendationQuickView('home_personalized_deals', productId)}
+            onProductClick={(product) => handleRecommendationClick('home_personalized_deals', product)}
+            ctaHref="/products"
+            ctaLabel="Shop deals"
+            compact
+          />
 
-      {/* Shop by Category Section */}
-      <div className="bg-white py-6">
-        <div className="max-w-screen-xl mx-auto px-2 sm:px-3 md:px-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Shop by Category</h2>
-            <Link href="/products" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-              View all <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* Categories Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {categoriesLoading ? (
-              Array.from({ length: isMobile ? 6 : 10 }).map((_, i) => (
-                <Skeleton key={i} className="h-40 w-full rounded-lg" />
-              ))
-            ) : displayedCategories.length > 0 ? (
-              displayedCategories.map((cat) => (
-                <Link key={cat.id} href={`/products?category=${encodeURIComponent(cat.slug || cat.name || '')}`}>
-                  <div className="group relative h-40 overflow-hidden rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
-                    {/* Fallback visual layer (shown when image is missing or fails) */}
-                    <div className="absolute inset-0 flex items-center justify-center text-5xl leading-none text-white/90">
-                      {cat.icon || '📦'}
-                    </div>
-
-                    {cat.image_url && (
-                      <img
-                        src={getHighResImageUrl(cat.image_url)}
-                        alt={cat.name}
-                        className="absolute inset-0 h-full w-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    )}
-
-                    {/* Text contrast overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-                    <p className="absolute bottom-2 left-2 right-2 font-semibold text-white text-sm text-center line-clamp-2">
-                      {cat.name}
-                    </p>
-                  </div>
+          <div className="bg-white py-6">
+            <div className="max-w-screen-xl mx-auto px-2 sm:px-3 md:px-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Shop by Category</h2>
+                <Link href="/products" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                  View all <ChevronRight className="w-4 h-4" />
                 </Link>
-              ))
-            ) : (
-              <div className="col-span-full py-12 text-center">
-                <p className="text-gray-500 text-lg">No categories available ({categories.length} categories loaded)</p>
               </div>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {quickViewProductId && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {categoriesLoading ? (
+                  Array.from({ length: isMobile ? 6 : 10 }).map((_, i) => (
+                    <Skeleton key={i} className="h-40 w-full rounded-lg" />
+                  ))
+                ) : displayedCategories.length > 0 ? (
+                  displayedCategories.map((cat) => (
+                    <Link key={cat.id} href={`/products?category=${encodeURIComponent(cat.slug || cat.name || '')}`}>
+                      <div className="group relative h-40 overflow-hidden rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
+                        <div className="absolute inset-0 flex items-center justify-center text-5xl leading-none text-white/90">
+                          {cat.icon || '📦'}
+                        </div>
+
+                        {cat.image_url && (
+                          <img
+                            src={getHighResImageUrl(cat.image_url)}
+                            alt={cat.name}
+                            className="absolute inset-0 h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        )}
+
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                        <p className="absolute bottom-2 left-2 right-2 font-semibold text-white text-sm text-center line-clamp-2">
+                          {cat.name}
+                        </p>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="col-span-full py-12 text-center">
+                    <p className="text-gray-500 text-lg">No categories available ({categories.length} categories loaded)</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {showBelowFoldContent && quickViewProductId && (
         <QuickViewModal
           productId={quickViewProductId}
           isOpen={!!quickViewProductId}

@@ -4,6 +4,7 @@ export default function Accessibility() {
   return (
     <>
       <SEOHead
+        pageType="policy"
         title="Accessibility Statement - MotorVault"
         description="MotorVault Accessibility Statement. We're committed to making our website accessible to all users."
         keywords={['accessibility', 'WCAG', 'inclusive design', 'accessibility statement']}
