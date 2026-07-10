@@ -358,6 +358,29 @@ function buildBreadcrumbs(
   };
 }
 
+function buildFaqPage(faqData: FAQSchemaInput[] | undefined, pageUrl: string): Record<string, unknown> | null {
+  if (!Array.isArray(faqData) || faqData.length === 0) return null;
+
+  const mainEntity = faqData
+    .filter((item) => item.question?.trim() && item.answer?.trim())
+    .map((item) => ({
+      '@type': 'Question',
+      name: item.question.trim(),
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer.trim(),
+      },
+    }));
+
+  if (mainEntity.length === 0) return null;
+
+  return {
+    '@type': 'FAQPage',
+    '@id': `${pageUrl}#faq`,
+    mainEntity,
+  };
+}
+
 export function buildStructuredDataGraph(options: BuildSchemaOptions): Record<string, unknown> {
   const graph: Record<string, unknown>[] = [];
 
@@ -373,6 +396,11 @@ export function buildStructuredDataGraph(options: BuildSchemaOptions): Record<st
   const breadcrumbs = buildBreadcrumbs(options.breadcrumbs, options.pageUrl);
   if (breadcrumbs) {
     graph.push(breadcrumbs);
+  }
+
+  const faqPage = buildFaqPage(options.faqData, options.pageUrl);
+  if (faqPage) {
+    graph.push(faqPage);
   }
 
   return stripEmpty({

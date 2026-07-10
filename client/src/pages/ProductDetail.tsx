@@ -1,6 +1,6 @@
 import { useRoute, useLocation } from 'wouter';
 import { ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
-import { ProductDetailSkeleton } from '@/components/skeletons/ProductDetailSkeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Link } from 'wouter';
 import { SEOHead } from '@/components/SEOHead';
@@ -14,7 +14,7 @@ import currencyClient from '@/lib/currencyClient';
 import { getHighResImageUrl } from '@/lib/images';
 import { trackAddToCart, trackViewContent } from '@/hooks/useMetaPixel';
 import { ProductRecommendationSection } from '@/components/ProductRecommendationSection';
-import { TrustindexWidget } from '@/components/TrustindexWidget';
+import { BlootrueWidget } from '@/components/TrustindexWidget';
 import { useRecommendations } from '@/hooks/useRecommendations';
 import { buildContactHref, getEnquiryCopy } from '@/lib/enquiry';
 import { getSiteLanguage } from '@/lib/language';
@@ -357,7 +357,43 @@ export default function ProductDetail() {
           ogImage={seoImage}
           keywords={seoKeywords}
         />
-        <ProductDetailSkeleton />
+        <main role="main" className="bg-white min-h-screen w-full overflow-x-hidden">
+          <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
+            <div className="mb-6">
+              <Skeleton className="h-5 w-64" />
+            </div>
+
+            <div className="lg:grid lg:grid-cols-2 lg:gap-x-20 xl:gap-x-24 lg:items-start">
+              <section className="space-y-4">
+                <Skeleton className="h-[420px] w-full rounded-lg" />
+                <div className="grid grid-cols-5 gap-2">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <Skeleton key={idx} className="h-16 w-full rounded-md" />
+                  ))}
+                </div>
+              </section>
+
+              <section className="mt-10 px-4 sm:px-0 sm:mt-16 lg:mt-0 space-y-4">
+                <Skeleton className="h-10 w-5/6" />
+                <Skeleton className="h-8 w-1/3" />
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-4/5" />
+                <Skeleton className="h-12 w-full rounded-md" />
+                <Skeleton className="h-12 w-full rounded-md" />
+                <Skeleton className="h-40 w-full rounded-3xl" />
+              </section>
+            </div>
+
+            <div className="mt-12 border-t border-gray-200 pt-12 space-y-4">
+              <Skeleton className="h-8 w-56" />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <Skeleton key={idx} className="h-20 w-full rounded-md" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
       </>
     );
   }
@@ -833,7 +869,7 @@ export default function ProductDetail() {
               {/* Product detail review widget for high-intent shoppers */}
               <div className="mt-8 rounded-3xl bg-slate-50 border border-slate-200 p-5">
                 <h2 className="text-lg font-semibold text-slate-900 mb-3">Customer feedback</h2>
-                <TrustindexWidget />
+                <BlootrueWidget />
               </div>
 
               {/* Out of Stock Message */}

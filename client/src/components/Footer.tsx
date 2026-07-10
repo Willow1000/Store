@@ -8,11 +8,22 @@ export default function Footer() {
   const t = (key: string, fallback: string) => translateText(language, key, fallback);
 
   useEffect(() => {
+    const syncFromStorage = () => {
+      const storedLanguage = getSiteLanguage();
+      if (storedLanguage !== language) {
+        setLanguage(storedLanguage);
+      }
+    };
+
+    syncFromStorage();
+    const timer = window.setTimeout(syncFromStorage, 800);
+
     const onLanguageChanged = () => setLanguage(getSiteLanguage());
     window.addEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
     window.addEventListener('storage', onLanguageChanged);
 
     return () => {
+      window.clearTimeout(timer);
       window.removeEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
       window.removeEventListener('storage', onLanguageChanged);
     };

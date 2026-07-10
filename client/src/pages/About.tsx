@@ -125,8 +125,28 @@ export default function About() {
     <>
       <SEOHead
         pageType="about"
-        title="About MotorVault - Trusted Automotive Parts Sourcing"
-        description="Learn how MotorVault sources, inspects, and lists automotive parts with transparency, warranty support, and customer-first service."
+        title="About MotorVault - Trusted Automotive Parts Sourcing in Europe"
+        description="Learn how MotorVault supports fitment-first automotive parts sourcing across Europe, including guidance for Dutch searches such as motorblokken auto and auto motorblok kopen."
+        keywords={[
+          'motorvault',
+          'automotive parts sourcing',
+          'motorblokken auto',
+          'auto motorblokken',
+          'motorparts nederland',
+          'auto motorblok kopen',
+        ]}
+        faqData={[
+          {
+            question: 'Kan ik via MotorVault auto motorblokken aanvragen in Nederland?',
+            answer:
+              'Ja. MotorVault ondersteunt Nederlandse klanten met fitment-first begeleiding voor motorblokken auto op basis van voertuigdetails.',
+          },
+          {
+            question: 'Biedt MotorVault motorparts Nederland met OEM en aftermarket keuzes?',
+            answer:
+              'Ja. We helpen je OEM en aftermarket opties vergelijken op beschikbaarheid, prijs en fitment-risico.',
+          },
+        ]}
         canonical="/about"
       />
 
@@ -325,6 +345,26 @@ export default function About() {
                     </div>
                   </a>
                 ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-10 border-t border-gray-200 pt-8 sm:pt-10">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Dutch Support</p>
+              <h2 className="mt-2 text-xl sm:text-2xl font-bold text-slate-900">
+                Netherlands-focused sourcing guidance
+              </h2>
+              <p className="mt-3 text-sm sm:text-base text-slate-700 max-w-3xl">
+                For users searching terms like motorblokken auto, auto motorblokken, or auto motorblok kopen, we provide a dedicated Dutch page with fitment-focused guidance.
+              </p>
+              <div className="mt-4">
+                <Link href="/nl/auto-motorblokken">
+                  <a className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition-colors">
+                    View Dutch motorblokken page
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                </Link>
               </div>
             </div>
           </section>

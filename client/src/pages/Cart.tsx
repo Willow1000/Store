@@ -224,51 +224,7 @@ export default function Cart() {
   const total = subtotal + shipping + vat;
 
   const shouldShowLoadingState = !sessionRestored || authLoading || awaitingCartHydration || (isAuthenticated && isSupabaseLoading);
-
-  if (isLoading || shouldShowLoadingState) {
-    return (
-      <div className="min-h-screen bg-background w-full overflow-x-hidden">
-        <div className="container px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12 space-y-6">
-          <Skeleton className="h-10 w-56" />
-          <div className="grid gap-6 md:gap-8 md:grid-cols-3">
-            <div className="md:col-span-2 space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex gap-4 rounded-lg border border-border bg-white p-4">
-                  <Skeleton className="h-24 w-24 rounded-lg bg-gray-100 flex-shrink-0" />
-                  <div className="flex-1 space-y-3">
-                    <Skeleton className="h-5 w-11/12" />
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-4 w-20" />
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-10 w-10 rounded-md" />
-                      <Skeleton className="h-4 w-8" />
-                      <Skeleton className="h-10 w-10 rounded-md" />
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end justify-between">
-                    <Skeleton className="h-5 w-20" />
-                    <Skeleton className="h-10 w-10 rounded-md" />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-4 rounded-lg border border-border bg-white p-5">
-              <Skeleton className="h-6 w-32" />
-              <div className="space-y-3">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-10 w-40 rounded-lg" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const showCartLoading = isLoading || shouldShowLoadingState;
 
   const enrichedCartItems = effectiveCartItems.map((item) => {
     const product = resolveProduct(item);
@@ -279,7 +235,7 @@ export default function Cart() {
     };
   });
 
-  if (effectiveCartItems.length === 0) {
+  if (!showCartLoading && effectiveCartItems.length === 0) {
     return (
           <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-secondary py-12 sm:py-16">
@@ -370,7 +326,27 @@ export default function Cart() {
           {/* Cart Items */}
           <div className="md:col-span-2">
             <div className="space-y-4">
-              {enrichedCartItems.map((item) => (
+              {showCartLoading
+                ? [...Array(3)].map((_, i) => (
+                  <div key={i} className="flex gap-4 rounded-lg border border-border bg-white p-4">
+                    <Skeleton className="h-24 w-24 rounded-lg bg-gray-100 flex-shrink-0" />
+                    <div className="flex-1 space-y-3">
+                      <Skeleton className="h-5 w-11/12" />
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-4 w-20" />
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-10 w-10 rounded-md" />
+                        <Skeleton className="h-4 w-8" />
+                        <Skeleton className="h-10 w-10 rounded-md" />
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end justify-between">
+                      <Skeleton className="h-5 w-20" />
+                      <Skeleton className="h-10 w-10 rounded-md" />
+                    </div>
+                  </div>
+                ))
+                : enrichedCartItems.map((item) => (
                 <div key={item.productId || item.productIndex} className="flex gap-4 rounded-lg border border-border bg-white p-4">
                   {/* Product Image */}
                   <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-secondary">
@@ -442,69 +418,86 @@ export default function Cart() {
                     </button>
                   </div>
                 </div>
-              ))}
+                ))}
             </div>
 
             {/* Continue Shopping */}
-            <Link href="/products">
-              <a className="mt-6 inline-flex items-center gap-2 text-sm font-semibold hover:text-gray-600">
-                ← {t('cart.continueShopping', 'Continue Shopping')}
-              </a>
-            </Link>
+            {!showCartLoading && (
+              <Link href="/products">
+                <a className="mt-6 inline-flex items-center gap-2 text-sm font-semibold hover:text-gray-600">
+                  ← {t('cart.continueShopping', 'Continue Shopping')}
+                </a>
+              </Link>
+            )}
           </div>
 
           {/* Order Summary */}
           <div className="rounded-lg border border-border bg-white p-4 sm:p-6 h-fit">
             <h2 className="mb-4 sm:mb-6 text-lg sm:text-xl font-bold">{t('checkout.orderSummary', 'Order Summary')}</h2>
 
-            <div className="space-y-3 sm:space-y-4 border-b border-border pb-4">
-              <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-600">{t('checkout.subtotal', 'Subtotal')}</span>
-                <span className="font-semibold">{currencyClient.formatUSD(subtotal)}</span>
+            {showCartLoading ? (
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-10 w-40 rounded-lg" />
               </div>
-              <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-600">{t('checkout.estimatedShipping', 'Estimated shipping')}</span>
-                <span className="font-semibold">
-                  {shipping === 0 ? t('checkout.free', 'FREE') : currencyClient.formatUSD(shipping)}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-600">
-                  {t('checkout.vat', 'V.A.T')} ({(vatSummary.weightedAverageRate * 100).toFixed(2)}%, max {(vatSummary.maxRate * 100).toFixed(0)}%)
-                </span>
-                <span className="font-semibold">{currencyClient.formatUSD(vat)}</span>
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="space-y-3 sm:space-y-4 border-b border-border pb-4">
+                  <div className="flex justify-between text-xs sm:text-sm">
+                    <span className="text-gray-600">{t('checkout.subtotal', 'Subtotal')}</span>
+                    <span className="font-semibold">{currencyClient.formatUSD(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs sm:text-sm">
+                    <span className="text-gray-600">{t('checkout.estimatedShipping', 'Estimated shipping')}</span>
+                    <span className="font-semibold">
+                      {shipping === 0 ? t('checkout.free', 'FREE') : currencyClient.formatUSD(shipping)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs sm:text-sm">
+                    <span className="text-gray-600">
+                      {t('checkout.vat', 'V.A.T')} ({(vatSummary.weightedAverageRate * 100).toFixed(2)}%, max {(vatSummary.maxRate * 100).toFixed(0)}%)
+                    </span>
+                    <span className="font-semibold">{currencyClient.formatUSD(vat)}</span>
+                  </div>
+                </div>
 
-            <div className="my-4 flex justify-between">
-              <span className="font-bold text-base sm:text-lg">{t('checkout.total', 'Total')}</span>
-              <span className="text-xl sm:text-2xl font-bold">{currencyClient.formatUSD(total)}</span>
-            </div>
+                <div className="my-4 flex justify-between">
+                  <span className="font-bold text-base sm:text-lg">{t('checkout.total', 'Total')}</span>
+                  <span className="text-xl sm:text-2xl font-bold">{currencyClient.formatUSD(total)}</span>
+                </div>
 
-            <p className="mb-2 text-xs text-gray-600">
-              {t('checkout.shippingEstimateDisclaimer', 'Shipping shown is an estimate. Final shipping is confirmed at checkout.')}
-            </p>
-            {shipping > 0 && (
-              <p className="mb-4 text-xs text-gray-600">
-                {t('checkout.freeShippingNotice', `Shipping fee is 5% for orders under $${getFreeShippingThresholdUsd().toLocaleString('en-US')}`)}
-              </p>
+                <p className="mb-2 text-xs text-gray-600">
+                  {t('checkout.shippingEstimateDisclaimer', 'Shipping shown is an estimate. Final shipping is confirmed at checkout.')}
+                </p>
+                {shipping > 0 && (
+                  <p className="mb-4 text-xs text-gray-600">
+                    {t('checkout.freeShippingNotice', `Shipping fee is 5% for orders under $${getFreeShippingThresholdUsd().toLocaleString('en-US')}`)}
+                  </p>
+                )}
+
+                <button
+                  onClick={() => {
+                    // Always allow navigating to checkout; inline auth will be shown on the checkout page
+                    navigate('/checkout');
+                  }}
+                  className="w-full py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                >
+                  {t('checkout.proceedToCheckout', 'Proceed to Checkout')}
+                </button>
+
+                <Link href="/products">
+                  <a className="mt-3 w-full inline-block text-center py-2.5 sm:py-3 rounded-lg border border-border bg-background font-semibold hover:bg-secondary transition-colors text-sm sm:text-base">
+                    {t('cart.continueShopping', 'Continue Shopping')}
+                  </a>
+                </Link>
+              </>
             )}
-
-            <button
-              onClick={() => {
-                // Always allow navigating to checkout; inline auth will be shown on the checkout page
-                navigate('/checkout');
-              }}
-              className="w-full py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base"
-            >
-              {t('checkout.proceedToCheckout', 'Proceed to Checkout')}
-            </button>
-
-            <Link href="/products">
-              <a className="mt-3 w-full inline-block text-center py-2.5 sm:py-3 rounded-lg border border-border bg-background font-semibold hover:bg-secondary transition-colors text-sm sm:text-base">
-                {t('cart.continueShopping', 'Continue Shopping')}
-              </a>
-            </Link>
           </div>
         </div>
       </div>

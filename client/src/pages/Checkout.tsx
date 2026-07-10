@@ -1407,60 +1407,7 @@ export default function Checkout() {
     return null;
   }
 
-  // Avoid hiding the full checkout UI during transient auth/cart loading on refresh.
-  // Only show the skeleton while the initial session restoration is in-flight.
-  if (!sessionRestored && authLoading) {
-    return (
-      <div className="min-h-screen bg-white w-full overflow-x-hidden">
-        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-12 lg:py-16 animate-pulse">
-          <div className="mb-8">
-            <div className="h-10 w-64 bg-gray-200 rounded mb-3" />
-            <div className="h-4 w-72 bg-gray-100 rounded" />
-          </div>
-
-          <div className="grid gap-6 sm:gap-8 grid-cols-1 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-4">
-              <div className="h-24 bg-gray-100 rounded border border-gray-200" />
-              <div className="bg-white border border-gray-200 rounded p-6 space-y-4">
-                <div className="h-7 w-48 bg-gray-200 rounded" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="h-11 bg-gray-100 rounded" />
-                  <div className="h-11 bg-gray-100 rounded" />
-                </div>
-                <div className="h-11 bg-gray-100 rounded" />
-                <div className="h-11 bg-gray-100 rounded" />
-                <div className="h-11 bg-gray-100 rounded" />
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="h-11 bg-gray-100 rounded" />
-                  <div className="h-11 bg-gray-100 rounded" />
-                  <div className="h-11 bg-gray-100 rounded" />
-                </div>
-                <div className="h-12 bg-gray-200 rounded" />
-              </div>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded p-6 space-y-4 h-fit">
-              <div className="h-6 w-36 bg-gray-200 rounded" />
-              <div className="space-y-3">
-                <div className="h-16 bg-gray-100 rounded" />
-                <div className="h-16 bg-gray-100 rounded" />
-              </div>
-              <div className="h-px bg-gray-200" />
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-100 rounded" />
-                <div className="h-4 bg-gray-100 rounded" />
-                <div className="h-4 bg-gray-100 rounded" />
-              </div>
-              <div className="h-px bg-gray-200" />
-              <div className="h-8 w-32 bg-gray-200 rounded" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isMetaCheckout && !isAuthenticated) {
+  if (!isMetaCheckout && !isAuthenticated && sessionRestored && !authLoading) {
     return (
       <div className="min-h-screen bg-white py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-screen-xl mx-auto">

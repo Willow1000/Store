@@ -6,7 +6,7 @@ import { SEOHead } from '@/components/SEOHead';
 import { HeroSlideshow } from '@/components/HeroSlideshow';
 import { BannerCarousel } from '@/components/BannerCarousel';
 import { ProductRecommendationSection } from '@/components/ProductRecommendationSection';
-import { TrustindexWidget } from '@/components/TrustindexWidget';
+import { BlootrueWidget } from '@/components/TrustindexWidget';
 import { toast } from 'sonner';
 import { useProducts, useCategories } from '@/hooks/useSupabaseProducts';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -187,7 +187,7 @@ export default function Home() {
                 <h2 className="mt-2 text-3xl font-extrabold text-slate-900">Why buyers trust our fitment-first approach</h2>
               </div>
             </div>
-            <TrustindexWidget />
+            <BlootrueWidget />
           </div>
         </section>
 

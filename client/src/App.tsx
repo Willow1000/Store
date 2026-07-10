@@ -9,8 +9,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AuthModal from "./components/AuthModal";
 import { AuthModalProvider } from "./contexts/AuthModalContext";
-import Header from "./components/Header";
-import Footer from "./components/Footer";
 import { SITE_LANGUAGE_CHANGED_EVENT, getSiteLanguage, getSiteLanguageSource, translateText, type SiteLanguageCode } from "./lib/language";
 import { preloadTranslations, useGlobalAutoTranslation } from "./lib/autoTranslate";
 import currencyClient from "./lib/currencyClient";
@@ -45,11 +43,15 @@ const Accessibility = lazy(() => import("./pages/Accessibility"));
 const FAQ = lazy(() => import("./pages/FAQ"));
 const SiteMap = lazy(() => import("./pages/SiteMap.tsx"));
 const Tickets = lazy(() => import("./pages/Tickets"));
+const AutoMotorblokkenNederland = lazy(() => import("./pages/AutoMotorblokkenNederland"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const PaymentFailed = lazy(() => import("./pages/PaymentFailed"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Header = lazy(() => import("./components/Header"));
+const Footer = lazy(() => import("./components/Footer"));
 
 const PRELOAD_DONE_KEY_PREFIX = 'site-translation-preload-done';
+const ROUTE_TRANSLATION_DONE_KEY_PREFIX = 'route-translation-done-v1';
 
 function getPreloadDoneKey(language: SiteLanguageCode): string {
   return `${PRELOAD_DONE_KEY_PREFIX}:${TRANSLATION_PRELOAD_VERSION}:${language}`;
@@ -68,6 +70,28 @@ function markPreloadDone(language: SiteLanguageCode): void {
   if (language === 'en') return;
   try {
     localStorage.setItem(getPreloadDoneKey(language), '1');
+  } catch {
+    // ignore storage issues
+  }
+}
+
+function getRouteTranslationDoneKey(language: SiteLanguageCode, path: string): string {
+  return `${ROUTE_TRANSLATION_DONE_KEY_PREFIX}:${language}:${path}`;
+}
+
+function isRouteTranslationDone(language: SiteLanguageCode, path: string): boolean {
+  if (language === 'en') return true;
+  try {
+    return localStorage.getItem(getRouteTranslationDoneKey(language, path)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markRouteTranslationDone(language: SiteLanguageCode, path: string): void {
+  if (language === 'en') return;
+  try {
+    localStorage.setItem(getRouteTranslationDoneKey(language, path), '1');
   } catch {
     // ignore storage issues
   }
@@ -96,6 +120,7 @@ function AppRoutes() {
       <Route path={"/terms"} component={Terms} />
       <Route path={"/cookies"} component={Cookies} />
       <Route path={"/tickets"} component={Tickets} />
+      <Route path={"/nl/auto-motorblokken"} component={AutoMotorblokkenNederland} />
       <Route path={"/accessibility"} component={Accessibility} />
       <Route path={"/faq"} component={FAQ} />
       <Route path={"/site-map"} component={SiteMap} />
@@ -189,6 +214,32 @@ function ContentPageSkeleton() {
         <Skeleton className="h-24 w-full rounded-xl" />
         <Skeleton className="h-24 w-full rounded-xl" />
         <Skeleton className="h-24 w-full rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+function HeaderFallback() {
+  return (
+    <div className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+      <div className="mx-auto flex h-16 max-w-screen-xl items-center gap-4 px-3 sm:px-4 lg:px-6">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-9 flex-1" />
+        <Skeleton className="h-8 w-24" />
+      </div>
+    </div>
+  );
+}
+
+function FooterFallback() {
+  return (
+    <div className="border-t border-border bg-white">
+      <div className="mx-auto max-w-screen-xl px-3 py-8 sm:px-4 lg:px-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
       </div>
     </div>
   );
@@ -320,77 +371,83 @@ function AppContent() {
   const canonicalPath = location.startsWith('/') ? location : `/${location}`;
   const [language, setLanguage] = useState<SiteLanguageCode>(() => getSiteLanguage());
   const [pendingLanguage, setPendingLanguage] = useState<SiteLanguageCode | null>(null);
-  const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
-  const [routePendingTranslation, setRoutePendingTranslation] = useState(false);
-  const [showRouteSkeleton, setShowRouteSkeleton] = useState(false);
+  const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
   const [preloadedLanguage, setPreloadedLanguage] = useState<SiteLanguageCode | null>(null);
+  const [showTranslationOverlay, setShowTranslationOverlay] = useState(false);
 
   const { isTranslating, hasTranslationError, readyLanguage } = useGlobalAutoTranslation(language);
+
+  useEffect(() => {
+    // Bootstrap sync: if geo auto-detection updated localStorage before listeners mounted,
+    // align in-memory language state with persisted value.
+    const syncFromStorage = () => {
+      const storedLanguage = getSiteLanguage();
+      if (storedLanguage !== language) {
+        setLanguage(storedLanguage);
+      }
+    };
+
+    syncFromStorage();
+    const timer = window.setTimeout(syncFromStorage, 800);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const isAwaitingLanguage =
     pendingLanguage !== null &&
     !hasTranslationError &&
     readyLanguage !== pendingLanguage;
 
-  const shouldBlockUntilTranslated =
-    false;
-  const showLanguageLoading = isAwaitingLanguage && showLoadingOverlay;
-  const showTranslationSkeleton = false;
+  const showTranslationLoading =
+    language !== 'en' &&
+    isLanguageSwitching &&
+    pendingLanguage !== null &&
+    !hasTranslationError &&
+    (isAwaitingLanguage || isTranslating);
   const loadingLabel = translateText(language, 'loading.selectedLanguage', 'Loading selected language...');
 
   useEffect(() => {
     if (!pendingLanguage) return;
     if (hasTranslationError || readyLanguage === pendingLanguage) {
       setPendingLanguage(null);
-      setShowLoadingOverlay(false);
+      setIsLanguageSwitching(false);
     }
   }, [pendingLanguage, readyLanguage, hasTranslationError]);
 
   useEffect(() => {
-    if (language === 'en' || hasTranslationError) {
-      setRoutePendingTranslation(false);
-      return;
+    if (language === 'en') return;
+    if (readyLanguage !== language) return;
+    if (isTranslating) return;
+
+    markRouteTranslationDone(language, canonicalPath);
+
+    if (pendingLanguage === language) {
+      setPendingLanguage(null);
+      setIsLanguageSwitching(false);
     }
-    setRoutePendingTranslation(true);
-  }, [location, language, hasTranslationError]);
+  }, [language, canonicalPath, readyLanguage, isTranslating, pendingLanguage]);
 
   useEffect(() => {
-    if (language === 'en' || hasTranslationError) {
-      setRoutePendingTranslation(false);
-      return;
-    }
-    if (routePendingTranslation && !isTranslating) {
-      setRoutePendingTranslation(false);
-    }
-  }, [routePendingTranslation, isTranslating, language, hasTranslationError]);
+    if (!isLanguageSwitching || !pendingLanguage) return;
+
+    // Fail-safe: never allow translation overlay to stick indefinitely.
+    const timeout = window.setTimeout(() => {
+      setPendingLanguage(null);
+      setIsLanguageSwitching(false);
+    }, 6000);
+
+    return () => window.clearTimeout(timeout);
+  }, [isLanguageSwitching, pendingLanguage]);
 
   useEffect(() => {
-    if (!isAwaitingLanguage) {
-      setShowLoadingOverlay(false);
-      return;
-    }
-
-    // Avoid flashing the loader for very fast language transitions.
-    const timer = window.setTimeout(() => setShowLoadingOverlay(true), 90);
-    return () => window.clearTimeout(timer);
-  }, [isAwaitingLanguage]);
-
-  useEffect(() => {
-    const needsSkeleton = isAwaitingLanguage || routePendingTranslation;
-    if (!needsSkeleton) {
-      setShowRouteSkeleton(false);
-      return;
-    }
-
-    // Small delay avoids skeleton flash on instant cache hits.
-    const timer = window.setTimeout(() => setShowRouteSkeleton(true), 90);
-    return () => window.clearTimeout(timer);
-  }, [isAwaitingLanguage, routePendingTranslation]);
+    setShowTranslationOverlay(showTranslationLoading);
+  }, [showTranslationLoading]);
 
   useEffect(() => {
     const onLanguageChanged = () => {
       const nextLanguage = getSiteLanguage();
-      setPendingLanguage(nextLanguage);
+      const alreadyTranslatedRoute = isRouteTranslationDone(nextLanguage, canonicalPath);
+      setPendingLanguage(alreadyTranslatedRoute ? null : nextLanguage);
+      setIsLanguageSwitching(nextLanguage !== 'en' && !alreadyTranslatedRoute);
       setLanguage(nextLanguage);
       if (!isPreloadDone(nextLanguage) && nextLanguage !== 'en') {
         void preloadTranslations(nextLanguage, GLOBAL_TRANSLATION_PRELOAD_TEXTS).then(() => {
@@ -405,7 +462,7 @@ function AppContent() {
       window.removeEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
       window.removeEventListener('storage', onLanguageChanged);
     };
-  }, []);
+  }, [canonicalPath]);
 
   useEffect(() => {
     if (language === 'en') return;
@@ -498,20 +555,26 @@ function AppContent() {
 
             <div
               className="flex min-h-screen flex-col bg-background w-full overflow-x-hidden"
-              style={{ visibility: shouldBlockUntilTranslated ? 'hidden' : 'visible' }}
+              style={{ visibility: 'visible' }}
             >
-              <Header />
+              <Suspense fallback={<HeaderFallback />}>
+                <Header />
+              </Suspense>
               <main className={`flex-1 w-full overflow-x-hidden ${isHomePage ? '' : 'pt-0'}`}>
                 <Suspense fallback={<RouteTranslationSkeleton path={location} />}>
                   <AppRoutes />
                 </Suspense>
               </main>
-              <Footer />
+              <Suspense fallback={<FooterFallback />}>
+                <Footer />
+              </Suspense>
             </div>
 
-            {showTranslationSkeleton && (
+            {showTranslationOverlay && (
               <div className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-[1px] overflow-auto">
-                <div className="px-4 pt-4 text-xs font-medium text-gray-600">{loadingLabel}</div>
+                <div className="px-4 pt-4 text-xs font-medium text-gray-600">
+                  {loadingLabel} The page is being translated.
+                </div>
                 <RouteTranslationSkeleton path={location} />
               </div>
             )}

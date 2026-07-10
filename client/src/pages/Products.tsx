@@ -9,7 +9,6 @@ import { Filter, X, Star, Heart, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { SEOHead } from '@/components/SEOHead';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ProductsPageSkeleton } from '@/components/skeletons/ProductsPageSkeleton';
 import { QuickViewModal } from '@/components/QuickViewModal';
 import { BrandFilter } from '@/components/BrandFilter';
 import { useProducts, useCategories, useProductsBySlug } from '@/hooks/useSupabaseProducts';
@@ -810,21 +809,7 @@ export default function Products() {
   const shouldShowPageSkeleton =
     (isLoading && allProducts.length === 0) ||
     (categoryFilter && isCategoryLoading && categoryProducts.length === 0);
-
-  if (shouldShowPageSkeleton) {
-    return (
-      <>
-        <SEOHead
-          pageType="category"
-          title={seoTitle}
-          description={seoDescription}
-          keywords={['automotive parts', 'car parts', 'OEM parts', 'aftermarket parts', 'auto accessories']}
-          canonical={canonicalUrl}
-        />
-        <ProductsPageSkeleton />
-      </>
-    );
-  }
+  const shouldShowGridSkeleton = shouldShowPageSkeleton;
 
   return (
     <>
@@ -1232,7 +1217,17 @@ export default function Products() {
 
             {/* ...existing code... */}
             {/* Products Grid */}
-            {allDisplayedProducts.length > 0 ? (
+            {shouldShowGridSkeleton ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-4">
+                {Array.from({ length: 12 }).map((_, idx) => (
+                  <div key={idx} className="space-y-3">
+                    <Skeleton className="h-40 md:h-48 w-full rounded-lg" />
+                    <Skeleton className="h-4 w-4/5" />
+                    <Skeleton className="h-4 w-2/5" />
+                  </div>
+                ))}
+              </div>
+            ) : allDisplayedProducts.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-4">
                 {allDisplayedProducts.map((product: Product, idx: number) => {
                   const priceUSD = product.price !== null && product.price !== undefined 

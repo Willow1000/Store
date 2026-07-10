@@ -374,6 +374,13 @@ export function detectLanguageFromGeo(geo: GeoLike | null | undefined): SiteLang
   const hintedLanguage = normalizeLanguageCode(geo?.country_metadata?.languages?.[0]);
   if (hintedLanguage) return hintedLanguage;
 
+  if (typeof navigator !== 'undefined') {
+    const localeHint = normalizeLanguageCode(
+      navigator.language || (Array.isArray(navigator.languages) ? navigator.languages[0] : '')
+    );
+    if (localeHint) return localeHint;
+  }
+
   return 'en';
 }
 

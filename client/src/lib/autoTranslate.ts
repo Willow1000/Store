@@ -9,10 +9,13 @@ const ATTR_TRANSLATE_ELEMENTS = [
 
 const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'CODE', 'PRE', 'TEXTAREA', 'INPUT']);
 const ATTRS: AttrName[] = ['placeholder', 'title', 'aria-label', 'alt'];
+const SECTION_TRANSLATE_SELECTOR = 'header, main, footer, section, article, aside, nav, [data-translate-section]';
+const SECTION_PENDING_ATTR = 'data-translate-pending';
+const LEGACY_SECTION_STYLE_ID = 'mv-translate-section-style';
 
 const translationCache = new Map<string, string>();
 const TRANSLATE_CONCURRENCY = 6;
-const APPLY_DEBOUNCE_MS = 80;
+const APPLY_DEBOUNCE_MS = 0;
 const TRANSLATION_CACHE_KEY = 'site-translation-cache-v1';
 const MAX_PERSISTED_TRANSLATIONS = 4000;
 const ENABLE_RUNTIME_TRANSLATION = import.meta.env.VITE_ENABLE_RUNTIME_TRANSLATION !== 'false';
@@ -179,6 +182,15 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
     const root = document.getElementById('root');
     if (!root) return;
 
+    // Cleanup from earlier implementations that visually hid pending sections.
+    const legacyStyle = document.getElementById(LEGACY_SECTION_STYLE_ID);
+    if (legacyStyle) {
+      legacyStyle.remove();
+    }
+    root.querySelectorAll(`[${SECTION_PENDING_ATTR}]`).forEach((el) => {
+      el.removeAttribute(SECTION_PENDING_ATTR);
+    });
+
     const textOriginals = new WeakMap<Text, string>();
     let disposed = false;
     let inFlight = false;
@@ -188,9 +200,39 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
     let writingTranslatedContent = false;
     const pendingTextNodes = new Set<Text>();
     const pendingAttrElements = new Set<Element>();
+    const pendingSections = new Set<HTMLElement>();
 
     setHasTranslationError(false);
     setReadyLanguage(language === 'en' ? 'en' : null);
+    const getTopLevelSections = (): HTMLElement[] => {
+      const candidates = Array.from(root.querySelectorAll(SECTION_TRANSLATE_SELECTOR)) as HTMLElement[];
+      const topLevel = candidates.filter((el) => !el.parentElement?.closest(SECTION_TRANSLATE_SELECTOR));
+      return topLevel.length > 0 ? topLevel : [root];
+    };
+
+    const resolveSectionElement = (node: Node | null): HTMLElement => {
+      if (!node) return root;
+      const element = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
+      const section = element?.closest(SECTION_TRANSLATE_SELECTOR) as HTMLElement | null;
+      return section || root;
+    };
+
+    const setSectionPending = (section: HTMLElement, isPending: boolean) => {
+      // Keep this as a non-visual marker only; do not hide section content.
+      if (language === 'en' || !isPending) {
+        section.removeAttribute(SECTION_PENDING_ATTR);
+        return;
+      }
+      section.setAttribute(SECTION_PENDING_ATTR, '1');
+    };
+
+    const collectAttrElementsFromSection = (section: HTMLElement): Element[] => {
+      const attrElements = Array.from(section.querySelectorAll(ATTR_TRANSLATE_ELEMENTS));
+      if (section.matches(ATTR_TRANSLATE_ELEMENTS)) {
+        attrElements.push(section);
+      }
+      return Array.from(new Set(attrElements));
+    };
 
     const collectTextNodesFromElement = (el: Element): Text[] => {
       const nodes: Text[] = [];
@@ -236,7 +278,6 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
         });
         attrMap.forEach(({ el, attr, original }) => setTranslatedAttr(el, attr, original));
         writingTranslatedContent = false;
-        setReadyLanguage('en');
         return;
       }
 
@@ -279,16 +320,40 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
           needFullScan = false;
           pendingTextNodes.clear();
           pendingAttrElements.clear();
-          const textNodes = collectTextNodes(root);
-          const attrElements = Array.from(root.querySelectorAll(ATTR_TRANSLATE_ELEMENTS));
-          await processNodes(textNodes, attrElements);
+
+          const sections = getTopLevelSections();
+          sections.forEach((section) => setSectionPending(section, true));
+
+          for (const section of sections) {
+            const textNodes = collectTextNodes(section);
+            const attrElements = collectAttrElementsFromSection(section);
+            await processNodes(textNodes, attrElements);
+            if (disposed) return;
+            setSectionPending(section, false);
+          }
+
+          setReadyLanguage(language);
         } else {
-          const textNodes = Array.from(pendingTextNodes);
-          const attrElements = Array.from(pendingAttrElements);
+          const sections = Array.from(pendingSections);
           pendingTextNodes.clear();
           pendingAttrElements.clear();
-          if (textNodes.length > 0 || attrElements.length > 0) {
+          pendingSections.clear();
+
+          for (const section of sections) {
+            setSectionPending(section, true);
+            const textNodes = collectTextNodes(section);
+            const attrElements = collectAttrElementsFromSection(section);
+            if (textNodes.length === 0 && attrElements.length === 0) {
+              setSectionPending(section, false);
+              continue;
+            }
             await processNodes(textNodes, attrElements);
+            if (disposed) return;
+            setSectionPending(section, false);
+          }
+
+          if (sections.length > 0) {
+            setReadyLanguage(language);
           }
         }
       } finally {
@@ -335,6 +400,7 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
             const parent = textNode.parentElement;
             if (parent && !SKIP_TAGS.has(parent.tagName) && isLikelyTranslatable(textNode.nodeValue || '')) {
               pendingTextNodes.add(textNode);
+              pendingSections.add(resolveSectionElement(textNode));
             }
           }
           return;
@@ -347,6 +413,7 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
               const parent = textNode.parentElement;
               if (parent && !SKIP_TAGS.has(parent.tagName) && isLikelyTranslatable(textNode.nodeValue || '')) {
                 pendingTextNodes.add(textNode);
+                pendingSections.add(resolveSectionElement(textNode));
               }
               return;
             }
@@ -358,12 +425,13 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
                 pendingAttrElements.add(element);
               }
               element.querySelectorAll(ATTR_TRANSLATE_ELEMENTS).forEach((el) => pendingAttrElements.add(el));
+              pendingSections.add(resolveSectionElement(element));
             }
           });
         }
       });
 
-      scheduleApply();
+      scheduleApply(true);
     });
 
     observer.observe(root, {
