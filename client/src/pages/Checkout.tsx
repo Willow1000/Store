@@ -477,10 +477,11 @@ export default function Checkout() {
   // they belong to the same country and match the selected field mode.
   useEffect(() => {
     if (!geo || geoPrefillAppliedRef.current) return;
-    geoPrefillAppliedRef.current = true;
 
     const geoCountry = geo.location?.country_code2?.toUpperCase() || '';
-    if (!geoCountry || !countryOptions.some((country) => country.value === geoCountry)) return;
+    if (!geoCountry) return;
+
+    geoPrefillAppliedRef.current = true;
 
     setFormData((prev) => {
       const selectedCountry = prev.country || geoCountry;
@@ -502,21 +503,34 @@ export default function Checkout() {
 
       const geoState = sanitizeTextInput(geo.location?.state_prov || '', 80);
       const geoCity = sanitizeTextInput(geo.location?.city || '', 80);
+      const geoZip = sanitizePostalCode(geo.location?.zipcode || '', 20);
 
       if (usesManualLocationFields(geoCountry)) {
         next.state = geoState;
         next.city = geoCity;
+        if (!prev.zip && geoZip) {
+          next.zip = geoZip;
+        }
         return next;
       }
 
       const normalizedState = normalizeRegionCode(geoCountry, geoState);
       const stateExists = getStateOptions(geoCountry).some((state) => state.value === normalizedState);
-      if (!stateExists) return next;
+      if (!stateExists) {
+        if (!prev.zip && geoZip) {
+          next.zip = geoZip;
+        }
+        return next;
+      }
 
       next.state = normalizedState;
       const validCities = getCityOptions(geoCountry, normalizedState);
       if (validCities.includes(geoCity)) {
         next.city = geoCity;
+      }
+
+      if (!prev.zip && geoZip) {
+        next.zip = geoZip;
       }
 
       return next;
