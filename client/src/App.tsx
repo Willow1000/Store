@@ -367,6 +367,7 @@ function RouteTranslationSkeleton({ path }: { path: string }) {
 function AppContent() {
   const queryClient = useQueryClient();
   const [location] = useLocation();
+  const [, setCurrencyVersion] = useState(0);
   const isHomePage = location === '/';
   const canonicalPath = location.startsWith('/') ? location : `/${location}`;
   const [language, setLanguage] = useState<SiteLanguageCode>(() => getSiteLanguage());
@@ -445,6 +446,7 @@ function AppContent() {
   useEffect(() => {
     const onLanguageChanged = () => {
       const nextLanguage = getSiteLanguage();
+      if (nextLanguage === language) return;
       const alreadyTranslatedRoute = isRouteTranslationDone(nextLanguage, canonicalPath);
       setPendingLanguage(alreadyTranslatedRoute ? null : nextLanguage);
       setIsLanguageSwitching(nextLanguage !== 'en' && !alreadyTranslatedRoute);
@@ -456,13 +458,31 @@ function AppContent() {
         });
       }
     };
+
+    const onStorageLanguageChanged = (event: StorageEvent) => {
+      if (event.key !== 'site-language') return;
+      onLanguageChanged();
+    };
+
     window.addEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
-    window.addEventListener('storage', onLanguageChanged);
+    window.addEventListener('storage', onStorageLanguageChanged);
     return () => {
       window.removeEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
-      window.removeEventListener('storage', onLanguageChanged);
+      window.removeEventListener('storage', onStorageLanguageChanged);
     };
-  }, [canonicalPath]);
+  }, [canonicalPath, language]);
+
+  useEffect(() => {
+    const onCurrencyUpdated = () => {
+      // Trigger a top-level rerender so pages reading currencyClient values update immediately.
+      setCurrencyVersion((value) => value + 1);
+    };
+
+    window.addEventListener('currency-client-updated', onCurrencyUpdated as EventListener);
+    return () => {
+      window.removeEventListener('currency-client-updated', onCurrencyUpdated as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     if (language === 'en') return;

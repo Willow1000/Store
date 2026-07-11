@@ -78,15 +78,23 @@ export default function Header() {
     syncFromStorage();
     const timer = window.setTimeout(syncFromStorage, 800);
 
-    const onLanguageChanged = () => setLanguage(getSiteLanguage());
+    const onLanguageChanged = () => {
+      const next = getSiteLanguage();
+      if (next === language) return;
+      setLanguage(next);
+    };
+    const onStorageLanguageChanged = (event: StorageEvent) => {
+      if (event.key !== 'site-language') return;
+      onLanguageChanged();
+    };
     window.addEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
-    window.addEventListener('storage', onLanguageChanged);
+    window.addEventListener('storage', onStorageLanguageChanged);
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
-      window.removeEventListener('storage', onLanguageChanged);
+      window.removeEventListener('storage', onStorageLanguageChanged);
     };
-  }, []);
+  }, [language]);
 
   return (
     <header className="sticky top-0 left-0 right-0 z-50 border-b border-gray-200 bg-white shadow-sm w-full">

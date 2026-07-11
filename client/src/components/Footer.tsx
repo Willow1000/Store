@@ -18,16 +18,24 @@ export default function Footer() {
     syncFromStorage();
     const timer = window.setTimeout(syncFromStorage, 800);
 
-    const onLanguageChanged = () => setLanguage(getSiteLanguage());
+    const onLanguageChanged = () => {
+      const next = getSiteLanguage();
+      if (next === language) return;
+      setLanguage(next);
+    };
+    const onStorageLanguageChanged = (event: StorageEvent) => {
+      if (event.key !== 'site-language') return;
+      onLanguageChanged();
+    };
     window.addEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
-    window.addEventListener('storage', onLanguageChanged);
+    window.addEventListener('storage', onStorageLanguageChanged);
 
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
-      window.removeEventListener('storage', onLanguageChanged);
+      window.removeEventListener('storage', onStorageLanguageChanged);
     };
-  }, []);
+  }, [language]);
 
   return (
     <footer className="border-t border-border bg-black text-white w-full overflow-x-hidden">

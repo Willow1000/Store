@@ -18,11 +18,17 @@ type CacheShape = {
 };
 
 const CACHE_KEY = 'geo-currency-cache';
+const CURRENCY_UPDATED_EVENT = 'currency-client-updated';
 
 let initialized = false;
 let currencyCode = 'USD';
 let currencyRate: number = 1;
 let geoData: GeolocationData | null = null;
+
+function emitCurrencyUpdated(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(CURRENCY_UPDATED_EVENT));
+}
 
 
 export async function initCurrencyClient(): Promise<void> {
@@ -87,6 +93,7 @@ export async function initCurrencyClient(): Promise<void> {
     } catch (e) {
       // ignore
     }
+    emitCurrencyUpdated();
     return;
   } else {
     // Prefer geoData.currency.code if present and not USD, else fallback by country
@@ -140,6 +147,8 @@ export async function initCurrencyClient(): Promise<void> {
   } catch (e) {
     // ignore
   }
+
+  emitCurrencyUpdated();
 }
 
 export function getCurrencyCode(): string {
