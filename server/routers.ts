@@ -136,8 +136,9 @@ export const appRouter = router({
         paymentMethod: z.string(),
         stripePaymentIntentId: z.string().optional(),
         paystackPaymentId: z.string().optional(),
+        language: z.string().optional(),
       }))
-      .mutation(({ ctx, input }) => createOrder(ctx.user.id, input as any, ctx.user.email ?? undefined, ctx.user.name ?? undefined))
+      .mutation(({ ctx, input }) => createOrder(ctx.user.id, input as any, ctx.user.email ?? undefined, ctx.user.name ?? undefined, undefined, input.language ?? ctx.req.header('accept-language') ?? undefined))
   }),
 
   // Paystack procedures

@@ -1340,6 +1340,7 @@ export default function Checkout() {
           utmMedium: metaParams.utm_medium,
           utmCampaign: metaParams.utm_campaign,
           utmContent: metaParams.utm_content,
+          language: activeLanguage,
         },
       };
 

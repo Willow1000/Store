@@ -685,6 +685,7 @@ function resolvePreferredEmailLanguage(req: express.Request, explicitValue?: unk
   if (preferred.startsWith('fr')) return 'fr';
   if (preferred.startsWith('de')) return 'de';
   if (preferred.startsWith('it')) return 'it';
+  if (preferred.startsWith('nl')) return 'nl';
   return 'en';
 }
 
@@ -1050,6 +1051,7 @@ export function createApp() {
       const discountAmount = resolvedOffer?.discountAmount ?? 0;
       const offerId = resolvedOffer?.id ?? null;
       const offerCode = resolvedOffer?.code ?? (submittedOfferCode ? submittedOfferCode.toUpperCase() : null);
+      const preferredEmailLanguage = resolvePreferredEmailLanguage(req, paymentMetadata.language);
       let customerEmail = String(paymentMetadata.email || paystackData.customer?.email || paystackData.email || '');
       let customerName = String(paymentMetadata.name || paystackData.customer?.name || '');
 
@@ -1121,7 +1123,8 @@ export function createApp() {
           shippingAddress: null,
           billingAddress: null,
           trackingNumber: null,
-        }, customerEmail, customerName, orderLineItems);
+        }, customerEmail, customerName, orderLineItems, preferredEmailLanguage);
+        
 
       } catch (orderErr) {
         console.error('[Payment Callback] Failed to create order:', orderErr);
@@ -1135,8 +1138,15 @@ export function createApp() {
         console.error('[Payment Callback] Failed to clear cart:', clearCartErr);
       }
 
-      // Redirect to a success page (client can show order details by reference)
-      return res.redirect(`/payment/success?payment=success&reference=${encodeURIComponent(reference)}`);
+      // Redirect to success and include confirmed recipient email for immediate on-site confirmation copy.
+      const successParams = new URLSearchParams({
+        payment: 'success',
+        reference,
+      });
+      if (customerEmail) {
+        successParams.set('email', customerEmail);
+      }
+      return res.redirect(`/payment/success?${successParams.toString()}`);
     } catch (err) {
       console.error('[Payment Callback] Verification error:', err);
       return res.status(500).send('Payment verification failed');

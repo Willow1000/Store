@@ -493,6 +493,7 @@ export async function createOrder(
   userEmail?: string,
   customerName?: string,
   items?: OrderItemInput[],
+  emailLanguage?: string,
 ) {
   const db = await getDb();
   if (!db) return null;
@@ -537,9 +538,15 @@ export async function createOrder(
         order_date: orderDate,
         order_total: data.total as string,
         currency: 'USD',
+        subtotal: data.subtotal as string,
+        shipping_cost: (data.shippingCost as string) || '0',
+        tax: (data.tax as string) || '0',
+        discount_amount: (data.discountAmount as string) || '0',
         order_url: `https://store-nine-eosin.vercel.app/orders/${orderId || userId}`,
         support_email: process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop',
         items: enrichedItems,
+        receipt_filename: `motorvault-receipt-${String(data.orderNumber || '').replace(/[^a-zA-Z0-9-_]/g, '')}.html`,
+        language: emailLanguage,
       }).catch((err: unknown) => console.error('[Order Confirmation Email] Error:', err));
     } catch (error) {
       console.error('[Email Service] Failed to send confirmation email:', error);

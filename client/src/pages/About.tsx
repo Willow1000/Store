@@ -225,7 +225,7 @@ export default function About() {
               <h2 className="text-3xl font-bold">Simple, careful, and accountable.</h2>
               <div className="mt-6 space-y-5 text-white/85 leading-relaxed">
                 <p>
-                  We mainly operate within Europe, but we are open to sourcing from other regions when availability, quality, and lead time justify it.
+                  We operate across Europe, including Albania, Andorra, Armenia, Austria, Azerbaijan, Belarus, Belgium, Bosnia and Herzegovina, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Georgia, Germany, Greece, Hungary, Iceland, Ireland, Italy, Kosovo, Latvia, Liechtenstein, Lithuania, Luxembourg, Malta, Moldova, Monaco, Montenegro, Netherlands, North Macedonia, Norway, Poland, Portugal, Romania, Russia, San Marino, Serbia, Slovakia, Slovenia, Spain, Sweden, Switzerland, Turkey, Ukraine, United Kingdom, and Vatican City.
                 </p>
                 <p>
                   Our process is designed to reduce wrong-part orders. We validate identifiers and listing details so buyers can make decisions with less uncertainty.

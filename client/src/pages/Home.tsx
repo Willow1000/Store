@@ -171,7 +171,7 @@ export default function Home() {
       <SEOHead
         pageType="homepage"
         title="MotorVault - Buy Automotive Parts Online | OEM & Aftermarket"
-        description="Shop automotive parts from MotorVault. Wide selection of OEM and aftermarket parts. Free shipping over $1500. Quality guaranteed. Shop now!"
+        description="Find premium OEM and aftermarket parts for European cars. MotorVault offers fitment-focused parts for Opel, Fiat, Volvo, Saab, Dacia, Lancia, BMW, Mercedes, Audi, VW, and Porsche."
         keywords={['automobile parts', 'car parts', 'auto parts', 'aftermarket parts', 'OEM parts', 'motor parts online']}
         canonical="https://motorvault.shop"
       />

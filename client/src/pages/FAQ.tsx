@@ -110,6 +110,13 @@ const faqItems: FAQItem[] = [
       'Delivery time depends on stock status, destination, and carrier service. We provide shipping estimates and send tracking details once the parcel is dispatched.',
   },
   {
+    id: 'shipping-1',
+    category: 'Shipping and operating countries',
+    question: 'Which countries in Europe do you operate in?',
+    answer:
+      'We operate across Europe, including: Albania, Andorra, Armenia, Austria, Azerbaijan, Belarus, Belgium, Bosnia and Herzegovina, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Georgia, Germany, Greece, Hungary, Iceland, Ireland, Italy, Kosovo, Latvia, Liechtenstein, Lithuania, Luxembourg, Malta, Moldova, Monaco, Montenegro, Netherlands, North Macedonia, Norway, Poland, Portugal, Romania, Russia, San Marino, Serbia, Slovakia, Slovenia, Spain, Sweden, Switzerland, Turkey, Ukraine, United Kingdom, and Vatican City.',
+  },
+  {
     id: 'diy-1',
     category: 'DIY vs professional installation',
     question: 'How do I decide between DIY installation and using a mechanic?',
