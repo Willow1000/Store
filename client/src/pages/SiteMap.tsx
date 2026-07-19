@@ -1,10 +1,12 @@
 import { SEOHead } from '@/components/SEOHead';
 import { Link } from 'wouter';
 import { useCategories } from '@/hooks/useSupabaseProducts';
+import { BLOG_POSTS } from '@shared/blogPosts';
 
 const corePages = [
   { href: '/', label: 'Home' },
   { href: '/products', label: 'All Products' },
+  { href: '/blog', label: 'Blog' },
   { href: '/about', label: 'About' },
   { href: '/help', label: 'Help Center' },
   { href: '/faq', label: 'FAQ' },
@@ -121,6 +123,19 @@ export default function SiteMap() {
                   sitemap-products.xml
                 </a>
               </li>
+            </ul>
+          </section>
+
+          <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
+            <h2 className="text-lg font-bold text-gray-900">Blog Articles</h2>
+            <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+              {BLOG_POSTS.map((post) => (
+                <li key={post.slug}>
+                  <Link href={`/blog/${post.slug}`} className="text-blue-700 hover:text-blue-800 hover:underline">
+                    {post.title}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </section>
         </div>

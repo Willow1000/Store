@@ -199,6 +199,7 @@ export default defineConfig({
               'router-vendor': ['wouter'],
               'supabase-vendor': ['@supabase/supabase-js'],
               'form-vendor': ['react-hook-form', 'zod'],
+              'country-data-vendor': ['country-state-city'],
             },
       },
     },

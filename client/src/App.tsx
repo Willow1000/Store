@@ -42,6 +42,8 @@ const About = lazy(() => import("./pages/About"));
 const Accessibility = lazy(() => import("./pages/Accessibility"));
 const FAQ = lazy(() => import("./pages/FAQ"));
 const SiteMap = lazy(() => import("./pages/SiteMap.tsx"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
 const Tickets = lazy(() => import("./pages/Tickets"));
 const AutoMotorblokkenNederland = lazy(() => import("./pages/AutoMotorblokkenNederland"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
@@ -124,6 +126,8 @@ function AppRoutes() {
       <Route path={"/accessibility"} component={Accessibility} />
       <Route path={"/faq"} component={FAQ} />
       <Route path={"/site-map"} component={SiteMap} />
+      <Route path={"/blog"} component={Blog} />
+      <Route path={"/blog/:slug"} component={BlogPost} />
       <Route path={"/payment/success"} component={PaymentSuccess} />
       <Route path={"/payment/failed"} component={PaymentFailed} />
       <Route path={"/404"} component={NotFound} />

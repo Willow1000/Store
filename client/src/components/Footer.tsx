@@ -57,6 +57,9 @@ export default function Footer() {
                 <Link href="/products" className="hover:text-white inline-flex min-h-11 items-center">{t('footer.allProducts', 'All Products')}</Link>
               </li>
               <li>
+                <Link href="/blog" className="hover:text-white inline-flex min-h-11 items-center">Blog</Link>
+              </li>
+              <li>
                 <Link href="/site-map" className="hover:text-white inline-flex min-h-11 items-center">{t('footer.siteMap', 'HTML Sitemap')}</Link>
               </li>
             </ul>

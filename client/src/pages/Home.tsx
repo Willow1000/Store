@@ -192,7 +192,7 @@ export default function Home() {
         </section>
 
         <section className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 pb-8 sm:pb-10">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Link href="/faq" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Fitment</p>
               <h3 className="mt-2 text-lg font-bold text-slate-900">Will this part fit my vehicle?</h3>
@@ -207,6 +207,11 @@ export default function Home() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Post-Purchase</p>
               <h3 className="mt-2 text-lg font-bold text-slate-900">Returns, warranty, and shipping timing</h3>
               <p className="mt-2 text-sm text-slate-600">Get clarity on what happens after checkout.</p>
+            </Link>
+            <Link href="/blog" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Knowledge Hub</p>
+              <h3 className="mt-2 text-lg font-bold text-slate-900">Read fitment and repair guides</h3>
+              <p className="mt-2 text-sm text-slate-600">Explore VIN, OEM, DPF, ECU, and EV buying playbooks.</p>
             </Link>
           </div>
         </section>

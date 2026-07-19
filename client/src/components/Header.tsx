@@ -108,6 +108,7 @@ export default function Header() {
         {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center gap-8 flex-1 justify-center mx-4">
           <Link href="/products" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">{t('header.products', 'Products')}</Link>
+          <Link href="/blog" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Blog</Link>
           <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">{t('header.about', 'About')}</Link>
           <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">{t('header.contact', 'Contact')}</Link>
         </div>
@@ -198,6 +199,9 @@ export default function Header() {
             </Link>
             <Link href="/products" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
               {t('header.products', 'Products')}
+            </Link>
+            <Link href="/blog" className="block px-3 py-2 text-sm font-medium hover:bg-gray-100 rounded-md" onClick={() => setIsMenuOpen(false)}>
+              Blog
             </Link>
             {isAuthenticated && (
               <>
