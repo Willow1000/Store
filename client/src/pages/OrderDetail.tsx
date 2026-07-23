@@ -178,9 +178,12 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
     );
   }
 
-  const subtotal = Number(order.total_amount || 0);
-  const shipping = 0; // Shipping already included in total
   const orderItems = Array.isArray((order as any).items) ? (order as any).items : [];
+  const subtotal = Number(order.subtotal ?? order.total_amount ?? order.total ?? 0);
+  const shipping = Number((order as any).shippingCost ?? (order as any).shipping_cost ?? 0);
+  const tax = Number(order.tax ?? 0);
+  const discount = Number((order as any).discountAmount ?? (order as any).discount_amount ?? 0);
+  const total = Number(order.total ?? order.total_amount ?? Math.max(0, subtotal + shipping + tax - discount));
 
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
@@ -288,19 +291,31 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
               <div className="space-y-3 mb-6 pb-6 border-b border-border">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold">${(subtotal as number).toFixed(2)}</span>
+                  <span className="font-semibold">${subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
                   <span className="font-semibold">
-                    {shipping === 0 ? 'FREE' : `$${(shipping as number).toFixed(2)}`}
+                    {shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}
                   </span>
                 </div>
+                {tax > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Tax</span>
+                    <span className="font-semibold">${tax.toFixed(2)}</span>
+                  </div>
+                )}
+                {discount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Discount</span>
+                    <span className="font-semibold text-green-700">-${discount.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between items-center mb-6">
                 <span className="text-lg font-bold">Total</span>
-                <span className="text-2xl font-bold text-black">${(subtotal as number).toFixed(2)}</span>
+                <span className="text-2xl font-bold text-black">${total.toFixed(2)}</span>
               </div>
 
               <div className="space-y-2 text-xs text-gray-600">

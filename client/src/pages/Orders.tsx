@@ -80,9 +80,9 @@ export default function Orders() {
       case 'oldest':
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       case 'highest':
-        return Number(b.total_amount) - Number(a.total_amount);
+        return Number(b.total ?? b.total_amount ?? 0) - Number(a.total ?? a.total_amount ?? 0);
       case 'lowest':
-        return Number(a.total_amount) - Number(b.total_amount);
+        return Number(a.total ?? a.total_amount ?? 0) - Number(b.total ?? b.total_amount ?? 0);
       default:
         return 0;
     }
@@ -277,7 +277,7 @@ export default function Orders() {
                         <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Total Amount</p>
                         <div className="flex items-center gap-2">
                           <DollarSign size={16} className="text-gray-500" />
-                          <p className="text-xl font-bold">{order.currency} {Number(order.total_amount).toFixed(2)}</p>
+                          <p className="text-xl font-bold">{order.currency ? `${order.currency} ` : '$'}{Number(order.total ?? order.total_amount ?? 0).toFixed(2)}</p>
                         </div>
                       </div>
 

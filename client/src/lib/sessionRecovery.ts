@@ -6,11 +6,27 @@ let recoveryInProgress = false;
 function clearBrowserStorage() {
   if (typeof window === 'undefined') return;
 
+  const authKeys = [
+    'motorvault_auth_redirect',
+    'oauth_return_to',
+    'pending_auth_action',
+    'auth_session_started_at',
+    'manus-runtime-user-info',
+    'isMigratingCart',
+    'cart',
+    'checkout-cart-snapshot-v1',
+  ];
+  const sessionKeys = ['cart-auth-redirect-pending-v1'];
+
   try {
-    window.localStorage.clear();
-    window.sessionStorage.clear();
+    for (const key of authKeys) {
+      window.localStorage.removeItem(key);
+    }
+    for (const key of sessionKeys) {
+      window.sessionStorage.removeItem(key);
+    }
   } catch (error) {
-    console.warn('[sessionRecovery] Failed to clear localStorage', error);
+    console.warn('[sessionRecovery] Failed to clear browser storage', error);
   }
 }
 
@@ -50,5 +66,12 @@ export function isTimeoutError(error: unknown) {
   if (!(error instanceof Error)) return false;
 
   const message = error.message.toLowerCase();
-  return message.includes('timed out') || message.includes('timeout');
+  return (
+    message.includes('session expired') ||
+    message.includes('refresh token') ||
+    message.includes('jwt expired') ||
+    message.includes('invalid token') ||
+    message.includes('unauthorized') ||
+    message.includes('access denied')
+  );
 }

@@ -93,10 +93,17 @@ export type Address = {
 export type Order = {
   id: string;
   user_id: string | null;
-  total_amount: number;
-  currency: string;
+  orderNumber?: string;
+  subtotal?: number;
+  shippingCost?: number;
+  tax?: number;
+  total?: number;
+  discountAmount?: number;
+  total_amount?: number;
+  currency?: string;
   status: 'pending' | 'completed' | 'failed' | 'refunded';
   created_at: string;
+  updated_at?: string;
   items?: OrderItem[];
 };
 

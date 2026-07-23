@@ -385,6 +385,8 @@ export default function Checkout() {
   // Coupon code UI state
   const [couponCodeInput, setCouponCodeInput] = useState<string>('');
   const [appliedOfferData, setAppliedOfferData] = useState<any | null>(null);
+  const [appliedOfferDiscount, setAppliedOfferDiscount] = useState<number>(0);
+  const [appliedCouponLabel, setAppliedCouponLabel] = useState<string | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
   const paymentCallbackHandledRef = useRef(false);
@@ -899,10 +901,16 @@ export default function Checkout() {
     }
   }, [formData.state, formData.country, formData.city, manualLocationFields]);
 
-  // Calculate totals (all amounts in USD, rounded to 2 decimal places)
+  // Normalize checkout prices and calculate totals (all amounts in USD, rounded to 2 decimal places)
+  const parseCheckoutPrice = (price: string) => {
+    const normalized = String(price || '').replace(/[^0-9.-]+/g, '').trim();
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
   const subtotal = Math.round(
     cartItems.reduce((sum, item) => {
-      const price = parseFloat(item.price.replace(/[^\d.]/g, '') || '0');
+      const price = parseCheckoutPrice(item.price);
       return sum + price * item.quantity;
     }, 0) * 100
   ) / 100;
@@ -912,7 +920,7 @@ export default function Checkout() {
     cartItems.map((item) => ({
       productId: item.product_id,
       title: item.title,
-      unitPrice: parseFloat(item.price.replace(/[^\d.]/g, '') || '0'),
+      unitPrice: parseCheckoutPrice(item.price),
       quantity: item.quantity,
     }))
   );
@@ -929,16 +937,18 @@ export default function Checkout() {
   const finalAppliedOffer = appliedOfferData || resolvedOffer.data || null;
 
   const legacyCouponPercent = isMetaCheckout && !resolvedOffer.data ? parseMetaCouponPercent(metaCoupon) : 0;
-  const offerDiscountAmount = finalAppliedOffer
-    ? finalAppliedOffer.discountAmount
+  const derivedOfferDiscountAmount = finalAppliedOffer
+    ? Number(finalAppliedOffer.discountAmount || 0)
     : Math.round((subtotal * (legacyCouponPercent / 100)) * 100) / 100;
-  const couponLabel = finalAppliedOffer
+  const offerDiscountAmount = appliedOfferDiscount ?? appliedOfferData?.discountAmount ?? derivedOfferDiscountAmount;
+  const derivedCouponLabel = finalAppliedOffer
     ? `${finalAppliedOffer.name} (${finalAppliedOffer.code})`
     : legacyCouponPercent > 0 && metaCoupon
       ? `Coupon (${metaCoupon})`
       : null;
-  const total = Math.round((subtotal + shipping + vat - offerDiscountAmount) * 100) / 100; // Ensure final total is precise
-  const cartGrandTotal = total;
+  const couponLabel = appliedCouponLabel ?? derivedCouponLabel;
+  const total = Math.max(0, Math.round((subtotal + shipping + vat - offerDiscountAmount) * 100) / 100); // Ensure final total is precise
+  const cartGrandTotal = Number.isFinite(total) ? total : 0;
 
   useEffect(() => {
     if (cartItems.length === 0 || total <= 0) return;
@@ -2014,6 +2024,9 @@ export default function Checkout() {
                           const body = await r.json();
                           if (!Array.isArray(body) || body.length === 0) {
                             setAppliedOfferData(null);
+                            setAppliedOfferData(null);
+                            setAppliedOfferDiscount(0);
+                            setAppliedCouponLabel(null);
                             setCouponError('Coupon is not valid or not applicable to your order');
                             return;
                           }
@@ -2023,18 +2036,28 @@ export default function Checkout() {
                           if (!offer.active) {
                             setCouponError('Coupon is not active');
                             setAppliedOfferData(null);
+                            setAppliedOfferDiscount(0);
+                            setAppliedCouponLabel(null);
                           } else if (offer.startsAt && new Date(offer.startsAt) > now) {
                             setCouponError('Coupon is not yet active');
                             setAppliedOfferData(null);
+                            setAppliedOfferDiscount(0);
+                            setAppliedCouponLabel(null);
                           } else if (offer.endsAt && new Date(offer.endsAt) < now) {
                             setCouponError('Coupon has expired');
                             setAppliedOfferData(null);
+                            setAppliedOfferDiscount(0);
+                            setAppliedCouponLabel(null);
                           } else if (offer.maxUses !== null && offer.maxUses !== undefined && Number(offer.usedCount ?? 0) >= offer.maxUses) {
                             setCouponError('Coupon has been fully redeemed');
                             setAppliedOfferData(null);
+                            setAppliedOfferDiscount(0);
+                            setAppliedCouponLabel(null);
                           } else if (offer.minimumSubtotal && subtotal < Number(offer.minimumSubtotal)) {
                             setCouponError(`Coupon requires minimum subtotal of ${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(Number(offer.minimumSubtotal)).toFixed(2)}`);
                             setAppliedOfferData(null);
+                            setAppliedOfferDiscount(0);
+                            setAppliedCouponLabel(null);
                           } else {
                             const numericValue = Number(offer.value);
                             const discountAmount = offer.type === 'percentage'
@@ -2051,6 +2074,8 @@ export default function Checkout() {
                               discountAmount: Number(discountAmount.toFixed ? discountAmount.toFixed(2) : discountAmount),
                             };
                             setAppliedOfferData(resolved);
+                            setAppliedOfferDiscount(resolved.discountAmount);
+                            setAppliedCouponLabel(`${resolved.name} (${resolved.code})`);
                             toast.success('Coupon applied');
                           }
                         } catch (err) {
@@ -2072,7 +2097,13 @@ export default function Checkout() {
                     <div className="mt-2 text-sm text-green-700 flex items-center justify-between">
                       <span>{`${appliedOfferData.name} (${appliedOfferData.code}) applied`}</span>
                       <button
-                        onClick={() => { setAppliedOfferData(null); setCouponCodeInput(''); toast.success('Coupon removed'); }}
+                        onClick={() => {
+                          setAppliedOfferData(null);
+                          setAppliedOfferDiscount(0);
+                          setAppliedCouponLabel(null);
+                          setCouponCodeInput('');
+                          toast.success('Coupon removed');
+                        }}
                         className="text-xs text-blue-600 hover:underline"
                       >
                         Remove
