@@ -14,6 +14,23 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+    include: ["server/**/*.test.ts", "server/**/*.spec.ts", "client/**/*.test.ts", "client/**/*.spec.ts"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html", "lcov"],
+      exclude: [
+        "node_modules/",
+        "dist/",
+        "**/*.d.ts",
+        "**/*.test.ts",
+        "**/*.spec.ts",
+        "**/index.ts",
+      ],
+      // No enforced thresholds yet: current coverage is a low single-digit
+      // percentage of this codebase, so a threshold here would either be
+      // fictional (this repo is nowhere near it) or immediately fail CI.
+      // Coverage is still collected and reported so it's visible and can
+      // grow honestly as tests are added alongside future feature commits.
+    },
   },
 });
