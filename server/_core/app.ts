@@ -18,6 +18,7 @@ import { sdk } from "./sdk";
 import { ENV } from "./env";
 import {
   getDb,
+  checkDatabaseHealth,
   createOrder,
   createPayment,
   getUserById,
@@ -909,6 +910,18 @@ async function getFeedProducts(): Promise<FeedProduct[]> {
 export function createApp() {
   const app = express();
   app.disable("x-powered-by");
+
+  // Health check: verifies the process is up and the database is actually
+  // reachable (not just that a connection pool was created at some point in
+  // the past), for uptime monitors and deploy checks.
+  app.get("/api/health", async (_req, res) => {
+    const databaseHealthy = await checkDatabaseHealth();
+    res.status(databaseHealthy ? 200 : 503).json({
+      status: databaseHealthy ? "ok" : "degraded",
+      database: databaseHealthy ? "connected" : "unreachable",
+      timestamp: new Date().toISOString(),
+    });
+  });
 
   // Stripe webhook: must be registered (with its raw-body parser) before
   // the global express.json() below - body parsers consume the request

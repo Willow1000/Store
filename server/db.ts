@@ -79,6 +79,24 @@ export async function getDb() {
   return _db;
 }
 
+/**
+ * Runs a trivial query against the database to confirm it's actually
+ * reachable, not just that a pool object was created - getDb() can return a
+ * cached, previously-successful connection even if the database has since
+ * gone down.
+ */
+export async function checkDatabaseHealth(): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    await db.execute(sql`select 1`);
+    return true;
+  } catch (error) {
+    logger.warn({ data: [error] }, "[Database] Health check query failed:");
+    return false;
+  }
+}
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");

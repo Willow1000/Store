@@ -55,6 +55,15 @@ jobs:
       - name: Lint with Prettier
         run: pnpm exec prettier --check .
 
+      # The postgres service above starts with no tables - without this,
+      # any test that queries a real table (not just a connectivity check
+      # like `select 1`) would fail here despite passing locally against
+      # docker-compose's Postgres once db:push has been run against it.
+      - name: Push database schema
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/store
+        run: pnpm run db:push
+
       - name: Run tests
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/store
