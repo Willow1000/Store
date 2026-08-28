@@ -24,6 +24,13 @@ interface SEOHeadProps {
   ogImage?: string;
   ogType?: "website" | "product" | "article";
   keywords?: string[];
+  /**
+   * Marks this as the App-shell-level default rather than a specific
+   * page's own SEOHead. A fallback registration only applies when no
+   * page-specific SEOHead has registered - it never overrides one, even
+   * if it happens to render after the fallback during SSR.
+   */
+  fallback?: boolean;
   // For product pages
   productData?: ProductSchemaInput;
   // For article/blog pages
@@ -267,6 +274,7 @@ export function SEOHead({
   articleData,
   faqData,
   breadcrumbs,
+  fallback = false,
 }: SEOHeadProps) {
   const effectiveCanonical = normalizeCanonicalUrl(canonical);
   const currentUrl = getCurrentUrl();
@@ -322,7 +330,7 @@ export function SEOHead({
   });
 
   if (typeof window === "undefined" && headCollector) {
-    headCollector.addMarkup(headMarkup);
+    headCollector.addMarkup(headMarkup, { fallback });
   }
 
   useEffect(() => {

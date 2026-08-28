@@ -36,7 +36,12 @@ function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // index: false - express.static's default `index.html` fallback would
+  // otherwise serve the raw, unrendered template for `/` (and any other
+  // directory-style request) directly, silently bypassing the SSR handler
+  // below entirely. Real assets (JS/CSS/images) still have explicit
+  // extensions and are served normally.
+  app.use(express.static(distPath, { index: false }));
 
   const indexHtmlPath = path.resolve(distPath, "index.html");
   let template = "";
@@ -90,7 +95,11 @@ function serveStatic(app: Express) {
           .setHeader("Content-Type", "text/html; charset=utf-8")
           .send(html);
       })
-      .catch(() => {
+      .catch(err => {
+        logger.error(
+          { data: [err?.stack || err] },
+          "[SSR] Render failed, falling back to unrendered template"
+        );
         res.sendFile(indexHtmlPath);
       });
   });

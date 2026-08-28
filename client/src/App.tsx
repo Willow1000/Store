@@ -661,7 +661,7 @@ function AppContent() {
           <TooltipProvider>
             <Toaster />
             <AuthModal />
-            <SEOHead canonical={canonicalPath} />
+            <SEOHead canonical={canonicalPath} fallback />
 
             <div
               className="flex min-h-screen flex-col bg-background w-full overflow-x-hidden"
