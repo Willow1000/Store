@@ -64,9 +64,7 @@ function clearAppStorage() {
         sessionStorage.removeItem(key);
       }
     }
-  } catch (storageError) {
-    console.warn("[useAuth] Failed to clear app storage", storageError);
-  }
+  } catch {}
 }
 
 type UseAuthOptions = {
@@ -103,7 +101,6 @@ export function useAuth(options?: UseAuthOptions) {
           error,
         } = await supabase.auth.getSession();
         if (error) {
-          console.error("[useAuth] Error getting Supabase session:", error);
         }
         if (isMounted) {
           setSupabaseSession(session);
@@ -119,7 +116,6 @@ export function useAuth(options?: UseAuthOptions) {
           setSessionRestored(true);
         }
       } catch (error) {
-        console.error("[useAuth] Error in getSession:", error);
         if (isMounted) {
           setIsSessionLoading(false);
           setSessionRestored(true);
@@ -154,12 +150,7 @@ export function useAuth(options?: UseAuthOptions) {
           clearAppStorage();
           clearPendingAuthAction();
           window.dispatchEvent(new Event("cartUpdated"));
-        } catch (storageError) {
-          console.warn(
-            "[useAuth] Failed to clear browser storage on sign out",
-            storageError
-          );
-        }
+        } catch {}
       } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         if (event === "SIGNED_IN" && !getSessionStartedAt()) {
           setSessionStartedAt(Date.now());
@@ -171,10 +162,6 @@ export function useAuth(options?: UseAuthOptions) {
         const { data: userData, error: userError } =
           await supabase.auth.getUser();
         if (userError || !userData?.user) {
-          console.warn(
-            "[useAuth] Session exists but getUser() returned no user",
-            userError
-          );
         }
         // Invalidate the auth query to refetch user data
         utils.auth.me.invalidate();
@@ -229,12 +216,7 @@ export function useAuth(options?: UseAuthOptions) {
         clearAppStorage();
         clearPendingAuthAction();
         window.dispatchEvent(new Event("cartUpdated"));
-      } catch (storageError) {
-        console.warn(
-          "[useAuth] Failed to clear browser storage during logout",
-          storageError
-        );
-      }
+      } catch {}
     }
   }, [logoutMutation, utils]);
 

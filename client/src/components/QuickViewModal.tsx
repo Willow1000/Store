@@ -211,7 +211,6 @@ export function QuickViewModal({
     // Allow guests to add to cart via hook (hook handles localStorage when no user)
 
     if (!product?.id) {
-      console.error("[QuickViewModal] AddToCart blocked: missing product id");
       toast.error("Product information is missing");
       return;
     }
@@ -232,7 +231,6 @@ export function QuickViewModal({
       setQuantity(1);
       onClose();
     } catch (error) {
-      console.error("[QuickViewModal] AddToCart exception", error);
       toast.error("Failed to add to cart");
     }
   };

@@ -57,9 +57,7 @@ export default function VinDecoder() {
       if (stored) {
         setVinHistory(JSON.parse(stored));
       }
-    } catch (err) {
-      console.error("Failed to load VIN history:", err);
-    }
+    } catch {}
   }, []);
 
   const decodeVinMutation = trpc.vinDecoder.decode.useQuery(
@@ -105,14 +103,11 @@ export default function VinDecoder() {
             "vinDecoder_history",
             JSON.stringify(newHistory)
           );
-        } catch {
-          console.error("Failed to save VIN history");
-        }
+        } catch {}
 
         toast.success("VIN decoded successfully!");
       }
     } catch (error: any) {
-      console.error("VIN decode error:", error);
       const message =
         error?.message ||
         "Failed to decode VIN. Please check the VIN and try again.";
@@ -147,7 +142,6 @@ export default function VinDecoder() {
         );
       }
     } catch (err) {
-      console.error("VIN product search error:", err);
       toast.error("Failed to search products for this VIN");
     } finally {
       setProductsLoading(false);
@@ -162,9 +156,7 @@ export default function VinDecoder() {
     setVinHistory([]);
     try {
       localStorage.removeItem("vinDecoder_history");
-    } catch {
-      console.error("Failed to clear VIN history");
-    }
+    } catch {}
   };
 
   const renderVehicleInfo = () => {

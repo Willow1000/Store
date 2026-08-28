@@ -24,9 +24,7 @@ export const trpcClient = createTRPCProxyClient<AppRouter>({
               Authorization: `Bearer ${session.access_token}`,
             };
           }
-        } catch (error) {
-          console.warn("[tRPC] Failed to get Supabase session:", error);
-        }
+        } catch {}
 
         return {};
       },

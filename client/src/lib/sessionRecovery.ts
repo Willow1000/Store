@@ -25,9 +25,7 @@ function clearBrowserStorage() {
     for (const key of sessionKeys) {
       window.sessionStorage.removeItem(key);
     }
-  } catch (error) {
-    console.warn("[sessionRecovery] Failed to clear browser storage", error);
-  }
+  } catch {}
 }
 
 export async function recoverFromTimeout(
@@ -39,9 +37,7 @@ export async function recoverFromTimeout(
   try {
     try {
       await supabase.auth.signOut();
-    } catch (error) {
-      console.warn("[sessionRecovery] Failed to sign out after timeout", error);
-    }
+    } catch {}
 
     clearBrowserStorage();
 

@@ -32,7 +32,6 @@ export function useSupabaseOrders(userId: string | null) {
       const message =
         err instanceof Error ? err.message : "Failed to fetch orders";
       setError(message);
-      console.error("Error fetching orders:", err);
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +85,6 @@ export function useSupabaseOrders(userId: string | null) {
         const message =
           err instanceof Error ? err.message : "Failed to create order";
         toast.error(message);
-        console.error("Error creating order:", err);
         return null;
       }
     },
@@ -114,7 +112,6 @@ export function useSupabaseOrders(userId: string | null) {
         const message =
           err instanceof Error ? err.message : "Failed to update order";
         toast.error(message);
-        console.error("Error updating order:", err);
         return false;
       }
     },
@@ -183,7 +180,6 @@ export function useSupabasePayments() {
           err instanceof Error ? err.message : "Failed to record payment";
         setError(message);
         toast.error(message);
-        console.error("Error recording payment:", err);
         return null;
       } finally {
         setIsProcessing(false);
@@ -213,7 +209,6 @@ export function useSupabasePayments() {
           err instanceof Error ? err.message : "Failed to update payment";
         setError(message);
         toast.error(message);
-        console.error("Error updating payment:", err);
         return false;
       } finally {
         setIsProcessing(false);

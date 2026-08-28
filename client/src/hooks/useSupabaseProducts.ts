@@ -107,7 +107,6 @@ export function useProducts(
         const message =
           err instanceof Error ? err.message : "Failed to fetch products";
         setError(message);
-        console.error("[useProducts] Error fetching products:", err);
         if (isTimeoutError(err)) {
           await recoverFromTimeout(message);
         }
@@ -172,9 +171,7 @@ export function useProducts(
                     return prev;
                 }
               });
-            } catch (err) {
-              console.error("Realtime products handler error:", err);
-            }
+            } catch {}
           }
         )
         .subscribe();
@@ -186,10 +183,7 @@ export function useProducts(
           // ignore
         }
       };
-    } catch (err) {
-      // subscription failure shouldn't break app
-      console.warn("Failed to subscribe to products realtime updates", err);
-    }
+    } catch {}
   }, [enableRealtime]);
 
   useEffect(() => {
@@ -316,12 +310,7 @@ export function useProductById(productId: string) {
                     brandData as typeof productWithBrand.brand_details,
                 };
               }
-            } catch (err) {
-              console.warn(
-                "[useProductById] Failed to fetch brand details:",
-                err
-              );
-            }
+            } catch {}
           }
 
           // Normalize product cover image
@@ -357,7 +346,6 @@ export function useProductById(productId: string) {
         const message =
           err instanceof Error ? err.message : "Failed to fetch product";
         setError(message);
-        console.error("[useProductById] Error fetching product:", err);
         if (isTimeoutError(err)) {
           await recoverFromTimeout(message);
         }
@@ -415,7 +403,6 @@ export function useProductsByCategory(categoryName: string) {
         const message =
           err instanceof Error ? err.message : "Failed to fetch products";
         setError(message);
-        console.error("Error fetching products:", err);
         if (isTimeoutError(err)) {
           await recoverFromTimeout(message);
         }
@@ -504,7 +491,6 @@ export function useSearchProducts(searchTerm: string) {
       } catch (err) {
         const message = err instanceof Error ? err.message : "Search failed";
         setError(message);
-        console.error("Search error:", err);
       } finally {
         setIsLoading(false);
       }
@@ -574,7 +560,6 @@ export function useCategories() {
         const message =
           err instanceof Error ? err.message : "Failed to fetch categories";
         setError(message);
-        console.error("Error fetching categories:", err);
         if (isTimeoutError(err)) {
           await recoverFromTimeout(message);
         }
@@ -647,7 +632,6 @@ export function useProductsBySlug(categorySlug: string) {
         const message =
           err instanceof Error ? err.message : "Failed to fetch products";
         setError(message);
-        console.error("Error fetching products by slug:", err);
         if (isTimeoutError(err)) {
           await recoverFromTimeout(message);
         }

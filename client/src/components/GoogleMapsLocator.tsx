@@ -133,7 +133,6 @@ export function GoogleMapsLocator() {
           locator.configureFromQuickBuilder(LOCATOR_CONFIG);
         }
       } catch (err) {
-        console.error("Unable to initialize Google Maps locator", err);
         if (mounted) {
           setLoadError("Map preview is unavailable right now.");
         }

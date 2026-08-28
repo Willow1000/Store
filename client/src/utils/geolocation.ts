@@ -252,10 +252,6 @@ async function requestGeolocation(
     });
 
     if (!response.ok) {
-      console.warn(
-        `[geolocation] API error ${response.status}: ${response.statusText}`
-      );
-
       return null;
     }
 
@@ -264,9 +260,7 @@ async function requestGeolocation(
     return normalizeResponse(raw);
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      console.warn("[geolocation] Request timeout");
     } else {
-      console.warn("[geolocation] Request failed", error);
     }
 
     return null;
@@ -286,8 +280,6 @@ export async function fetchGeolocation(
   const apiKey = import.meta.env.VITE_GEOLOCATION_API_KEY;
 
   if (!apiKey) {
-    console.error("[geolocation] Missing VITE_GEOLOCATION_API_KEY");
-
     return null;
   }
 

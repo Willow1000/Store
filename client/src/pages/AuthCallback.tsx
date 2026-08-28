@@ -46,7 +46,6 @@ export default function AuthCallback() {
         }
 
         if (error || !session) {
-          console.error("Auth callback error:", error);
           toast.error("Authentication failed. Please try again.");
           setIsProcessing(false);
           // Redirect after a short delay
@@ -69,7 +68,6 @@ export default function AuthCallback() {
                 : user.user_metadata?.provider || "email",
           });
         } catch (syncError) {
-          console.warn("Error syncing user to backend:", syncError);
           // Continue anyway - user is authenticated with Supabase
         }
 
@@ -127,7 +125,6 @@ export default function AuthCallback() {
         setIsProcessing(false);
         navigate(finalTarget, { replace: true });
       } catch (error) {
-        console.error("Callback error:", error);
         toast.error("Authentication failed. Please try again.");
         setIsProcessing(false);
         setTimeout(() => {

@@ -50,17 +50,14 @@ export function useBrands() {
         );
 
         const fetchPromise = (async () => {
-          console.log("[useBrands] Fetching brands from Supabase...");
           const { data, error: supabaseError } = await supabase
             .from("brand")
             .select("id, name, image_url, created_at")
             .order("name", { ascending: true });
 
           if (supabaseError) {
-            console.error("[useBrands] Supabase error:", supabaseError);
             throw supabaseError;
           }
-          console.log("[useBrands] Fetched brands:", data);
           return (data || []) as Brand[];
         })();
 
@@ -70,22 +67,18 @@ export function useBrands() {
         ]);
 
         if (fetchedBrands.length > 0) {
-          console.log("[useBrands] Setting brands and cache:", fetchedBrands);
           setBrands(fetchedBrands);
           writeCachedArray(BRANDS_CACHE_KEY, fetchedBrands);
         } else {
-          console.warn("[useBrands] No brands returned from query");
           // Still try to use cache if available
           const cached = readCachedArray<Brand>(BRANDS_CACHE_KEY);
           if (cached.length > 0) {
-            console.log("[useBrands] Using cached brands:", cached);
             setBrands(cached);
           }
         }
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to fetch brands";
-        console.error("[useBrands] Error:", message, err);
         setError(message);
 
         if (isTimeoutError(err)) {
@@ -95,7 +88,6 @@ export function useBrands() {
         // Try to use cached data if available
         const cached = readCachedArray<Brand>(BRANDS_CACHE_KEY);
         if (cached.length > 0) {
-          console.log("[useBrands] Using cached brands after error:", cached);
           setBrands(cached);
           setError(null); // Clear error if we have cache
         }

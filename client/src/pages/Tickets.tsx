@@ -142,8 +142,7 @@ export default function TicketsPage() {
 
       const data = await res.json();
       setTickets(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error(err);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -221,7 +220,6 @@ export default function TicketsPage() {
         fetchTickets();
       }, 500);
     } catch (err: any) {
-      console.error(err);
       setMessage(err?.message || "Error");
     } finally {
       setLoading(false);

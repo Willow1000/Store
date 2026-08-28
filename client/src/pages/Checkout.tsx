@@ -638,10 +638,6 @@ export default function Checkout() {
         .in("id", ids);
 
       if (error) {
-        console.error(
-          "[Checkout] Failed to load Meta checkout products:",
-          error
-        );
         toast.error("Unable to load checkout products from your Meta cart.");
         return;
       }
@@ -730,12 +726,7 @@ export default function Checkout() {
           if (isAuthenticated) {
             try {
               await clearSupabaseCart();
-            } catch (err) {
-              console.warn(
-                "[Checkout] Failed to clear Supabase cart after Stripe success:",
-                err
-              );
-            }
+            } catch {}
           }
           localStorage.removeItem("cart");
           localStorage.removeItem(CHECKOUT_CART_SNAPSHOT_KEY);
@@ -743,7 +734,6 @@ export default function Checkout() {
           toast.success("Payment completed successfully");
           navigate("/orders");
         } catch (err) {
-          console.error("[Checkout] Error handling Stripe success:", err);
           toast.error(
             "Payment was successful but we had trouble loading your order. Please go to Orders page."
           );
@@ -823,12 +813,7 @@ export default function Checkout() {
           if (isAuthenticated) {
             try {
               await clearSupabaseCart();
-            } catch (err) {
-              console.warn(
-                "[Checkout] Failed to clear Supabase cart after success callback:",
-                err
-              );
-            }
+            } catch {}
           }
           localStorage.removeItem("cart");
           localStorage.removeItem(CHECKOUT_CART_SNAPSHOT_KEY);
@@ -836,19 +821,10 @@ export default function Checkout() {
           toast.success("Payment completed successfully");
           navigate("/orders");
         } catch (err) {
-          console.error(
-            "[Checkout] Failed to confirm successful payment:",
-            err
-          );
           if (isAuthenticated) {
             try {
               await clearSupabaseCart();
-            } catch (clearErr) {
-              console.warn(
-                "[Checkout] Failed to clear Supabase cart after success callback:",
-                clearErr
-              );
-            }
+            } catch {}
           }
           localStorage.removeItem("cart");
           localStorage.removeItem(CHECKOUT_CART_SNAPSHOT_KEY);
@@ -893,12 +869,7 @@ export default function Checkout() {
             if (isAuthenticated) {
               try {
                 await clearSupabaseCart();
-              } catch (err) {
-                console.warn(
-                  "[Checkout] Failed to clear Supabase cart after verified reference:",
-                  err
-                );
-              }
+              } catch {}
             }
             localStorage.removeItem("cart");
             localStorage.removeItem(CHECKOUT_CART_SNAPSHOT_KEY);
@@ -923,10 +894,6 @@ export default function Checkout() {
           );
           setStep("review");
         } catch (verifyErr) {
-          console.error(
-            "[Checkout] Failed to verify payment reference from URL:",
-            verifyErr
-          );
           toast.error("Unable to verify payment reference. Please try again.");
           setStep("review");
         }
@@ -938,18 +905,14 @@ export default function Checkout() {
   useEffect(() => {
     try {
       localStorage.setItem("checkout-form-data", JSON.stringify(formData));
-    } catch {
-      console.warn("[Checkout] Failed to persist form data");
-    }
+    } catch {}
   }, [formData]);
 
   // Persist checkout step to localStorage
   useEffect(() => {
     try {
       localStorage.setItem("checkout-step", step);
-    } catch {
-      console.warn("[Checkout] Failed to persist checkout step");
-    }
+    } catch {}
   }, [step]);
 
   const composeAddressLine = (address: string, state: string) =>
@@ -1044,7 +1007,6 @@ export default function Checkout() {
         .maybeSingle();
 
       if (error) {
-        console.warn("[Checkout] Failed to load default address:", error);
         return;
       }
 
@@ -1614,7 +1576,6 @@ export default function Checkout() {
 
       return true;
     } catch (error) {
-      console.error("[Checkout] Failed to save shipping address:", error);
       toast.error(
         checkoutText(
           "checkout.addressSaveFailed",
@@ -1742,7 +1703,6 @@ export default function Checkout() {
           ? error.message
           : "Payment failed. Please try again.";
       toast.error(errorMessage);
-      console.error("[Checkout] Paystack error:", error);
     }
   };
 
@@ -1756,9 +1716,6 @@ export default function Checkout() {
         .map(item => {
           const productId = parseInt(String(item.product_id), 10);
           if (!Number.isFinite(productId) || productId <= 0) {
-            console.warn(
-              `[Checkout] Skipping invalid product ID: ${item.product_id}`
-            );
             return null;
           }
           return {
@@ -1810,7 +1767,6 @@ export default function Checkout() {
           ? error.message
           : "Payment failed. Please try again.";
       toast.error(errorMessage);
-      console.error("[Checkout] Stripe error:", error);
     }
   };
 
@@ -2693,10 +2649,6 @@ export default function Checkout() {
                             toast.success("Coupon applied");
                           }
                         } catch (err) {
-                          console.error(
-                            "[Checkout] Coupon validation failed",
-                            err
-                          );
                           setCouponError("Failed to validate coupon");
                           setAppliedOfferData(null);
                         } finally {

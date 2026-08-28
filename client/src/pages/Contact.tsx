@@ -296,7 +296,7 @@ export default function Contact() {
             if (lat || lon)
               out += `- ${sections.coordinates}: ${lat}, ${lon}\n`;
             out += "\n";
-          } catch (e) {}
+          } catch {}
         }
 
         out += `${sections.additionalDetails}:\n`;
@@ -447,7 +447,6 @@ export default function Contact() {
           responseBody?.error ||
             "We were unable to send your message. Please try again."
         );
-        console.error("Contact form error:", responseBody);
         setIsLoading(false);
         return;
       }
@@ -466,7 +465,6 @@ export default function Contact() {
       setCaptchaToken(null);
     } catch (error) {
       toast.error("We were unable to send your message. Please try again.");
-      console.error("Contact form submission error:", error);
     } finally {
       setIsLoading(false);
     }

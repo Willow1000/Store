@@ -129,7 +129,6 @@ function openInlineModal(
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Paystack setup failed";
-      console.error("[Paystack] Setup error:", message);
       reject(new Error(message));
     }
   });
@@ -140,7 +139,6 @@ export function initializePaystack() {
   const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
 
   if (!publicKey) {
-    console.warn("Paystack public key is not configured");
     return false;
   }
 
@@ -157,13 +155,11 @@ export function openPaystackModal(config: PaystackConfig) {
   if (!publicKey) {
     const error =
       "Paystack public key is not configured. Set VITE_PAYSTACK_PUBLIC_KEY in .env.local";
-    console.error("[Paystack]", error);
     throw new Error(error);
   }
 
   if (!publicKey.startsWith("pk_")) {
     const error = `Invalid Paystack public key format. Expected pk_test_* or pk_live_*, got: ${publicKey.substring(0, 10)}...`;
-    console.error("[Paystack]", error);
     throw new Error(error);
   }
 

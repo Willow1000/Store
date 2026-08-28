@@ -45,7 +45,6 @@ export function useJsonProducts() {
         setData({ all, byCategory });
       })
       .catch(err => {
-        console.error("Failed to load products:", err);
         setData({ all: [], byCategory: {} });
       });
   }, []);
@@ -89,7 +88,6 @@ export async function getFeaturedProducts(
 
     return products.slice(0, limit);
   } catch (err) {
-    console.error("Failed to load featured products:", err);
     return [];
   }
 }

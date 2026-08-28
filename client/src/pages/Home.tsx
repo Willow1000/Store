@@ -122,9 +122,7 @@ export default function Home() {
     try {
       const ids = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
       setRecentlyViewedIds(ids);
-    } catch (error) {
-      console.error("Failed to load recently viewed items:", error);
-    }
+    } catch {}
   }, []);
 
   // Get recently viewed products from the products list

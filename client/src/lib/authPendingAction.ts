@@ -28,9 +28,7 @@ export function savePendingAuthAction(action: PendingAuthAction) {
       JSON.stringify({ ...action, redirectTo })
     );
     if (redirectTo) saveAuthRedirect(redirectTo);
-  } catch (error) {
-    console.warn("[AuthPendingAction] Failed to save pending action", error);
-  }
+  } catch {}
 }
 
 export function getPendingAuthAction(): PendingAuthAction | null {
@@ -39,7 +37,6 @@ export function getPendingAuthAction(): PendingAuthAction | null {
     if (!raw) return null;
     return JSON.parse(raw) as PendingAuthAction;
   } catch (error) {
-    console.warn("[AuthPendingAction] Failed to read pending action", error);
     return null;
   }
 }
@@ -48,9 +45,7 @@ export function clearPendingAuthAction() {
   try {
     pendingAuthStorage?.removeItem(PENDING_AUTH_ACTION_KEY);
     pendingAuthStorage?.removeItem("oauth_return_to");
-  } catch (error) {
-    console.warn("[AuthPendingAction] Failed to clear pending action", error);
-  }
+  } catch {}
 }
 
 function markCartAuthRedirectPending() {
@@ -210,7 +205,7 @@ async function mergeGuestCartWithUserCart(userId: string): Promise<string[]> {
           w.__resolveCartMigration = resolve;
         });
       }
-    } catch (e) {}
+    } catch {}
   }
 
   // Prevent concurrent merges - if already in progress, wait for it
@@ -245,10 +240,6 @@ async function mergeGuestCartWithUserCart(userId: string): Promise<string[]> {
         // This ensures guest items don't overwrite but accumulate
         await upsertCartItem(userId, guestItem.productId, guestItem.quantity);
       } catch (error) {
-        console.warn(
-          `[CartMerge] Failed to merge item ${guestItem.productId}:`,
-          error instanceof Error ? error.message : "Unknown error"
-        );
         // Continue merging other items even if one fails
         // This prevents one out-of-stock item from blocking the entire merge
       }
@@ -318,10 +309,6 @@ async function mergeGuestWishlistWithUserWishlist(
     try {
       await upsertWishlistItem(userId, pid);
     } catch (err) {
-      console.warn(
-        `[WishlistMerge] Failed to merge ${pid}:`,
-        err instanceof Error ? err.message : err
-      );
       // continue
     }
   }
@@ -330,7 +317,7 @@ async function mergeGuestWishlistWithUserWishlist(
     localStorage.removeItem("wishlist");
     try {
       localStorage.removeItem("isMigratingCart");
-    } catch (e) {}
+    } catch {}
     window.dispatchEvent(new Event("cartMerged"));
   }
 

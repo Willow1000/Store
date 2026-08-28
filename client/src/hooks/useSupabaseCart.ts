@@ -17,10 +17,6 @@ export function useSupabaseCart(userId: string | null) {
 
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) {
-      console.error(
-        "Unable to resolve authenticated user for profile sync:",
-        userError
-      );
       return false;
     }
 
@@ -40,7 +36,6 @@ export function useSupabaseCart(userId: string | null) {
     );
 
     if (profileError) {
-      console.error("Failed to ensure profile exists:", profileError);
       return false;
     }
 
@@ -69,12 +64,7 @@ export function useSupabaseCart(userId: string | null) {
       localStorage.setItem("cart", nextJson);
       lastLocalCartJsonRef.current = nextJson;
       window.dispatchEvent(new Event("cartUpdated"));
-    } catch (storageError) {
-      console.warn(
-        "[useSupabaseCart] Failed to mirror cart snapshot locally:",
-        storageError
-      );
-    }
+    } catch {}
   }, []);
 
   // Fetch cart items
@@ -94,11 +84,6 @@ export function useSupabaseCart(userId: string | null) {
 
       const profileReady = await ensureProfile();
       if (!profileReady) {
-        // Profile upsert may lag briefly right after OAuth completion; continue
-        // and rely on cart query result instead of hard-failing to an empty cart.
-        console.warn(
-          "[useSupabaseCart] Profile not ready yet; continuing cart fetch"
-        );
       }
 
       const { data, error: supabaseError } = await supabase
@@ -119,7 +104,6 @@ export function useSupabaseCart(userId: string | null) {
       const message =
         err instanceof Error ? err.message : "Failed to fetch cart";
       setError(message);
-      console.error("Error fetching cart:", err);
     } finally {
       if (requestId === fetchRequestIdRef.current) {
         setIsLoading(false);
@@ -180,7 +164,6 @@ export function useSupabaseCart(userId: string | null) {
           const message =
             err instanceof Error ? err.message : "Failed to add to cart";
           toast.error(message);
-          console.error("Error adding to local cart:", err);
           return false;
         }
       }
@@ -259,7 +242,6 @@ export function useSupabaseCart(userId: string | null) {
         const message =
           err instanceof Error ? err.message : "Failed to add to cart";
         toast.error(message);
-        console.error("Error adding to cart:", err);
         return false;
       }
     },
@@ -297,7 +279,6 @@ export function useSupabaseCart(userId: string | null) {
         const message =
           err instanceof Error ? err.message : "Failed to update quantity";
         toast.error(message);
-        console.error("Error updating quantity:", err);
         return false;
       }
     },
@@ -330,7 +311,6 @@ export function useSupabaseCart(userId: string | null) {
         const message =
           err instanceof Error ? err.message : "Failed to remove from cart";
         toast.error(message);
-        console.error("Error removing from cart:", err);
         return false;
       }
     },
@@ -356,7 +336,6 @@ export function useSupabaseCart(userId: string | null) {
       const message =
         err instanceof Error ? err.message : "Failed to clear cart";
       toast.error(message);
-      console.error("Error clearing cart:", err);
       return false;
     }
   }, [userId, fetchCart]);
@@ -379,14 +358,14 @@ export function useSupabaseCart(userId: string | null) {
                 resolve();
                 try {
                   window.removeEventListener("cartMerged", onMerged);
-                } catch (e) {}
+                } catch {}
               };
               window.addEventListener("cartMerged", onMerged);
               // Safety timeout
               setTimeout(() => {
                 try {
                   window.removeEventListener("cartMerged", onMerged);
-                } catch (e) {}
+                } catch {}
                 resolve();
               }, 3000);
             });
@@ -400,7 +379,7 @@ export function useSupabaseCart(userId: string | null) {
         if (!cancelled) {
           try {
             fetchCart();
-          } catch (_) {}
+          } catch {}
         }
       }
     })();
@@ -521,7 +500,6 @@ export function useSupabaseWishlist(userId: string | null) {
       const message =
         err instanceof Error ? err.message : "Failed to fetch wishlist";
       setError(message);
-      console.error("Error fetching wishlist:", err);
     } finally {
       setIsLoading(false);
     }
@@ -560,7 +538,6 @@ export function useSupabaseWishlist(userId: string | null) {
           return true;
         } catch (e) {
           toast.error("Failed to add to wishlist");
-          console.error(e);
           return false;
         }
       }
@@ -589,7 +566,6 @@ export function useSupabaseWishlist(userId: string | null) {
         const message =
           err instanceof Error ? err.message : "Failed to add to wishlist";
         toast.error(message);
-        console.error("Error adding to wishlist:", err);
         return false;
       }
     },
@@ -628,7 +604,6 @@ export function useSupabaseWishlist(userId: string | null) {
           return true;
         } catch (e) {
           toast.error("Failed to remove from wishlist");
-          console.error(e);
           return false;
         }
       }
@@ -656,7 +631,6 @@ export function useSupabaseWishlist(userId: string | null) {
         const message =
           err instanceof Error ? err.message : "Failed to remove from wishlist";
         toast.error(message);
-        console.error("Error removing from wishlist:", err);
         return false;
       }
     },

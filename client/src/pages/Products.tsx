@@ -166,11 +166,11 @@ export default function Products() {
                 : `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
             try {
               localStorage.setItem("sessionId", sid);
-            } catch (e) {}
+            } catch {}
           }
           payload.sessionId = payload.sessionId || sid;
         }
-      } catch (e) {}
+      } catch {}
 
       const body = JSON.stringify(payload);
       if (
@@ -316,9 +316,7 @@ export default function Products() {
     try {
       const ids = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
       setRecentlyViewedIds(ids.filter((id: any) => typeof id === "string"));
-    } catch (error) {
-      console.error("[Products] Failed to load recently viewed items:", error);
-    }
+    } catch {}
   }, []);
 
   // Search session logic:
@@ -336,7 +334,7 @@ export default function Products() {
       searchResolvedByClickRef.current = false;
       try {
         sessionStorage.setItem("activeSearchTerm", q);
-      } catch (e) {}
+      } catch {}
       // If there is a pending completed term (user cleared before) and they now start a new search, emit the pending term
       const pending =
         pendingCompletedSearchRef.current ||
@@ -352,7 +350,7 @@ export default function Products() {
         pendingCompletedSearchRef.current = null;
         try {
           sessionStorage.removeItem("pendingSearchTerm");
-        } catch (e) {}
+        } catch {}
       }
     } else {
       // search cleared: if there was an active term, emit it as a "cleared" search
@@ -365,14 +363,14 @@ export default function Products() {
         pendingCompletedSearchRef.current = null;
         try {
           sessionStorage.removeItem("pendingSearchTerm");
-        } catch (e) {}
+        } catch {}
         pendingSearchSnapshotRef.current = null;
 
         if (!shouldTrackAbandonedSearch) {
           activeSearchRef.current = null;
           try {
             sessionStorage.removeItem("activeSearchTerm");
-          } catch (e) {}
+          } catch {}
           return;
         }
 
@@ -431,7 +429,7 @@ export default function Products() {
       activeSearchRef.current = null;
       try {
         sessionStorage.removeItem("activeSearchTerm");
-      } catch (e) {}
+      } catch {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
@@ -1538,12 +1536,7 @@ export default function Products() {
 
                                   try {
                                     await toggleWishlist(product.id);
-                                  } catch (error) {
-                                    console.error(
-                                      "Failed to toggle wishlist from products page:",
-                                      error
-                                    );
-                                  }
+                                  } catch {}
                                 }}
                                 className="bg-white p-2 rounded-full hover:bg-gray-100 shadow"
                                 aria-label={

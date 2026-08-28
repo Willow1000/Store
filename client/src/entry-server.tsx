@@ -68,9 +68,7 @@ export async function render(
   );
 
   const stream = await renderToReadableStream(app, {
-    onError(error) {
-      console.error("[SSR] render error:", error);
-    },
+    onError(error) {},
   });
 
   const reader = stream.getReader();

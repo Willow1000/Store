@@ -21,7 +21,6 @@ export default function Account() {
       toast.success("Logged out successfully");
       window.location.href = "/";
     } catch (error) {
-      console.error("[Account] Logout error:", error);
       toast.error("Failed to logout");
     }
   };

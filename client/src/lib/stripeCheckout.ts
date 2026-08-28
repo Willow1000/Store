@@ -60,7 +60,6 @@ export async function redirectToStripeCheckout(
     // Redirect to Stripe Checkout
     window.location.href = response.url;
   } catch (error) {
-    console.error("[Stripe Checkout] Error:", error);
     throw error;
   }
 }

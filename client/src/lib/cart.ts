@@ -95,7 +95,6 @@ export function addToLocalCart(item: LocalCartItem) {
     writeCartToStorage(next);
     return true;
   } catch (e) {
-    console.error("addToLocalCart error", e);
     return false;
   }
 }
@@ -106,7 +105,7 @@ export function readWishlistFromStorage(): string[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) return parsed.filter(x => typeof x === "string");
-  } catch (e) {}
+  } catch {}
   return [];
 }
 
@@ -114,5 +113,5 @@ export function writeWishlistToStorage(items: string[]) {
   try {
     localStorage.setItem("wishlist", JSON.stringify(items));
     window.dispatchEvent(new Event("wishlistUpdated"));
-  } catch (e) {}
+  } catch {}
 }

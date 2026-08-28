@@ -89,11 +89,11 @@ export default function ProductDetail() {
                 : `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
             try {
               localStorage.setItem("sessionId", sid || "");
-            } catch (e) {}
+            } catch {}
           }
           payload.sessionId = payload.sessionId || sid;
         }
-      } catch (e) {}
+      } catch {}
 
       const body = JSON.stringify(payload);
       if (
@@ -235,7 +235,6 @@ export default function ProductDetail() {
     // Allow guest users to add to local cart; use addToCart hook which supports guest localStorage
 
     if (!product?.id) {
-      console.error("[ProductDetail] AddToCart blocked: missing product id");
       toast.error("Product information is missing");
       return;
     }
@@ -244,7 +243,6 @@ export default function ProductDetail() {
       const added = await addToCart(product.id, quantity);
 
       if (!added) {
-        console.error("[ProductDetail] AddToCart failed: hook returned false");
         return;
       }
       trackAddToCart(
@@ -269,9 +267,8 @@ export default function ProductDetail() {
             matchedProductIds: (allProducts || []).slice(0, 50).map(p => p.id),
           });
         }
-      } catch (e) {}
+      } catch {}
     } catch (error) {
-      console.error("[ProductDetail] AddToCart exception", error);
       toast.error("Failed to add to cart");
     }
   };
@@ -288,9 +285,6 @@ export default function ProductDetail() {
 
     try {
       if (!product?.id) {
-        console.error(
-          "[ProductDetail] QuickCheckout blocked: missing product id"
-        );
         toast.error("Product information is missing");
         return;
       }
@@ -312,10 +306,9 @@ export default function ProductDetail() {
             matchedProductIds: (allProducts || []).slice(0, 50).map(p => p.id),
           });
         }
-      } catch (e) {}
+      } catch {}
       navigate("/checkout");
     } catch (error) {
-      console.error("[ProductDetail] QuickCheckout exception", error);
       toast.error("Failed to proceed to checkout");
     }
   };
@@ -324,9 +317,7 @@ export default function ProductDetail() {
     if (product?.id) {
       try {
         await toggleWishlist(product.id);
-      } catch (error) {
-        console.error("Failed to toggle wishlist:", error);
-      }
+      } catch {}
     }
   };
 
@@ -343,9 +334,7 @@ export default function ProductDetail() {
         );
         const updated = [product.id, ...filtered].slice(0, 10); // Keep max 10 items
         localStorage.setItem("recentlyViewed", JSON.stringify(updated));
-      } catch (error) {
-        console.error("Failed to update recently viewed:", error);
-      }
+      } catch {}
     }
   }, [product?.id]);
 
@@ -641,7 +630,7 @@ export default function ProductDetail() {
           matchedProductIds: (allProducts || []).slice(0, 50).map(p => p.id),
         });
       }
-    } catch (e) {}
+    } catch {}
     navigate(getEnquiryContactUrl(false));
   };
 
@@ -1354,7 +1343,7 @@ export default function ProductDetail() {
                                   .map(pp => pp.id),
                               });
                             }
-                          } catch (e) {}
+                          } catch {}
                         }}
                         className="group relative bg-white border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                       >

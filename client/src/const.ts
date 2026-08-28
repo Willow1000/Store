@@ -7,9 +7,6 @@ export const getLoginUrl = () => {
 
   // If OAuth config is not available, return a placeholder or auth path
   if (!oauthPortalUrl || !appId) {
-    console.warn(
-      "OAuth environment variables not configured. Using fallback auth path."
-    );
     return "/auth/login";
   }
 
@@ -24,7 +21,6 @@ export const getLoginUrl = () => {
     url.searchParams.set("type", "signIn");
     return url.toString();
   } catch (error) {
-    console.error("Failed to construct login URL:", error);
     return "/auth/login";
   }
 };

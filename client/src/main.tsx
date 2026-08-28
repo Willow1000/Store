@@ -58,7 +58,6 @@ queryClient.getQueryCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.query.state.error;
     redirectToLoginIfUnauthorized(error);
-    console.error("[API Query Error]", error);
   }
 });
 
@@ -66,7 +65,6 @@ queryClient.getMutationCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.mutation.state.error;
     redirectToLoginIfUnauthorized(error);
-    console.error("[API Mutation Error]", error);
   }
 });
 
@@ -91,9 +89,7 @@ const trpcClient = trpc.createClient({
               headers,
             });
           }
-        } catch (error) {
-          console.warn("[tRPC] Failed to get Supabase session:", error);
-        }
+        } catch {}
 
         // Fallback: fetch without Authorization header
         return globalThis.fetch(input, {
@@ -132,8 +128,7 @@ async function bootstrapApp() {
     void (async () => {
       try {
         await supabase.auth.getSession();
-      } catch (sessionErr) {
-        console.warn("[auth] initial session bootstrap failed", sessionErr);
+      } catch {
       } finally {
         authBootstrapComplete = true;
       }
@@ -145,12 +140,8 @@ async function bootstrapApp() {
       void currencyClient.init().then(() => {
         initializeSiteLanguage(currencyClient.getGeoData());
       });
-    } catch (e) {
-      console.warn("[currencyClient] initialization failed", e);
-    }
-  } catch (e) {
-    console.error("[bootstrap] Fatal error:", e);
-  }
+    } catch {}
+  } catch {}
 }
 
 bootstrapApp();
