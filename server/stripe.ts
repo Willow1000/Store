@@ -165,6 +165,13 @@ export async function createCheckoutSession(
     customer_email: userEmail,
     client_reference_id: userId.toString(),
     metadata: sessionMetadata,
+    // Adaptive Pricing (on by default per the Stripe dashboard setting,
+    // independent of anything in this code) converts the displayed/charged
+    // amount to the customer's local currency based on their location. Our
+    // line items are already computed in USD from the product catalog's
+    // real prices, so this must stay off - otherwise the amount Stripe
+    // actually shows/charges silently differs by the FX rate applied.
+    adaptive_pricing: { enabled: false },
     // Checkout Session metadata is NOT copied to the underlying PaymentIntent
     // automatically — the webhook handles `payment_intent.succeeded` and reads
     // paymentIntent.metadata, so it must be duplicated here.
