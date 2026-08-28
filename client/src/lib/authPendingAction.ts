@@ -231,19 +231,21 @@ async function mergeGuestCartWithUserCart(userId: string): Promise<string[]> {
       .map(item => item.productId)
       .filter((productId): productId is string => Boolean(productId));
 
-    // Process each guest cart item
-    for (const guestItem of guestCartItems) {
-      if (!guestItem.productId) continue;
-
-      try {
-        // Merge strategy: add quantities
-        // This ensures guest items don't overwrite but accumulate
-        await upsertCartItem(userId, guestItem.productId, guestItem.quantity);
-      } catch (error) {
-        // Continue merging other items even if one fails
-        // This prevents one out-of-stock item from blocking the entire merge
-      }
-    }
+    // Merge strategy: add quantities (guest quantity on top of any existing
+    // account quantity). Each item touches its own (userId, productId) row,
+    // so these are independent - running them in parallel instead of one at
+    // a time cuts merge time from O(items * round-trip) to roughly one
+    // round-trip, which matters here since the cart page blocks its loading
+    // skeleton on this merge finishing. allSettled (not all) keeps the
+    // existing behavior of one out-of-stock item not blocking the rest.
+    await Promise.allSettled(
+      guestCartItems
+        .filter(
+          (item): item is typeof item & { productId: string } =>
+            !!item.productId
+        )
+        .map(item => upsertCartItem(userId, item.productId, item.quantity))
+    );
 
     // Clear localStorage cart after successful merge to prevent duplication
     if (typeof window !== "undefined") {
