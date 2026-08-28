@@ -76,15 +76,23 @@ export function isTimeoutError(error: unknown) {
   const message = normalizeErrorMessage(error);
   if (!message) return false;
 
+  // Only match phrases that unambiguously indicate the user's own session
+  // has actually expired or been invalidated - not generic auth-failure
+  // text. A bare "jwt", "unauthorized", or "access denied" match is far
+  // too broad: those substrings show up in transient, unrelated Supabase/
+  // PostgREST errors (e.g. a request that raced ahead of session restore
+  // on page load, or an RLS denial for a completely different reason),
+  // and recoverFromTimeout() responds by signing the user out and
+  // reloading the page - a false positive here means a real, valid
+  // session gets forcibly logged out over a one-off unrelated error. That
+  // combination previously caused signed-in users to get logged out again
+  // on refresh.
   return (
     message.includes("session expired") ||
     message.includes("refresh token") ||
     message.includes("jwt expired") ||
     message.includes("invalid token") ||
-    message.includes("unauthorized") ||
-    message.includes("access denied") ||
     message.includes("token has expired") ||
-    message.includes("invalid jwt") ||
-    message.includes("jwt")
+    message.includes("invalid jwt")
   );
 }
