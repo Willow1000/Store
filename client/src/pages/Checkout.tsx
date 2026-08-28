@@ -1187,6 +1187,16 @@ export default function Checkout() {
   const cartGrandTotal = orderSummary.total;
   const couponLabel = orderSummary.couponLabel;
 
+  // While auth/session restore or the initial Supabase cart fetch is still
+  // in flight, cartItems can briefly be [] before the real cart-loading
+  // effect sets it - showing $0.00 during that window looks like a broken
+  // calculation rather than a loading state. Gate the numeric order-summary
+  // display on this instead of showing bare numbers throughout.
+  const orderSummaryReady =
+    !authLoading &&
+    sessionRestored &&
+    (!isAuthenticated || supabaseCartHasLoadedOnce);
+
   useEffect(() => {
     if (cartItems.length === 0 || cartGrandTotal <= 0) return;
     const signature = cartItems
@@ -2229,10 +2239,14 @@ export default function Checkout() {
                   {selectedPayment === "stripe" ? (
                     <button
                       onClick={handlePayment}
-                      disabled={isProcessing}
+                      disabled={isProcessing || !orderSummaryReady}
                       className="flex-1 bg-black hover:bg-gray-900 disabled:bg-gray-400 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
                     >
-                      {isProcessing ? "Redirecting..." : "Continue to Stripe"}
+                      {isProcessing
+                        ? "Redirecting..."
+                        : !orderSummaryReady
+                          ? t("checkout.loadingCart", "Loading cart...")
+                          : "Continue to Stripe"}
                       <ChevronRight size={20} />
                     </button>
                   ) : (
@@ -2334,12 +2348,14 @@ export default function Checkout() {
                   </button>
                   <button
                     onClick={handlePayment}
-                    disabled={isProcessing}
+                    disabled={isProcessing || !orderSummaryReady}
                     className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 text-sm sm:text-base"
                   >
                     {isProcessing
                       ? t("checkout.processing", "Processing...")
-                      : `${selectedPayment === "stripe" ? "Continue to Stripe" : t("checkout.payNow", "Pay Now")} ${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(cartGrandTotal).toFixed(2)}`}
+                      : !orderSummaryReady
+                        ? t("checkout.loadingCart", "Loading cart...")
+                        : `${selectedPayment === "stripe" ? "Continue to Stripe" : t("checkout.payNow", "Pay Now")} ${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(cartGrandTotal).toFixed(2)}`}
                   </button>
                 </div>
               </div>
@@ -2576,9 +2592,13 @@ export default function Checkout() {
                   <span className="text-gray-600">
                     {t("checkout.subtotal", "Subtotal")}
                   </span>
-                  <span className="font-medium text-gray-900">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(subtotal).toFixed(2)}`}</span>
+                  {orderSummaryReady ? (
+                    <span className="font-medium text-gray-900">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(subtotal).toFixed(2)}`}</span>
+                  ) : (
+                    <span className="inline-block h-4 w-16 rounded bg-gray-200 animate-pulse" />
+                  )}
                 </div>
-                {offerDiscountAmount > 0 && (
+                {orderSummaryReady && offerDiscountAmount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">
                       {couponLabel || "Discount"}
@@ -2595,17 +2615,21 @@ export default function Checkout() {
                   <span className="text-gray-600">
                     {t("checkout.estimatedShipping", "Estimated shipping")}
                   </span>
-                  <span
-                    className={
-                      shipping === 0
-                        ? "text-green-600 font-semibold"
-                        : "font-medium text-gray-900"
-                    }
-                  >
-                    {shipping === 0
-                      ? t("checkout.free", "FREE")
-                      : `${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(shipping).toFixed(2)}`}
-                  </span>
+                  {orderSummaryReady ? (
+                    <span
+                      className={
+                        shipping === 0
+                          ? "text-green-600 font-semibold"
+                          : "font-medium text-gray-900"
+                      }
+                    >
+                      {shipping === 0
+                        ? t("checkout.free", "FREE")
+                        : `${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(shipping).toFixed(2)}`}
+                    </span>
+                  ) : (
+                    <span className="inline-block h-4 w-14 rounded bg-gray-200 animate-pulse" />
+                  )}
                 </div>
                 <p className="text-xs text-gray-500">
                   {t(
@@ -2621,7 +2645,11 @@ export default function Checkout() {
                   <span className="text-gray-600">
                     {t("checkout.total", "Total")}
                   </span>
-                  <span className="text-3xl font-bold text-black">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(cartGrandTotal).toFixed(2)}`}</span>
+                  {orderSummaryReady ? (
+                    <span className="text-3xl font-bold text-black">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(cartGrandTotal).toFixed(2)}`}</span>
+                  ) : (
+                    <span className="inline-block h-8 w-24 rounded bg-gray-200 animate-pulse" />
+                  )}
                 </div>
                 <p className="text-xs text-gray-500 text-right mt-1">
                   {t("checkout.taxInclusive", "Tax inclusive")}
