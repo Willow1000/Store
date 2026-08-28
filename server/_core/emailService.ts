@@ -25,13 +25,14 @@ export async function sendContactAdminNotification(
       subject: 'New Contact/Inquiry Submitted — Action Required',
       html: htmlContent,
     }, `admin contact notification to ${adminEmail}`);
-    console.log(`[Email] Admin notification sent to ${adminEmail}`);
+    logger.info({ adminEmail }, '[Email] Admin notification sent');
     return true;
   } catch (error) {
     logEmailError(`[Email] Failed to send admin notification to ${adminEmail}`, error);
     return false;
   }
 }
+import { logger } from './logger';
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
@@ -1306,7 +1307,7 @@ export async function sendOrderConfirmationEmail(
       ],
     }, `order confirmation to ${recipientEmail}`);
 
-    console.log(`[Email] Order confirmation sent to ${recipientEmail}`);
+    logger.info({ recipientEmail }, '[Email] Order confirmation sent');
     return true;
   } catch (error) {
     logEmailError(`[Email] Failed to send order confirmation to ${recipientEmail}`, error);
@@ -1375,7 +1376,7 @@ export async function sendTicketConfirmationEmail(
       attachments: logoMail.attachments,
     }, `ticket confirmation to ${recipientEmail}`);
 
-    console.log(`[Email] Ticket confirmation sent to ${recipientEmail}`);
+    logger.info({ recipientEmail }, '[Email] Ticket confirmation sent');
     return true;
   } catch (error) {
     logEmailError(`[Email] Failed to send ticket confirmation to ${recipientEmail}`, error);
@@ -1426,7 +1427,7 @@ export async function sendContactConfirmationEmail(
       attachments: logoMail.attachments,
     }, `contact confirmation to ${recipientEmail}`);
 
-    console.log(`[Email] Contact confirmation sent to ${recipientEmail}`);
+    logger.info({ recipientEmail }, '[Email] Contact confirmation sent');
     return true;
   } catch (error) {
     logEmailError(`[Email] Failed to send contact confirmation to ${recipientEmail}`, error);
@@ -1473,7 +1474,7 @@ export async function sendContactReplyEmail(
       attachments: logoMail.attachments,
     }, `contact reply to ${recipientEmail}`);
 
-    console.log(`[Email] Contact reply sent to ${recipientEmail}`);
+    logger.info({ recipientEmail }, '[Email] Contact reply sent');
     return true;
   } catch (error) {
     logEmailError(`[Email] Failed to send contact reply to ${recipientEmail}`, error);
@@ -1488,7 +1489,7 @@ export async function verifyEmailConnection(): Promise<boolean> {
   try {
     const transporterInstance = getTransporter();
     await transporterInstance.verify();
-    console.log('[Email] SMTP connection verified');
+    logger.info('[Email] SMTP connection verified');
     return true;
   } catch (error) {
     logEmailError('[Email] SMTP connection failed', error);
