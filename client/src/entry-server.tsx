@@ -5,6 +5,35 @@ import superjson from "superjson";
 import App from "./App";
 import { trpc } from "./lib/trpc";
 import { createHeadCollector, HeadProvider } from "./lib/headManager";
+import { supabase } from "./lib/supabase";
+import {
+  SsrProductDataProvider,
+  type SsrProductSeoData,
+} from "./lib/ssrProductData";
+
+const PRODUCT_SEO_FIELDS =
+  "id, title, item_specifics, price, brand, model, category_name, cover_image_url, part_number";
+
+async function fetchSsrProductSeoData(
+  url: string
+): Promise<SsrProductSeoData | null> {
+  const match = /^\/product\/([^/?#]+)/.exec(url);
+  if (!match) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from("products")
+      .select(PRODUCT_SEO_FIELDS)
+      .eq("id", match[1])
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as SsrProductSeoData;
+  } catch {
+    // SEO enrichment is best-effort - the page still renders its normal
+    // loading state and generic SEOHead fallback if this fails.
+    return null;
+  }
+}
 
 type MemoryStorage = {
   getItem: (key: string) => string | null;
@@ -56,14 +85,17 @@ export async function render(
   });
 
   const headCollector = createHeadCollector();
+  const ssrProduct = await fetchSsrProductSeoData(url);
 
   const app = (
     <HeadProvider collector={headCollector}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <App initialPath={url} ssr />
-        </QueryClientProvider>
-      </trpc.Provider>
+      <SsrProductDataProvider product={ssrProduct}>
+        <trpc.Provider client={trpcClient} queryClient={queryClient}>
+          <QueryClientProvider client={queryClient}>
+            <App initialPath={url} ssr />
+          </QueryClientProvider>
+        </trpc.Provider>
+      </SsrProductDataProvider>
     </HeadProvider>
   );
 

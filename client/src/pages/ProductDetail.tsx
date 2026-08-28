@@ -29,6 +29,7 @@ import { BlootrueWidget } from "@/components/TrustindexWidget";
 import { useRecommendations } from "@/hooks/useRecommendations";
 import { buildContactHref, getEnquiryCopy } from "@/lib/enquiry";
 import { getSiteLanguage } from "@/lib/language";
+import { useSsrProductData } from "@/lib/ssrProductData";
 
 export default function ProductDetail() {
   const [, params] = useRoute("/product/:id");
@@ -50,6 +51,7 @@ export default function ProductDetail() {
   const { user, isAuthenticated } = useAuth();
   const isMobile = useIsMobile();
   const { product, images, isLoading, error } = useProductById(productId || "");
+  const ssrProduct = useSsrProductData();
   const { products: allProducts } = useProducts(1, 200); // Fetch products for similar items
   const { addToCart } = useSupabaseCart(user?.id || null);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(
@@ -379,25 +381,53 @@ export default function ProductDetail() {
     typeof window !== "undefined"
       ? `${window.location.origin}/product/${productId}`
       : `/product/${productId}`;
-  const seoTitle = product?.title
-    ? `${product.title} | MotorVault`
+  // product only settles after useProductById's client-side fetch, which
+  // never runs during SSR - ssrProduct is a lightweight server-only
+  // prefetch (see entry-server.tsx) used just to give each product page
+  // its own title/description before that fetch has happened. It only
+  // affects these SEOHead values, never the actual rendered content.
+  const seoProduct = product || ssrProduct;
+  // Some catalog titles carry stray leading/trailing whitespace or
+  // newlines from the original listing data - trim before it ends up in
+  // a <title> tag or meta description.
+  const seoProductTitle = seoProduct?.title?.replace(/\s+/g, " ").trim();
+  const seoTitle = seoProductTitle
+    ? `${seoProductTitle} | MotorVault`
     : "Product Details | MotorVault";
-  const seoDescription = product?.title
-    ? `View ${product.title} on MotorVault. Compare pricing, check availability, and shop secure automotive parts and accessories.`
+  const seoDescription = seoProductTitle
+    ? `View ${seoProductTitle} on MotorVault. Compare pricing, check availability, and shop secure automotive parts and accessories.`
     : "View premium automotive parts and accessories on MotorVault.";
   const seoImage =
     product?.cover_image_url ||
     images?.[0]?.image_url ||
+    ssrProduct?.cover_image_url ||
     "https://motorvault.shop/images/hero/premium-european-auto-parts-hero.webp";
   const seoKeywords = [
     "automotive parts",
     "car parts",
     "OEM parts",
     "aftermarket parts",
-    product?.brand,
-    product?.model,
-    product?.category_name,
+    seoProduct?.brand,
+    seoProduct?.model,
+    seoProduct?.category_name,
   ].filter((value): value is string => Boolean(value && value.trim()));
+  // Minimal Product schema from the SSR-only prefetch, so a crawler that
+  // only ever sees the loading-state render (i.e. any crawler, since the
+  // real fetch only happens client-side) still gets rich-result-eligible
+  // markup instead of none at all.
+  const seoProductData = seoProduct
+    ? {
+        name: seoProductTitle || seoProduct.title,
+        price: seoProduct.price ?? "",
+        image: seoImage,
+        category: seoProduct.category_name || undefined,
+        description: ssrProduct?.item_specifics || undefined,
+        sku: seoProduct.part_number || undefined,
+        brand: seoProduct.brand || undefined,
+        mpn: seoProduct.part_number || undefined,
+        url: canonicalUrl,
+      }
+    : undefined;
 
   if (isLoading) {
     return (
@@ -409,6 +439,7 @@ export default function ProductDetail() {
           ogType="product"
           ogImage={seoImage}
           keywords={seoKeywords}
+          productData={seoProductData}
         />
         <main
           role="main"
@@ -464,6 +495,7 @@ export default function ProductDetail() {
           ogType="product"
           ogImage={seoImage}
           keywords={seoKeywords}
+          productData={seoProductData}
         />
         <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
           <div className="text-center">
