@@ -1,10 +1,23 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { initializeTransaction, verifyTransaction } from '../paystack';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { TRPCError } from '@trpc/server';
+import { initializeTransaction, verifyTransaction, buildPaystackCallbackUrl } from './paystack';
 
 /**
- * Mock Paystack API responses for testing
+ * paystackRequest() reads the response body via response.text() and JSON.parses
+ * it, so mocks must implement text(), not json().
  */
-const mockPaystackSuccessResponse = {
+function mockFetchOnce(status: number, ok: boolean, body: unknown) {
+  global.fetch = vi.fn(() =>
+    Promise.resolve({
+      ok,
+      status,
+      statusText: ok ? 'OK' : 'Error',
+      text: () => Promise.resolve(JSON.stringify(body)),
+    } as unknown as Response)
+  );
+}
+
+const mockInitializeSuccess = {
   status: true,
   message: 'Authorization URL created',
   data: {
@@ -14,240 +27,166 @@ const mockPaystackSuccessResponse = {
   },
 };
 
-const mockPaystackFailureResponse = {
-  status: false,
-  message: 'Invalid request',
-};
-
-const mockVerifySuccessResponse = {
+const mockVerifySuccess = {
   status: true,
   message: 'Verification successful',
   data: {
     reference: 'TEST-REF-12345',
     amount: 100000,
+    currency: 'USD',
     status: 'success',
-    paid: true,
-    customer: {
-      id: 123,
-      email: 'customer@example.com',
-    },
-  },
-};
-
-const mockVerifyFailureResponse = {
-  status: false,
-  message: 'Verification failed',
-  data: {
-    status: 'failed',
-    paid: false,
+    domain: 'test',
+    metadata: { userId: 'user-123' },
   },
 };
 
 describe('Paystack Payment Integration', () => {
+  const originalFetch = global.fetch;
+
   beforeEach(() => {
-    // Clear all mocks before each test
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
   describe('initializeTransaction', () => {
-    it('should successfully initialize a transaction with valid parameters', async () => {
-      // Mock successful API response
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockPaystackSuccessResponse),
-        } as Response)
-      );
+    it('initializes a transaction with valid parameters', async () => {
+      mockFetchOnce(200, true, mockInitializeSuccess);
 
-      const result = await initializeTransaction(
-        'customer@example.com',
-        100000,
-        'ORD-12345',
-        { userId: 'user-123' }
-      );
-
-      expect(result).toBeDefined();
-      expect(result?.reference).toBe('TEST-REF-12345');
-      expect(result?.authorizationUrl).toBe('https://checkout.paystack.com/test-reference');
-    });
-
-    it('should return null when API request fails', async () => {
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: false,
-          status: 400,
-          json: () => Promise.resolve(mockPaystackFailureResponse),
-        } as Response)
-      );
-
-      const result = await initializeTransaction(
-        'customer@example.com',
-        100000,
-        'ORD-12345',
-        { userId: 'user-123' }
-      );
-
-      expect(result).toBeNull();
-    });
-
-    it('should handle network errors gracefully', async () => {
-      global.fetch = vi.fn(() =>
-        Promise.reject(new Error('Network error'))
-      );
-
-      const result = await initializeTransaction(
-        'customer@example.com',
-        100000,
-        'ORD-12345',
-        { userId: 'user-123' }
-      );
-
-      expect(result).toBeNull();
-    });
-
-    it('should include metadata in transaction', async () => {
-      global.fetch = vi.fn((_url: string, init?: RequestInit) => {
-        const body = JSON.parse(init?.body as string);
-        expect(body.metadata).toEqual({ userId: 'user-123', orderId: 'ORD-12345' });
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockPaystackSuccessResponse),
-        } as Response);
+      const result = await initializeTransaction({
+        email: 'customer@example.com',
+        amount: 100000,
+        reference: 'ORD-12345',
+        metadata: { userId: 'user-123' },
       });
 
-      const result = await initializeTransaction(
-        'customer@example.com',
-        100000,
-        'ORD-12345',
-        { userId: 'user-123' }
+      expect(result.status).toBe(true);
+      expect(result.data.reference).toBe('TEST-REF-12345');
+      expect(result.data.authorization_url).toBe('https://checkout.paystack.com/test-reference');
+    });
+
+    it('sends email, amount, reference and metadata in the request body', async () => {
+      mockFetchOnce(200, true, mockInitializeSuccess);
+
+      await initializeTransaction({
+        email: 'customer@example.com',
+        amount: 100000,
+        reference: 'ORD-12345',
+        metadata: { userId: 'user-123' },
+      });
+
+      const call = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const [url, init] = call;
+      expect(url).toBe('https://api.paystack.co/transaction/initialize');
+      const body = JSON.parse(init.body as string);
+      expect(body.email).toBe('customer@example.com');
+      expect(body.amount).toBe(100000);
+      expect(body.reference).toBe('ORD-12345');
+      expect(body.metadata).toEqual({ userId: 'user-123' });
+    });
+
+    it('throws when email is missing', async () => {
+      await expect(
+        initializeTransaction({ email: '', amount: 100000 })
+      ).rejects.toThrow('Initialize transaction requires email and amount');
+    });
+
+    it('throws when amount is missing', async () => {
+      await expect(
+        initializeTransaction({ email: 'customer@example.com', amount: 0 })
+      ).rejects.toThrow('Initialize transaction requires email and amount');
+    });
+
+    it('throws when the email has no @', async () => {
+      await expect(
+        initializeTransaction({ email: 'not-an-email', amount: 100000 })
+      ).rejects.toThrow('Invalid email address provided');
+    });
+
+    it('throws when the amount is negative', async () => {
+      await expect(
+        initializeTransaction({ email: 'customer@example.com', amount: -5 })
+      ).rejects.toThrow('Amount must be greater than zero');
+    });
+
+    it('throws a TRPCError when Paystack returns a non-OK response', async () => {
+      mockFetchOnce(400, false, { status: false, message: 'Invalid request' });
+
+      await expect(
+        initializeTransaction({ email: 'customer@example.com', amount: 100000 })
+      ).rejects.toMatchObject({ message: 'Invalid request' } satisfies Partial<TRPCError>);
+    });
+
+    it('throws a TRPCError when the response body is not valid JSON', async () => {
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: () => Promise.resolve('not json'),
+        } as unknown as Response)
       );
 
-      expect(result).toBeDefined();
+      await expect(
+        initializeTransaction({ email: 'customer@example.com', amount: 100000 })
+      ).rejects.toThrow(/Invalid JSON response/);
     });
   });
 
   describe('verifyTransaction', () => {
-    it('should successfully verify a completed transaction', async () => {
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockVerifySuccessResponse),
-        } as Response)
-      );
+    it('verifies a completed transaction', async () => {
+      mockFetchOnce(200, true, mockVerifySuccess);
 
       const result = await verifyTransaction('TEST-REF-12345');
 
-      expect(result).toBeDefined();
-      expect(result?.status).toBe('success');
-      expect(result?.paid).toBe(true);
-      expect(result?.amount).toBe(100000);
+      expect(result.status).toBe(true);
+      expect(result.data.status).toBe('success');
+      expect(result.data.amount).toBe(100000);
+      expect(result.data.reference).toBe('TEST-REF-12345');
     });
 
-    it('should return failed status for unsuccessful transaction', async () => {
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockVerifyFailureResponse),
-        } as Response)
-      );
+    it('requests the correctly encoded verify URL', async () => {
+      mockFetchOnce(200, true, mockVerifySuccess);
 
-      const result = await verifyTransaction('TEST-REF-FAILED');
+      await verifyTransaction('ref with spaces');
 
-      expect(result).toBeDefined();
-      expect(result?.paid).toBe(false);
+      const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe('https://api.paystack.co/transaction/verify/ref%20with%20spaces');
     });
 
-    it('should handle API errors during verification', async () => {
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: false,
-          status: 500,
-          json: () => Promise.resolve({ message: 'Server error' }),
-        } as Response)
+    it('throws when reference is empty', async () => {
+      await expect(verifyTransaction('')).rejects.toThrow(
+        'Reference is required to verify transaction'
       );
-
-      const result = await verifyTransaction('TEST-REF-ERROR');
-
-      expect(result).toBeNull();
     });
 
-    it('should extract customer email from verification response', async () => {
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            ...mockVerifySuccessResponse,
-            data: {
-              ...mockVerifySuccessResponse.data,
-              customer: {
-                id: 456,
-                email: 'verified@example.com',
-              },
-            },
-          }),
-        } as Response)
-      );
+    it('throws a TRPCError when the API reports an error', async () => {
+      mockFetchOnce(500, false, { status: false, message: 'Server error' });
 
-      const result = await verifyTransaction('TEST-REF-12345');
-
-      expect(result?.customer?.email).toBe('verified@example.com');
+      await expect(verifyTransaction('TEST-REF-ERROR')).rejects.toMatchObject({
+        message: 'Server error',
+      } satisfies Partial<TRPCError>);
     });
   });
 
-  describe('Error handling and edge cases', () => {
-    it('should handle missing secret key gracefully', async () => {
-      const originalKey = process.env.PAYSTACK_SECRET_KEY;
-      delete process.env.PAYSTACK_SECRET_KEY;
-
-      try {
-        const result = await initializeTransaction(
-          'customer@example.com',
-          100000,
-          'ORD-12345',
-          {}
-        );
-        expect(result).toBeNull();
-      } finally {
-        if (originalKey) {
-          process.env.PAYSTACK_SECRET_KEY = originalKey;
-        }
-      }
+  describe('buildPaystackCallbackUrl', () => {
+    it('appends /payment/callback to the origin', () => {
+      expect(buildPaystackCallbackUrl('https://motorvault.shop')).toBe(
+        'https://motorvault.shop/payment/callback'
+      );
     });
 
-    it('should handle malformed JSON response', async () => {
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.reject(new Error('Invalid JSON')),
-        } as Response)
+    it('strips a trailing slash from the origin', () => {
+      expect(buildPaystackCallbackUrl('https://motorvault.shop/')).toBe(
+        'https://motorvault.shop/payment/callback'
       );
-
-      const result = await initializeTransaction(
-        'customer@example.com',
-        100000,
-        'ORD-12345',
-        {}
-      );
-
-      expect(result).toBeNull();
     });
 
-    it('should handle zero amount', async () => {
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: false,
-          json: () => Promise.resolve({ message: 'Invalid amount' }),
-        } as Response)
-      );
-
-      const result = await initializeTransaction(
-        'customer@example.com',
-        0,
-        'ORD-12345',
-        {}
-      );
-
-      expect(result).toBeNull();
+    it('returns undefined when no origin is given', () => {
+      expect(buildPaystackCallbackUrl(null)).toBeUndefined();
+      expect(buildPaystackCallbackUrl(undefined)).toBeUndefined();
     });
   });
 });

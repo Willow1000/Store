@@ -1,3 +1,9 @@
+// @vitest-environment jsdom
+//
+// recommendations.ts is browser-only code (it branches on `typeof window`
+// and reads/writes localStorage), so it needs a real DOM environment to
+// exercise that code path instead of always hitting the server-side
+// fallback.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   scoreProduct,
@@ -6,7 +12,7 @@ import {
   type InterestProfile,
   type SmartScoreBreakdown,
   type Product,
-} from '../../client/src/lib/recommendations';
+} from './recommendations';
 
 /**
  * Mock product fixture for testing
@@ -119,14 +125,17 @@ describe('Product Scoring and Breakdown', () => {
     });
 
     it('should factor in deal score when sale price is lower than regular price', () => {
+      // calculateDealScore compares `price` against `original_price`/`discount`
+      // (the pre-markdown reference price) - `sale_price` isn't part of that
+      // calculation at all.
       const regularProduct = mockProduct({
         price: 450,
-        sale_price: null,
+        original_price: undefined,
       });
 
       const dealProduct = mockProduct({
-        price: 450,
-        sale_price: 299.99,
+        price: 299.99,
+        original_price: 450,
       });
 
       const profile = mockProfile();
@@ -274,9 +283,12 @@ describe('Product Scoring and Breakdown', () => {
         mockProduct({ id: 'prod-3', price: 200 }),
       ];
 
+      // preserveWhenNoSignals is intentionally omitted: when it's true and
+      // there are no profile/searchTerm signals, rankProducts short-circuits
+      // and returns the input order untouched, before the price tiebreak in
+      // its sort comparator ever runs.
       const ranked = rankProducts(products, {
         priceDirection: 'asc',
-        preserveWhenNoSignals: true,
       });
 
       expect(Number(ranked[0].price)).toBeLessThanOrEqual(Number(ranked[1].price));
@@ -292,7 +304,6 @@ describe('Product Scoring and Breakdown', () => {
 
       const ranked = rankProducts(products, {
         priceDirection: 'desc',
-        preserveWhenNoSignals: true,
       });
 
       expect(Number(ranked[0].price)).toBeGreaterThanOrEqual(Number(ranked[1].price));
