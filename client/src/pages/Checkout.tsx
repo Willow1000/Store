@@ -78,7 +78,7 @@ type CheckoutFormData = {
 };
 
 type PaymentMethod = {
-  id: "visa" | "mastercard" | "applePay" | "stripe";
+  id: "visa" | "mastercard" | "stripe";
   name: string;
   icon: ReactNode;
   description: string;
@@ -426,7 +426,7 @@ export default function Checkout() {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<
-    "visa" | "mastercard" | "applePay" | "stripe"
+    "visa" | "mastercard" | "stripe"
   >("stripe");
   // Coupon code UI state
   const [couponCodeInput, setCouponCodeInput] = useState<string>("");
@@ -1256,23 +1256,6 @@ export default function Checkout() {
       ),
       description:
         "Pay securely with Visa, Mastercard, or other cards via Stripe",
-    },
-    {
-      id: "applePay",
-      name: "Apple Pay",
-      icon: (
-        <img
-          src="https://cdn-icons-png.flaticon.com/512/5968/5968500.png"
-          alt="Apple Pay logo"
-          className="w-8 h-8 object-contain"
-          onError={e => {
-            e.currentTarget.src =
-              "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%22000000%22 width=%2248%22 height=%2248%22/%3E%3Ctext x=%2224%22 y=%2726%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2218%22 font-weight=%22bold%22%3E%26%23xf179;%3C/text%3E%3C/svg%3E";
-          }}
-        />
-      ),
-      description: "Coming soon to your region",
-      disabled: true,
     },
   ];
 
