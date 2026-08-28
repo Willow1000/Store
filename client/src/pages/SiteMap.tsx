@@ -6,6 +6,7 @@ import { BLOG_POSTS } from '@shared/blogPosts';
 const corePages = [
   { href: '/', label: 'Home' },
   { href: '/products', label: 'All Products' },
+  { href: '/vin-decoder', label: 'VIN Decoder' },
   { href: '/blog', label: 'Blog' },
   { href: '/about', label: 'About' },
   { href: '/help', label: 'Help Center' },

@@ -60,6 +60,9 @@ export default function Footer() {
                 <Link href="/blog" className="hover:text-white inline-flex min-h-11 items-center">Blog</Link>
               </li>
               <li>
+                <Link href="/vin-decoder" className="hover:text-white inline-flex min-h-11 items-center">VIN Decoder</Link>
+              </li>
+              <li>
                 <Link href="/site-map" className="hover:text-white inline-flex min-h-11 items-center">{t('footer.siteMap', 'HTML Sitemap')}</Link>
               </li>
             </ul>

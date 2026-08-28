@@ -1,0 +1,679 @@
+.vin-decoder-container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 3rem 1rem;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f0f4f8 0%, #f9fafb 100%);
+}
+
+.vin-decoder-wrapper {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 3.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.vin-decoder-wrapper h1 {
+  font-size: 2.5rem;
+  margin: 0 0 1rem;
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.description {
+  color: #64748b;
+  margin: 0 0 3rem;
+  line-height: 1.8;
+  font-size: 1.05rem;
+}
+
+/* Form Styles */
+.vin-decoder-form {
+  margin-bottom: 3rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.form-group {
+  margin-bottom: 1.75rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.vin-input {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.1em;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  background: white;
+}
+
+.vin-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  background: white;
+}
+
+.vin-input:disabled {
+  background-color: #f5f7fa;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.5rem;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.decode-button {
+  width: 100%;
+  padding: 1.125rem 1.5rem;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
+  letter-spacing: -0.01em;
+}
+
+.decode-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+}
+
+.decode-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.decode-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* VIN History Styles */
+.vin-history {
+  margin: 3rem 0;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #f5f3ff 100%);
+  border-radius: 12px;
+  border: 1px solid #dbeafe;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.history-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.01em;
+}
+
+.clear-history-button {
+  padding: 0.6rem 1.25rem;
+  background: white;
+  border: 1.5px solid #dbeafe;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #0284c7;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 600;
+}
+
+.clear-history-button:hover {
+  background: #0284c7;
+  color: white;
+  border-color: #0284c7;
+}
+
+.history-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.history-item {
+  padding: 0.6rem 1rem;
+  background: white;
+  border: 1.5px solid #dbeafe;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.history-item:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+  transform: translateY(-2px);
+}
+
+/* Product search button */
+.vin-product-search {
+  margin: 1.5rem 0;
+}
+
+.find-products-button {
+  width: 100%;
+  padding: 0.95rem 1.25rem;
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.find-products-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Results */
+.vin-product-results {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid #e6eef2;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.no-results {
+  color: #64748b;
+}
+
+.product-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.product-item {
+  border: 1px solid #e6eef2;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.product-link {
+  display: flex;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.75rem;
+}
+
+.product-thumb img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.product-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.product-name {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.product-price {
+  color: #2563eb;
+  font-weight: 800;
+}
+
+.product-snippet {
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.product-placeholder {
+  width: 72px;
+  height: 72px;
+  background: #eef2f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  border-radius: 6px;
+}
+
+/* Screen reader only helper */
+.sr-only {
+  position: absolute !important;
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap;
+}
+
+/* Result Styles */
+.vin-decoder-result {
+  margin-bottom: 2rem;
+  padding: 2.5rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.result-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.result-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: #0f172a;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.result-header h2 svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+.vin-display {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #64748b;
+}
+
+.vin-display code {
+  background: #f1f5f9;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  color: #2563eb;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* Info Sections */
+.info-section {
+  margin-bottom: 2.5rem;
+}
+
+.info-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.title-icon {
+  font-size: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+}
+
+.title-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  stroke-width: 2;
+}
+
+.section-title h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #1e293b;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+/* Tier-specific grid layouts for optimal field spacing */
+.section-grid.tier-1 {
+  /* Vehicle Identity: Year, Make, Model, Trim - should show 2x2 on desktop, 1 col on mobile */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.section-grid.tier-2 {
+  /* Body & Configuration: up to 2 fields - should show side by side */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+
+.section-grid.tier-3 {
+  /* Engine Specs: 4 fields - flexible 2x2 or full width */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.section-grid.tier-4 {
+  /* Manufacturing: 2 fields - side by side */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+
+.section-grid.tier-extra {
+  /* Additional fields: flexible sizing */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+/* Elegant Info Cards */
+.elegant-info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+.elegant-info-card:hover {
+  border-color: #2563eb;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12);
+  transform: translateY(-3px);
+}
+
+.card-icon {
+  font-size: 1.75rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+  border-radius: 10px;
+  border: 1px solid #dbeafe;
+  color: #2563eb;
+}
+
+.card-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  stroke-width: 2;
+  color: #2563eb;
+}
+
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.card-value {
+  font-size: 1.1rem;
+  color: #0f172a;
+  font-weight: 600;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+/* Info Box Styles */
+.info-box {
+  padding: 2rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #f0f4f8 100%);
+  border: 1.5px solid #dbeafe;
+  border-radius: 12px;
+  margin-top: 3rem;
+}
+
+.info-box h3 {
+  margin: 0 0 1.25rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e40af;
+  letter-spacing: -0.01em;
+}
+
+.info-box ul {
+  margin: 0;
+  padding-left: 1.75rem;
+  list-style: disc;
+}
+
+.info-box li {
+  margin-bottom: 0.75rem;
+  color: #1e40af;
+  line-height: 1.8;
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .vin-decoder-container {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .vin-decoder-wrapper {
+    padding: 2rem 1.5rem;
+  }
+
+  .vin-decoder-wrapper h1 {
+    font-size: 1.75rem;
+  }
+
+  .vin-decoder-form {
+    padding: 1.5rem;
+  }
+
+  .vin-decoder-result {
+    padding: 1.5rem;
+  }
+
+  .result-header h2 {
+    font-size: 1.4rem;
+  }
+
+  .result-header h2 svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  /* Mobile: Stack grids to 2 columns for tier-1, 1 column for others */
+  .section-grid.tier-1 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .section-grid.tier-2,
+  .section-grid.tier-3,
+  .section-grid.tier-4,
+  .section-grid.tier-extra {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .elegant-info-card {
+    padding: 1rem;
+  }
+
+  .card-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .card-icon svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .card-label {
+    font-size: 0.75rem;
+  }
+
+  .card-value {
+    font-size: 1rem;
+  }
+
+  .history-list {
+    flex-direction: column;
+  }
+
+  .history-item {
+    width: 100%;
+    text-align: left;
+  }
+
+  .info-box {
+    padding: 1.5rem;
+  }
+
+  .title-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .vin-decoder-container {
+    padding: 1rem 0.5rem;
+  }
+
+  .vin-decoder-wrapper {
+    padding: 1.5rem 1rem;
+  }
+
+  .vin-decoder-wrapper h1 {
+    font-size: 1.5rem;
+  }
+
+  .description {
+    font-size: 0.95rem;
+  }
+
+  /* Mobile small: Stack all grids to 1 column */
+  .section-grid.tier-1,
+  .section-grid.tier-2,
+  .section-grid.tier-3,
+  .section-grid.tier-4,
+  .section-grid.tier-extra {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .elegant-info-card {
+    padding: 0.875rem;
+  }
+
+  .card-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .card-icon svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .history-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .section-title {
+    gap: 0.5rem;
+  }
+
+  .section-title h3 {
+    font-size: 1.1rem;
+  }
+
+  .title-icon svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .result-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .result-header h2 svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}

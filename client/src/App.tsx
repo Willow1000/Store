@@ -46,6 +46,7 @@ const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const Tickets = lazy(() => import("./pages/Tickets"));
 const AutoMotorblokkenNederland = lazy(() => import("./pages/AutoMotorblokkenNederland"));
+const VinDecoder = lazy(() => import("./pages/VinDecoder"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const PaymentFailed = lazy(() => import("./pages/PaymentFailed"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -123,6 +124,7 @@ function AppRoutes() {
       <Route path={"/cookies"} component={Cookies} />
       <Route path={"/tickets"} component={Tickets} />
       <Route path={"/nl/auto-motorblokken"} component={AutoMotorblokkenNederland} />
+      <Route path={"/vin-decoder"} component={VinDecoder} />
       <Route path={"/accessibility"} component={Accessibility} />
       <Route path={"/faq"} component={FAQ} />
       <Route path={"/site-map"} component={SiteMap} />
