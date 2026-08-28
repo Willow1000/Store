@@ -948,16 +948,16 @@ export default function Checkout() {
         quantity: item.quantity,
       }));
 
-      if (mapped.length > 0) {
-        setCartItems(mapped);
-        writeCheckoutSnapshot(mapped);
-        return;
-      }
-
-      // If checkout returns from a failed/abandoned payment before cart hydration,
-      // keep showing the last known cart snapshot instead of dropping total to 0.00.
-      const snapshot = readCheckoutSnapshot();
-      setCartItems(snapshot);
+      // supabaseCartHasLoadedOnce is true at this point, so `mapped` is the
+      // real, current cart - always trust it, including when it's empty.
+      // Falling back to the old snapshot here (rather than only as the
+      // lazy initial state, before the fetch resolves) was the bug: once
+      // loading has genuinely finished, a stale snapshot from a previous
+      // checkout attempt would keep showing instead of the actual current
+      // cart (wrong items, wrong prices, wrong total) any time the real
+      // cart was smaller or empty compared to that old snapshot.
+      setCartItems(mapped);
+      writeCheckoutSnapshot(mapped);
       return;
     }
 
