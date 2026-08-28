@@ -413,17 +413,34 @@ export default function Checkout() {
     return isMetaCheckoutRequest(params, window.location.pathname);
   }, []);
 
-  const [cartItems, setCartItems] = useState<CartItem[]>(() =>
-    readCheckoutSnapshot()
+  // These two must NOT read localStorage in the useState initializer - that
+  // function also runs during the client's very first (hydrating) render,
+  // where localStorage has real, possibly stale, values, while SSR always
+  // sees none (no window). That mismatch between the server-rendered HTML
+  // and the client's first render is a hydration mismatch: React logs a
+  // warning and the affected content becomes unreliable (e.g. the order
+  // summary showing a stale "previous checkout attempt" total while the
+  // item list, patched separately, shows current data). Starting both at
+  // their SSR-safe default and seeding the real value in an effect (which
+  // never runs during SSR) keeps the initial client render identical to
+  // the server's.
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [step, setStep] = useState<"shipping" | "payment" | "review">(
+    "shipping"
   );
-  const [step, setStep] = useState<"shipping" | "payment" | "review">(() => {
-    try {
-      const saved = localStorage.getItem("checkout-step");
-      return (saved as "shipping" | "payment" | "review") || "shipping";
-    } catch {
-      return "shipping";
+
+  useEffect(() => {
+    const snapshot = readCheckoutSnapshot();
+    if (snapshot.length > 0) {
+      setCartItems(snapshot);
     }
-  });
+    try {
+      const savedStep = localStorage.getItem("checkout-step");
+      if (savedStep === "payment" || savedStep === "review") {
+        setStep(savedStep);
+      }
+    } catch {}
+  }, []);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<
     "visa" | "mastercard" | "stripe"
@@ -467,42 +484,46 @@ export default function Checkout() {
     };
   }, []);
 
-  const [formData, setFormData] = useState<CheckoutFormData>(() => {
+  // Same SSR-vs-client-first-render hydration hazard as cartItems/step
+  // above - default to the SSR-safe shape here and seed the saved draft in
+  // a client-only effect below, instead of reading localStorage in this
+  // initializer.
+  const [formData, setFormData] = useState<CheckoutFormData>({
+    firstName: user?.name?.split(" ")[0] || "",
+    lastName: user?.name?.split(" ").slice(1).join(" ") || "",
+    email: user?.email || "",
+    phone: "",
+    phoneCountry: DEFAULT_PHONE_COUNTRY,
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+    country: "US",
+  });
+
+  useEffect(() => {
     try {
       const saved = localStorage.getItem("checkout-form-data");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          firstName: parsed.firstName || user?.name?.split(" ")[0] || "",
-          lastName:
-            parsed.lastName || user?.name?.split(" ").slice(1).join(" ") || "",
-          email: parsed.email || user?.email || "",
-          phone: parsed.phone || "",
-          phoneCountry:
-            parsed.phoneCountry || parsed.country || DEFAULT_PHONE_COUNTRY,
-          address: parsed.address || "",
-          city: parsed.city || "",
-          state: parsed.state || "",
-          zip: parsed.zip || "",
-          country: parsed.country || "US",
-        };
-      }
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      setFormData(prev => ({
+        firstName: parsed.firstName || prev.firstName,
+        lastName: parsed.lastName || prev.lastName,
+        email: parsed.email || prev.email,
+        phone: parsed.phone || prev.phone,
+        phoneCountry:
+          parsed.phoneCountry || parsed.country || prev.phoneCountry,
+        address: parsed.address || prev.address,
+        city: parsed.city || prev.city,
+        state: parsed.state || prev.state,
+        zip: parsed.zip || prev.zip,
+        country: parsed.country || prev.country,
+      }));
     } catch {
       // Ignore parse errors
     }
-    return {
-      firstName: user?.name?.split(" ")[0] || "",
-      lastName: user?.name?.split(" ").slice(1).join(" ") || "",
-      email: user?.email || "",
-      phone: "",
-      phoneCountry: DEFAULT_PHONE_COUNTRY,
-      address: "",
-      city: "",
-      state: "",
-      zip: "",
-      country: "US",
-    };
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
