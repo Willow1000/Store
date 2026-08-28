@@ -7,6 +7,7 @@ import { createRequire } from "module";
 import fs from "fs";
 import path from "path";
 import { pathToFileURL } from "url";
+import { logger } from "../server/_core/logger";
 
 const handler = express();
 const require = createRequire(import.meta.url);
@@ -31,8 +32,10 @@ const SERVER_ROUTE_PREFIXES = [
   "/.well-known/apple-developer-merchantid-domain-association",
 ];
 
+type SsrRenderResult = { html: string; head: string };
+
 let cachedIndexTemplate: string | null = null;
-let cachedRender: ((url: string) => Promise<string>) | null = null;
+let cachedRender: ((url: string) => Promise<SsrRenderResult>) | null = null;
 
 function isStaticAssetPath(urlPath: string): boolean {
   return (
@@ -71,7 +74,7 @@ function getIndexTemplate(): string | null {
 }
 
 async function getSsrRender(): Promise<
-  ((url: string) => Promise<string>) | null
+  ((url: string) => Promise<SsrRenderResult>) | null
 > {
   if (cachedRender) return cachedRender;
   if (!fs.existsSync(SSR_ENTRY_PATH)) return null;
@@ -111,19 +114,23 @@ handler.use(async (req: Request, res: Response, next: NextFunction) => {
         const ssrRender = await getSsrRender();
         if (template && ssrRender) {
           try {
-            const appHtml = await ssrRender(req.originalUrl || req.url || "/");
-            const html = template.replace(
-              '<div id="root"></div>',
-              `<div id="root">${appHtml}</div>`
+            const { html: appHtml, head: headHtml } = await ssrRender(
+              req.originalUrl || req.url || "/"
             );
+            const html = template
+              .replace("<!--SSR_HEAD-->", headHtml || "")
+              .replace(
+                '<div id="root"></div>',
+                `<div id="root">${appHtml || ""}</div>`
+              );
             return res
               .status(200)
               .set({ "Content-Type": "text/html; charset=utf-8" })
               .send(html);
-          } catch (ssrError) {
-            console.error(
-              "[API] SSR render failed, serving static shell:",
-              ssrError
+          } catch (ssrError: any) {
+            logger.error(
+              { data: [ssrError?.message || String(ssrError)] },
+              "[API] SSR render failed, serving static shell"
             );
             return res
               .status(200)
@@ -156,11 +163,9 @@ handler.use(async (req: Request, res: Response, next: NextFunction) => {
 
     if (typeof createApp !== "function") {
       const exported = Object.keys(bundled || {});
-      console.error(
-        "[API] createApp is not a function, got:",
-        typeof createApp,
-        "exports:",
-        exported
+      logger.error(
+        { data: [typeof createApp, exported] },
+        "[API] createApp is not a function"
       );
       throw new Error(
         `Invalid createApp ${
@@ -179,24 +184,23 @@ handler.use(async (req: Request, res: Response, next: NextFunction) => {
     }
     return app(req, res, next);
   } catch (error: any) {
-    console.error("[API] Error:", error?.message || String(error));
-    if (error?.stack) {
-      const stackLines = error.stack.split("\n").slice(1, 4).join("\n");
-      console.error("[API] Stack trace (first 3 lines):\n", stackLines);
-    }
+    logger.error(
+      { data: [error?.message || String(error), error?.stack] },
+      "[API] Error"
+    );
 
     // Fallback for development: try loading from source
     if (process.env.NODE_ENV !== "production") {
       try {
-        console.warn("[API] Trying source as fallback...");
+        logger.warn("[API] Trying source as fallback...");
         const source = await import("../server/_core/app");
         const { createApp } = source as any;
         const app = createApp();
         return app(req, res, next);
       } catch (sourceError: any) {
-        console.error(
-          "[API] Source fallback also failed:",
-          sourceError?.message
+        logger.error(
+          { data: [sourceError?.message] },
+          "[API] Source fallback also failed"
         );
       }
     }
