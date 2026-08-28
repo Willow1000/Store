@@ -50,11 +50,7 @@ pids
 coverage/
 *.lcov
 
-# Test files (local testing only, not committed)
-*.test.ts
-test-*.ts
-test-*.js
-test-*.mjs
+# Scratch notes (not vitest spec files - those are tracked and run in CI)
 test-*.md
 *-test.md
 *-notes.md
