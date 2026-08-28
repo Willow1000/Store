@@ -76,6 +76,12 @@ export default function Cart() {
       return false;
     }
   });
+  // Safety net: several independent things gate the loading skeleton
+  // (session restore, the guest->account cart migration handshake,
+  // useSupabaseCart's own fetch). Each has its own timeout, but if any
+  // combination still leaves it stuck, force the loading state off after
+  // a bound rather than showing skeletons indefinitely.
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
 
   const t = (key: string, fallback: string) =>
     translateText(language, key, fallback);
@@ -160,6 +166,27 @@ export default function Cart() {
     effectiveCartItems.length,
     refetchSupabaseCart,
   ]);
+
+  const isWaitingOnCartData =
+    !sessionRestored ||
+    authLoading ||
+    awaitingCartHydration ||
+    (isAuthenticated && isSupabaseLoading);
+
+  useEffect(() => {
+    if (!isWaitingOnCartData) {
+      setLoadingTimedOut(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      // One more explicit attempt before giving up on the skeleton - a
+      // fresh fetchCart() call isn't subject to whatever left the
+      // original attempt stuck (e.g. a stale request id).
+      if (isAuthenticated) void refetchSupabaseCart();
+      setLoadingTimedOut(true);
+    }, 8000);
+    return () => window.clearTimeout(timer);
+  }, [isWaitingOnCartData, isAuthenticated, refetchSupabaseCart]);
 
   const productsById = useMemo(() => {
     return new Map(
@@ -272,12 +299,9 @@ export default function Cart() {
   // inclusive, communicated to the shopper instead of itemized.
   const total = subtotal + shipping;
 
-  const shouldShowLoadingState =
-    !sessionRestored ||
-    authLoading ||
-    awaitingCartHydration ||
-    (isAuthenticated && isSupabaseLoading);
-  const showCartLoading = isLoading || shouldShowLoadingState;
+  const shouldShowLoadingState = !loadingTimedOut && isWaitingOnCartData;
+  const showCartLoading =
+    !loadingTimedOut && (isLoading || shouldShowLoadingState);
 
   const enrichedCartItems = effectiveCartItems.map(item => {
     const product = resolveProduct(item);

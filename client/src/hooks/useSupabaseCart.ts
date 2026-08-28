@@ -347,9 +347,17 @@ export function useSupabaseCart(userId: string | null) {
       try {
         if (typeof window !== "undefined") {
           const w = window as any;
-          // Prefer promise-based migration handshake when available
+          // Prefer promise-based migration handshake when available. This
+          // has no timeout of its own (unlike the fallback branch below),
+          // so if the merge that created it never resolves - e.g. the tab
+          // was navigated to a full page reload mid-merge and the promise
+          // it's holding a reference to is from a torn-down window - race
+          // it against a safety timeout rather than waiting forever.
           if (w.__cartMigrationPromise) {
-            await w.__cartMigrationPromise;
+            await Promise.race([
+              w.__cartMigrationPromise,
+              new Promise<void>(resolve => setTimeout(resolve, 3000)),
+            ]);
             if (cancelled) return;
           } else if (localStorage.getItem("isMigratingCart")) {
             // Fallback to event-based listener for older flows
