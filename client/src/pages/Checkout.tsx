@@ -1237,6 +1237,12 @@ export default function Checkout() {
     }
   };
 
+  // Stripe is the only payment method shown in the UI. Paystack ("visa"/
+  // "mastercard" below were its UI entry points, both routing to
+  // handleCardPayment -> handlePaystackPayment) is kept fully wired up
+  // server- and client-side - see handlePaystackPayment, handleCardPayment,
+  // and the "visa"/"mastercard" case in handlePayment's switch below - so
+  // re-enabling it later is just adding its entries back to this array.
   const paymentMethods: PaymentMethod[] = [
     {
       id: "stripe",
@@ -1250,38 +1256,6 @@ export default function Checkout() {
       ),
       description:
         "Pay securely with Visa, Mastercard, or other cards via Stripe",
-    },
-    {
-      id: "visa",
-      name: "Visa",
-      icon: (
-        <img
-          src="https://www.svgrepo.com/show/76111/visa-pay-logo.svg"
-          alt="Visa logo"
-          className="w-8 h-8 object-contain"
-          onError={e => {
-            e.currentTarget.src =
-              "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%221a1f71%22 width=%2248%22 height=%2248%22/%3E%3Ctext x=%2724%22 y=%2726%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2218%22 font-weight=%22bold%22%3EV%3C/text%3E%3C/svg%3E";
-          }}
-        />
-      ),
-      description: "Pay securely with your Visa card through Paystack",
-    },
-    {
-      id: "mastercard",
-      name: "Mastercard",
-      icon: (
-        <img
-          src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSXnXkBmw2uSAI7UPnfI8ZWleOP_9jguz46rQ&s"
-          alt="Mastercard logo"
-          className="w-8 h-8 object-contain"
-          onError={e => {
-            e.currentTarget.src =
-              "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%22ff5f00%22 width=%2224%22 height=%2248%22/%3E%3Crect fill=%22d2001d%22 x=%2724%22 width=%2224%22 height=%2248%22/%3E%3C/svg%3E";
-          }}
-        />
-      ),
-      description: "Pay securely with your Mastercard through Paystack",
     },
     {
       id: "applePay",
