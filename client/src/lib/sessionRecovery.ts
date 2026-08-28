@@ -52,6 +52,9 @@ export async function recoverFromTimeout(reason = 'Session expired. Please log i
           },
         })
       );
+      setTimeout(() => {
+        window.location.reload();
+      }, 250);
     }
 
     toast.error(reason);
@@ -62,16 +65,28 @@ export async function recoverFromTimeout(reason = 'Session expired. Please log i
   }
 }
 
-export function isTimeoutError(error: unknown) {
-  if (!(error instanceof Error)) return false;
+function normalizeErrorMessage(error: unknown): string {
+  if (typeof error === 'string') return error.toLowerCase();
+  if (error instanceof Error) return error.message.toLowerCase();
+  if (error && typeof (error as any).message === 'string') {
+    return (error as any).message.toLowerCase();
+  }
+  return '';
+}
 
-  const message = error.message.toLowerCase();
+export function isTimeoutError(error: unknown) {
+  const message = normalizeErrorMessage(error);
+  if (!message) return false;
+
   return (
     message.includes('session expired') ||
     message.includes('refresh token') ||
     message.includes('jwt expired') ||
     message.includes('invalid token') ||
     message.includes('unauthorized') ||
-    message.includes('access denied')
+    message.includes('access denied') ||
+    message.includes('token has expired') ||
+    message.includes('invalid jwt') ||
+    message.includes('jwt')
   );
 }
