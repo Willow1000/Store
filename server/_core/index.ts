@@ -2,6 +2,7 @@ import { createServer } from "http";
 import net from "net";
 import { serveStatic, setupVite } from "./vite";
 import { createApp } from "./app";
+import { logger } from "./logger";
 
 // Export createApp for Vercel serverless functions
 export { createApp };
@@ -44,4 +45,6 @@ async function startServer() {
   server.listen(port, () => {});
 }
 
-startServer().catch(console.error);
+startServer().catch(err =>
+  logger.error({ data: [err] }, "Failed to start server")
+);

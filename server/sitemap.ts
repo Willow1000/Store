@@ -1,6 +1,7 @@
 import { getDb } from "./db";
 import { BLOG_POSTS } from "../shared/blogPosts";
 
+import { logger } from "./_core/logger";
 type SitemapKind = "site" | "products";
 
 export async function generateSitemap(
@@ -81,7 +82,7 @@ export async function generateSitemap(
     xml += "</urlset>";
     return xml;
   } catch (error) {
-    console.error("Error generating sitemap:", error);
+    logger.error({ data: [error] }, "Error generating sitemap:");
     return generateBasicSitemap(normalizedBaseUrl, kind);
   }
 }

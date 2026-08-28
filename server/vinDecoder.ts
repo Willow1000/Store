@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 
+import { logger } from "./_core/logger";
 export interface VinDecodedData {
   year?: string | number;
   make?: string;
@@ -79,7 +80,10 @@ export async function decodeVin(vin: string): Promise<VinDecoderResponse> {
       }
       data = JSON.parse(text);
     } catch (parseError) {
-      console.error("[VIN Decoder] Response parse error:", parseError);
+      logger.error(
+        { data: [parseError] },
+        "[VIN Decoder] Response parse error:"
+      );
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: "Failed to parse VIN decoder response",
@@ -124,7 +128,7 @@ export async function decodeVin(vin: string): Promise<VinDecoderResponse> {
       });
     }
 
-    console.error("[VIN Decoder] Unexpected error:", error);
+    logger.error({ data: [error] }, "[VIN Decoder] Unexpected error:");
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: error instanceof Error ? error.message : "Failed to decode VIN",

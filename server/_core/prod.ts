@@ -6,6 +6,7 @@ import path from "path";
 import { pathToFileURL } from "url";
 import { createApp } from "./app";
 
+import { logger } from "./logger";
 export { createApp };
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -30,7 +31,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "public");
   if (!fs.existsSync(distPath)) {
-    console.error(
+    logger.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
@@ -113,5 +114,7 @@ async function startServer() {
 }
 
 if (process.env.VERCEL !== "1") {
-  startServer().catch(console.error);
+  startServer().catch(err =>
+    logger.error({ data: [err] }, "Failed to start server")
+  );
 }

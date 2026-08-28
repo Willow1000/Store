@@ -38,6 +38,7 @@ import {
 import { decodeVin } from "./vinDecoder";
 import { TRPCError } from "@trpc/server";
 
+import { logger } from "./_core/logger";
 function getRequestOrigin(req: {
   header: (name: string) => string | undefined;
   protocol?: string;
@@ -85,7 +86,7 @@ export const appRouter = router({
           });
           return { success: true };
         } catch (error) {
-          console.error("[tRPC] syncOAuthUser error:", error);
+          logger.error({ data: [error] }, "[tRPC] syncOAuthUser error:");
           throw error;
         }
       }),
@@ -234,9 +235,9 @@ export const appRouter = router({
               callback_url: buildPaystackCallbackUrl(requestOrigin),
             });
           } catch (err: any) {
-            console.error(
-              "[Paystack Initialize] Error:",
-              err && (err.message || String(err))
+            logger.error(
+              { data: [err && (err.message || String(err))] },
+              "[Paystack Initialize] Error:"
             );
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
@@ -319,9 +320,9 @@ export const appRouter = router({
               url: session.url,
             };
           } catch (err: any) {
-            console.error(
-              "[Stripe Checkout] Error:",
-              err?.message || String(err)
+            logger.error(
+              { data: [err?.message || String(err)] },
+              "[Stripe Checkout] Error:"
             );
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
@@ -546,12 +547,12 @@ export const appRouter = router({
                 : null,
             });
           } catch (trackErr) {
-            console.warn("[VIN Filter] tracking error", trackErr);
+            logger.warn({ data: [trackErr] }, "[VIN Filter] tracking error");
           }
 
           return { products: paged, totalMatches };
         } catch (err) {
-          console.error("[VIN Filter] error", err);
+          logger.error({ data: [err] }, "[VIN Filter] error");
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to filter products by VIN",

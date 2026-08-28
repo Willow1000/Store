@@ -5,6 +5,7 @@ import { ENV } from "./env";
 import { createClient } from "@supabase/supabase-js";
 import * as db from "../db";
 
+import { logger } from "./logger";
 // Create a Supabase client for token verification.
 // The anon key is sufficient for auth.getUser(token); prefer the service key when available.
 const supabase = ENV.supabaseUrl
@@ -85,20 +86,26 @@ export async function createContext(
                 };
               }
             } catch (syncError) {
-              console.error("[Auth] Failed to sync Supabase user:", syncError);
+              logger.error(
+                { data: [syncError] },
+                "[Auth] Failed to sync Supabase user:"
+              );
             }
           } else {
             // Database sync disabled - skip user hydration.
           }
         }
       } else {
-        console.warn(
+        logger.warn(
           "[Auth] Supabase client not configured - check VITE_SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables"
         );
       }
     }
   } catch (supabaseError) {
-    console.error("[Auth] Supabase token verification error:", supabaseError);
+    logger.error(
+      { data: [supabaseError] },
+      "[Auth] Supabase token verification error:"
+    );
   }
 
   // No authentication method succeeded - user is unauthenticated (public access allowed)

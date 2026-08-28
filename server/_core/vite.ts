@@ -4,10 +4,11 @@ import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
 
+import { logger } from "./logger";
 export async function setupVite(app: Express, server: Server) {
   // Guard: This should NEVER be called in production (e.g., on Vercel)
   if (process.env.NODE_ENV !== "development") {
-    console.warn(
+    logger.warn(
       "[Vite] setupVite called in non-development mode, skipping vite setup"
     );
     return;
@@ -78,7 +79,7 @@ export async function setupVite(app: Express, server: Server) {
       }
     });
   } catch (err: any) {
-    console.error("[Vite] Failed to set up Vite:", err?.message);
+    logger.error({ data: [err?.message] }, "[Vite] Failed to set up Vite:");
     // In dev, we want to see the error
     throw err;
   }
@@ -90,7 +91,7 @@ export function serveStatic(app: Express) {
       ? path.resolve(import.meta.dirname, "../..", "dist", "public")
       : path.resolve(import.meta.dirname, "public");
   if (!fs.existsSync(distPath)) {
-    console.error(
+    logger.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }

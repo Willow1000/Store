@@ -24,6 +24,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
+import { logger } from "./_core/logger";
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: Pool | null = null;
 
@@ -70,7 +71,7 @@ export async function getDb() {
       _pool = new Pool(poolConfig);
       _db = drizzle(_pool);
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      logger.warn({ data: [error] }, "[Database] Failed to connect:");
       _db = null;
       _pool = null;
     }
@@ -85,7 +86,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
+    logger.warn("[Database] Cannot upsert user: database not available");
     return;
   }
 
@@ -133,7 +134,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       set: updateSet,
     });
   } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
+    logger.error({ data: [error] }, "[Database] Failed to upsert user:");
     throw error;
   }
 }
@@ -424,7 +425,10 @@ export async function recordProductSearchTrackingEvent(
 
     return true;
   } catch (error) {
-    console.warn("[Track] Failed to insert tracking event directly:", error);
+    logger.warn(
+      { data: [error] },
+      "[Track] Failed to insert tracking event directly:"
+    );
     return false;
   }
 }
@@ -470,7 +474,10 @@ export async function recentSimilarTrackingExists(params: {
     }
     return cnt > 0;
   } catch (err) {
-    console.warn("[Track] Failed to check recentSimilarTrackingExists:", err);
+    logger.warn(
+      { data: [err] },
+      "[Track] Failed to check recentSimilarTrackingExists:"
+    );
     return false;
   }
 }
@@ -612,7 +619,7 @@ export async function createOrder(
     try {
       enrichedItems = await createOrderItems(orderId, items);
     } catch (error) {
-      console.warn("[Orders] Failed to create order items:", error);
+      logger.warn({ data: [error] }, "[Orders] Failed to create order items:");
     }
   }
 
@@ -620,7 +627,10 @@ export async function createOrder(
     try {
       await incrementOfferUsage(Number(data.offerId));
     } catch (error) {
-      console.warn("[Offers] Failed to increment usage count:", error);
+      logger.warn(
+        { data: [error] },
+        "[Offers] Failed to increment usage count:"
+      );
     }
   }
 
@@ -663,12 +673,12 @@ export async function createOrder(
         receipt_filename: `motorvault-receipt-${String(data.orderNumber || "").replace(/[^a-zA-Z0-9-_]/g, "")}.html`,
         language: emailLanguage,
       }).catch((err: unknown) =>
-        console.error("[Order Confirmation Email] Error:", err)
+        logger.error({ data: [err] }, "[Order Confirmation Email] Error:")
       );
     } catch (error) {
-      console.error(
-        "[Email Service] Failed to send confirmation email:",
-        error
+      logger.error(
+        { data: [error] },
+        "[Email Service] Failed to send confirmation email:"
       );
       // Don't throw - order was created successfully, email is just a bonus
     }
@@ -706,13 +716,13 @@ export async function createTicket(data: InsertTicket) {
   try {
     const db = await getDb();
     if (!db) {
-      console.error("[createTicket] Database not available");
+      logger.error("[createTicket] Database not available");
       return null;
     }
     const result = await db.insert(tickets).values(data).returning();
     return result[0] || null;
   } catch (error) {
-    console.error("[createTicket] Error:", error);
+    logger.error({ data: [error] }, "[createTicket] Error:");
     throw error;
   }
 }
@@ -840,7 +850,7 @@ export async function addToWishlist(userId: number, productId: number) {
 export async function logProductSearch(entry: InsertProductSearchTracking) {
   const db = await getDb();
   if (!db) {
-    console.warn("[logProductSearch] DB not available");
+    logger.warn("[logProductSearch] DB not available");
     return null;
   }
 
@@ -848,7 +858,10 @@ export async function logProductSearch(entry: InsertProductSearchTracking) {
     const res = await db.insert(productSearchTracking).values(entry as any);
     return res;
   } catch (err) {
-    console.error("[logProductSearch] Failed to insert tracking row:", err);
+    logger.error(
+      { data: [err] },
+      "[logProductSearch] Failed to insert tracking row:"
+    );
     return null;
   }
 }

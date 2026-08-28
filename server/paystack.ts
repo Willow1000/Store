@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./_core/env";
 
+import { logger } from "./_core/logger";
 interface PaystackApiResponse<T> {
   status: boolean;
   message: string;
@@ -39,7 +40,7 @@ const SECRET_KEY = ENV.paystackSecretKey;
 const PUBLIC_KEY = ENV.paystackPublicKey;
 
 if (!SECRET_KEY) {
-  console.warn("[Paystack] PAYSTACK_SECRET_KEY not configured in environment");
+  logger.warn("[Paystack] PAYSTACK_SECRET_KEY not configured in environment");
 }
 
 async function paystackRequest<T>(
@@ -72,7 +73,7 @@ async function paystackRequest<T>(
     data = JSON.parse(text);
   } catch (parseError) {
     const statusText = response.statusText || `HTTP ${response.status}`;
-    console.error("[Paystack] Response parse error:", parseError);
+    logger.error({ data: [parseError] }, "[Paystack] Response parse error:");
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: `Paystack API error (${statusText}): Invalid JSON response`,

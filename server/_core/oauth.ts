@@ -4,6 +4,7 @@ import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
+import { logger } from "./logger";
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
   return typeof value === "string" ? value : undefined;
@@ -70,7 +71,7 @@ export function registerOAuthRoutes(app: Express) {
       // Client will handle reading oauth_return_to from localStorage and redirecting appropriately.
       res.redirect(302, "/auth/callback");
     } catch (error) {
-      console.error("[OAuth] Callback failed", error);
+      logger.error({ data: [error] }, "[OAuth] Callback failed");
       res.status(500).json({ error: "OAuth callback failed" });
     }
   });

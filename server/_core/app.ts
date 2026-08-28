@@ -43,6 +43,7 @@ import {
 import { calculateShipping } from "@shared/shipping";
 import { buildRobotsTxt, buildLlmsTxt, FEED_SHIPPING_COUNTRIES } from "./seo";
 
+import { logger } from "./logger";
 // In production, silence non-error console output to avoid leaking debug info.
 if (process.env.NODE_ENV === "production") {
   try {
@@ -153,7 +154,7 @@ async function verifyRecaptchaToken(
 ): Promise<boolean> {
   const secret = process.env.RECAPTCHA_SECRET_KEY?.trim();
   if (!secret) {
-    console.warn(
+    logger.warn(
       "[Contact] RECAPTCHA_SECRET_KEY not configured; skipping server-side CAPTCHA verification"
     );
     return true;
@@ -178,15 +179,15 @@ async function verifyRecaptchaToken(
     );
     const body = await captchaRes.json().catch(() => null);
     if (!captchaRes.ok || !body?.success) {
-      console.warn(
-        "[Contact] CAPTCHA verification failed:",
-        body || captchaRes.status
+      logger.warn(
+        { data: [body || captchaRes.status] },
+        "[Contact] CAPTCHA verification failed:"
       );
       return false;
     }
     return true;
   } catch (error) {
-    console.error("[Contact] CAPTCHA verification error:", error);
+    logger.error({ data: [error] }, "[Contact] CAPTCHA verification error:");
     return false;
   }
 }
@@ -356,10 +357,9 @@ async function insertProductSearchTrackingEventToSupabase(entry: {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.warn(
-      "[Track] Supabase REST insert failed:",
-      response.status,
-      errorText
+    logger.warn(
+      { data: [response.status, errorText] },
+      "[Track] Supabase REST insert failed:"
     );
     return false;
   }
@@ -875,7 +875,7 @@ function getRateLimitClientKey(req: express.Request): string {
 
 async function getFeedProducts(): Promise<FeedProduct[]> {
   if (!ENV.supabaseUrl) {
-    console.warn("[Feed] Supabase URL is not configured");
+    logger.warn("[Feed] Supabase URL is not configured");
     return [];
   }
 
@@ -892,13 +892,16 @@ async function getFeedProducts(): Promise<FeedProduct[]> {
       .limit(1000);
 
     if (error) {
-      console.warn("[Feed] Supabase product lookup failed:", error.message);
+      logger.warn(
+        { data: [error.message] },
+        "[Feed] Supabase product lookup failed:"
+      );
       return [];
     }
 
     return Array.isArray(data) ? (data as FeedProduct[]) : [];
   } catch (error) {
-    console.warn("[Feed] Supabase feed lookup failed:", error);
+    logger.warn({ data: [error] }, "[Feed] Supabase feed lookup failed:");
     return [];
   }
 }
@@ -960,9 +963,9 @@ export function createApp() {
         res.setHeader("X-Content-Type-Options", "nosniff");
         return res.status(200).send(association);
       } catch (error) {
-        console.error(
-          "[Apple Merchant] Failed to read association file:",
-          error
+        logger.error(
+          { data: [error] },
+          "[Apple Merchant] Failed to read association file:"
         );
         return res.status(500).send("Failed to load association file");
       }
@@ -999,7 +1002,10 @@ export function createApp() {
       const xml = await generateSitemap(origin, "site");
       res.type("application/xml").send(xml);
     } catch (error) {
-      console.error("[Sitemap] Failed to generate sitemap.xml:", error);
+      logger.error(
+        { data: [error] },
+        "[Sitemap] Failed to generate sitemap.xml:"
+      );
       res.status(500).type("text/plain").send("Failed to generate sitemap");
     }
   });
@@ -1010,9 +1016,9 @@ export function createApp() {
       const xml = await generateSitemap(origin, "products");
       res.type("application/xml").send(xml);
     } catch (error) {
-      console.error(
-        "[Sitemap] Failed to generate sitemap-products.xml:",
-        error
+      logger.error(
+        { data: [error] },
+        "[Sitemap] Failed to generate sitemap-products.xml:"
       );
       res.status(500).type("text/plain").send("Failed to generate sitemap");
     }
@@ -1034,9 +1040,9 @@ export function createApp() {
         const verification = await verifyTransaction(reference);
 
         if (!verification || !verification.data) {
-          console.error(
-            "[Paystack] Empty verification response for",
-            reference
+          logger.error(
+            { data: [reference] },
+            "[Paystack] Empty verification response for"
           );
           return res.status(502).send("Failed to verify transaction");
         }
@@ -1057,10 +1063,9 @@ export function createApp() {
             : failedStatuses.has(status)
               ? "failed"
               : "failed";
-          console.warn(
-            "[Paystack] Transaction not successful:",
-            reference,
-            status
+          logger.warn(
+            { data: [reference, status] },
+            "[Paystack] Transaction not successful:"
           );
           return res.redirect(
             `/payment/failed?payment=${paymentState}&reference=${encodeURIComponent(reference)}&status=${encodeURIComponent(status)}`
@@ -1081,7 +1086,7 @@ export function createApp() {
           const user = await sdk.authenticateRequest(req as any);
           if (user && (user as any).id) userId = (user as any).id;
         } catch (authErr) {
-          console.warn(
+          logger.warn(
             "[Payment Callback] User not authenticated via SDK session"
           );
         }
@@ -1106,16 +1111,16 @@ export function createApp() {
               const dbUser = await getUserByOpenId(metadataUserOpenId);
               if (dbUser?.id) userId = dbUser.id;
             } catch (lookupErr) {
-              console.warn(
-                "[Payment Callback] Failed metadata openId user lookup:",
-                lookupErr
+              logger.warn(
+                { data: [lookupErr] },
+                "[Payment Callback] Failed metadata openId user lookup:"
               );
             }
           }
         }
 
         if (!userId) {
-          console.error(
+          logger.error(
             "[Payment Callback] Cannot create order without authenticated user"
           );
           return res.redirect(
@@ -1161,9 +1166,9 @@ export function createApp() {
               customerName = String(dbUser?.name || "");
             }
           } catch (lookupErr) {
-            console.warn(
-              "[Payment Callback] Failed to resolve user email for order confirmation:",
-              lookupErr
+            logger.warn(
+              { data: [lookupErr] },
+              "[Payment Callback] Failed to resolve user email for order confirmation:"
             );
           }
         }
@@ -1211,9 +1216,9 @@ export function createApp() {
               : null,
           });
         } catch (paymentErr) {
-          console.error(
-            "[Payment Callback] Failed to record payment:",
-            paymentErr
+          logger.error(
+            { data: [paymentErr] },
+            "[Payment Callback] Failed to record payment:"
           );
           return res
             .status(500)
@@ -1248,7 +1253,10 @@ export function createApp() {
             preferredEmailLanguage
           );
         } catch (orderErr) {
-          console.error("[Payment Callback] Failed to create order:", orderErr);
+          logger.error(
+            { data: [orderErr] },
+            "[Payment Callback] Failed to create order:"
+          );
           return res
             .status(500)
             .send("Payment recorded but failed to create order");
@@ -1258,9 +1266,9 @@ export function createApp() {
         try {
           await clearUserCart(userId);
         } catch (clearCartErr) {
-          console.error(
-            "[Payment Callback] Failed to clear cart:",
-            clearCartErr
+          logger.error(
+            { data: [clearCartErr] },
+            "[Payment Callback] Failed to clear cart:"
           );
         }
 
@@ -1274,7 +1282,7 @@ export function createApp() {
         }
         return res.redirect(`/payment/success?${successParams.toString()}`);
       } catch (err) {
-        console.error("[Payment Callback] Verification error:", err);
+        logger.error({ data: [err] }, "[Payment Callback] Verification error:");
         return res.status(500).send("Payment verification failed");
       }
     }
@@ -1303,9 +1311,9 @@ export function createApp() {
 
         return res.status(200).json(paymentData);
       } catch (error: any) {
-        console.error(
-          "[Initialize Payment] Error initializing transaction:",
-          error?.message ?? error
+        logger.error(
+          { data: [error?.message ?? error] },
+          "[Initialize Payment] Error initializing transaction:"
         );
         return res
           .status(500)
@@ -1357,7 +1365,7 @@ export function createApp() {
       } catch (error: any) {
         const message =
           error?.message ?? "Failed to probe Paystack initialization";
-        console.error("[Paystack Debug Probe] Error:", message);
+        logger.error({ data: [message] }, "[Paystack Debug Probe] Error:");
         return res.status(500).json({
           ok: false,
           request: {
@@ -1382,7 +1390,7 @@ export function createApp() {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
       if (!sig || !webhookSecret) {
-        console.warn("[Stripe Webhook] Missing signature or webhook secret");
+        logger.warn("[Stripe Webhook] Missing signature or webhook secret");
         return res
           .status(400)
           .json({ error: "Missing signature or webhook secret" });
@@ -1396,9 +1404,9 @@ export function createApp() {
           webhookSecret
         );
       } catch (err: any) {
-        console.error(
-          "[Stripe Webhook] Signature verification failed:",
-          err.message
+        logger.error(
+          { data: [err.message] },
+          "[Stripe Webhook] Signature verification failed:"
         );
         return res.status(400).json({ error: `Webhook Error: ${err.message}` });
       }
@@ -1406,7 +1414,10 @@ export function createApp() {
       // Handle different event types
       if (event.type === "payment_intent.succeeded") {
         const paymentIntent = event.data.object;
-        console.log("[Stripe Webhook] Payment succeeded:", paymentIntent.id);
+        logger.info(
+          { data: [paymentIntent.id] },
+          "[Stripe Webhook] Payment succeeded:"
+        );
 
         try {
           const userId = Number(paymentIntent.metadata?.user_id ?? NaN);
@@ -1435,9 +1446,9 @@ export function createApp() {
           let customerName = String(paymentIntent.metadata?.name || "");
 
           if (!userId || userId <= 0) {
-            console.error(
-              "[Stripe Webhook] Invalid user_id in metadata:",
-              paymentIntent.metadata?.user_id
+            logger.error(
+              { data: [paymentIntent.metadata?.user_id] },
+              "[Stripe Webhook] Invalid user_id in metadata:"
             );
             return res
               .status(400)
@@ -1452,9 +1463,9 @@ export function createApp() {
                 customerName = String(dbUser?.name || "");
               }
             } catch (lookupErr) {
-              console.warn(
-                "[Stripe Webhook] Failed to resolve user email:",
-                lookupErr
+              logger.warn(
+                { data: [lookupErr] },
+                "[Stripe Webhook] Failed to resolve user email:"
               );
             }
           }
@@ -1479,7 +1490,7 @@ export function createApp() {
           let orderId: number | null = null;
           try {
             if (orderLineItems.length === 0) {
-              console.warn(
+              logger.warn(
                 "[Stripe Webhook] No order line items found in payment metadata"
               );
             }
@@ -1512,14 +1523,14 @@ export function createApp() {
             );
 
             orderId = createdOrder?.id ?? null;
-            console.log(
-              "[Stripe Webhook] Order created successfully:",
-              orderId
+            logger.info(
+              { data: [orderId] },
+              "[Stripe Webhook] Order created successfully:"
             );
           } catch (orderErr: any) {
-            console.error(
-              "[Stripe Webhook] Failed to create order:",
-              orderErr?.message
+            logger.error(
+              { data: [orderErr?.message] },
+              "[Stripe Webhook] Failed to create order:"
             );
             // Log but don't fail the webhook - payment was successful
           }
@@ -1551,29 +1562,33 @@ export function createApp() {
               paidAt: new Date(paymentIntent.created * 1000),
             });
 
-            console.log("[Stripe Webhook] Payment recorded:", paymentRecord);
+            logger.info(
+              { data: [paymentRecord] },
+              "[Stripe Webhook] Payment recorded:"
+            );
           } catch (paymentErr: any) {
-            console.error(
-              "[Stripe Webhook] Failed to record payment:",
-              paymentErr?.message
+            logger.error(
+              { data: [paymentErr?.message] },
+              "[Stripe Webhook] Failed to record payment:"
             );
             // Continue even if payment record fails - order was already created
           }
 
           res.status(200).json({ received: true });
         } catch (err: any) {
-          console.error(
-            "[Stripe Webhook] Error processing payment_intent.succeeded:",
-            err?.message
+          logger.error(
+            { data: [err?.message] },
+            "[Stripe Webhook] Error processing payment_intent.succeeded:"
           );
           res.status(500).json({ error: "Internal server error" });
         }
       } else if (event.type === "payment_intent.payment_failed") {
         const paymentIntent = event.data.object;
-        console.warn(
-          "[Stripe Webhook] Payment failed:",
-          paymentIntent.id,
-          paymentIntent.last_payment_error?.message
+        logger.warn(
+          {
+            data: [paymentIntent.id, paymentIntent.last_payment_error?.message],
+          },
+          "[Stripe Webhook] Payment failed:"
         );
 
         try {
@@ -1604,12 +1619,12 @@ export function createApp() {
               paidAt: null,
             });
 
-            console.log("[Stripe Webhook] Failed payment recorded");
+            logger.info("[Stripe Webhook] Failed payment recorded");
           }
         } catch (err: any) {
-          console.error(
-            "[Stripe Webhook] Error recording failed payment:",
-            err?.message
+          logger.error(
+            { data: [err?.message] },
+            "[Stripe Webhook] Error recording failed payment:"
           );
         }
 
@@ -1711,12 +1726,12 @@ export function createApp() {
         }));
 
       if (!supabaseRecorded) {
-        console.warn("[Track] Direct insert did not complete");
+        logger.warn("[Track] Direct insert did not complete");
       }
 
       return res.status(200).json({ success: true });
     } catch (err) {
-      console.error("[Track] Failed to record event:", err);
+      logger.error({ data: [err] }, "[Track] Failed to record event:");
       return res.status(200).json({ success: true }); // Don't fail the user's request
     }
   });
@@ -1756,7 +1771,10 @@ export function createApp() {
             }
           }
         } catch (tokenErr) {
-          console.warn("[Tickets] Failed to validate Bearer token:", tokenErr);
+          logger.warn(
+            { data: [tokenErr] },
+            "[Tickets] Failed to validate Bearer token:"
+          );
         }
       }
 
@@ -1800,7 +1818,7 @@ export function createApp() {
       const serviceKey = process.env.SUPABASE_SERVICE_KEY;
 
       if (!serviceKey) {
-        console.error("[Tickets] SUPABASE_SERVICE_KEY not configured");
+        logger.error("[Tickets] SUPABASE_SERVICE_KEY not configured");
         return res.status(500).json({ error: "Service key not configured" });
       }
 
@@ -1825,10 +1843,9 @@ export function createApp() {
 
       const resText = await ticketRes.text();
       if (!ticketRes.ok) {
-        console.error(
-          "[Tickets] Supabase API error:",
-          ticketRes.status,
-          resText
+        logger.error(
+          { data: [ticketRes.status, resText] },
+          "[Tickets] Supabase API error:"
         );
         return res.status(502).json({ error: "Failed to create ticket" });
       }
@@ -1881,7 +1898,7 @@ export function createApp() {
         });
 
         if (!ticketEmailSent) {
-          console.warn("[Tickets] Ticket confirmation email was not sent");
+          logger.warn("[Tickets] Ticket confirmation email was not sent");
         }
       }
 
@@ -1891,7 +1908,7 @@ export function createApp() {
         ticket: Array.isArray(created) ? created[0] : created,
       });
     } catch (err) {
-      console.error("[Tickets] create error:", err);
+      logger.error({ data: [err] }, "[Tickets] create error:");
       return res.status(500).json({ error: "internal" });
     }
   });
@@ -1917,31 +1934,55 @@ export function createApp() {
       };
 
       if (honeypot) {
-        console.warn("[Contact] Honeypot submission blocked", { ip: req.ip });
+        logger.warn(
+          { data: [{ ip: req.ip }] },
+          "[Contact] Honeypot submission blocked"
+        );
         return res.status(400).json(validationErrorResponse);
       }
 
       if (!name || !email || !subject || !message) {
-        console.warn("[Contact] Validation failed: missing required fields", {
-          hasName: Boolean(name),
-          hasEmail: Boolean(email),
-          hasSubject: Boolean(subject),
-          hasMessage: Boolean(message),
-        });
+        logger.warn(
+          {
+            data: [
+              {
+                hasName: Boolean(name),
+                hasEmail: Boolean(email),
+                hasSubject: Boolean(subject),
+                hasMessage: Boolean(message),
+              },
+            ],
+          },
+          "[Contact] Validation failed: missing required fields"
+        );
         return res.status(400).json(validationErrorResponse);
       }
 
       if (!isValidEmailAddress(email)) {
-        console.warn("[Contact] Validation failed: invalid email format", {
-          email,
-        });
+        logger.warn(
+          {
+            data: [
+              {
+                email,
+              },
+            ],
+          },
+          "[Contact] Validation failed: invalid email format"
+        );
         return res.status(400).json(validationErrorResponse);
       }
 
       if (message.length < 10) {
-        console.warn("[Contact] Validation failed: message too short", {
-          email,
-        });
+        logger.warn(
+          {
+            data: [
+              {
+                email,
+              },
+            ],
+          },
+          "[Contact] Validation failed: message too short"
+        );
         return res.status(400).json(validationErrorResponse);
       }
 
@@ -1972,7 +2013,7 @@ export function createApp() {
       let stored = false;
 
       if (!serviceKey) {
-        console.warn(
+        logger.warn(
           "[Contact] SUPABASE_SERVICE_KEY not configured; continuing with email-only processing"
         );
       } else {
@@ -1990,17 +2031,19 @@ export function createApp() {
 
           const resText = await contactRes.text();
           if (!contactRes.ok) {
-            console.error(
-              "[Contact] Supabase API error:",
-              contactRes.status,
-              resText
+            logger.error(
+              { data: [contactRes.status, resText] },
+              "[Contact] Supabase API error:"
             );
           } else {
             stored = true;
             created = JSON.parse(resText || "null");
           }
         } catch (storageError) {
-          console.error("[Contact] Supabase storage exception:", storageError);
+          logger.error(
+            { data: [storageError] },
+            "[Contact] Supabase storage exception:"
+          );
         }
       }
 
@@ -2023,11 +2066,11 @@ export function createApp() {
       });
 
       if (!contactEmailSent) {
-        console.warn("[Contact] Confirmation email was not sent");
+        logger.warn("[Contact] Confirmation email was not sent");
       }
 
       if (!adminEmailSent) {
-        console.error("[Contact] Support notification email was not sent");
+        logger.error("[Contact] Support notification email was not sent");
         return res.status(502).json({
           success: false,
           error: "We were unable to send your message. Please try again.",
@@ -2038,7 +2081,7 @@ export function createApp() {
         success: true,
       });
     } catch (err) {
-      console.error("[Contact] create error:", err);
+      logger.error({ data: [err] }, "[Contact] create error:");
       return res.status(500).json({
         success: false,
         error: "We were unable to send your message. Please try again.",
@@ -2075,7 +2118,10 @@ export function createApp() {
             }
           }
         } catch (tokenErr) {
-          console.warn("[Tickets] Failed to validate Bearer token:", tokenErr);
+          logger.warn(
+            { data: [tokenErr] },
+            "[Tickets] Failed to validate Bearer token:"
+          );
         }
       }
 
@@ -2091,7 +2137,7 @@ export function createApp() {
       const serviceKey = process.env.SUPABASE_SERVICE_KEY;
 
       if (!serviceKey) {
-        console.error("[Tickets] SUPABASE_SERVICE_KEY not configured");
+        logger.error("[Tickets] SUPABASE_SERVICE_KEY not configured");
         return res.status(500).json({ error: "Service key not configured" });
       }
 
@@ -2110,10 +2156,9 @@ export function createApp() {
 
       if (!ticketRes.ok) {
         const errText = await ticketRes.text();
-        console.error(
-          "[Tickets] Supabase API error:",
-          ticketRes.status,
-          errText
+        logger.error(
+          { data: [ticketRes.status, errText] },
+          "[Tickets] Supabase API error:"
         );
         return res.status(502).json({ error: "Failed to fetch tickets" });
       }
@@ -2121,7 +2166,7 @@ export function createApp() {
       const tickets = await ticketRes.json();
       return res.status(200).json(tickets || []);
     } catch (err) {
-      console.error("[Tickets] list error:", err);
+      logger.error({ data: [err] }, "[Tickets] list error:");
       return res.status(500).json({ error: "internal" });
     }
   });
@@ -2137,7 +2182,7 @@ export function createApp() {
       const serviceKey = process.env.SUPABASE_SERVICE_KEY;
 
       if (!serviceKey) {
-        console.error("[Tickets] SUPABASE_SERVICE_KEY not configured");
+        logger.error("[Tickets] SUPABASE_SERVICE_KEY not configured");
         return res.status(500).json({ error: "Service key not configured" });
       }
 
@@ -2163,10 +2208,9 @@ export function createApp() {
 
       if (!ticketRes.ok) {
         const errText = await ticketRes.text();
-        console.error(
-          "[Tickets] Supabase API error:",
-          ticketRes.status,
-          errText
+        logger.error(
+          { data: [ticketRes.status, errText] },
+          "[Tickets] Supabase API error:"
         );
         return res.status(502).json({ error: "Failed to update ticket" });
       }
@@ -2177,7 +2221,7 @@ export function createApp() {
         ticket: Array.isArray(updated) ? updated[0] : updated,
       });
     } catch (err) {
-      console.error("[Tickets] update error:", err);
+      logger.error({ data: [err] }, "[Tickets] update error:");
       return res.status(500).json({ error: "internal" });
     }
   });
@@ -2188,7 +2232,7 @@ export function createApp() {
       // Db is loaded but we're using REST API now
     })
     .catch(err => {
-      console.warn("[App] Database connection setup skipped:", err);
+      logger.warn({ data: [err] }, "[App] Database connection setup skipped:");
     });
   app.get(
     ["/feed.xml", "/api/server"],
@@ -2393,7 +2437,7 @@ export function createApp() {
         res.setHeader("Surrogate-Control", "no-store");
         return res.status(200).send(xml);
       } catch (err) {
-        console.error("[Feed] Error generating feed:", err);
+        logger.error({ data: [err] }, "[Feed] Error generating feed:");
         return res.status(500).send("Failed to generate feed");
       }
     }
