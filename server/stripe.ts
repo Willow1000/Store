@@ -56,8 +56,26 @@ export async function confirmPaymentIntent(
   });
 }
 
+export interface StripeCheckoutCharges {
+  /** Shipping cost in dollars, added as its own line item when > 0. */
+  shipping?: number;
+  /** Tax/VAT in dollars, added as its own line item when > 0. */
+  tax?: number;
+  /** Discount in dollars, applied as a one-off Stripe coupon when > 0. */
+  discountAmount?: number;
+  /** Offer code, used only to label the generated coupon. */
+  offerCode?: string;
+}
+
 /**
  * Create a Checkout Session (for hosted checkout)
+ *
+ * The line items built from `items` only cover the product subtotal - the
+ * session metadata previously carried subtotal/shipping/tax/discountAmount
+ * for the webhook's records, but nothing actually added shipping/tax to the
+ * charge or subtracted the discount, so the amount Stripe collected didn't
+ * match the total shown to the customer. `charges` makes those real parts
+ * of what's charged.
  */
 export async function createCheckoutSession(
   userId: number,
@@ -65,9 +83,19 @@ export async function createCheckoutSession(
   userName: string | null | undefined,
   items: Array<{ productId: number; quantity: number; price: string }>,
   origin: string,
-  metadata?: Record<string, string>
+  metadata?: Record<string, string>,
+  charges: StripeCheckoutCharges = {}
 ) {
-  const lineItems = items.map(item => ({
+  type LineItem = {
+    price_data: {
+      currency: string;
+      product_data: { name: string; metadata: Record<string, string> };
+      unit_amount: number;
+    };
+    quantity: number;
+  };
+
+  const lineItems: LineItem[] = items.map(item => ({
     price_data: {
       currency: "usd",
       product_data: {
@@ -81,6 +109,30 @@ export async function createCheckoutSession(
     quantity: item.quantity,
   }));
 
+  const shippingCents = Math.round((charges.shipping || 0) * 100);
+  if (shippingCents > 0) {
+    lineItems.push({
+      price_data: {
+        currency: "usd",
+        product_data: { name: "Shipping", metadata: {} },
+        unit_amount: shippingCents,
+      },
+      quantity: 1,
+    });
+  }
+
+  const taxCents = Math.round((charges.tax || 0) * 100);
+  if (taxCents > 0) {
+    lineItems.push({
+      price_data: {
+        currency: "usd",
+        product_data: { name: "Tax", metadata: {} },
+        unit_amount: taxCents,
+      },
+      quantity: 1,
+    });
+  }
+
   const sessionMetadata = {
     user_id: userId.toString(),
     customer_email: userEmail,
@@ -89,6 +141,22 @@ export async function createCheckoutSession(
     items: JSON.stringify(items),
     ...metadata,
   };
+
+  // Stripe Checkout Sessions can't combine allow_promotion_codes with an
+  // explicit `discounts` array, and our discounts come from our own `offers`
+  // table (not Stripe's promotion codes), so a discount coupon replaces
+  // allow_promotion_codes rather than sitting alongside it.
+  const discountCents = Math.round((charges.discountAmount || 0) * 100);
+  let discounts: Array<{ coupon: string }> | undefined;
+  if (discountCents > 0) {
+    const coupon = await stripe.coupons.create({
+      amount_off: discountCents,
+      currency: "usd",
+      duration: "once",
+      name: charges.offerCode ? `Discount (${charges.offerCode})` : "Discount",
+    });
+    discounts = [{ coupon: coupon.id }];
+  }
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
@@ -106,7 +174,7 @@ export async function createCheckoutSession(
     },
     success_url: `${origin}/checkout?payment=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/checkout?payment=cancelled`,
-    allow_promotion_codes: true,
+    ...(discounts ? { discounts } : { allow_promotion_codes: true }),
   });
 
   return session;

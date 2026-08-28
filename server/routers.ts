@@ -304,7 +304,13 @@ export const appRouter = router({
               input.userName || null,
               input.items,
               input.origin,
-              sessionMetadata
+              sessionMetadata,
+              {
+                shipping: Number(input.shipping || 0),
+                tax: Number(input.tax || 0),
+                discountAmount: Number(input.discountAmount || 0),
+                offerCode: input.offerCode,
+              }
             );
 
             return {

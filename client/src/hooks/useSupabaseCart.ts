@@ -7,6 +7,7 @@ import { trackRecommendationEvent } from "@/lib/recommendations";
 export function useSupabaseCart(userId: string | null) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fetchRequestIdRef = useRef(0);
   const lastLocalCartJsonRef = useRef<string | null>(null);
@@ -83,6 +84,7 @@ export function useSupabaseCart(userId: string | null) {
     if (!userId) {
       setItems([]);
       setIsLoading(false);
+      setHasLoadedOnce(true);
       return;
     }
 
@@ -121,6 +123,7 @@ export function useSupabaseCart(userId: string | null) {
     } finally {
       if (requestId === fetchRequestIdRef.current) {
         setIsLoading(false);
+        setHasLoadedOnce(true);
       }
     }
   }, [userId, ensureProfile, syncLocalCartSnapshot]);
@@ -467,6 +470,7 @@ export function useSupabaseCart(userId: string | null) {
   return {
     items,
     isLoading,
+    hasLoadedOnce,
     error,
     addToCart,
     updateQuantity,

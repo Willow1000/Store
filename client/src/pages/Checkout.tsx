@@ -402,6 +402,7 @@ export default function Checkout() {
   const {
     items: supabaseCartItems,
     isLoading: supabaseCartLoading,
+    hasLoadedOnce: supabaseCartHasLoadedOnce,
     clearCart: clearSupabaseCart,
   } = useSupabaseCart(user?.id || null);
   const [metaCoupon, setMetaCoupon] = useState<string | null>(null);
@@ -413,7 +414,9 @@ export default function Checkout() {
     return isMetaCheckoutRequest(params, window.location.pathname);
   }, []);
 
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>(() =>
+    readCheckoutSnapshot()
+  );
   const [step, setStep] = useState<"shipping" | "payment" | "review">(() => {
     try {
       const saved = localStorage.getItem("checkout-step");
@@ -966,6 +969,15 @@ export default function Checkout() {
     if (isMetaCheckout) return;
 
     if (isAuthenticated) {
+      // The Supabase cart hook starts with items=[] and isLoading=false
+      // before its fetch effect has even had a chance to run, so an empty
+      // result here doesn't yet mean "cart is empty" - it can also mean
+      // "haven't checked yet". Wait for the first real fetch to settle
+      // before treating an empty result as authoritative, otherwise the
+      // order summary flashes to $0.00 on every load that has no cached
+      // snapshot to fall back on.
+      if (!supabaseCartHasLoadedOnce) return;
+
       const mapped = supabaseCartItems.map(item => ({
         product_id: item.product_id,
         title: item.product?.title || "Product",
@@ -997,7 +1009,12 @@ export default function Checkout() {
     }));
     setCartItems(items);
     writeCheckoutSnapshot(items);
-  }, [isAuthenticated, supabaseCartItems, isMetaCheckout]);
+  }, [
+    isAuthenticated,
+    supabaseCartItems,
+    supabaseCartHasLoadedOnce,
+    isMetaCheckout,
+  ]);
 
   // Keep shipping form synced when user becomes available after refresh.
   useEffect(() => {
@@ -2462,7 +2479,7 @@ export default function Checkout() {
                             </p>
                           </div>
                           <p className="font-semibold text-gray-900">
-                            {`${currencyClient.getCurrencySymbolLocal()}${(currencyClient.convertUSD(parseFloat(item.price.replace(/[^\d.]/g, "") || "")) * item.quantity).toFixed(2)}`}
+                            {`${currencyClient.getCurrencySymbolLocal()}${(currencyClient.convertUSD(parseCheckoutPrice(item.price)) * item.quantity).toFixed(2)}`}
                           </p>
                         </div>
                       ))}
@@ -2543,7 +2560,7 @@ export default function Checkout() {
                           ×{item.quantity}
                         </p>
                         <p className="text-sm font-semibold text-gray-900 mt-1">
-                          {`${currencyClient.getCurrencySymbolLocal()}${(currencyClient.convertUSD(parseFloat(item.price.replace(/[^\d.]/g, "") || "")) * item.quantity).toFixed(2)}`}
+                          {`${currencyClient.getCurrencySymbolLocal()}${(currencyClient.convertUSD(parseCheckoutPrice(item.price)) * item.quantity).toFixed(2)}`}
                         </p>
                       </div>
                     </div>
@@ -2734,7 +2751,10 @@ export default function Checkout() {
                       {couponLabel || "Discount"}
                     </span>
                     <span className="font-medium text-green-700">
-                      -{offerDiscountAmount.toFixed(2)}
+                      -{currencyClient.getCurrencySymbolLocal()}
+                      {currencyClient
+                        .convertUSD(offerDiscountAmount)
+                        .toFixed(2)}
                     </span>
                   </div>
                 )}
