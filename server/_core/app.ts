@@ -43,6 +43,15 @@ import {
 } from "@shared/sanitize";
 import { calculateShipping } from "@shared/shipping";
 import { buildRobotsTxt, buildLlmsTxt, FEED_SHIPPING_COUNTRIES } from "./seo";
+import { createRateLimitMiddleware } from "./rateLimit";
+import {
+  getRequestOrigin,
+  getSiteOrigin,
+  verifyRecaptchaToken,
+  isSameOriginRequest,
+  applySecurityHeaders,
+  isValidConfiguredOrigin,
+} from "./security";
 
 import { logger } from "./logger";
 // In production, silence non-error console output to avoid leaking debug info.
@@ -56,248 +65,8 @@ if (process.env.NODE_ENV === "production") {
   }
 }
 
-function getRequestOrigin(req: express.Request): string | null {
-  const forwardedProto = req.header("x-forwarded-proto")?.split(",")[0]?.trim();
-  const forwardedHost = req.header("x-forwarded-host")?.split(",")[0]?.trim();
-  const protocol = forwardedProto || req.protocol;
-  const host = forwardedHost || req.header("host");
-
-  if (!protocol || !host) return null;
-  return `${protocol}://${host}`;
-}
-
-function getSiteOrigin(req: express.Request): string {
-  return (
-    getRequestOrigin(req) ||
-    ENV.siteUrl ||
-    `${req.protocol}://${req.get("host")}`
-  ).replace(/\/$/, "");
-}
-
-type RateBucket = { count: number; resetAt: number };
-const rateBuckets = new Map<string, RateBucket>();
-
-function isStaticAssetPath(pathname: string): boolean {
-  return (
-    /\.(?:css|js|mjs|map|png|jpg|jpeg|gif|webp|svg|ico|txt|xml|woff2?)$/i.test(
-      pathname
-    ) ||
-    pathname.startsWith("/assets/") ||
-    pathname.startsWith("/images/")
-  );
-}
-
-// Note: this is intentionally NOT the createRateLimitMiddleware in
-// ./rateLimit.ts - that extraction diverged from this one (a narrower
-// isFeedRequest/getRateLimitClientKey than the getCandidateRequestPaths-based
-// versions this file actually uses elsewhere for feed/sitemap routing), so
-// swapping it in would silently change which requests get rate-limited.
-function createRateLimitMiddleware(opts: {
-  windowMs: number;
-  max: number;
-  pathPrefix?: string[];
-}) {
-  return (
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    if (req.method === "OPTIONS" || isStaticAssetPath(req.path)) {
-      return next();
-    }
-
-    // Keep the global limiter focused on mutating traffic; read endpoints (like feeds) can be high-volume.
-    if (!opts.pathPrefix && (req.method === "GET" || req.method === "HEAD")) {
-      return next();
-    }
-
-    // Feed endpoints are consumed by bots/integrations and should not be throttled by app API limits.
-    if (isFeedRequest(req)) {
-      return next();
-    }
-
-    if (
-      opts.pathPrefix &&
-      !opts.pathPrefix.some(prefix => req.path.startsWith(prefix))
-    ) {
-      return next();
-    }
-
-    const key = `${getRateLimitClientKey(req)}:${opts.pathPrefix?.[0] || "global"}`;
-    const now = Date.now();
-    const current = rateBuckets.get(key);
-
-    if (!current || current.resetAt <= now) {
-      rateBuckets.set(key, { count: 1, resetAt: now + opts.windowMs });
-      return next();
-    }
-
-    current.count += 1;
-    if (current.count > opts.max) {
-      res.setHeader(
-        "Retry-After",
-        Math.ceil((current.resetAt - now) / 1000).toString()
-      );
-      return res.status(429).json({ error: "Too many requests" });
-    }
-
-    return next();
-  };
-}
-
 function isValidEmailAddress(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-async function verifyRecaptchaToken(
-  token: string | undefined,
-  remoteIp: string | undefined
-): Promise<boolean> {
-  const secret = process.env.RECAPTCHA_SECRET_KEY?.trim();
-  if (!secret) {
-    logger.warn(
-      "[Contact] RECAPTCHA_SECRET_KEY not configured; skipping server-side CAPTCHA verification"
-    );
-    return true;
-  }
-
-  if (!token) return false;
-
-  const params = new URLSearchParams({
-    secret,
-    response: token,
-  });
-  if (remoteIp) params.set("remoteip", remoteIp);
-
-  try {
-    const captchaRes = await fetch(
-      "https://www.google.com/recaptcha/api/siteverify",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: params.toString(),
-      }
-    );
-    const body = await captchaRes.json().catch(() => null);
-    if (!captchaRes.ok || !body?.success) {
-      logger.warn(
-        { data: [body || captchaRes.status] },
-        "[Contact] CAPTCHA verification failed:"
-      );
-      return false;
-    }
-    return true;
-  } catch (error) {
-    logger.error({ data: [error] }, "[Contact] CAPTCHA verification error:");
-    return false;
-  }
-}
-
-function isSameOriginRequest(req: express.Request): boolean {
-  const originHeader = req.header("origin");
-  if (!originHeader) return true;
-
-  const requestOrigin = getRequestOrigin(req);
-  if (!requestOrigin) return false;
-
-  try {
-    const originUrl = new URL(originHeader);
-    const requestUrl = new URL(requestOrigin);
-    if (originUrl.origin === requestUrl.origin) return true;
-
-    const configuredOrigins = [
-      ENV.siteUrl,
-      process.env.VITE_APP_URL,
-      process.env.APP_URL,
-      process.env.VITE_SITE_URL,
-      process.env.SITE_URL,
-    ]
-      .filter(Boolean)
-      .map(value => {
-        try {
-          return new URL(String(value)).origin;
-        } catch {
-          return "";
-        }
-      })
-      .filter(Boolean);
-
-    if (configuredOrigins.includes(originUrl.origin)) return true;
-
-    const loopbackHosts = new Set(["localhost", "127.0.0.1", "::1"]);
-    const originLoopback = loopbackHosts.has(originUrl.hostname);
-    const requestLoopback = loopbackHosts.has(requestUrl.hostname);
-    const samePort = originUrl.port === requestUrl.port;
-
-    // Allow localhost/127.0.0.1 interchangeably during local checkout testing.
-    if (originLoopback && requestLoopback && samePort) return true;
-    if (!ENV.isProduction && originLoopback && requestLoopback) return true;
-
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-function applySecurityHeaders(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-) {
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(self), payment=(self), unload=*"
-  );
-  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-
-  if (req.secure || req.header("x-forwarded-proto") === "https") {
-    res.setHeader(
-      "Strict-Transport-Security",
-      "max-age=31536000; includeSubDomains; preload"
-    );
-  }
-
-  const csp = [
-    "default-src 'self'",
-    "base-uri 'self'",
-    "frame-ancestors 'none'",
-    "form-action 'self' https://*.supabase.co https://checkout.paystack.com",
-    "img-src 'self' data: blob: https:",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.trustindex.io https://api.blootrue.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net https://www.facebook.com https://www.googletagmanager.com https://www.google.com https://www.gstatic.com https://www.googleapis.com https://ajax.googleapis.com https://maps.googleapis.com https://maps.gstatic.com https://cdn.trustindex.io https://api.blootrue.com",
-    "script-src-elem 'self' 'unsafe-inline' https://connect.facebook.net https://www.facebook.com https://www.googletagmanager.com https://www.google.com https://www.gstatic.com https://www.googleapis.com https://ajax.googleapis.com https://maps.googleapis.com https://maps.gstatic.com https://cdn.trustindex.io https://api.blootrue.com",
-    "connect-src 'self' https: wss:",
-    "frame-src 'self' https://www.google.com https://www.facebook.com https://api.blootrue.com",
-    "media-src 'self' https: data: blob:",
-    "object-src 'none'",
-    "require-trusted-types-for 'script'",
-    "trusted-types default",
-    "upgrade-insecure-requests",
-  ].join("; ");
-
-  res.setHeader("Content-Security-Policy", csp);
-  next();
-}
-
-function isValidConfiguredOrigin(value: string | undefined): boolean {
-  if (!value) return false;
-
-  const normalized = value.trim().replace(/\/$/, "");
-  if (!normalized || normalized.includes("your-production-domain.com")) {
-    return false;
-  }
-
-  try {
-    const url = new URL(normalized);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
 }
 
 async function insertProductSearchTrackingEventToSupabase(entry: {
@@ -911,6 +680,13 @@ export function createApp() {
   const app = express();
   app.disable("x-powered-by");
 
+  // Must be the first middleware registered - Express runs handlers in
+  // registration order, and both the health check and the Stripe webhook
+  // route below fully handle their own responses, so anything registered
+  // after them (this used to be registered much later, alongside the body
+  // parsers) never gets a chance to run for those routes.
+  app.use(applySecurityHeaders);
+
   // Health check: verifies the process is up and the database is actually
   // reachable (not just that a connection pool was created at some point in
   // the past), for uptime monitors and deploy checks.
@@ -1186,8 +962,15 @@ export function createApp() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  app.use(applySecurityHeaders);
-  app.use(createRateLimitMiddleware({ windowMs: 10 * 60 * 1000, max: 600 }));
+  app.use(
+    createRateLimitMiddleware({
+      windowMs: 10 * 60 * 1000,
+      max: 600,
+      // Feed/sitemap endpoints are consumed by bots/integrations and
+      // shouldn't be throttled by app API limits.
+      isExempt: isFeedRequest,
+    })
+  );
   app.use(
     createRateLimitMiddleware({
       windowMs: 10 * 60 * 1000,
