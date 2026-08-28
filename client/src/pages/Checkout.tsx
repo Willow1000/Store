@@ -33,7 +33,6 @@ import {
   calculateShipping,
   getFreeShippingThresholdUsd,
 } from "@shared/shipping";
-import { calculateVariableVat } from "@/lib/vat";
 import currencyClient from "@/lib/currencyClient";
 import {
   isMetaCheckoutRequest,
@@ -1157,14 +1156,6 @@ export default function Checkout() {
   const orderSummary = useMemo(() => {
     const roundedSubtotal = Math.round(cartSubtotalAmount * 100) / 100;
     const shippingValue = calculateShipping(roundedSubtotal);
-    const vatValue = calculateVariableVat(
-      cartItems.map(item => ({
-        productId: item.product_id,
-        title: item.title,
-        unitPrice: parseCheckoutPrice(item.price),
-        quantity: item.quantity,
-      }))
-    ).totalVat;
 
     const derivedOfferDiscountAmount = finalAppliedOffer
       ? Number(finalAppliedOffer.discountAmount || 0)
@@ -1182,17 +1173,18 @@ export default function Checkout() {
           ? `Coupon (${metaCoupon})`
           : null);
 
+    // Tax is not charged as a separate line - listed prices are tax
+    // inclusive, communicated to the shopper instead of itemized.
     const totalValue = Math.max(
       0,
       Math.round(
-        (roundedSubtotal + shippingValue + vatValue - discountAmountValue) * 100
+        (roundedSubtotal + shippingValue - discountAmountValue) * 100
       ) / 100
     );
 
     return {
       subtotal: roundedSubtotal,
       shipping: shippingValue,
-      vat: vatValue,
       discountAmount: discountAmountValue,
       total: Number.isFinite(totalValue) ? totalValue : 0,
       couponLabel: couponLabelValue,
@@ -1210,7 +1202,6 @@ export default function Checkout() {
 
   const subtotal = orderSummary.subtotal;
   const shipping = orderSummary.shipping;
-  const vat = orderSummary.vat;
   const offerDiscountAmount = orderSummary.discountAmount;
   const cartGrandTotal = orderSummary.total;
   const couponLabel = orderSummary.couponLabel;
@@ -1696,7 +1687,7 @@ export default function Checkout() {
           orderId: provisionalOrderId,
           subtotal,
           shipping,
-          tax: vat,
+          tax: 0,
           discountAmount: offerDiscountAmount,
           total: cartGrandTotal,
           name: `${sanitizeName(formData.firstName, 60)} ${sanitizeName(formData.lastName, 60)}`.trim(),
@@ -1794,7 +1785,7 @@ export default function Checkout() {
         items: validItems,
         subtotal: subtotal.toString(),
         shipping: shipping.toString(),
-        tax: vat.toString(),
+        tax: "0",
         total: cartGrandTotal.toString(),
         discountAmount: offerDiscountAmount.toString(),
         offerCode: finalAppliedOffer?.code || metaCoupon || undefined,
@@ -2780,12 +2771,6 @@ export default function Checkout() {
                     "Shipping shown is an estimate. Final shipping is confirmed at checkout."
                   )}
                 </p>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">
-                    {t("checkout.vat", "V.A.T")}
-                  </span>
-                  <span className="font-medium text-gray-900">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(vat).toFixed(2)}`}</span>
-                </div>
               </div>
 
               {/* Total */}
@@ -2796,6 +2781,9 @@ export default function Checkout() {
                   </span>
                   <span className="text-3xl font-bold text-black">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(cartGrandTotal).toFixed(2)}`}</span>
                 </div>
+                <p className="text-xs text-gray-500 text-right mt-1">
+                  {t("checkout.taxInclusive", "Tax inclusive")}
+                </p>
               </div>
 
               {/* Benefits */}

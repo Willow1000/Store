@@ -15,7 +15,6 @@ import {
   getFreeShippingThresholdUsd,
 } from "@shared/shipping";
 import currencyClient from "@/lib/currencyClient";
-import { calculateVariableVat } from "@/lib/vat";
 import {
   SITE_LANGUAGE_CHANGED_EVENT,
   getSiteLanguage,
@@ -269,18 +268,9 @@ export default function Cart() {
   }, 0);
 
   const shipping = calculateShipping(subtotal);
-  const vatSummary = calculateVariableVat(
-    effectiveCartItems.map(item => ({
-      productId: item.productId
-        ? String(item.productId)
-        : String(item.productIndex),
-      title: item.title,
-      unitPrice: parseFloat(item.price.replace(/[^\d.]/g, "") || "0"),
-      quantity: item.quantity,
-    }))
-  );
-  const vat = vatSummary.totalVat;
-  const total = subtotal + shipping + vat;
+  // Tax is not charged as a separate line - listed prices are tax
+  // inclusive, communicated to the shopper instead of itemized.
+  const total = subtotal + shipping;
 
   const shouldShowLoadingState =
     !sessionRestored ||
@@ -571,16 +561,6 @@ export default function Cart() {
                         : currencyClient.formatUSD(shipping)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs sm:text-sm">
-                    <span className="text-gray-600">
-                      {t("checkout.vat", "V.A.T")} (
-                      {(vatSummary.weightedAverageRate * 100).toFixed(2)}%, max{" "}
-                      {(vatSummary.maxRate * 100).toFixed(0)}%)
-                    </span>
-                    <span className="font-semibold">
-                      {currencyClient.formatUSD(vat)}
-                    </span>
-                  </div>
                 </div>
 
                 <div className="my-4 flex justify-between">
@@ -591,6 +571,9 @@ export default function Cart() {
                     {currencyClient.formatUSD(total)}
                   </span>
                 </div>
+                <p className="mb-2 text-xs text-gray-500 text-right">
+                  {t("checkout.taxInclusive", "Tax inclusive")}
+                </p>
 
                 <p className="mb-2 text-xs text-gray-600">
                   {t(
