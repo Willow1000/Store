@@ -24,17 +24,14 @@ import { trackInitiateCheckout, trackPurchase } from '@/hooks/useMetaPixel';
 import { TrustSignals } from '@/components/TrustSignals';
 import { getSiteLanguage, translateText } from '@/lib/language';
 import { redirectToStripeCheckout } from '@/lib/stripeCheckout';
-
-const CHECKOUT_CART_SNAPSHOT_KEY = 'checkout-cart-snapshot-v1';
-const META_PURCHASE_TRACKED_PREFIX = 'meta-purchase-tracked-v1:';
-
-type CartItem = {
-  product_id: string;
-  title: string;
-  price: string;
-  image: string;
-  quantity: number;
-};
+import {
+  readCheckoutSnapshot,
+  writeCheckoutSnapshot,
+  hasTrackedMetaPurchase,
+  markTrackedMetaPurchase,
+  CHECKOUT_CART_SNAPSHOT_KEY,
+  type CartItem,
+} from '@/lib/checkoutSnapshot';
 
 type CheckoutFormData = {
   firstName: string;
@@ -56,41 +53,6 @@ type PaymentMethod = {
   description: string;
   disabled?: boolean;
 };
-
-function readCheckoutSnapshot(): CartItem[] {
-  try {
-    const raw = localStorage.getItem(CHECKOUT_CART_SNAPSHOT_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeCheckoutSnapshot(items: CartItem[]) {
-  try {
-    localStorage.setItem(CHECKOUT_CART_SNAPSHOT_KEY, JSON.stringify(items));
-  } catch {
-    // Ignore storage issues and continue with in-memory checkout state.
-  }
-}
-
-function hasTrackedMetaPurchase(reference: string): boolean {
-  try {
-    return Boolean(localStorage.getItem(`${META_PURCHASE_TRACKED_PREFIX}${reference}`));
-  } catch {
-    return false;
-  }
-}
-
-function markTrackedMetaPurchase(reference: string) {
-  try {
-    localStorage.setItem(`${META_PURCHASE_TRACKED_PREFIX}${reference}`, new Date().toISOString());
-  } catch {
-    // Ignore persistence issues; duplicate prevention is best effort.
-  }
-}
 
 const t = (_key: string, fallback: string) => fallback;
 

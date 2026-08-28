@@ -16,6 +16,7 @@ import { getDb, createOrder, createPayment, getUserById, getUserByOpenId, resolv
 import { sendContactConfirmationEmail, sendTicketConfirmationEmail, sendContactAdminNotification } from "./emailService";
 import { sanitizeEmail, sanitizeLocation, sanitizeMultilineText, sanitizeName, sanitizePhone, sanitizeText } from "@shared/sanitize";
 import { calculateShipping } from "@shared/shipping";
+import { buildRobotsTxt, buildLlmsTxt, FEED_SHIPPING_COUNTRIES } from "./seo";
 
 // In production, silence non-error console output to avoid leaking debug info.
 if (process.env.NODE_ENV === 'production') {
@@ -42,132 +43,8 @@ function getSiteOrigin(req: express.Request): string {
   return (getRequestOrigin(req) || ENV.siteUrl || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
 }
 
-function buildRobotsTxt(origin: string): string {
-  const normalizedOrigin = origin.replace(/\/$/, '');
-  return [
-    'User-agent: *',
-    'Allow: /',
-    'Disallow: /api/',
-    'Disallow: /admin/',
-    'Disallow: /account',
-    'Disallow: /orders',
-    'Disallow: /checkout',
-    'Disallow: /cart',
-    'Disallow: /tickets',
-    'Disallow: /payment/',
-    'Disallow: /auth/',
-    'Disallow: /search',
-    'Disallow: /*?*sort=',
-    'Disallow: /*?*filter=',
-    'Disallow: /*?*page=',
-    'Disallow: /*?*utm_source=',
-    'Disallow: /*?*utm_medium=',
-    'Disallow: /*?*utm_campaign=',
-    'Disallow: /*?*fbclid=',
-    'Disallow: /*?*gclid=',
-    'Sitemap: ' + `${normalizedOrigin}/sitemap.xml`,
-    'Sitemap: ' + `${normalizedOrigin}/sitemap-products.xml`,
-    '',
-  ].join('\n');
-}
-
-function buildLlmsTxt(origin: string): string {
-  const normalizedOrigin = origin.replace(/\/$/, '');
-  return [
-    '# MotorVault',
-    '',
-    '> MotorVault is an e-commerce platform for automotive parts and accessories, focused on clear product details, shipping/returns guidance, and secure checkout.',
-    '',
-    'Use this file as a curated entrypoint for LLMs and agents. Prefer policy and support pages for factual answers, then use product pages for item-level details.',
-    '',
-    '## Store',
-    `- [Homepage](${normalizedOrigin}/): Brand and catalog overview.`,
-    `- [Products](${normalizedOrigin}/products): Primary product discovery and filtering page.`,
-    `- [About](${normalizedOrigin}/about): Company background and sourcing standards.`,
-    '',
-    '## Policies And Support',
-    `- [Shipping](${normalizedOrigin}/shipping): Shipping expectations, timeframes, and coverage guidance.`,
-    `- [Returns](${normalizedOrigin}/returns): Returns and refund policy details.`,
-    `- [FAQ](${normalizedOrigin}/faq): Common operational and purchase questions.`,
-    `- [Contact](${normalizedOrigin}/contact): Official support contact form.`,
-    `- [Help](${normalizedOrigin}/help): Customer support entrypoint and assistance details.`,
-    '',
-    '## Machine-Readable Discovery',
-    `- [Robots](${normalizedOrigin}/robots.txt): Crawl directives and sitemap pointers.`,
-    `- [Primary Sitemap](${normalizedOrigin}/sitemap.xml): Index of key public pages.`,
-    `- [Product Sitemap](${normalizedOrigin}/sitemap-products.xml): Product URL inventory for catalog discovery.`,
-    `- [HTML Sitemap](${normalizedOrigin}/site-map): Human-readable internal-link hub for major pages and category paths.`,
-    `- [Product Feed](${normalizedOrigin}/feed.xml): Merchant-style product feed for integrations.`,
-    '- Structured data is embedded in the initial HTML response head as JSON-LD (`<script id="mv-structured-data-jsonld" type="application/ld+json">`).',
-    '',
-    '## Optional',
-    `- [Privacy Policy](${normalizedOrigin}/privacy): Privacy and data-use terms.`,
-    `- [Terms](${normalizedOrigin}/terms): Terms and conditions.`,
-    `- [Cookies](${normalizedOrigin}/cookies): Cookie usage and controls.`,
-    `- [Accessibility](${normalizedOrigin}/accessibility): Accessibility commitments and support.`,
-    '',
-  ].join('\n');
-}
-
 type RateBucket = { count: number; resetAt: number };
 const rateBuckets = new Map<string, RateBucket>();
-
-// Google merchant feeds expect ISO 3166-1 alpha-2 country codes.
-const FEED_SHIPPING_COUNTRIES: string[] = [
-  'US',
-  'CA',
-  'AL',
-  'AD',
-  'AM',
-  'AT',
-  'AZ',
-  'BY',
-  'BE',
-  'BA',
-  'BG',
-  'HR',
-  'CY',
-  'CZ',
-  'DK',
-  'EE',
-  'FI',
-  'FR',
-  'GE',
-  'DE',
-  'GR',
-  'HU',
-  'IS',
-  'IE',
-  'IT',
-  'KZ',
-  'XK',
-  'LV',
-  'LI',
-  'LT',
-  'LU',
-  'MT',
-  'MD',
-  'MC',
-  'ME',
-  'NL',
-  'MK',
-  'NO',
-  'PL',
-  'PT',
-  'RO',
-  'RU',
-  'SM',
-  'RS',
-  'SK',
-  'SI',
-  'ES',
-  'SE',
-  'CH',
-  'TR',
-  'UA',
-  'GB',
-  'VA',
-];
 
 function isStaticAssetPath(pathname: string): boolean {
   return /\.(?:css|js|mjs|map|png|jpg|jpeg|gif|webp|svg|ico|txt|xml|woff2?)$/i.test(pathname) ||
@@ -175,6 +52,11 @@ function isStaticAssetPath(pathname: string): boolean {
     pathname.startsWith('/images/');
 }
 
+// Note: this is intentionally NOT the createRateLimitMiddleware in
+// ./rateLimit.ts - that extraction diverged from this one (a narrower
+// isFeedRequest/getRateLimitClientKey than the getCandidateRequestPaths-based
+// versions this file actually uses elsewhere for feed/sitemap routing), so
+// swapping it in would silently change which requests get rate-limited.
 function createRateLimitMiddleware(opts: { windowMs: number; max: number; pathPrefix?: string[] }) {
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.method === 'OPTIONS' || isStaticAssetPath(req.path)) {
