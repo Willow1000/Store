@@ -7,7 +7,30 @@ import { createRequire } from "module";
 import fs from "fs";
 import path from "path";
 import { pathToFileURL } from "url";
-import { logger } from "../server/_core/logger";
+import pino from "pino";
+
+// This file is Vercel's serverless function entry point, deployed as a
+// standalone bundle (see vercel.json's `includeFiles`) - it can't rely on a
+// relative import into server/_core/logger.ts, since only this file plus
+// dist/** actually ship with the function. The logger is duplicated here
+// (matching server/_core/logger.ts's config) rather than imported.
+const logger = pino({
+  level:
+    process.env.LOG_LEVEL ||
+    (process.env.NODE_ENV === "production" ? "info" : "debug"),
+  transport:
+    process.env.NODE_ENV === "production"
+      ? undefined
+      : {
+          target: "pino-pretty",
+          options: {
+            colorize: true,
+            singleLine: false,
+            translateTime: "SYS:standard",
+            ignore: "pid,hostname",
+          },
+        },
+});
 
 const handler = express();
 const require = createRequire(import.meta.url);
