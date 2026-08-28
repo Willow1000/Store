@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Start services
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: store
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # pnpm-lock.yaml is lockfileVersion 9 (written by pnpm 10.4.1, which is
+      # also pinned in package.json's packageManager field). pnpm 8 can't
+      # read that lockfile format, so let action-setup pick up the pinned
+      # version instead of hardcoding an incompatible one.
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      # setup-node's cache: "pnpm" shells out to `pnpm store path`, so pnpm
+      # must already be on PATH - this step has to come after
+      # pnpm/action-setup, not before it.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type checking
+        run: pnpm run check
+
+      - name: Lint with Prettier
+        run: pnpm exec prettier --check .
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/store
+          JWT_SECRET: test-jwt-secret-for-ci-min-32-chars-req
+          NODE_ENV: test
+        # `pnpm test -- --coverage` (the "test" script is "vitest run") makes
+        # pnpm insert a literal `--` before the forwarded args, which vitest's
+        # CLI parses as "everything after is positional", so --coverage is
+        # swallowed silently instead of enabling coverage. Invoke vitest
+        # directly instead.
+        run: pnpm exec vitest run --coverage
+
+      - name: Run dependency audit
+        run: pnpm audit --audit-level=high || true

@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  # Local PostgreSQL database for development and testing
+  postgres:
+    image: postgres:16-alpine
+    container_name: store-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: store
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persist database data across container restarts
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d store"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # Don't auto-start; only start when explicitly requested:
+    # docker-compose up postgres -d
+    profiles:
+      - dev
+
+volumes:
+  postgres_data:
+    driver: local

@@ -7,12 +7,15 @@ dist/
 build/
 *.dist
 
-# Environment variables
+# Environment variables (.env.example is intentionally NOT ignored - it's
+# a placeholder-only template meant to be committed)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*.local
+!.env.example
 
 # IDE and editor files
 .vscode/
@@ -120,7 +123,6 @@ temp/
 # Manus version file (auto-generated, not part of source)
 client/public/__manus__/version.json
 
-.env*
 node_modules
 dist
 build
