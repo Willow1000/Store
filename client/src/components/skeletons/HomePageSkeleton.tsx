@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function HomePageSkeleton() {
   return (
@@ -19,7 +19,10 @@ export function HomePageSkeleton() {
         <Skeleton className="absolute right-4 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full bg-white/15" />
         <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className={`h-3 rounded-full ${i === 0 ? 'w-8' : 'w-3'} bg-white/20`} />
+            <Skeleton
+              key={i}
+              className={`h-3 rounded-full ${i === 0 ? "w-8" : "w-3"} bg-white/20`}
+            />
           ))}
         </div>
       </div>
@@ -34,7 +37,10 @@ export function HomePageSkeleton() {
 
           <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col">
+              <div
+                key={i}
+                className="group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col"
+              >
                 <Skeleton className="relative w-full pt-[100%] rounded-none bg-gray-100" />
                 <div className="p-3 sm:p-4 md:p-5 space-y-3">
                   <Skeleton className="h-4 w-11/12" />
@@ -58,7 +64,10 @@ export function HomePageSkeleton() {
 
           <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col">
+              <div
+                key={i}
+                className="group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col"
+              >
                 <Skeleton className="relative w-full pt-[100%] rounded-none bg-gray-100" />
                 <div className="p-3 sm:p-4 md:p-5 space-y-3">
                   <Skeleton className="h-4 w-11/12" />
@@ -89,7 +98,10 @@ export function HomePageSkeleton() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="relative h-40 overflow-hidden rounded-lg border bg-gray-100">
+              <div
+                key={i}
+                className="relative h-40 overflow-hidden rounded-lg border bg-gray-100"
+              >
                 <Skeleton className="absolute inset-0 h-full w-full rounded-none bg-gray-200" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
                 <div className="absolute bottom-3 left-3 right-3 space-y-2">

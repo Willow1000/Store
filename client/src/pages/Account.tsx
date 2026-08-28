@@ -1,9 +1,9 @@
-import { useAuth } from '@/_core/hooks/useAuth';
-import { useEffect, useRef } from 'react';
-import { SEOHead } from '@/components/SEOHead';
-import { User, Mail, Phone, MapPin, LogOut } from 'lucide-react';
-import { toast } from 'sonner';
-import { requestAuthenticationForPath } from '@/lib/authRequired';
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useEffect, useRef } from "react";
+import { SEOHead } from "@/components/SEOHead";
+import { User, Mail, Phone, MapPin, LogOut } from "lucide-react";
+import { toast } from "sonner";
+import { requestAuthenticationForPath } from "@/lib/authRequired";
 
 export default function Account() {
   const { user, isAuthenticated, sessionRestored, logout } = useAuth();
@@ -18,11 +18,11 @@ export default function Account() {
   const handleLogout = async () => {
     try {
       await logout();
-      toast.success('Logged out successfully');
-      window.location.href = '/';
+      toast.success("Logged out successfully");
+      window.location.href = "/";
     } catch (error) {
-      console.error('[Account] Logout error:', error);
-      toast.error('Failed to logout');
+      console.error("[Account] Logout error:", error);
+      toast.error("Failed to logout");
     }
   };
 
@@ -66,10 +66,10 @@ export default function Account() {
           <div className="rounded-lg border border-border bg-white p-6">
             <div className="mb-6 flex items-center gap-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black text-2xl font-bold text-white">
-                {user.name?.charAt(0).toUpperCase() || 'U'}
+                {user.name?.charAt(0).toUpperCase() || "U"}
               </div>
               <div>
-                <h2 className="text-xl font-bold">{user.name || 'User'}</h2>
+                <h2 className="text-xl font-bold">{user.name || "User"}</h2>
                 <p className="text-sm text-gray-600">{user.email}</p>
               </div>
             </div>
@@ -101,19 +101,23 @@ export default function Account() {
               <h2 className="mb-6 text-2xl font-bold">Personal Information</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">Full Name</label>
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Full Name
+                  </label>
                   <input
                     type="text"
-                    value={user.name || ''}
+                    value={user.name || ""}
                     disabled
                     className="mt-1 w-full rounded-md border border-input bg-gray-50 px-4 py-2 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">Email Address</label>
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Email Address
+                  </label>
                   <input
                     type="email"
-                    value={user.email || ''}
+                    value={user.email || ""}
                     disabled
                     className="mt-1 w-full rounded-md border border-input bg-gray-50 px-4 py-2 text-sm"
                   />

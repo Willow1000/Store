@@ -11,7 +11,9 @@
   background: #ffffff;
   border-radius: 16px;
   padding: 3.5rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.08),
+    0 0 1px rgba(0, 0, 0, 0.05);
   border: 1px solid #e2e8f0;
 }
 
@@ -62,7 +64,7 @@
   border: 2px solid #e2e8f0;
   border-radius: 10px;
   font-size: 1rem;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   letter-spacing: 0.1em;
   transition: all 0.3s ease;
   text-transform: uppercase;
@@ -174,7 +176,7 @@
   border: 1.5px solid #dbeafe;
   border-radius: 8px;
   font-size: 0.875rem;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   cursor: pointer;
   transition: all 0.2s;
   color: #2563eb;
@@ -201,7 +203,9 @@
   border-radius: 10px;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .find-products-button:disabled {
@@ -349,7 +353,7 @@
   background: #f1f5f9;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   color: #2563eb;
   font-weight: 600;
   letter-spacing: 0.05em;

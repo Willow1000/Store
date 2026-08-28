@@ -3,7 +3,13 @@
  */
 export async function sendContactAdminNotification(
   adminEmail: string,
-  data: { name: string; email: string; location: string; subject: string; message: string; }
+  data: {
+    name: string;
+    email: string;
+    location: string;
+    subject: string;
+    message: string;
+  }
 ): Promise<boolean> {
   try {
     const transporterInstance = getTransporter();
@@ -19,39 +25,62 @@ export async function sendContactAdminNotification(
       </ul>
       <p>Log in to the admin dashboard or check your CRM to follow up.</p>
     `;
-    await sendMailWithRetry(transporterInstance, {
-      from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
-      to: adminEmail,
-      subject: 'New Contact/Inquiry Submitted — Action Required',
-      html: htmlContent,
-    }, `admin contact notification to ${adminEmail}`);
-    logger.info({ adminEmail }, '[Email] Admin notification sent');
+    await sendMailWithRetry(
+      transporterInstance,
+      {
+        from: `${process.env.SENDER_NAME || "Our Store"} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
+        to: adminEmail,
+        subject: "New Contact/Inquiry Submitted — Action Required",
+        html: htmlContent,
+      },
+      `admin contact notification to ${adminEmail}`
+    );
+    logger.info({ adminEmail }, "[Email] Admin notification sent");
     return true;
   } catch (error) {
-    logEmailError(`[Email] Failed to send admin notification to ${adminEmail}`, error);
+    logEmailError(
+      `[Email] Failed to send admin notification to ${adminEmail}`,
+      error
+    );
     return false;
   }
 }
-import { logger } from './logger';
-import nodemailer from 'nodemailer';
-import fs from 'fs';
-import path from 'path';
-import PDFDocument from 'pdfkit';
-import QRCode from 'qrcode';
+import { logger } from "./logger";
+import nodemailer from "nodemailer";
+import fs from "fs";
+import path from "path";
+import PDFDocument from "pdfkit";
+import QRCode from "qrcode";
 let transporter: nodemailer.Transporter | null = null;
-const errorLogPath = path.join(process.cwd(), 'server', 'logs', 'nodemailer-errors.log');
+const errorLogPath = path.join(
+  process.cwd(),
+  "server",
+  "logs",
+  "nodemailer-errors.log"
+);
 
 // Use __filename for module directory resolution; server is bundled to CJS.
-const moduleDir = (typeof __filename !== 'undefined') ? path.dirname(__filename) : process.cwd();
+const moduleDir =
+  typeof __filename !== "undefined" ? path.dirname(__filename) : process.cwd();
 
 function resolveTemplatePath(templateName: string): string {
   const fileName = `${templateName}.html`;
   const candidates = [
-    path.resolve(process.cwd(), 'server', 'email_templates', 'motorvault', fileName),
-    path.resolve(process.cwd(), 'email_templates', 'motorvault', fileName),
-    path.resolve(moduleDir, '../email_templates/motorvault', fileName),
-    path.resolve(moduleDir, '../../server/email_templates/motorvault', fileName),
-    path.resolve(moduleDir, '../../email_templates/motorvault', fileName),
+    path.resolve(
+      process.cwd(),
+      "server",
+      "email_templates",
+      "motorvault",
+      fileName
+    ),
+    path.resolve(process.cwd(), "email_templates", "motorvault", fileName),
+    path.resolve(moduleDir, "../email_templates/motorvault", fileName),
+    path.resolve(
+      moduleDir,
+      "../../server/email_templates/motorvault",
+      fileName
+    ),
+    path.resolve(moduleDir, "../../email_templates/motorvault", fileName),
   ];
 
   for (const candidate of candidates) {
@@ -60,14 +89,25 @@ function resolveTemplatePath(templateName: string): string {
     }
   }
 
-  throw new Error(`Email template not found for ${templateName}. Tried: ${candidates.join(', ')}`);
+  throw new Error(
+    `Email template not found for ${templateName}. Tried: ${candidates.join(", ")}`
+  );
 }
 
 function resolveLogoPath(): string | null {
   const candidates = [
-    path.resolve(process.cwd(), 'client', 'public', 'images', 'motorvault_profile.png'),
-    path.resolve(moduleDir, '../../client/public/images/motorvault_profile.png'),
-    path.resolve(moduleDir, '../public/images/motorvault_profile.png'),
+    path.resolve(
+      process.cwd(),
+      "client",
+      "public",
+      "images",
+      "motorvault_profile.png"
+    ),
+    path.resolve(
+      moduleDir,
+      "../../client/public/images/motorvault_profile.png"
+    ),
+    path.resolve(moduleDir, "../public/images/motorvault_profile.png"),
   ];
 
   for (const candidate of candidates) {
@@ -85,8 +125,8 @@ function resolveLogoUrl(): string {
     process.env.SITE_URL ||
     process.env.VITE_APP_URL ||
     process.env.APP_URL ||
-    'https://motorvault.shop'
-  ).replace(/\/$/, '');
+    "https://motorvault.shop"
+  ).replace(/\/$/, "");
 
   return `${base}/images/motorvault_profile.png`;
 }
@@ -94,7 +134,7 @@ function resolveLogoUrl(): string {
 async function sendMailWithRetry(
   transporterInstance: nodemailer.Transporter,
   mailOptions: nodemailer.SendMailOptions,
-  context: string,
+  context: string
 ): Promise<void> {
   let lastError: unknown;
 
@@ -119,10 +159,13 @@ function logEmailError(message: string, error: unknown): void {
   ensureErrorLogDir();
 
   const timestamp = new Date().toISOString();
-  const details = error instanceof Error ? `${error.name}: ${error.message}\n${error.stack ?? ''}` : String(error);
+  const details =
+    error instanceof Error
+      ? `${error.name}: ${error.message}\n${error.stack ?? ""}`
+      : String(error);
   const entry = `[${timestamp}] ${message}\n${details}\n\n`;
 
-  fs.appendFileSync(errorLogPath, entry, 'utf8');
+  fs.appendFileSync(errorLogPath, entry, "utf8");
 }
 
 /**
@@ -135,15 +178,15 @@ function getTransporter(): nodemailer.Transporter {
   }
 
   if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-    throw new Error('SMTP_USER or SMTP_PASSWORD is not configured');
+    throw new Error("SMTP_USER or SMTP_PASSWORD is not configured");
   }
 
-  const port = parseInt(process.env.SMTP_PORT || '465', 10);
+  const port = parseInt(process.env.SMTP_PORT || "465", 10);
   const secure = process.env.SMTP_SECURE
-    ? process.env.SMTP_SECURE === 'true'
+    ? process.env.SMTP_SECURE === "true"
     : port === 465;
   const smtpConfig = {
-    host: process.env.SMTP_HOST || 'mail.privateemail.com',
+    host: process.env.SMTP_HOST || "mail.privateemail.com",
     port,
     secure,
     requireTLS: port === 587,
@@ -163,11 +206,11 @@ function getTransporter(): nodemailer.Transporter {
 function loadTemplate(templateName: string, data: Record<string, any>): string {
   try {
     const templatePath = resolveTemplatePath(templateName);
-    let templateContent = fs.readFileSync(templatePath, 'utf-8');
+    let templateContent = fs.readFileSync(templatePath, "utf-8");
 
     Object.entries(data).forEach(([key, value]) => {
-      const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
-      templateContent = templateContent.replace(regex, String(value ?? ''));
+      const regex = new RegExp(`{{\\s*${key}\\s*}}`, "g");
+      templateContent = templateContent.replace(regex, String(value ?? ""));
     });
 
     return templateContent;
@@ -179,64 +222,74 @@ function loadTemplate(templateName: string, data: Record<string, any>): string {
 
 function escapeHtml(value: string): string {
   return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
-function buildItemsHtml(items?: Array<{
-  name: string;
-  quantity: number;
-  price: string;
-  sku?: string;
-  description?: string;
-  unit_price?: string;
-  line_total?: string;
-}>): string {
+function buildItemsHtml(
+  items?: Array<{
+    name: string;
+    quantity: number;
+    price: string;
+    sku?: string;
+    description?: string;
+    unit_price?: string;
+    line_total?: string;
+  }>
+): string {
   if (!items || items.length === 0) {
-    return '';
+    return "";
   }
 
-  return items.map((item) => {
-    const quantity = item.quantity ?? 1;
-    const unitPrice = item.unit_price ?? item.price ?? '0.00';
-    const lineTotal = item.line_total ?? item.price ?? '0.00';
-    const name = escapeHtml(item.name || 'Item');
-    const sku = item.sku ? `<div class="item-meta">SKU: ${escapeHtml(item.sku)}</div>` : '';
-    const description = item.description ? `<div class="item-meta">${escapeHtml(item.description)}</div>` : '';
+  return items
+    .map(item => {
+      const quantity = item.quantity ?? 1;
+      const unitPrice = item.unit_price ?? item.price ?? "0.00";
+      const lineTotal = item.line_total ?? item.price ?? "0.00";
+      const name = escapeHtml(item.name || "Item");
+      const sku = item.sku
+        ? `<div class="item-meta">SKU: ${escapeHtml(item.sku)}</div>`
+        : "";
+      const description = item.description
+        ? `<div class="item-meta">${escapeHtml(item.description)}</div>`
+        : "";
 
-    // Grid format for new professional template
-    return `<div class="item-row"><div><div class="item-name">${name}</div><div class="item-meta">${sku}${description}</div></div><div class="item-qty">${quantity}</div><div class="item-price">${unitPrice}</div><div class="item-total">${lineTotal}</div></div>`;
-  }).join('');
+      // Grid format for new professional template
+      return `<div class="item-row"><div><div class="item-name">${name}</div><div class="item-meta">${sku}${description}</div></div><div class="item-qty">${quantity}</div><div class="item-price">${unitPrice}</div><div class="item-total">${lineTotal}</div></div>`;
+    })
+    .join("");
 }
 
 function formatTextBlock(value: string | undefined | null): string {
-  return escapeHtml(String(value ?? '').trim()).replace(/\n/g, '<br />');
+  return escapeHtml(String(value ?? "").trim()).replace(/\n/g, "<br />");
 }
 
 function buildLogoMailContext() {
   const logoPath = resolveLogoPath();
-  const logoCid = 'motorvault-logo@cid';
+  const logoCid = "motorvault-logo@cid";
   const logoSrc = logoPath ? `cid:${logoCid}` : resolveLogoUrl();
   const attachments = logoPath
-    ? [{ filename: 'motorvault_profile.png', path: logoPath, cid: logoCid }]
+    ? [{ filename: "motorvault_profile.png", path: logoPath, cid: logoCid }]
     : [];
 
   return { logoSrc, attachments };
 }
 
-type MailLanguage = 'en' | 'es' | 'fr' | 'de' | 'it' | 'nl';
+type MailLanguage = "en" | "es" | "fr" | "de" | "it" | "nl";
 
 function resolveMailLanguage(value: unknown): MailLanguage {
-  const raw = String(value || '').trim().toLowerCase();
-  if (raw.startsWith('es')) return 'es';
-  if (raw.startsWith('fr')) return 'fr';
-  if (raw.startsWith('de')) return 'de';
-  if (raw.startsWith('it')) return 'it';
-  if (raw.startsWith('nl')) return 'nl';
-  return 'en';
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (raw.startsWith("es")) return "es";
+  if (raw.startsWith("fr")) return "fr";
+  if (raw.startsWith("de")) return "de";
+  if (raw.startsWith("it")) return "it";
+  if (raw.startsWith("nl")) return "nl";
+  return "en";
 }
 
 function getTicketEmailCopy(language: MailLanguage): {
@@ -263,136 +316,144 @@ function getTicketEmailCopy(language: MailLanguage): {
 } {
   const copy: Record<MailLanguage, ReturnType<typeof getTicketEmailCopy>> = {
     en: {
-      subject: 'We received your ticket',
-      pageTitle: 'Your Ticket Was Received',
-      heading: 'Ticket Received',
-      intro: 'Thanks for contacting us. We have received your support ticket.',
+      subject: "We received your ticket",
+      pageTitle: "Your Ticket Was Received",
+      heading: "Ticket Received",
+      intro: "Thanks for contacting us. We have received your support ticket.",
       labels: {
-        reference: 'Reference',
-        issue: 'Issue',
-        priority: 'Priority',
-        status: 'Status',
-        createdAt: 'Created At',
-        message: 'Message',
-        details: 'Ticket Details',
-        contactEmail: 'Contact Email',
-        contactPhone: 'Contact Phone',
-        support: 'Support Email',
+        reference: "Reference",
+        issue: "Issue",
+        priority: "Priority",
+        status: "Status",
+        createdAt: "Created At",
+        message: "Message",
+        details: "Ticket Details",
+        contactEmail: "Contact Email",
+        contactPhone: "Contact Phone",
+        support: "Support Email",
       },
-      followUp: 'Please keep this email for your records. Reply with your reference code if you would like to share more details.',
-      helpText: 'Need help? Contact',
-      notProvided: 'Not provided',
-      footer: 'Our team will follow up with you as soon as possible.',
+      followUp:
+        "Please keep this email for your records. Reply with your reference code if you would like to share more details.",
+      helpText: "Need help? Contact",
+      notProvided: "Not provided",
+      footer: "Our team will follow up with you as soon as possible.",
     },
     es: {
-      subject: 'Recibimos tu ticket',
-      pageTitle: 'Hemos recibido tu ticket',
-      heading: 'Ticket Recibido',
-      intro: 'Gracias por contactarnos. Hemos recibido tu ticket de soporte.',
+      subject: "Recibimos tu ticket",
+      pageTitle: "Hemos recibido tu ticket",
+      heading: "Ticket Recibido",
+      intro: "Gracias por contactarnos. Hemos recibido tu ticket de soporte.",
       labels: {
-        reference: 'Referencia',
-        issue: 'Problema',
-        priority: 'Prioridad',
-        status: 'Estado',
-        createdAt: 'Creado',
-        message: 'Mensaje',
-        details: 'Detalles del Ticket',
-        contactEmail: 'Correo de Contacto',
-        contactPhone: 'Telefono de Contacto',
-        support: 'Correo de Soporte',
+        reference: "Referencia",
+        issue: "Problema",
+        priority: "Prioridad",
+        status: "Estado",
+        createdAt: "Creado",
+        message: "Mensaje",
+        details: "Detalles del Ticket",
+        contactEmail: "Correo de Contacto",
+        contactPhone: "Telefono de Contacto",
+        support: "Correo de Soporte",
       },
-      followUp: 'Guarda este correo para tus registros. Responde con tu codigo de referencia si deseas compartir mas detalles.',
-      helpText: 'Necesitas ayuda? Contacta a',
-      notProvided: 'No proporcionado',
-      footer: 'Nuestro equipo te respondera lo antes posible.',
+      followUp:
+        "Guarda este correo para tus registros. Responde con tu codigo de referencia si deseas compartir mas detalles.",
+      helpText: "Necesitas ayuda? Contacta a",
+      notProvided: "No proporcionado",
+      footer: "Nuestro equipo te respondera lo antes posible.",
     },
     fr: {
-      subject: 'Nous avons recu votre ticket',
-      pageTitle: 'Votre ticket a ete recu',
-      heading: 'Ticket Recu',
-      intro: 'Merci de nous avoir contactes. Nous avons bien recu votre ticket.',
+      subject: "Nous avons recu votre ticket",
+      pageTitle: "Votre ticket a ete recu",
+      heading: "Ticket Recu",
+      intro:
+        "Merci de nous avoir contactes. Nous avons bien recu votre ticket.",
       labels: {
-        reference: 'Reference',
-        issue: 'Probleme',
-        priority: 'Priorite',
-        status: 'Statut',
-        createdAt: 'Cree le',
-        message: 'Message',
-        details: 'Details du Ticket',
-        contactEmail: 'Email de Contact',
-        contactPhone: 'Telephone de Contact',
-        support: 'Email Support',
+        reference: "Reference",
+        issue: "Probleme",
+        priority: "Priorite",
+        status: "Statut",
+        createdAt: "Cree le",
+        message: "Message",
+        details: "Details du Ticket",
+        contactEmail: "Email de Contact",
+        contactPhone: "Telephone de Contact",
+        support: "Email Support",
       },
-      followUp: 'Conservez cet email pour vos dossiers. Repondez avec votre reference si vous souhaitez ajouter des details.',
-      helpText: 'Besoin d aide? Contactez',
-      notProvided: 'Non renseigne',
-      footer: 'Notre equipe vous repondra dans les plus brefs delais.',
+      followUp:
+        "Conservez cet email pour vos dossiers. Repondez avec votre reference si vous souhaitez ajouter des details.",
+      helpText: "Besoin d aide? Contactez",
+      notProvided: "Non renseigne",
+      footer: "Notre equipe vous repondra dans les plus brefs delais.",
     },
     de: {
-      subject: 'Wir haben Ihr Ticket erhalten',
-      pageTitle: 'Ihr Ticket wurde empfangen',
-      heading: 'Ticket Erhalten',
-      intro: 'Danke fur Ihre Nachricht. Wir haben Ihr Support-Ticket erhalten.',
+      subject: "Wir haben Ihr Ticket erhalten",
+      pageTitle: "Ihr Ticket wurde empfangen",
+      heading: "Ticket Erhalten",
+      intro: "Danke fur Ihre Nachricht. Wir haben Ihr Support-Ticket erhalten.",
       labels: {
-        reference: 'Referenz',
-        issue: 'Anliegen',
-        priority: 'Prioritat',
-        status: 'Status',
-        createdAt: 'Erstellt am',
-        message: 'Nachricht',
-        details: 'Ticketdetails',
-        contactEmail: 'Kontakt E-Mail',
-        contactPhone: 'Kontakt Telefon',
-        support: 'Support E-Mail',
+        reference: "Referenz",
+        issue: "Anliegen",
+        priority: "Prioritat",
+        status: "Status",
+        createdAt: "Erstellt am",
+        message: "Nachricht",
+        details: "Ticketdetails",
+        contactEmail: "Kontakt E-Mail",
+        contactPhone: "Kontakt Telefon",
+        support: "Support E-Mail",
       },
-      followUp: 'Bitte bewahren Sie diese E-Mail fur Ihre Unterlagen auf. Antworten Sie mit Ihrer Referenznummer, wenn Sie weitere Details teilen mochten.',
-      helpText: 'Brauchen Sie Hilfe? Kontaktieren Sie',
-      notProvided: 'Nicht angegeben',
-      footer: 'Unser Team meldet sich so schnell wie moglich bei Ihnen.',
+      followUp:
+        "Bitte bewahren Sie diese E-Mail fur Ihre Unterlagen auf. Antworten Sie mit Ihrer Referenznummer, wenn Sie weitere Details teilen mochten.",
+      helpText: "Brauchen Sie Hilfe? Kontaktieren Sie",
+      notProvided: "Nicht angegeben",
+      footer: "Unser Team meldet sich so schnell wie moglich bei Ihnen.",
     },
     it: {
-      subject: 'Abbiamo ricevuto il tuo ticket',
-      pageTitle: 'Il tuo ticket e stato ricevuto',
-      heading: 'Ticket Ricevuto',
-      intro: 'Grazie per averci contattato. Abbiamo ricevuto il tuo ticket di supporto.',
+      subject: "Abbiamo ricevuto il tuo ticket",
+      pageTitle: "Il tuo ticket e stato ricevuto",
+      heading: "Ticket Ricevuto",
+      intro:
+        "Grazie per averci contattato. Abbiamo ricevuto il tuo ticket di supporto.",
       labels: {
-        reference: 'Riferimento',
-        issue: 'Problema',
-        priority: 'Priorita',
-        status: 'Stato',
-        createdAt: 'Creato il',
-        message: 'Messaggio',
-        details: 'Dettagli Ticket',
-        contactEmail: 'Email di Contatto',
-        contactPhone: 'Telefono di Contatto',
-        support: 'Email Supporto',
+        reference: "Riferimento",
+        issue: "Problema",
+        priority: "Priorita",
+        status: "Stato",
+        createdAt: "Creato il",
+        message: "Messaggio",
+        details: "Dettagli Ticket",
+        contactEmail: "Email di Contatto",
+        contactPhone: "Telefono di Contatto",
+        support: "Email Supporto",
       },
-      followUp: 'Conserva questa email per i tuoi archivi. Rispondi con il tuo codice di riferimento se vuoi aggiungere dettagli.',
-      helpText: 'Serve aiuto? Contatta',
-      notProvided: 'Non fornito',
-      footer: 'Il nostro team ti rispondera il prima possibile.',
+      followUp:
+        "Conserva questa email per i tuoi archivi. Rispondi con il tuo codice di riferimento se vuoi aggiungere dettagli.",
+      helpText: "Serve aiuto? Contatta",
+      notProvided: "Non fornito",
+      footer: "Il nostro team ti rispondera il prima possibile.",
     },
     nl: {
-      subject: 'Wij hebben uw ticket ontvangen',
-      pageTitle: 'Uw ticket is ontvangen',
-      heading: 'Ticket Ontvangen',
-      intro: 'Bedankt voor uw bericht. Wij hebben uw supportticket ontvangen.',
+      subject: "Wij hebben uw ticket ontvangen",
+      pageTitle: "Uw ticket is ontvangen",
+      heading: "Ticket Ontvangen",
+      intro: "Bedankt voor uw bericht. Wij hebben uw supportticket ontvangen.",
       labels: {
-        reference: 'Referentie',
-        issue: 'Probleem',
-        priority: 'Prioriteit',
-        status: 'Status',
-        createdAt: 'Aangemaakt op',
-        message: 'Bericht',
-        details: 'Ticketgegevens',
-        contactEmail: 'Contact e-mail',
-        contactPhone: 'Contact telefoon',
-        support: 'Support e-mail',
+        reference: "Referentie",
+        issue: "Probleem",
+        priority: "Prioriteit",
+        status: "Status",
+        createdAt: "Aangemaakt op",
+        message: "Bericht",
+        details: "Ticketgegevens",
+        contactEmail: "Contact e-mail",
+        contactPhone: "Contact telefoon",
+        support: "Support e-mail",
       },
-      followUp: 'Bewaar deze e-mail voor uw administratie. Beantwoord met uw referentiecode als u extra details wilt delen.',
-      helpText: 'Hulp nodig? Neem contact op met',
-      notProvided: 'Niet opgegeven',
-      footer: 'Ons team neemt zo snel mogelijk contact met u op.',
+      followUp:
+        "Bewaar deze e-mail voor uw administratie. Beantwoord met uw referentiecode als u extra details wilt delen.",
+      helpText: "Hulp nodig? Neem contact op met",
+      notProvided: "Niet opgegeven",
+      footer: "Ons team neemt zo snel mogelijk contact met u op.",
     },
   };
 
@@ -417,100 +478,111 @@ function getContactEmailCopy(language: MailLanguage): {
 } {
   const copy: Record<MailLanguage, ReturnType<typeof getContactEmailCopy>> = {
     en: {
-      subject: 'Thank you for contacting us',
-      pageTitle: 'Thank You for Contacting Us',
-      heading: 'Thank You for Contacting Us',
-      intro: 'Your message has been received. One of our staff members will reach out to you using this email address shortly.',
+      subject: "Thank you for contacting us",
+      pageTitle: "Thank You for Contacting Us",
+      heading: "Thank You for Contacting Us",
+      intro:
+        "Your message has been received. One of our staff members will reach out to you using this email address shortly.",
       labels: {
-        status: 'Status',
-        nextStep: 'Next step',
+        status: "Status",
+        nextStep: "Next step",
       },
       values: {
-        status: 'Received',
-        nextStep: 'A staff member will contact you via this email address',
+        status: "Received",
+        nextStep: "A staff member will contact you via this email address",
       },
-      helpText: 'Need more help? Email',
-      footer: 'We appreciate your patience and will follow up as soon as possible.',
+      helpText: "Need more help? Email",
+      footer:
+        "We appreciate your patience and will follow up as soon as possible.",
     },
     es: {
-      subject: 'Gracias por contactarnos',
-      pageTitle: 'Gracias por contactarnos',
-      heading: 'Gracias por contactarnos',
-      intro: 'Hemos recibido tu mensaje. Uno de nuestros colaboradores se pondra en contacto contigo usando este correo en breve.',
+      subject: "Gracias por contactarnos",
+      pageTitle: "Gracias por contactarnos",
+      heading: "Gracias por contactarnos",
+      intro:
+        "Hemos recibido tu mensaje. Uno de nuestros colaboradores se pondra en contacto contigo usando este correo en breve.",
       labels: {
-        status: 'Estado',
-        nextStep: 'Siguiente paso',
+        status: "Estado",
+        nextStep: "Siguiente paso",
       },
       values: {
-        status: 'Recibido',
-        nextStep: 'Un miembro del equipo te contactara por este correo',
+        status: "Recibido",
+        nextStep: "Un miembro del equipo te contactara por este correo",
       },
-      helpText: 'Necesitas mas ayuda? Escribe a',
-      footer: 'Agradecemos tu paciencia y te responderemos lo antes posible.',
+      helpText: "Necesitas mas ayuda? Escribe a",
+      footer: "Agradecemos tu paciencia y te responderemos lo antes posible.",
     },
     fr: {
-      subject: 'Merci de nous avoir contactes',
-      pageTitle: 'Merci de nous avoir contactes',
-      heading: 'Merci de nous avoir contactes',
-      intro: 'Votre message a bien ete recu. Un membre de notre equipe vous contactera bientot via cette adresse email.',
+      subject: "Merci de nous avoir contactes",
+      pageTitle: "Merci de nous avoir contactes",
+      heading: "Merci de nous avoir contactes",
+      intro:
+        "Votre message a bien ete recu. Un membre de notre equipe vous contactera bientot via cette adresse email.",
       labels: {
-        status: 'Statut',
-        nextStep: 'Prochaine etape',
+        status: "Statut",
+        nextStep: "Prochaine etape",
       },
       values: {
-        status: 'Recu',
-        nextStep: 'Un membre de l equipe vous contactera via cet email',
+        status: "Recu",
+        nextStep: "Un membre de l equipe vous contactera via cet email",
       },
-      helpText: 'Besoin d aide supplementaire? Ecrivez a',
-      footer: 'Merci pour votre patience, nous reviendrons vers vous rapidement.',
+      helpText: "Besoin d aide supplementaire? Ecrivez a",
+      footer:
+        "Merci pour votre patience, nous reviendrons vers vous rapidement.",
     },
     de: {
-      subject: 'Vielen Dank fur Ihre Nachricht',
-      pageTitle: 'Vielen Dank fur Ihre Nachricht',
-      heading: 'Vielen Dank fur Ihre Nachricht',
-      intro: 'Ihre Nachricht wurde empfangen. Ein Mitglied unseres Teams meldet sich in Kurze uber diese E-Mail-Adresse bei Ihnen.',
+      subject: "Vielen Dank fur Ihre Nachricht",
+      pageTitle: "Vielen Dank fur Ihre Nachricht",
+      heading: "Vielen Dank fur Ihre Nachricht",
+      intro:
+        "Ihre Nachricht wurde empfangen. Ein Mitglied unseres Teams meldet sich in Kurze uber diese E-Mail-Adresse bei Ihnen.",
       labels: {
-        status: 'Status',
-        nextStep: 'Nachster Schritt',
+        status: "Status",
+        nextStep: "Nachster Schritt",
       },
       values: {
-        status: 'Empfangen',
-        nextStep: 'Ein Teammitglied kontaktiert Sie uber diese E-Mail-Adresse',
+        status: "Empfangen",
+        nextStep: "Ein Teammitglied kontaktiert Sie uber diese E-Mail-Adresse",
       },
-      helpText: 'Brauchen Sie weitere Hilfe? Schreiben Sie an',
-      footer: 'Vielen Dank fur Ihre Geduld. Wir melden uns so schnell wie moglich.',
+      helpText: "Brauchen Sie weitere Hilfe? Schreiben Sie an",
+      footer:
+        "Vielen Dank fur Ihre Geduld. Wir melden uns so schnell wie moglich.",
     },
     it: {
-      subject: 'Grazie per averci contattato',
-      pageTitle: 'Grazie per averci contattato',
-      heading: 'Grazie per averci contattato',
-      intro: 'Il tuo messaggio e stato ricevuto. Un membro del nostro staff ti contattera a breve tramite questo indirizzo email.',
+      subject: "Grazie per averci contattato",
+      pageTitle: "Grazie per averci contattato",
+      heading: "Grazie per averci contattato",
+      intro:
+        "Il tuo messaggio e stato ricevuto. Un membro del nostro staff ti contattera a breve tramite questo indirizzo email.",
       labels: {
-        status: 'Stato',
-        nextStep: 'Prossimo passo',
+        status: "Stato",
+        nextStep: "Prossimo passo",
       },
       values: {
-        status: 'Ricevuto',
-        nextStep: 'Un membro del team ti contattera tramite questo indirizzo email',
+        status: "Ricevuto",
+        nextStep:
+          "Un membro del team ti contattera tramite questo indirizzo email",
       },
-      helpText: 'Hai bisogno di altro aiuto? Scrivi a',
-      footer: 'Grazie per la pazienza, ti risponderemo al piu presto.',
+      helpText: "Hai bisogno di altro aiuto? Scrivi a",
+      footer: "Grazie per la pazienza, ti risponderemo al piu presto.",
     },
     nl: {
-      subject: 'Bedankt dat u contact met ons opnam',
-      pageTitle: 'Bedankt voor uw bericht',
-      heading: 'Bedankt voor uw bericht',
-      intro: 'Uw bericht is ontvangen. Een medewerker neemt binnenkort contact met u op via dit e-mailadres.',
+      subject: "Bedankt dat u contact met ons opnam",
+      pageTitle: "Bedankt voor uw bericht",
+      heading: "Bedankt voor uw bericht",
+      intro:
+        "Uw bericht is ontvangen. Een medewerker neemt binnenkort contact met u op via dit e-mailadres.",
       labels: {
-        status: 'Status',
-        nextStep: 'Volgende stap',
+        status: "Status",
+        nextStep: "Volgende stap",
       },
       values: {
-        status: 'Ontvangen',
-        nextStep: 'Een medewerker neemt via dit e-mailadres contact met u op',
+        status: "Ontvangen",
+        nextStep: "Een medewerker neemt via dit e-mailadres contact met u op",
       },
-      helpText: 'Meer hulp nodig? E-mail',
-      footer: 'Wij waarderen uw geduld en nemen zo snel mogelijk contact met u op.',
+      helpText: "Meer hulp nodig? E-mail",
+      footer:
+        "Wij waarderen uw geduld en nemen zo snel mogelijk contact met u op.",
     },
   };
 
@@ -547,172 +619,187 @@ function getOrderEmailCopy(language: MailLanguage): {
 } {
   const copy: Record<MailLanguage, ReturnType<typeof getOrderEmailCopy>> = {
     en: {
-      heading: 'Order Confirmation',
-      subheading: 'Thank you for your purchase',
-      intro: 'we\'ve received your order',
-      orderNumber: 'Order Number',
-      orderDate: 'Order Date',
-      items: 'Items',
-      totalAmount: 'Total Amount',
-      customerInfo: 'Customer Information',
-      orderStatus: 'Order Status',
-      statusConfirmed: 'Confirmed',
-      product: 'Product',
-      qty: 'Qty',
-      price: 'Price',
-      subtotal: 'Subtotal',
-      shipping: 'Shipping',
-      tax: 'Tax',
-      discount: 'Discount',
-      total: 'Order Total',
-      viewDetails: 'View Full Order Details',
-      receiptNote: 'A professional receipt with QR code has been attached. Keep it for your records.',
-      questions: 'Questions? We\'re here to help.',
-      supportContact: 'Contact us',
-      tracking: 'We\'ll send you a tracking number as soon as your package ships.',
-      trackingLink: 'Track your shipment',
-      copyright: 'All rights reserved',
-      autoReply: 'This is an automated receipt. For support, contact',
+      heading: "Order Confirmation",
+      subheading: "Thank you for your purchase",
+      intro: "we've received your order",
+      orderNumber: "Order Number",
+      orderDate: "Order Date",
+      items: "Items",
+      totalAmount: "Total Amount",
+      customerInfo: "Customer Information",
+      orderStatus: "Order Status",
+      statusConfirmed: "Confirmed",
+      product: "Product",
+      qty: "Qty",
+      price: "Price",
+      subtotal: "Subtotal",
+      shipping: "Shipping",
+      tax: "Tax",
+      discount: "Discount",
+      total: "Order Total",
+      viewDetails: "View Full Order Details",
+      receiptNote:
+        "A professional receipt with QR code has been attached. Keep it for your records.",
+      questions: "Questions? We're here to help.",
+      supportContact: "Contact us",
+      tracking:
+        "We'll send you a tracking number as soon as your package ships.",
+      trackingLink: "Track your shipment",
+      copyright: "All rights reserved",
+      autoReply: "This is an automated receipt. For support, contact",
     },
     es: {
-      heading: 'Confirmación de Pedido',
-      subheading: 'Gracias por tu compra',
-      intro: 'hemos recibido tu pedido',
-      orderNumber: 'Número de Pedido',
-      orderDate: 'Fecha del Pedido',
-      items: 'Artículos',
-      totalAmount: 'Monto Total',
-      customerInfo: 'Información del Cliente',
-      orderStatus: 'Estado del Pedido',
-      statusConfirmed: 'Confirmado',
-      product: 'Producto',
-      qty: 'Cantidad',
-      price: 'Precio',
-      subtotal: 'Subtotal',
-      shipping: 'Envío',
-      tax: 'Impuesto',
-      discount: 'Descuento',
-      total: 'Total del Pedido',
-      viewDetails: 'Ver Detalles del Pedido',
-      receiptNote: 'Se ha adjuntado un recibo profesional con código QR. Guárdalo en tus registros.',
-      questions: '¿Preguntas? Estamos aquí para ayudarte.',
-      supportContact: 'Contáctanos',
-      tracking: 'Te enviaremos un número de seguimiento tan pronto como tu paquete se envíe.',
-      trackingLink: 'Seguimiento de envío',
-      copyright: 'Todos los derechos reservados',
-      autoReply: 'Este es un recibo automatizado. Para soporte, contacta a',
+      heading: "Confirmación de Pedido",
+      subheading: "Gracias por tu compra",
+      intro: "hemos recibido tu pedido",
+      orderNumber: "Número de Pedido",
+      orderDate: "Fecha del Pedido",
+      items: "Artículos",
+      totalAmount: "Monto Total",
+      customerInfo: "Información del Cliente",
+      orderStatus: "Estado del Pedido",
+      statusConfirmed: "Confirmado",
+      product: "Producto",
+      qty: "Cantidad",
+      price: "Precio",
+      subtotal: "Subtotal",
+      shipping: "Envío",
+      tax: "Impuesto",
+      discount: "Descuento",
+      total: "Total del Pedido",
+      viewDetails: "Ver Detalles del Pedido",
+      receiptNote:
+        "Se ha adjuntado un recibo profesional con código QR. Guárdalo en tus registros.",
+      questions: "¿Preguntas? Estamos aquí para ayudarte.",
+      supportContact: "Contáctanos",
+      tracking:
+        "Te enviaremos un número de seguimiento tan pronto como tu paquete se envíe.",
+      trackingLink: "Seguimiento de envío",
+      copyright: "Todos los derechos reservados",
+      autoReply: "Este es un recibo automatizado. Para soporte, contacta a",
     },
     fr: {
-      heading: 'Confirmation de Commande',
-      subheading: 'Merci pour votre achat',
-      intro: 'nous avons reçu votre commande',
-      orderNumber: 'Numéro de Commande',
-      orderDate: 'Date de la Commande',
-      items: 'Articles',
-      totalAmount: 'Montant Total',
-      customerInfo: 'Informations Client',
-      orderStatus: 'Statut de la Commande',
-      statusConfirmed: 'Confirmé',
-      product: 'Produit',
-      qty: 'Qté',
-      price: 'Prix',
-      subtotal: 'Sous-total',
-      shipping: 'Livraison',
-      tax: 'Taxe',
-      discount: 'Réduction',
-      total: 'Total de la Commande',
-      viewDetails: 'Voir les Détails de la Commande',
-      receiptNote: 'Un reçu professionnel avec code QR a été joint. Conservez-le pour vos dossiers.',
-      questions: 'Des questions ? Nous sommes là pour vous aider.',
-      supportContact: 'Nous contacter',
-      tracking: 'Nous vous enverrons un numéro de suivi dès que votre colis sera expédié.',
-      trackingLink: 'Suivre votre commande',
-      copyright: 'Tous les droits réservés',
-      autoReply: 'Ceci est un reçu automatisé. Pour le support, contactez',
+      heading: "Confirmation de Commande",
+      subheading: "Merci pour votre achat",
+      intro: "nous avons reçu votre commande",
+      orderNumber: "Numéro de Commande",
+      orderDate: "Date de la Commande",
+      items: "Articles",
+      totalAmount: "Montant Total",
+      customerInfo: "Informations Client",
+      orderStatus: "Statut de la Commande",
+      statusConfirmed: "Confirmé",
+      product: "Produit",
+      qty: "Qté",
+      price: "Prix",
+      subtotal: "Sous-total",
+      shipping: "Livraison",
+      tax: "Taxe",
+      discount: "Réduction",
+      total: "Total de la Commande",
+      viewDetails: "Voir les Détails de la Commande",
+      receiptNote:
+        "Un reçu professionnel avec code QR a été joint. Conservez-le pour vos dossiers.",
+      questions: "Des questions ? Nous sommes là pour vous aider.",
+      supportContact: "Nous contacter",
+      tracking:
+        "Nous vous enverrons un numéro de suivi dès que votre colis sera expédié.",
+      trackingLink: "Suivre votre commande",
+      copyright: "Tous les droits réservés",
+      autoReply: "Ceci est un reçu automatisé. Pour le support, contactez",
     },
     de: {
-      heading: 'Bestellbestätigung',
-      subheading: 'Vielen Dank für Ihren Kauf',
-      intro: 'wir haben Ihre Bestellung erhalten',
-      orderNumber: 'Bestellnummer',
-      orderDate: 'Bestelldatum',
-      items: 'Artikel',
-      totalAmount: 'Gesamtbetrag',
-      customerInfo: 'Kundeninformationen',
-      orderStatus: 'Bestellstatus',
-      statusConfirmed: 'Bestätigt',
-      product: 'Produkt',
-      qty: 'Menge',
-      price: 'Preis',
-      subtotal: 'Zwischensumme',
-      shipping: 'Versand',
-      tax: 'Steuern',
-      discount: 'Rabatt',
-      total: 'Gesamtbestellung',
-      viewDetails: 'Bestelldetails Anzeigen',
-      receiptNote: 'Eine professionelle Quittung mit QR-Code wurde beigefügt. Bewahren Sie sie für Ihre Unterlagen auf.',
-      questions: 'Haben Sie Fragen? Wir sind hier, um zu helfen.',
-      supportContact: 'Kontaktieren Sie uns',
-      tracking: 'Wir senden Ihnen eine Sendungsverfolgungsnummer, sobald Ihr Paket versandt wird.',
-      trackingLink: 'Sendung verfolgen',
-      copyright: 'Alle Rechte vorbehalten',
-      autoReply: 'Dies ist eine automatisierte Quittung. Für Support kontaktieren Sie',
+      heading: "Bestellbestätigung",
+      subheading: "Vielen Dank für Ihren Kauf",
+      intro: "wir haben Ihre Bestellung erhalten",
+      orderNumber: "Bestellnummer",
+      orderDate: "Bestelldatum",
+      items: "Artikel",
+      totalAmount: "Gesamtbetrag",
+      customerInfo: "Kundeninformationen",
+      orderStatus: "Bestellstatus",
+      statusConfirmed: "Bestätigt",
+      product: "Produkt",
+      qty: "Menge",
+      price: "Preis",
+      subtotal: "Zwischensumme",
+      shipping: "Versand",
+      tax: "Steuern",
+      discount: "Rabatt",
+      total: "Gesamtbestellung",
+      viewDetails: "Bestelldetails Anzeigen",
+      receiptNote:
+        "Eine professionelle Quittung mit QR-Code wurde beigefügt. Bewahren Sie sie für Ihre Unterlagen auf.",
+      questions: "Haben Sie Fragen? Wir sind hier, um zu helfen.",
+      supportContact: "Kontaktieren Sie uns",
+      tracking:
+        "Wir senden Ihnen eine Sendungsverfolgungsnummer, sobald Ihr Paket versandt wird.",
+      trackingLink: "Sendung verfolgen",
+      copyright: "Alle Rechte vorbehalten",
+      autoReply:
+        "Dies ist eine automatisierte Quittung. Für Support kontaktieren Sie",
     },
     it: {
-      heading: 'Conferma dell\'Ordine',
-      subheading: 'Grazie per il tuo acquisto',
-      intro: 'abbiamo ricevuto il tuo ordine',
-      orderNumber: 'Numero d\'Ordine',
-      orderDate: 'Data dell\'Ordine',
-      items: 'Articoli',
-      totalAmount: 'Importo Totale',
-      customerInfo: 'Informazioni del Cliente',
-      orderStatus: 'Stato dell\'Ordine',
-      statusConfirmed: 'Confermato',
-      product: 'Prodotto',
-      qty: 'Qtà',
-      price: 'Prezzo',
-      subtotal: 'Subtotale',
-      shipping: 'Spedizione',
-      tax: 'Tassa',
-      discount: 'Sconto',
-      total: 'Totale Ordine',
-      viewDetails: 'Visualizza Dettagli Ordine',
-      receiptNote: 'È stata allegata una ricevuta professionale con codice QR. Conservala per i tuoi registri.',
-      questions: 'Hai domande? Siamo qui per aiutarti.',
-      supportContact: 'Contattaci',
-      tracking: 'Ti invieremo un numero di tracciamento non appena il tuo pacco sarà spedito.',
-      trackingLink: 'Traccia il tuo ordine',
-      copyright: 'Tutti i diritti riservati',
-      autoReply: 'Questa è una ricevuta automatizzata. Per il supporto, contatta',
+      heading: "Conferma dell'Ordine",
+      subheading: "Grazie per il tuo acquisto",
+      intro: "abbiamo ricevuto il tuo ordine",
+      orderNumber: "Numero d'Ordine",
+      orderDate: "Data dell'Ordine",
+      items: "Articoli",
+      totalAmount: "Importo Totale",
+      customerInfo: "Informazioni del Cliente",
+      orderStatus: "Stato dell'Ordine",
+      statusConfirmed: "Confermato",
+      product: "Prodotto",
+      qty: "Qtà",
+      price: "Prezzo",
+      subtotal: "Subtotale",
+      shipping: "Spedizione",
+      tax: "Tassa",
+      discount: "Sconto",
+      total: "Totale Ordine",
+      viewDetails: "Visualizza Dettagli Ordine",
+      receiptNote:
+        "È stata allegata una ricevuta professionale con codice QR. Conservala per i tuoi registri.",
+      questions: "Hai domande? Siamo qui per aiutarti.",
+      supportContact: "Contattaci",
+      tracking:
+        "Ti invieremo un numero di tracciamento non appena il tuo pacco sarà spedito.",
+      trackingLink: "Traccia il tuo ordine",
+      copyright: "Tutti i diritti riservati",
+      autoReply:
+        "Questa è una ricevuta automatizzata. Per il supporto, contatta",
     },
     nl: {
-      heading: 'Bestellingsbevestiging',
-      subheading: 'Bedankt voor uw aankoop',
-      intro: 'wij hebben uw bestelling ontvangen',
-      orderNumber: 'Bestelnummer',
-      orderDate: 'Besteldatum',
-      items: 'Artikelen',
-      totalAmount: 'Totaalbedrag',
-      customerInfo: 'Klantinformatie',
-      orderStatus: 'Bestelstatus',
-      statusConfirmed: 'Bevestigd',
-      product: 'Product',
-      qty: 'Aantal',
-      price: 'Prijs',
-      subtotal: 'Subtotaal',
-      shipping: 'Verzending',
-      tax: 'Belasting',
-      discount: 'Korting',
-      total: 'Ordertotaal',
-      viewDetails: 'Bekijk volledige bestellingsgegevens',
-      receiptNote: 'Er is een professionele ontvangstbevestiging met QR-code bijgevoegd. Bewaar deze voor uw administratie.',
-      questions: 'Vragen? Wij helpen u graag.',
-      supportContact: 'Neem contact met ons op',
-      tracking: 'Wij sturen u een trackingnummer zodra uw pakket wordt verzonden.',
-      trackingLink: 'Volg uw zending',
-      copyright: 'Alle rechten voorbehouden',
-      autoReply: 'Dit is een automatisch gegenereerde ontvangstbevestiging. Voor support, neem contact op',
+      heading: "Bestellingsbevestiging",
+      subheading: "Bedankt voor uw aankoop",
+      intro: "wij hebben uw bestelling ontvangen",
+      orderNumber: "Bestelnummer",
+      orderDate: "Besteldatum",
+      items: "Artikelen",
+      totalAmount: "Totaalbedrag",
+      customerInfo: "Klantinformatie",
+      orderStatus: "Bestelstatus",
+      statusConfirmed: "Bevestigd",
+      product: "Product",
+      qty: "Aantal",
+      price: "Prijs",
+      subtotal: "Subtotaal",
+      shipping: "Verzending",
+      tax: "Belasting",
+      discount: "Korting",
+      total: "Ordertotaal",
+      viewDetails: "Bekijk volledige bestellingsgegevens",
+      receiptNote:
+        "Er is een professionele ontvangstbevestiging met QR-code bijgevoegd. Bewaar deze voor uw administratie.",
+      questions: "Vragen? Wij helpen u graag.",
+      supportContact: "Neem contact met ons op",
+      tracking:
+        "Wij sturen u een trackingnummer zodra uw pakket wordt verzonden.",
+      trackingLink: "Volg uw zending",
+      copyright: "Alle rechten voorbehouden",
+      autoReply:
+        "Dit is een automatisch gegenereerde ontvangstbevestiging. Voor support, neem contact op",
     },
   };
 
@@ -746,14 +833,17 @@ export interface OrderConfirmationData {
   language?: string;
 }
 
-function formatMoney(value: string | number | undefined, currency = 'USD'): string {
+function formatMoney(
+  value: string | number | undefined,
+  currency = "USD"
+): string {
   const numeric = Number(value ?? 0);
   if (!Number.isFinite(numeric)) {
     return `${currency} 0.00`;
   }
 
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
     currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -782,146 +872,168 @@ function getReceiptPdfCopy(language: MailLanguage): {
 } {
   const copy: Record<MailLanguage, ReturnType<typeof getReceiptPdfCopy>> = {
     en: {
-      title: 'PAYMENT RECEIPT',
-      billedTo: 'Billed to',
-      receiptNumber: 'Receipt #',
-      date: 'Date',
-      itemHeader: 'Item',
-      qtyHeader: 'Qty',
-      unitPriceHeader: 'Unit Price',
-      lineTotalHeader: 'Line Total',
-      subtotal: 'Subtotal',
-      shipping: 'Shipping',
-      tax: 'Tax',
-      discount: 'Discount',
-      total: 'TOTAL',
-      thankYou: 'Thank you for your purchase! This receipt is valid for returns and warranties.',
-      keepRecords: 'Keep this document for your records and product warranty information.',
-      copyright: '© {{year}} {{company}}. All rights reserved.',
-      autoReply: 'This is an automated receipt. For support, contact: support@motorvault.shop',
-      pageOf: 'Page {{current}} of {{total}}',
+      title: "PAYMENT RECEIPT",
+      billedTo: "Billed to",
+      receiptNumber: "Receipt #",
+      date: "Date",
+      itemHeader: "Item",
+      qtyHeader: "Qty",
+      unitPriceHeader: "Unit Price",
+      lineTotalHeader: "Line Total",
+      subtotal: "Subtotal",
+      shipping: "Shipping",
+      tax: "Tax",
+      discount: "Discount",
+      total: "TOTAL",
+      thankYou:
+        "Thank you for your purchase! This receipt is valid for returns and warranties.",
+      keepRecords:
+        "Keep this document for your records and product warranty information.",
+      copyright: "© {{year}} {{company}}. All rights reserved.",
+      autoReply:
+        "This is an automated receipt. For support, contact: support@motorvault.shop",
+      pageOf: "Page {{current}} of {{total}}",
     },
     es: {
-      title: 'RECIBO DE PAGO',
-      billedTo: 'Facturado a',
-      receiptNumber: 'Recibo #',
-      date: 'Fecha',
-      itemHeader: 'Artículo',
-      qtyHeader: 'Cant',
-      unitPriceHeader: 'Precio Unitario',
-      lineTotalHeader: 'Total Línea',
-      subtotal: 'Subtotal',
-      shipping: 'Envío',
-      tax: 'Impuesto',
-      discount: 'Descuento',
-      total: 'TOTAL',
-      thankYou: '¡Gracias por tu compra! Este recibo es válido para devoluciones y garantías.',
-      keepRecords: 'Conserva este documento para tus registros e información de garantía del producto.',
-      copyright: '© {{year}} {{company}}. Todos los derechos reservados.',
-      autoReply: 'Este es un recibo automatizado. Para soporte, contacta a: support@motorvault.shop',
-      pageOf: 'Página {{current}} de {{total}}',
+      title: "RECIBO DE PAGO",
+      billedTo: "Facturado a",
+      receiptNumber: "Recibo #",
+      date: "Fecha",
+      itemHeader: "Artículo",
+      qtyHeader: "Cant",
+      unitPriceHeader: "Precio Unitario",
+      lineTotalHeader: "Total Línea",
+      subtotal: "Subtotal",
+      shipping: "Envío",
+      tax: "Impuesto",
+      discount: "Descuento",
+      total: "TOTAL",
+      thankYou:
+        "¡Gracias por tu compra! Este recibo es válido para devoluciones y garantías.",
+      keepRecords:
+        "Conserva este documento para tus registros e información de garantía del producto.",
+      copyright: "© {{year}} {{company}}. Todos los derechos reservados.",
+      autoReply:
+        "Este es un recibo automatizado. Para soporte, contacta a: support@motorvault.shop",
+      pageOf: "Página {{current}} de {{total}}",
     },
     fr: {
-      title: 'REÇU DE PAIEMENT',
-      billedTo: 'Facturé à',
-      receiptNumber: 'Reçu #',
-      date: 'Date',
-      itemHeader: 'Article',
-      qtyHeader: 'Qté',
-      unitPriceHeader: 'Prix Unitaire',
-      lineTotalHeader: 'Total Ligne',
-      subtotal: 'Sous-total',
-      shipping: 'Livraison',
-      tax: 'Taxe',
-      discount: 'Réduction',
-      total: 'TOTAL',
-      thankYou: 'Merci pour votre achat! Ce reçu est valide pour les retours et les garanties.',
-      keepRecords: 'Conservez ce document pour vos dossiers et les informations de garantie du produit.',
-      copyright: '© {{year}} {{company}}. Tous les droits réservés.',
-      autoReply: 'Ceci est un reçu automatisé. Pour le support, contactez: support@motorvault.shop',
-      pageOf: 'Page {{current}} sur {{total}}',
+      title: "REÇU DE PAIEMENT",
+      billedTo: "Facturé à",
+      receiptNumber: "Reçu #",
+      date: "Date",
+      itemHeader: "Article",
+      qtyHeader: "Qté",
+      unitPriceHeader: "Prix Unitaire",
+      lineTotalHeader: "Total Ligne",
+      subtotal: "Sous-total",
+      shipping: "Livraison",
+      tax: "Taxe",
+      discount: "Réduction",
+      total: "TOTAL",
+      thankYou:
+        "Merci pour votre achat! Ce reçu est valide pour les retours et les garanties.",
+      keepRecords:
+        "Conservez ce document pour vos dossiers et les informations de garantie du produit.",
+      copyright: "© {{year}} {{company}}. Tous les droits réservés.",
+      autoReply:
+        "Ceci est un reçu automatisé. Pour le support, contactez: support@motorvault.shop",
+      pageOf: "Page {{current}} sur {{total}}",
     },
     de: {
-      title: 'ZAHLUNGSQUITTUNG',
-      billedTo: 'Rechnungsadresse',
-      receiptNumber: 'Quittung #',
-      date: 'Datum',
-      itemHeader: 'Artikel',
-      qtyHeader: 'Menge',
-      unitPriceHeader: 'Einzelpreis',
-      lineTotalHeader: 'Zeilensumme',
-      subtotal: 'Zwischensumme',
-      shipping: 'Versand',
-      tax: 'Steuern',
-      discount: 'Rabatt',
-      total: 'GESAMT',
-      thankYou: 'Vielen Dank für Ihren Kauf! Diese Quittung ist für Rückgaben und Garantien gültig.',
-      keepRecords: 'Bewahren Sie dieses Dokument für Ihre Unterlagen und Produktgarantieinformationen auf.',
-      copyright: '© {{year}} {{company}}. Alle Rechte vorbehalten.',
-      autoReply: 'Dies ist eine automatisierte Quittung. Für Support kontaktieren Sie: support@motorvault.shop',
-      pageOf: 'Seite {{current}} von {{total}}',
+      title: "ZAHLUNGSQUITTUNG",
+      billedTo: "Rechnungsadresse",
+      receiptNumber: "Quittung #",
+      date: "Datum",
+      itemHeader: "Artikel",
+      qtyHeader: "Menge",
+      unitPriceHeader: "Einzelpreis",
+      lineTotalHeader: "Zeilensumme",
+      subtotal: "Zwischensumme",
+      shipping: "Versand",
+      tax: "Steuern",
+      discount: "Rabatt",
+      total: "GESAMT",
+      thankYou:
+        "Vielen Dank für Ihren Kauf! Diese Quittung ist für Rückgaben und Garantien gültig.",
+      keepRecords:
+        "Bewahren Sie dieses Dokument für Ihre Unterlagen und Produktgarantieinformationen auf.",
+      copyright: "© {{year}} {{company}}. Alle Rechte vorbehalten.",
+      autoReply:
+        "Dies ist eine automatisierte Quittung. Für Support kontaktieren Sie: support@motorvault.shop",
+      pageOf: "Seite {{current}} von {{total}}",
     },
     it: {
-      title: 'RICEVUTA DI PAGAMENTO',
-      billedTo: 'Fatturato a',
-      receiptNumber: 'Ricevuta #',
-      date: 'Data',
-      itemHeader: 'Articolo',
-      qtyHeader: 'Qtà',
-      unitPriceHeader: 'Prezzo Unitario',
-      lineTotalHeader: 'Totale Riga',
-      subtotal: 'Subtotale',
-      shipping: 'Spedizione',
-      tax: 'Imposta',
-      discount: 'Sconto',
-      total: 'TOTALE',
-      thankYou: 'Grazie per il tuo acquisto! Questa ricevuta è valida per rese e garanzie.',
-      keepRecords: 'Conserva questo documento per i tuoi registri e le informazioni sulla garanzia del prodotto.',
-      copyright: '© {{year}} {{company}}. Tutti i diritti riservati.',
-      autoReply: 'Questa è una ricevuta automatizzata. Per il supporto, contatta: support@motorvault.shop',
-      pageOf: 'Pagina {{current}} di {{total}}',
+      title: "RICEVUTA DI PAGAMENTO",
+      billedTo: "Fatturato a",
+      receiptNumber: "Ricevuta #",
+      date: "Data",
+      itemHeader: "Articolo",
+      qtyHeader: "Qtà",
+      unitPriceHeader: "Prezzo Unitario",
+      lineTotalHeader: "Totale Riga",
+      subtotal: "Subtotale",
+      shipping: "Spedizione",
+      tax: "Imposta",
+      discount: "Sconto",
+      total: "TOTALE",
+      thankYou:
+        "Grazie per il tuo acquisto! Questa ricevuta è valida per rese e garanzie.",
+      keepRecords:
+        "Conserva questo documento per i tuoi registri e le informazioni sulla garanzia del prodotto.",
+      copyright: "© {{year}} {{company}}. Tutti i diritti riservati.",
+      autoReply:
+        "Questa è una ricevuta automatizzata. Per il supporto, contatta: support@motorvault.shop",
+      pageOf: "Pagina {{current}} di {{total}}",
     },
     nl: {
-      title: 'BETALINGSBEWIJS',
-      billedTo: 'Gefactureerd aan',
-      receiptNumber: 'Bon #',
-      date: 'Datum',
-      itemHeader: 'Artikel',
-      qtyHeader: 'Aantal',
-      unitPriceHeader: 'Stukprijs',
-      lineTotalHeader: 'Regeltotaal',
-      subtotal: 'Subtotaal',
-      shipping: 'Verzending',
-      tax: 'Belasting',
-      discount: 'Korting',
-      total: 'TOTAAL',
-      thankYou: 'Bedankt voor uw aankoop! Dit bewijs is geldig voor retouren en garanties.',
-      keepRecords: 'Bewaar dit document voor uw administratie en productgarantie-informatie.',
-      copyright: '© {{year}} {{company}}. Alle rechten voorbehouden.',
-      autoReply: 'Dit is een automatisch gegenereerd bewijs. Voor support, neem contact op: support@motorvault.shop',
-      pageOf: 'Pagina {{current}} van {{total}}',
+      title: "BETALINGSBEWIJS",
+      billedTo: "Gefactureerd aan",
+      receiptNumber: "Bon #",
+      date: "Datum",
+      itemHeader: "Artikel",
+      qtyHeader: "Aantal",
+      unitPriceHeader: "Stukprijs",
+      lineTotalHeader: "Regeltotaal",
+      subtotal: "Subtotaal",
+      shipping: "Verzending",
+      tax: "Belasting",
+      discount: "Korting",
+      total: "TOTAAL",
+      thankYou:
+        "Bedankt voor uw aankoop! Dit bewijs is geldig voor retouren en garanties.",
+      keepRecords:
+        "Bewaar dit document voor uw administratie en productgarantie-informatie.",
+      copyright: "© {{year}} {{company}}. Alle rechten voorbehouden.",
+      autoReply:
+        "Dit is een automatisch gegenereerd bewijs. Voor support, neem contact op: support@motorvault.shop",
+      pageOf: "Pagina {{current}} van {{total}}",
     },
   };
 
   return copy[language] || copy.en;
 }
 
-function buildReceiptRows(items?: OrderConfirmationData['items']): string {
+function buildReceiptRows(items?: OrderConfirmationData["items"]): string {
   if (!items || items.length === 0) {
     return '<tr><td colspan="5" style="padding:12px;border-bottom:1px solid #e5e7eb;color:#6b7280">No line items were available for this order.</td></tr>';
   }
 
   return items
-    .map((item) => {
+    .map(item => {
       const quantity = Number(item.quantity || 1);
       const unitPrice = Number(item.unit_price ?? item.price ?? 0);
       const lineTotal = Number(item.line_total ?? unitPrice * quantity);
-      const description = item.description ? `<div style="color:#6b7280;font-size:12px;margin-top:4px">${escapeHtml(item.description)}</div>` : '';
-      const sku = item.sku ? `<div style="color:#6b7280;font-size:12px;margin-top:2px">SKU: ${escapeHtml(item.sku)}</div>` : '';
+      const description = item.description
+        ? `<div style="color:#6b7280;font-size:12px;margin-top:4px">${escapeHtml(item.description)}</div>`
+        : "";
+      const sku = item.sku
+        ? `<div style="color:#6b7280;font-size:12px;margin-top:2px">SKU: ${escapeHtml(item.sku)}</div>`
+        : "";
 
       return `<tr>
         <td style="padding:12px;border-bottom:1px solid #e5e7eb;vertical-align:top">
-          <div style="font-weight:600;color:#111827">${escapeHtml(item.name || 'Item')}</div>
+          <div style="font-weight:600;color:#111827">${escapeHtml(item.name || "Item")}</div>
           ${sku}
           ${description}
         </td>
@@ -930,19 +1042,20 @@ function buildReceiptRows(items?: OrderConfirmationData['items']): string {
         <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right">${lineTotal.toFixed(2)}</td>
       </tr>`;
     })
-    .join('');
+    .join("");
 }
 
 function buildReceiptHtml(data: OrderConfirmationData): string {
-  const currency = data.currency || 'USD';
+  const currency = data.currency || "USD";
   const subtotal = Number(data.subtotal ?? data.order_total ?? 0);
   const shipping = Number(data.shipping_cost ?? 0);
   const tax = Number(data.tax ?? 0);
   const discount = Number(data.discount_amount ?? 0);
   const total = Number(data.order_total ?? 0);
-  const discountRow = discount > 0
-    ? `<tr><td style="padding:6px 0;color:#374151">Discount</td><td style="padding:6px 0;text-align:right;color:#16a34a">-${formatMoney(discount, currency)}</td></tr>`
-    : '';
+  const discountRow =
+    discount > 0
+      ? `<tr><td style="padding:6px 0;color:#374151">Discount</td><td style="padding:6px 0;text-align:right;color:#16a34a">-${formatMoney(discount, currency)}</td></tr>`
+      : "";
 
   return `<!doctype html>
 <html lang="en">
@@ -961,7 +1074,7 @@ function buildReceiptHtml(data: OrderConfirmationData): string {
       <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <div>
           <div style="font-size:13px;color:#6b7280">Billed to</div>
-          <div style="font-weight:700;margin-top:4px">${escapeHtml(data.customer_name || 'Customer')}</div>
+          <div style="font-weight:700;margin-top:4px">${escapeHtml(data.customer_name || "Customer")}</div>
         </div>
         <div>
           <div style="font-size:13px;color:#6b7280">Receipt number</div>
@@ -1005,14 +1118,14 @@ async function buildReceiptPdf(data: OrderConfirmationData): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const language = resolveMailLanguage(data.language);
     const copy = getReceiptPdfCopy(language);
-    const doc = new PDFDocument({ size: 'A4', margin: 40, bufferPages: true });
+    const doc = new PDFDocument({ size: "A4", margin: 40, bufferPages: true });
     const chunks: Buffer[] = [];
 
-    doc.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
+    doc.on("data", chunk => chunks.push(Buffer.from(chunk)));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
 
-    const currency = data.currency || 'USD';
+    const currency = data.currency || "USD";
     const subtotal = Number(data.subtotal ?? data.order_total ?? 0);
     const shipping = Number(data.shipping_cost ?? 0);
     const tax = Number(data.tax ?? 0);
@@ -1031,72 +1144,110 @@ async function buildReceiptPdf(data: OrderConfirmationData): Promise<Buffer> {
     }
 
     // Title and company info
-    doc.fontSize(22).font('Helvetica-Bold').fillColor('#0f172a').text(copy.title, 120, 50);
-    doc.fontSize(10).font('Helvetica').fillColor('#6b7280');
-    doc.text(`${process.env.SENDER_NAME || 'MotorVault Shop'}`, 120, 80);
-    doc.fontSize(9).text('www.motorvault.shop', 120, 94);
+    doc
+      .fontSize(22)
+      .font("Helvetica-Bold")
+      .fillColor("#0f172a")
+      .text(copy.title, 120, 50);
+    doc.fontSize(10).font("Helvetica").fillColor("#6b7280");
+    doc.text(`${process.env.SENDER_NAME || "MotorVault Shop"}`, 120, 80);
+    doc.fontSize(9).text("www.motorvault.shop", 120, 94);
 
     // Red divider line
-    doc.strokeColor('#dc2626').lineWidth(2).moveTo(40, 115).lineTo(555, 115).stroke();
+    doc
+      .strokeColor("#dc2626")
+      .lineWidth(2)
+      .moveTo(40, 115)
+      .lineTo(555, 115)
+      .stroke();
 
     // ===== RECEIPT META SECTION =====
     let y = 135;
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#111827');
+    doc.fontSize(11).font("Helvetica-Bold").fillColor("#111827");
     doc.text(copy.receiptNumber, 40, y);
-    doc.fontSize(10).font('Helvetica').fillColor('#0f172a');
+    doc.fontSize(10).font("Helvetica").fillColor("#0f172a");
     doc.text(data.order_number, 120, y);
     y += 16;
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#111827').text(copy.date + ':', 40, y);
-    doc.fontSize(10).font('Helvetica').fillColor('#6b7280');
+    doc
+      .fontSize(11)
+      .font("Helvetica-Bold")
+      .fillColor("#111827")
+      .text(copy.date + ":", 40, y);
+    doc.fontSize(10).font("Helvetica").fillColor("#6b7280");
     doc.text(data.order_date, 120, y);
     y += 20;
 
     // ===== CUSTOMER & QR CODE SECTION =====
     const billToY = y;
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#6b7280').text(copy.billedTo.toUpperCase() + ':', 40, billToY);
-    doc.fontSize(11).font('Helvetica').fillColor('#111827');
-    doc.text(data.customer_name || 'Customer', 40, billToY + 14);
+    doc
+      .fontSize(9)
+      .font("Helvetica-Bold")
+      .fillColor("#6b7280")
+      .text(copy.billedTo.toUpperCase() + ":", 40, billToY);
+    doc.fontSize(11).font("Helvetica").fillColor("#111827");
+    doc.text(data.customer_name || "Customer", 40, billToY + 14);
     if (data.customer_email) {
-      doc.fontSize(9).fillColor('#6b7280').text(data.customer_email, 40, billToY + 30);
+      doc
+        .fontSize(9)
+        .fillColor("#6b7280")
+        .text(data.customer_email, 40, billToY + 30);
     }
 
     // QR Code - generates order URL encoded
-    const qrCodeUrl = data.order_url || `${process.env.VITE_SITE_URL || 'https://motorvault.shop'}/order/${data.order_number}`;
-    QRCode.toDataURL(qrCodeUrl, { width: 100, errorCorrectionLevel: 'H', margin: 1 }, (err, qrImage) => {
-      if (!err && qrImage) {
-        try {
-          const buffer = Buffer.from(qrImage.split(',')[1], 'base64');
-          doc.image(buffer, 450, billToY, { width: 95 });
-        } catch {
-          // Continue if QR code fails
+    const qrCodeUrl =
+      data.order_url ||
+      `${process.env.VITE_SITE_URL || "https://motorvault.shop"}/order/${data.order_number}`;
+    QRCode.toDataURL(
+      qrCodeUrl,
+      { width: 100, errorCorrectionLevel: "H", margin: 1 },
+      (err, qrImage) => {
+        if (!err && qrImage) {
+          try {
+            const buffer = Buffer.from(qrImage.split(",")[1], "base64");
+            doc.image(buffer, 450, billToY, { width: 95 });
+          } catch {
+            // Continue if QR code fails
+          }
         }
-      }
 
-      // Continue after QR code attempt
-      resumeReceiptGeneration();
-    });
+        // Continue after QR code attempt
+        resumeReceiptGeneration();
+      }
+    );
 
     let itemStartY = 0;
     function resumeReceiptGeneration() {
       y = Math.max(billToY + 100, y + 45);
 
       // ===== ITEMS SECTION =====
-      doc.fontSize(9).font('Helvetica-Bold').fillColor('#fff').fillAndStroke('#374151');
+      doc
+        .fontSize(9)
+        .font("Helvetica-Bold")
+        .fillColor("#fff")
+        .fillAndStroke("#374151");
       doc.rect(40, y, 515, 16).fill();
-      doc.fillColor('#fff').text('Item Description', 45, y + 3);
-      doc.text('Qty', 310, y + 3, { width: 40, align: 'center' });
-      doc.text('Unit Price', 360, y + 3, { width: 55, align: 'right' });
-      doc.text('Line Total', 440, y + 3, { width: 115, align: 'right' });
+      doc.fillColor("#fff").text("Item Description", 45, y + 3);
+      doc.text("Qty", 310, y + 3, { width: 40, align: "center" });
+      doc.text("Unit Price", 360, y + 3, { width: 55, align: "right" });
+      doc.text("Line Total", 440, y + 3, { width: 115, align: "right" });
       itemStartY = y + 20;
       let itemY = itemStartY;
 
-      const items = data.items && data.items.length > 0
-        ? data.items
-        : [{ name: 'Order item', quantity: 1, price: String(data.order_total ?? '0.00'), unit_price: String(data.order_total ?? '0.00') }];
+      const items =
+        data.items && data.items.length > 0
+          ? data.items
+          : [
+              {
+                name: "Order item",
+                quantity: 1,
+                price: String(data.order_total ?? "0.00"),
+                unit_price: String(data.order_total ?? "0.00"),
+              },
+            ];
 
-      doc.fontSize(9).font('Helvetica').fillColor('#111827');
+      doc.fontSize(9).font("Helvetica").fillColor("#111827");
       for (const item of items) {
-        const itemName = item.name || 'Item';
+        const itemName = item.name || "Item";
         const quantity = Number(item.quantity || 1);
         const unitPrice = Number(item.unit_price ?? item.price ?? 0);
         const lineTotal = Number(item.line_total ?? unitPrice * quantity);
@@ -1106,29 +1257,45 @@ async function buildReceiptPdf(data: OrderConfirmationData): Promise<Buffer> {
           doc.addPage();
           itemY = 50;
           // Repeat header on new page
-          doc.fontSize(9).font('Helvetica-Bold').fillColor('#fff').fillAndStroke('#374151');
+          doc
+            .fontSize(9)
+            .font("Helvetica-Bold")
+            .fillColor("#fff")
+            .fillAndStroke("#374151");
           doc.rect(40, itemY, 515, 16).fill();
-          doc.fillColor('#fff').text('Item Description', 45, itemY + 3);
-          doc.text('Qty', 310, itemY + 3, { width: 40, align: 'center' });
-          doc.text('Unit Price', 360, itemY + 3, { width: 55, align: 'right' });
-          doc.text('Line Total', 440, itemY + 3, { width: 115, align: 'right' });
+          doc.fillColor("#fff").text("Item Description", 45, itemY + 3);
+          doc.text("Qty", 310, itemY + 3, { width: 40, align: "center" });
+          doc.text("Unit Price", 360, itemY + 3, { width: 55, align: "right" });
+          doc.text("Line Total", 440, itemY + 3, {
+            width: 115,
+            align: "right",
+          });
           itemY += 20;
-          doc.fontSize(9).font('Helvetica').fillColor('#111827');
+          doc.fontSize(9).font("Helvetica").fillColor("#111827");
         }
 
         // Draw item row with alternating background
         if (Math.floor((itemY - itemStartY) / 16) % 2 === 1) {
-          doc.fillColor('#f9fafb').rect(40, itemY, 515, 14).fill();
+          doc.fillColor("#f9fafb").rect(40, itemY, 515, 14).fill();
         }
-        doc.fillColor('#111827');
+        doc.fillColor("#111827");
         doc.text(itemName, 45, itemY + 1, { width: 250 });
-        doc.text(String(quantity), 310, itemY + 1, { width: 40, align: 'center' });
-        doc.text(unitPrice.toFixed(2), 360, itemY + 1, { width: 55, align: 'right' });
-        doc.text(lineTotal.toFixed(2), 440, itemY + 1, { width: 115, align: 'right' });
+        doc.text(String(quantity), 310, itemY + 1, {
+          width: 40,
+          align: "center",
+        });
+        doc.text(unitPrice.toFixed(2), 360, itemY + 1, {
+          width: 55,
+          align: "right",
+        });
+        doc.text(lineTotal.toFixed(2), 440, itemY + 1, {
+          width: 115,
+          align: "right",
+        });
 
         // SKU and description if available
         if (item.sku || item.description) {
-          doc.fontSize(8).fillColor('#6b7280');
+          doc.fontSize(8).fillColor("#6b7280");
           if (item.sku) {
             doc.text(`SKU: ${item.sku}`, 50, itemY + 12, { width: 240 });
           }
@@ -1141,68 +1308,102 @@ async function buildReceiptPdf(data: OrderConfirmationData): Promise<Buffer> {
           itemY += 16;
         }
 
-        doc.fontSize(9).font('Helvetica');
+        doc.fontSize(9).font("Helvetica");
       }
 
       // ===== TOTALS SECTION =====
       let totalY = itemY + 15;
-      doc.strokeColor('#d1d5db').lineWidth(1).moveTo(320, totalY).lineTo(555, totalY).stroke();
+      doc
+        .strokeColor("#d1d5db")
+        .lineWidth(1)
+        .moveTo(320, totalY)
+        .lineTo(555, totalY)
+        .stroke();
       totalY += 10;
 
-      doc.fontSize(10).font('Helvetica').fillColor('#374151');
-      doc.text(copy.subtotal + ':', 360, totalY, { width: 55 });
-      doc.text(formatMoney(subtotal, currency), 440, totalY, { width: 115, align: 'right' });
+      doc.fontSize(10).font("Helvetica").fillColor("#374151");
+      doc.text(copy.subtotal + ":", 360, totalY, { width: 55 });
+      doc.text(formatMoney(subtotal, currency), 440, totalY, {
+        width: 115,
+        align: "right",
+      });
       totalY += 14;
 
-      doc.text(copy.shipping + ':', 360, totalY, { width: 55 });
-      doc.text(formatMoney(shipping, currency), 440, totalY, { width: 115, align: 'right' });
+      doc.text(copy.shipping + ":", 360, totalY, { width: 55 });
+      doc.text(formatMoney(shipping, currency), 440, totalY, {
+        width: 115,
+        align: "right",
+      });
       totalY += 14;
 
-      doc.text(copy.tax + ':', 360, totalY, { width: 55 });
-      doc.text(formatMoney(tax, currency), 440, totalY, { width: 115, align: 'right' });
+      doc.text(copy.tax + ":", 360, totalY, { width: 55 });
+      doc.text(formatMoney(tax, currency), 440, totalY, {
+        width: 115,
+        align: "right",
+      });
       totalY += 14;
 
       if (discount > 0) {
-        doc.fillColor('#16a34a');
-        doc.text(copy.discount + ':', 360, totalY, { width: 55 });
-        doc.text(`-${formatMoney(discount, currency)}`, 440, totalY, { width: 115, align: 'right' });
+        doc.fillColor("#16a34a");
+        doc.text(copy.discount + ":", 360, totalY, { width: 55 });
+        doc.text(`-${formatMoney(discount, currency)}`, 440, totalY, {
+          width: 115,
+          align: "right",
+        });
         totalY += 14;
-        doc.fillColor('#374151');
+        doc.fillColor("#374151");
       }
 
       // Total box
       totalY += 6;
-      doc.strokeColor('#111827').lineWidth(1.5).moveTo(320, totalY).lineTo(555, totalY).stroke();
+      doc
+        .strokeColor("#111827")
+        .lineWidth(1.5)
+        .moveTo(320, totalY)
+        .lineTo(555, totalY)
+        .stroke();
       totalY += 10;
-      doc.fontSize(12).font('Helvetica-Bold').fillColor('#0f172a');
-      doc.text(copy.total + ':', 360, totalY, { width: 55 });
-      doc.text(formatMoney(total, currency), 440, totalY, { width: 115, align: 'right' });
+      doc.fontSize(12).font("Helvetica-Bold").fillColor("#0f172a");
+      doc.text(copy.total + ":", 360, totalY, { width: 55 });
+      doc.text(formatMoney(total, currency), 440, totalY, {
+        width: 115,
+        align: "right",
+      });
       totalY += 20;
 
       // ===== FOOTER SECTION =====
-      doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(40, totalY).lineTo(555, totalY).stroke();
+      doc
+        .strokeColor("#e5e7eb")
+        .lineWidth(1)
+        .moveTo(40, totalY)
+        .lineTo(555, totalY)
+        .stroke();
       totalY += 10;
 
-      doc.fontSize(9).font('Helvetica').fillColor('#6b7280');
-      doc.text(copy.thankYou, 40, totalY, { width: 515, align: 'center' });
+      doc.fontSize(9).font("Helvetica").fillColor("#6b7280");
+      doc.text(copy.thankYou, 40, totalY, { width: 515, align: "center" });
       totalY += 12;
-      doc.text(copy.keepRecords, 40, totalY, { width: 515, align: 'center' });
-      totalY +=  16;
+      doc.text(copy.keepRecords, 40, totalY, { width: 515, align: "center" });
+      totalY += 16;
 
       // Copyright and company info
-      doc.fontSize(8).fillColor('#9ca3af').font('Helvetica');
-      const copyrightText = copy.copyright.replace('{{year}}', currentYear.toString()).replace('{{company}}', process.env.SENDER_NAME || 'MotorVault Shop');
-      doc.text(copyrightText, 40, totalY, { width: 515, align: 'center' });
+      doc.fontSize(8).fillColor("#9ca3af").font("Helvetica");
+      const copyrightText = copy.copyright
+        .replace("{{year}}", currentYear.toString())
+        .replace("{{company}}", process.env.SENDER_NAME || "MotorVault Shop");
+      doc.text(copyrightText, 40, totalY, { width: 515, align: "center" });
       totalY += 10;
-      doc.text(copy.autoReply, 40, totalY, { width: 515, align: 'center' });
+      doc.text(copy.autoReply, 40, totalY, { width: 515, align: "center" });
 
       // Page numbers
       const pages = doc.bufferedPageRange().count;
       for (let i = 0; i < pages; i++) {
         doc.switchToPage(i);
-        doc.fontSize(8).fillColor('#bfdbfe');
-        const pageText = copy.pageOf.replace('{{current}}', String(i + 1)).replace('{{total}}', String(pages));
-        doc.text(pageText, 40, 780, { align: 'right' });
+        doc.fontSize(8).fillColor("#bfdbfe");
+        const pageText = copy.pageOf
+          .replace("{{current}}", String(i + 1))
+          .replace("{{total}}", String(pages));
+        doc.text(pageText, 40, 780, { align: "right" });
       }
 
       doc.end();
@@ -1222,35 +1423,47 @@ export async function sendOrderConfirmationEmail(
     const language = resolveMailLanguage(data.language);
     const copy = getOrderEmailCopy(language);
     const itemsHtml = buildItemsHtml(data.items as any);
-    const itemCount = data.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) ?? 0;
+    const itemCount =
+      data.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) ?? 0;
     const logoMail = buildLogoMailContext();
     const currentYear = new Date().getFullYear();
-    
+
     // Format discount row if applicable
     const discount = Number(data.discount_amount ?? 0);
-    const discountRow = discount > 0 
-      ? `<div class="total-row discount"><div class="total-label">${copy.discount}:</div><div class="total-amount">-${formatMoney(discount, data.currency)}</div></div>`
-      : '';
-    
-    const trackingNote = data.tracking_url 
+    const discountRow =
+      discount > 0
+        ? `<div class="total-row discount"><div class="total-label">${copy.discount}:</div><div class="total-amount">-${formatMoney(discount, data.currency)}</div></div>`
+        : "";
+
+    const trackingNote = data.tracking_url
       ? `${copy.tracking} <a href="${escapeHtml(data.tracking_url)}" style="color: #2563eb; text-decoration: none;">${copy.trackingLink}</a>`
       : copy.tracking;
 
-    const htmlContent = loadTemplate('order-confirmed', {
+    const htmlContent = loadTemplate("order-confirmed", {
       ...data,
       item_count: itemCount,
       logo_src: logoMail.logoSrc,
-      receipt_filename: data.receipt_filename || `motorvault-receipt-${String(data.order_number || '').replace(/[^a-zA-Z0-9-_]/g, '')}.pdf`,
+      receipt_filename:
+        data.receipt_filename ||
+        `motorvault-receipt-${String(data.order_number || "").replace(/[^a-zA-Z0-9-_]/g, "")}.pdf`,
       items_html: itemsHtml,
-      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop'),
-      sender_name: process.env.SENDER_NAME || 'Our Store',
+      support_email: escapeHtml(
+        data.support_email ||
+          process.env.SMTP_FROM_EMAIL ||
+          process.env.GMAIL_USER ||
+          "support@motorvault.shop"
+      ),
+      sender_name: process.env.SENDER_NAME || "Our Store",
       current_year: currentYear,
       customer_email: escapeHtml(data.customer_email || recipientEmail),
-      subtotal: formatMoney(data.subtotal ?? data.order_total ?? '0.00', data.currency),
-      shipping_cost: formatMoney(data.shipping_cost ?? '0.00', data.currency),
-      tax: formatMoney(data.tax ?? '0.00', data.currency),
+      subtotal: formatMoney(
+        data.subtotal ?? data.order_total ?? "0.00",
+        data.currency
+      ),
+      shipping_cost: formatMoney(data.shipping_cost ?? "0.00", data.currency),
+      tax: formatMoney(data.tax ?? "0.00", data.currency),
       discount_row: discountRow,
-      order_total: formatMoney(data.order_total ?? '0.00', data.currency),
+      order_total: formatMoney(data.order_total ?? "0.00", data.currency),
       tracking_note: trackingNote,
       // Language-specific strings
       heading: copy.heading,
@@ -1278,7 +1491,10 @@ export async function sendOrderConfirmationEmail(
       auto_reply: copy.autoReply,
     });
 
-    const safeOrderNumber = String(data.order_number || 'receipt').replace(/[^a-zA-Z0-9-_]/g, '');
+    const safeOrderNumber = String(data.order_number || "receipt").replace(
+      /[^a-zA-Z0-9-_]/g,
+      ""
+    );
     const receiptFilename = `motorvault-receipt-${safeOrderNumber}.pdf`;
     const receiptPdf = await buildReceiptPdf(data);
 
@@ -1292,25 +1508,32 @@ export async function sendOrderConfirmationEmail(
       nl: `Bestelling Bevestigd — #${data.order_number}`,
     };
 
-    await sendMailWithRetry(transporterInstance, {
-      from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
-      to: recipientEmail,
-      subject: subjectMap[language],
-      html: htmlContent,
-      attachments: [
-        ...logoMail.attachments,
-        {
-          filename: receiptFilename,
-          content: receiptPdf,
-          contentType: 'application/pdf',
-        },
-      ],
-    }, `order confirmation to ${recipientEmail}`);
+    await sendMailWithRetry(
+      transporterInstance,
+      {
+        from: `${process.env.SENDER_NAME || "Our Store"} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
+        to: recipientEmail,
+        subject: subjectMap[language],
+        html: htmlContent,
+        attachments: [
+          ...logoMail.attachments,
+          {
+            filename: receiptFilename,
+            content: receiptPdf,
+            contentType: "application/pdf",
+          },
+        ],
+      },
+      `order confirmation to ${recipientEmail}`
+    );
 
-    logger.info({ recipientEmail }, '[Email] Order confirmation sent');
+    logger.info({ recipientEmail }, "[Email] Order confirmation sent");
     return true;
   } catch (error) {
-    logEmailError(`[Email] Failed to send order confirmation to ${recipientEmail}`, error);
+    logEmailError(
+      `[Email] Failed to send order confirmation to ${recipientEmail}`,
+      error
+    );
     return false;
   }
 }
@@ -1337,9 +1560,14 @@ export async function sendTicketConfirmationEmail(
     const transporterInstance = getTransporter();
     const language = resolveMailLanguage(data.language);
     const copy = getTicketEmailCopy(language);
-    const supportEmail = escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop');
+    const supportEmail = escapeHtml(
+      data.support_email ||
+        process.env.SMTP_FROM_EMAIL ||
+        process.env.GMAIL_USER ||
+        "support@motorvault.shop"
+    );
     const logoMail = buildLogoMailContext();
-    const htmlContent = loadTemplate('ticket-received', {
+    const htmlContent = loadTemplate("ticket-received", {
       logo_src: logoMail.logoSrc,
       page_title: copy.pageTitle,
       heading: copy.heading,
@@ -1365,21 +1593,28 @@ export async function sendTicketConfirmationEmail(
       help_text: copy.helpText,
       footer: copy.footer,
       support_email: supportEmail,
-      sender_name: process.env.SENDER_NAME || 'Our Store',
+      sender_name: process.env.SENDER_NAME || "Our Store",
     });
 
-    await sendMailWithRetry(transporterInstance, {
-      from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
-      to: recipientEmail,
-      subject: `${copy.subject} - ${data.ticket_reference}`,
-      html: htmlContent,
-      attachments: logoMail.attachments,
-    }, `ticket confirmation to ${recipientEmail}`);
+    await sendMailWithRetry(
+      transporterInstance,
+      {
+        from: `${process.env.SENDER_NAME || "Our Store"} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
+        to: recipientEmail,
+        subject: `${copy.subject} - ${data.ticket_reference}`,
+        html: htmlContent,
+        attachments: logoMail.attachments,
+      },
+      `ticket confirmation to ${recipientEmail}`
+    );
 
-    logger.info({ recipientEmail }, '[Email] Ticket confirmation sent');
+    logger.info({ recipientEmail }, "[Email] Ticket confirmation sent");
     return true;
   } catch (error) {
-    logEmailError(`[Email] Failed to send ticket confirmation to ${recipientEmail}`, error);
+    logEmailError(
+      `[Email] Failed to send ticket confirmation to ${recipientEmail}`,
+      error
+    );
     return false;
   }
 }
@@ -1401,9 +1636,14 @@ export async function sendContactConfirmationEmail(
     const transporterInstance = getTransporter();
     const language = resolveMailLanguage(data.language);
     const copy = getContactEmailCopy(language);
-    const supportEmail = escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop');
+    const supportEmail = escapeHtml(
+      data.support_email ||
+        process.env.SMTP_FROM_EMAIL ||
+        process.env.GMAIL_USER ||
+        "support@motorvault.shop"
+    );
     const logoMail = buildLogoMailContext();
-    const htmlContent = loadTemplate('contact-received', {
+    const htmlContent = loadTemplate("contact-received", {
       logo_src: logoMail.logoSrc,
       page_title: copy.pageTitle,
       heading: copy.heading,
@@ -1416,21 +1656,28 @@ export async function sendContactConfirmationEmail(
       help_text: copy.helpText,
       support_email: supportEmail,
       footer: copy.footer,
-      sender_name: process.env.SENDER_NAME || 'Our Store',
+      sender_name: process.env.SENDER_NAME || "Our Store",
     });
 
-    await sendMailWithRetry(transporterInstance, {
-      from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
-      to: recipientEmail,
-      subject: copy.subject,
-      html: htmlContent,
-      attachments: logoMail.attachments,
-    }, `contact confirmation to ${recipientEmail}`);
+    await sendMailWithRetry(
+      transporterInstance,
+      {
+        from: `${process.env.SENDER_NAME || "Our Store"} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
+        to: recipientEmail,
+        subject: copy.subject,
+        html: htmlContent,
+        attachments: logoMail.attachments,
+      },
+      `contact confirmation to ${recipientEmail}`
+    );
 
-    logger.info({ recipientEmail }, '[Email] Contact confirmation sent');
+    logger.info({ recipientEmail }, "[Email] Contact confirmation sent");
     return true;
   } catch (error) {
-    logEmailError(`[Email] Failed to send contact confirmation to ${recipientEmail}`, error);
+    logEmailError(
+      `[Email] Failed to send contact confirmation to ${recipientEmail}`,
+      error
+    );
     return false;
   }
 }
@@ -1455,29 +1702,41 @@ export async function sendContactReplyEmail(
   try {
     const transporterInstance = getTransporter();
     const logoMail = buildLogoMailContext();
-    const htmlContent = loadTemplate('contact-reply', {
+    const htmlContent = loadTemplate("contact-reply", {
       logo_src: logoMail.logoSrc,
       customer_name: escapeHtml(data.customer_name),
-      original_subject: escapeHtml(data.original_subject || 'Your message'),
+      original_subject: escapeHtml(data.original_subject || "Your message"),
       original_message: formatTextBlock(data.original_message),
-      customer_location: escapeHtml(data.customer_location || 'Not provided'),
+      customer_location: escapeHtml(data.customer_location || "Not provided"),
       reply_message: formatTextBlock(data.reply_message),
-      support_email: escapeHtml(data.support_email || process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || 'support@motorvault.shop'),
-      sender_name: process.env.SENDER_NAME || 'Our Store',
+      support_email: escapeHtml(
+        data.support_email ||
+          process.env.SMTP_FROM_EMAIL ||
+          process.env.GMAIL_USER ||
+          "support@motorvault.shop"
+      ),
+      sender_name: process.env.SENDER_NAME || "Our Store",
     });
 
-    await sendMailWithRetry(transporterInstance, {
-      from: `${process.env.SENDER_NAME || 'Our Store'} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
-      to: recipientEmail,
-      subject: `Re: ${data.original_subject}`,
-      html: htmlContent,
-      attachments: logoMail.attachments,
-    }, `contact reply to ${recipientEmail}`);
+    await sendMailWithRetry(
+      transporterInstance,
+      {
+        from: `${process.env.SENDER_NAME || "Our Store"} <${process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER}>`,
+        to: recipientEmail,
+        subject: `Re: ${data.original_subject}`,
+        html: htmlContent,
+        attachments: logoMail.attachments,
+      },
+      `contact reply to ${recipientEmail}`
+    );
 
-    logger.info({ recipientEmail }, '[Email] Contact reply sent');
+    logger.info({ recipientEmail }, "[Email] Contact reply sent");
     return true;
   } catch (error) {
-    logEmailError(`[Email] Failed to send contact reply to ${recipientEmail}`, error);
+    logEmailError(
+      `[Email] Failed to send contact reply to ${recipientEmail}`,
+      error
+    );
     return false;
   }
 }
@@ -1489,10 +1748,10 @@ export async function verifyEmailConnection(): Promise<boolean> {
   try {
     const transporterInstance = getTransporter();
     await transporterInstance.verify();
-    logger.info('[Email] SMTP connection verified');
+    logger.info("[Email] SMTP connection verified");
     return true;
   } catch (error) {
-    logEmailError('[Email] SMTP connection failed', error);
+    logEmailError("[Email] SMTP connection failed", error);
     return false;
   }
 }

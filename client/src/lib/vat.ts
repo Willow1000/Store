@@ -22,7 +22,7 @@ function clampNumber(value: number, min: number, max: number): number {
 }
 
 function normalizeSeed(seed: string): string {
-  return seed.trim().toLowerCase() || 'fallback_product_seed';
+  return seed.trim().toLowerCase() || "fallback_product_seed";
 }
 
 function hashString(seed: string): number {
@@ -30,7 +30,8 @@ function hashString(seed: string): number {
   const normalized = normalizeSeed(seed);
   for (let i = 0; i < normalized.length; i++) {
     hash ^= normalized.charCodeAt(i);
-    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    hash +=
+      (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
   }
   return hash >>> 0;
 }
@@ -42,7 +43,8 @@ function roundToCents(amount: number): number {
 export function getProductVatRate(seed: string): number {
   const hash = hashString(seed);
   const step = hash % (RATE_STEPS + 1);
-  const rate = MIN_VAT_RATE + ((MAX_VAT_RATE - MIN_VAT_RATE) * step) / RATE_STEPS;
+  const rate =
+    MIN_VAT_RATE + ((MAX_VAT_RATE - MIN_VAT_RATE) * step) / RATE_STEPS;
   return clampNumber(Number(rate.toFixed(4)), MIN_VAT_RATE, MAX_VAT_RATE);
 }
 
@@ -57,9 +59,9 @@ export function calculateVariableVat(items: VatLineItemInput[]): {
   let weightedRateNumerator = 0;
 
   const lines = items
-    .filter((item) => item.quantity > 0 && item.unitPrice > 0)
-    .map((item) => {
-      const seed = item.productId || item.title || 'fallback_product_seed';
+    .filter(item => item.quantity > 0 && item.unitPrice > 0)
+    .map(item => {
+      const seed = item.productId || item.title || "fallback_product_seed";
       const safeQuantity = Math.max(0, Math.floor(item.quantity));
       const safeUnitPrice = Math.max(0, item.unitPrice);
       const lineSubtotal = safeUnitPrice * safeQuantity;
@@ -79,7 +81,8 @@ export function calculateVariableVat(items: VatLineItemInput[]): {
       };
     });
 
-  const weightedAverageRate = subtotal > 0 ? weightedRateNumerator / subtotal : 0;
+  const weightedAverageRate =
+    subtotal > 0 ? weightedRateNumerator / subtotal : 0;
 
   return {
     totalVat: roundToCents(totalVat),

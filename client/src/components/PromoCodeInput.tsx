@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { Send, AlertCircle, CheckCircle } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
-import { toast } from 'sonner';
+import { useState, useRef, useEffect } from "react";
+import { Send, AlertCircle, CheckCircle } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 interface PromoCodeInputProps {
   subtotal: number;
@@ -13,7 +13,7 @@ interface PromoCodeInputProps {
 
 /**
  * PromoCodeInput: Component for entering and validating promo codes at checkout.
- * 
+ *
  * - Accepts alphanumeric promo codes with case-insensitive matching
  * - Validates offers against subtotal and usage limits (server-side)
  * - Shows real-time discount amount when valid
@@ -25,14 +25,14 @@ export function PromoCodeInput({
   onDiscountApply,
   disabled = false,
 }: PromoCodeInputProps) {
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [appliedCode, setAppliedCode] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Query for resolving the promo code
   const resolveOffer = trpc.offers.resolve.useQuery(
-    { code: appliedCode || '', subtotal },
+    { code: appliedCode || "", subtotal },
     {
       enabled: Boolean(appliedCode) && subtotal > 0,
       retry: false,
@@ -42,7 +42,10 @@ export function PromoCodeInput({
   // Notify parent when discount is applied
   useEffect(() => {
     if (resolveOffer.data) {
-      onDiscountApply?.(resolveOffer.data.discountAmount, resolveOffer.data.name);
+      onDiscountApply?.(
+        resolveOffer.data.discountAmount,
+        resolveOffer.data.name
+      );
     }
   }, [resolveOffer.data, onDiscountApply]);
 
@@ -50,12 +53,12 @@ export function PromoCodeInput({
     const trimmedCode = inputValue.trim().toUpperCase();
 
     if (!trimmedCode) {
-      toast.error('Please enter a promo code');
+      toast.error("Please enter a promo code");
       return;
     }
 
     if (!/^[A-Z0-9_-]{3,32}$/.test(trimmedCode)) {
-      toast.error('Invalid promo code format');
+      toast.error("Invalid promo code format");
       return;
     }
 
@@ -69,9 +72,9 @@ export function PromoCodeInput({
   };
 
   const handleRemoveCode = () => {
-    setInputValue('');
+    setInputValue("");
     setAppliedCode(null);
-    onDiscountApply?.(0, '');
+    onDiscountApply?.(0, "");
     if (inputRef.current) {
       inputRef.current.focus();
     }
@@ -90,9 +93,9 @@ export function PromoCodeInput({
             ref={inputRef}
             type="text"
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value.toUpperCase())}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter' && !isLoading && !disabled) {
+            onChange={e => setInputValue(e.target.value.toUpperCase())}
+            onKeyPress={e => {
+              if (e.key === "Enter" && !isLoading && !disabled) {
                 handleApplyCode();
               }
             }}
@@ -118,10 +121,13 @@ export function PromoCodeInput({
       {isValid && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 flex-1">
-            <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle
+              size={18}
+              className="text-green-600 flex-shrink-0 mt-0.5"
+            />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-green-900">
-                {resolveOffer.data?.name || 'Promo Code Applied'}
+                {resolveOffer.data?.name || "Promo Code Applied"}
               </p>
               <p className="text-xs text-green-700 mt-1">
                 Discount: {currencySymbol}
@@ -141,13 +147,15 @@ export function PromoCodeInput({
       {/* Error State */}
       {isError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 flex items-start gap-3">
-          <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
+          <AlertCircle
+            size={18}
+            className="text-red-600 flex-shrink-0 mt-0.5"
+          />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-red-900">
-              Code not valid
-            </p>
+            <p className="text-sm font-medium text-red-900">Code not valid</p>
             <p className="text-xs text-red-700 mt-1">
-              This code may be expired, inactive, or have reached its usage limit.
+              This code may be expired, inactive, or have reached its usage
+              limit.
             </p>
           </div>
         </div>
@@ -164,4 +172,4 @@ export function PromoCodeInput({
 }
 
 // Helper to get currency symbol
-const currencySymbol = '$'; // Could be enhanced to accept currency as prop
+const currencySymbol = "$"; // Could be enhanced to accept currency as prop

@@ -1,10 +1,10 @@
-import { useAuth } from '@/_core/hooks/useAuth';
-import { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'wouter';
-import { ArrowLeft, Clock, CheckCircle, Truck, Package } from 'lucide-react';
-import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
-import { supabase } from '@/lib/supabase';
-import { requestAuthenticationForPath } from '@/lib/authRequired';
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
+import { ArrowLeft, Clock, CheckCircle, Truck, Package } from "lucide-react";
+import { useSupabaseOrders } from "@/hooks/useSupabaseOrders";
+import { supabase } from "@/lib/supabase";
+import { requestAuthenticationForPath } from "@/lib/authRequired";
 
 export default function OrderDetail({ params }: { params: { id: string } }) {
   const { user, isAuthenticated, sessionRestored, loading } = useAuth();
@@ -13,40 +13,46 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
   const orderId = params.id;
   const { orders, isLoading } = useSupabaseOrders(user?.id ?? null);
   const [shippingInfo, setShippingInfo] = useState({
-    firstName: '',
-    lastName: '',
-    address: '',
-    city: '',
-    state: '',
-    zip: '',
-    country: 'US',
+    firstName: "",
+    lastName: "",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+    country: "US",
   });
 
   useEffect(() => {
-    if (!sessionRestored || loading || isAuthenticated || authPromptedRef.current) return;
+    if (
+      !sessionRestored ||
+      loading ||
+      isAuthenticated ||
+      authPromptedRef.current
+    )
+      return;
     authPromptedRef.current = true;
     requestAuthenticationForPath();
   }, [isAuthenticated, sessionRestored, loading]);
 
   // Initialize order from orders array - moved before conditional returns
-  const order = orders?.find((o) => String(o.id) === String(orderId));
+  const order = orders?.find(o => String(o.id) === String(orderId));
 
   useEffect(() => {
     let cancelled = false;
 
     const parseName = (name: string | null | undefined) => {
-      const raw = String(name || '').trim();
-      if (!raw) return { firstName: '', lastName: '' };
-      const [firstName, ...rest] = raw.split(' ');
-      return { firstName, lastName: rest.join(' ') };
+      const raw = String(name || "").trim();
+      if (!raw) return { firstName: "", lastName: "" };
+      const [firstName, ...rest] = raw.split(" ");
+      return { firstName, lastName: rest.join(" ") };
     };
 
     const parseAddressLine = (addressLine: string | null | undefined) => {
-      const raw = String(addressLine || '');
-      const [addressPart, statePart] = raw.split(' | ');
+      const raw = String(addressLine || "");
+      const [addressPart, statePart] = raw.split(" | ");
       return {
-        address: (addressPart || '').trim(),
-        state: (statePart || '').trim(),
+        address: (addressPart || "").trim(),
+        state: (statePart || "").trim(),
       };
     };
 
@@ -58,27 +64,29 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
 
       // 1) Preferred source: payment metadata captured at checkout time for this order.
       const { data: paymentRow } = await supabase
-        .from('payments')
-        .select('metadata')
-        .eq('order_id', order.id)
-        .order('created_at', { ascending: false })
+        .from("payments")
+        .select("metadata")
+        .eq("order_id", order.id)
+        .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      const metadata = (paymentRow?.metadata && typeof paymentRow.metadata === 'object')
-        ? (paymentRow.metadata as Record<string, any>)
-        : null;
+      const metadata =
+        paymentRow?.metadata && typeof paymentRow.metadata === "object"
+          ? (paymentRow.metadata as Record<string, any>)
+          : null;
 
       if (metadata) {
         const metaName = parseName(metadata.name);
         const next = {
-          firstName: metadata.firstName || metaName.firstName || userName.firstName,
+          firstName:
+            metadata.firstName || metaName.firstName || userName.firstName,
           lastName: metadata.lastName || metaName.lastName || userName.lastName,
-          address: metadata.address || '',
-          city: metadata.city || '',
-          state: metadata.state || '',
-          zip: metadata.zip || metadata.postalCode || '',
-          country: metadata.country || 'US',
+          address: metadata.address || "",
+          city: metadata.city || "",
+          state: metadata.state || "",
+          zip: metadata.zip || metadata.postalCode || "",
+          country: metadata.country || "US",
         };
 
         if (!cancelled) setShippingInfo(next);
@@ -88,11 +96,11 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
       // 2) Fallback: current default address for the user.
       if (user?.id) {
         const { data: addressRow } = await supabase
-          .from('addresses')
-          .select('address_line, city, postal_code, country')
-          .eq('user_id', user.id)
-          .eq('is_default', true)
-          .order('created_at', { ascending: false })
+          .from("addresses")
+          .select("address_line, city, postal_code, country")
+          .eq("user_id", user.id)
+          .eq("is_default", true)
+          .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
 
@@ -102,10 +110,10 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
             firstName: userName.firstName,
             lastName: userName.lastName,
             address: parsed.address,
-            city: addressRow.city || '',
+            city: addressRow.city || "",
             state: parsed.state,
-            zip: addressRow.postal_code || '',
-            country: addressRow.country || 'US',
+            zip: addressRow.postal_code || "",
+            country: addressRow.country || "US",
           };
           if (!cancelled) setShippingInfo(next);
           return;
@@ -114,7 +122,7 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
 
       // 3) Last fallback: user name only.
       if (!cancelled) {
-        setShippingInfo((prev) => ({
+        setShippingInfo(prev => ({
           ...prev,
           firstName: userName.firstName,
           lastName: userName.lastName,
@@ -131,7 +139,7 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
 
   if (!sessionRestored || loading) {
     return (
-        <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
+      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <div className="animate-pulse space-y-4">
           <div className="h-10 w-32 bg-muted rounded"></div>
           <div className="h-64 w-full bg-muted rounded"></div>
@@ -144,7 +152,9 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
     return (
       <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <h1 className="mb-6 text-2xl font-bold">Order</h1>
-        <div className="rounded-lg border border-border bg-white p-6">{/* blank for guests */}</div>
+        <div className="rounded-lg border border-border bg-white p-6">
+          {/* blank for guests */}
+        </div>
       </div>
     );
   }
@@ -164,7 +174,7 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
     return (
       <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <button
-          onClick={() => setLocation('/orders')}
+          onClick={() => setLocation("/orders")}
           className="mb-6 flex items-center gap-2 text-sm font-semibold hover:text-gray-600"
         >
           <ArrowLeft size={18} />
@@ -178,18 +188,30 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
     );
   }
 
-  const orderItems = Array.isArray((order as any).items) ? (order as any).items : [];
-  const subtotal = Number(order.subtotal ?? order.total_amount ?? order.total ?? 0);
-  const shipping = Number((order as any).shippingCost ?? (order as any).shipping_cost ?? 0);
+  const orderItems = Array.isArray((order as any).items)
+    ? (order as any).items
+    : [];
+  const subtotal = Number(
+    order.subtotal ?? order.total_amount ?? order.total ?? 0
+  );
+  const shipping = Number(
+    (order as any).shippingCost ?? (order as any).shipping_cost ?? 0
+  );
   const tax = Number(order.tax ?? 0);
-  const discount = Number((order as any).discountAmount ?? (order as any).discount_amount ?? 0);
-  const total = Number(order.total ?? order.total_amount ?? Math.max(0, subtotal + shipping + tax - discount));
+  const discount = Number(
+    (order as any).discountAmount ?? (order as any).discount_amount ?? 0
+  );
+  const total = Number(
+    order.total ??
+      order.total_amount ??
+      Math.max(0, subtotal + shipping + tax - discount)
+  );
 
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <button
-          onClick={() => setLocation('/orders')}
+          onClick={() => setLocation("/orders")}
           className="mb-6 flex items-center gap-2 text-sm font-semibold hover:text-gray-600"
         >
           <ArrowLeft size={18} />
@@ -201,38 +223,46 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
           <div className="md:col-span-2 space-y-6">
             {/* Order Header */}
             <div className="rounded-lg border border-border bg-white p-6">
-              <h1 className="text-3xl font-bold mb-6">Order #{String(order.id).slice(0, 8)}</h1>
+              <h1 className="text-3xl font-bold mb-6">
+                Order #{String(order.id).slice(0, 8)}
+              </h1>
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Order Date</p>
                   <p className="font-semibold">
-                    {new Date(order.created_at).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
+                    {new Date(order.created_at).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
                     })}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Order Status</p>
                   <div className="flex items-center gap-2">
-                    {order.status === 'pending' && (
+                    {order.status === "pending" && (
                       <>
                         <Clock size={18} className="text-yellow-600" />
-                        <span className="font-semibold text-yellow-600">Pending</span>
+                        <span className="font-semibold text-yellow-600">
+                          Pending
+                        </span>
                       </>
                     )}
-                    {String(order.status) === 'confirmed' && (
+                    {String(order.status) === "confirmed" && (
                       <>
                         <CheckCircle size={18} className="text-green-600" />
-                        <span className="font-semibold text-green-600">Confirmed</span>
+                        <span className="font-semibold text-green-600">
+                          Confirmed
+                        </span>
                       </>
                     )}
-                    {String(order.status) === 'shipped' && (
+                    {String(order.status) === "shipped" && (
                       <>
                         <Truck size={18} className="text-blue-600" />
-                        <span className="font-semibold text-blue-600">Shipped</span>
+                        <span className="font-semibold text-blue-600">
+                          Shipped
+                        </span>
                       </>
                     )}
                   </div>
@@ -260,21 +290,32 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
               <h2 className="text-xl font-bold mb-4">Order Items</h2>
               <div className="space-y-4">
                 {orderItems.length === 0 ? (
-                  <p className="text-gray-600 text-sm">No order items found for this order.</p>
+                  <p className="text-gray-600 text-sm">
+                    No order items found for this order.
+                  </p>
                 ) : (
                   orderItems.map((item: any) => {
                     const quantity = Number(item?.quantity || 1);
                     const unitPrice = Number(item?.price || 0);
                     const lineTotal = quantity * unitPrice;
                     return (
-                      <div key={item.id || `${item.product_id}-${quantity}`} className="flex items-start justify-between border-b border-gray-100 pb-3 last:border-b-0">
+                      <div
+                        key={item.id || `${item.product_id}-${quantity}`}
+                        className="flex items-start justify-between border-b border-gray-100 pb-3 last:border-b-0"
+                      >
                         <div>
                           <p className="font-semibold text-sm">
-                            {item?.product?.title || item?.product?.name || 'Product'}
+                            {item?.product?.title ||
+                              item?.product?.name ||
+                              "Product"}
                           </p>
-                          <p className="text-xs text-gray-600">Qty: {quantity}</p>
+                          <p className="text-xs text-gray-600">
+                            Qty: {quantity}
+                          </p>
                         </div>
-                        <p className="font-semibold text-sm">${lineTotal.toFixed(2)}</p>
+                        <p className="font-semibold text-sm">
+                          ${lineTotal.toFixed(2)}
+                        </p>
                       </div>
                     );
                   })
@@ -296,7 +337,7 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
                   <span className="font-semibold">
-                    {shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}
+                    {shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
                   </span>
                 </div>
                 {tax > 0 && (
@@ -308,14 +349,18 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
                 {discount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Discount</span>
-                    <span className="font-semibold text-green-700">-${discount.toFixed(2)}</span>
+                    <span className="font-semibold text-green-700">
+                      -${discount.toFixed(2)}
+                    </span>
                   </div>
                 )}
               </div>
 
               <div className="flex justify-between items-center mb-6">
                 <span className="text-lg font-bold">Total</span>
-                <span className="text-2xl font-bold text-black">${total.toFixed(2)}</span>
+                <span className="text-2xl font-bold text-black">
+                  ${total.toFixed(2)}
+                </span>
               </div>
 
               <div className="space-y-2 text-xs text-gray-600">

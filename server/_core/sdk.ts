@@ -1,4 +1,8 @@
-import { AXIOS_TIMEOUT_MS, COOKIE_NAME, SESSION_DURATION_MS } from "@shared/const";
+import {
+  AXIOS_TIMEOUT_MS,
+  COOKIE_NAME,
+  SESSION_DURATION_MS,
+} from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
@@ -30,7 +34,6 @@ const GET_USER_INFO_WITH_JWT_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserI
 
 class OAuthService {
   constructor(private client: ReturnType<typeof axios.create>) {
-
     if (!ENV.oAuthServerUrl) {
       console.error(
         "[OAuth] ERROR: OAUTH_SERVER_URL is not configured! Set OAUTH_SERVER_URL environment variable."
@@ -255,18 +258,21 @@ class SDKServer {
     } as GetUserInfoWithJwtResponse;
   }
 
-  private buildSessionUser(sessionUser: {
-    openId: string;
-    name: string;
-    appId: string;
-  }, userInfo?: Partial<GetUserInfoWithJwtResponse> | null): User {
+  private buildSessionUser(
+    sessionUser: {
+      openId: string;
+      name: string;
+      appId: string;
+    },
+    userInfo?: Partial<GetUserInfoWithJwtResponse> | null
+  ): User {
     return {
       id: 0 as any,
       openId: sessionUser.openId,
       name: userInfo?.name || sessionUser.name || null,
       email: userInfo?.email || null,
-      loginMethod: userInfo?.loginMethod ?? userInfo?.platform ?? 'email',
-      role: 'user',
+      loginMethod: userInfo?.loginMethod ?? userInfo?.platform ?? "email",
+      role: "user",
       createdAt: new Date(),
       updatedAt: new Date(),
       lastSignedIn: new Date(),
@@ -288,7 +294,10 @@ class SDKServer {
         const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
         return this.buildSessionUser(session, userInfo);
       } catch (error) {
-        console.error("[Auth] Failed to resolve session user without database:", error);
+        console.error(
+          "[Auth] Failed to resolve session user without database:",
+          error
+        );
         throw ForbiddenError("Failed to resolve authenticated user");
       }
     }

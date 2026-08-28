@@ -11,8 +11,8 @@ export type CartItem = {
   quantity: number;
 };
 
-export const CHECKOUT_CART_SNAPSHOT_KEY = 'checkout-cart-snapshot-v1';
-const META_PURCHASE_TRACKED_PREFIX = 'meta-purchase-tracked-v1:';
+export const CHECKOUT_CART_SNAPSHOT_KEY = "checkout-cart-snapshot-v1";
+const META_PURCHASE_TRACKED_PREFIX = "meta-purchase-tracked-v1:";
 
 /**
  * Read the checkout cart snapshot from localStorage
@@ -20,7 +20,7 @@ const META_PURCHASE_TRACKED_PREFIX = 'meta-purchase-tracked-v1:';
  */
 export function readCheckoutSnapshot(): CartItem[] {
   try {
-    if (typeof window === 'undefined') return [];
+    if (typeof window === "undefined") return [];
     const raw = localStorage.getItem(CHECKOUT_CART_SNAPSHOT_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
@@ -36,7 +36,7 @@ export function readCheckoutSnapshot(): CartItem[] {
  */
 export function writeCheckoutSnapshot(items: CartItem[]): void {
   try {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     localStorage.setItem(CHECKOUT_CART_SNAPSHOT_KEY, JSON.stringify(items));
   } catch {
     // Ignore storage issues and continue with in-memory checkout state
@@ -49,8 +49,10 @@ export function writeCheckoutSnapshot(items: CartItem[]): void {
  */
 export function hasTrackedMetaPurchase(reference: string): boolean {
   try {
-    if (typeof window === 'undefined') return false;
-    return Boolean(localStorage.getItem(`${META_PURCHASE_TRACKED_PREFIX}${reference}`));
+    if (typeof window === "undefined") return false;
+    return Boolean(
+      localStorage.getItem(`${META_PURCHASE_TRACKED_PREFIX}${reference}`)
+    );
   } catch {
     return false;
   }
@@ -62,8 +64,11 @@ export function hasTrackedMetaPurchase(reference: string): boolean {
  */
 export function markTrackedMetaPurchase(reference: string): void {
   try {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(`${META_PURCHASE_TRACKED_PREFIX}${reference}`, new Date().toISOString());
+    if (typeof window === "undefined") return;
+    localStorage.setItem(
+      `${META_PURCHASE_TRACKED_PREFIX}${reference}`,
+      new Date().toISOString()
+    );
   } catch {
     // Ignore persistence issues; duplicate prevention is best effort
   }
@@ -75,11 +80,11 @@ export function markTrackedMetaPurchase(reference: string): void {
  */
 export function clearCheckoutData(): void {
   try {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     localStorage.removeItem(CHECKOUT_CART_SNAPSHOT_KEY);
-    localStorage.removeItem('checkout-step');
-    localStorage.removeItem('checkout-form-data');
-    localStorage.removeItem('cart');
+    localStorage.removeItem("checkout-step");
+    localStorage.removeItem("checkout-form-data");
+    localStorage.removeItem("cart");
   } catch {
     // Ignore deletion issues
   }
@@ -89,14 +94,14 @@ export function clearCheckoutData(): void {
  * Validate cart item structure
  */
 export function isValidCartItem(item: unknown): item is CartItem {
-  if (typeof item !== 'object' || item === null) return false;
+  if (typeof item !== "object" || item === null) return false;
   const obj = item as Record<string, unknown>;
   return (
-    typeof obj.product_id === 'string' &&
-    typeof obj.title === 'string' &&
-    typeof obj.price === 'string' &&
-    typeof obj.image === 'string' &&
-    typeof obj.quantity === 'number' &&
+    typeof obj.product_id === "string" &&
+    typeof obj.title === "string" &&
+    typeof obj.price === "string" &&
+    typeof obj.image === "string" &&
+    typeof obj.quantity === "number" &&
     obj.quantity > 0
   );
 }

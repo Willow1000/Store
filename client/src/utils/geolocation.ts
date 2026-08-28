@@ -88,8 +88,7 @@ interface CacheEntry {
   expiresAt: number;
 }
 
-const GEOLOCATION_API =
-  'https://api.ipgeolocation.io/v3/ipgeo';
+const GEOLOCATION_API = "https://api.ipgeolocation.io/v3/ipgeo";
 
 const REQUEST_TIMEOUT_MS = 7000;
 const CACHE_TTL_MS = 1000 * 60 * 30; // 30 mins
@@ -101,7 +100,7 @@ const cache = new Map<string, CacheEntry>();
  * Sleep utility for retry delays
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     setTimeout(resolve, ms);
   });
 }
@@ -110,7 +109,7 @@ function sleep(ms: number): Promise<void> {
  * Build cache key
  */
 function buildCacheKey(ip?: string): string {
-  return ip || 'self';
+  return ip || "self";
 }
 
 /**
@@ -129,9 +128,7 @@ function cleanupCache(): void {
 /**
  * Get cached data
  */
-function getCachedData(
-  key: string
-): GeolocationData | null {
+function getCachedData(key: string): GeolocationData | null {
   const entry = cache.get(key);
 
   if (!entry) {
@@ -149,10 +146,7 @@ function getCachedData(
 /**
  * Save data to cache
  */
-function setCachedData(
-  key: string,
-  data: GeolocationData
-): void {
+function setCachedData(key: string, data: GeolocationData): void {
   cache.set(key, {
     data,
     expiresAt: Date.now() + CACHE_TTL_MS,
@@ -164,94 +158,72 @@ function setCachedData(
  */
 function normalizeResponse(raw: any): GeolocationData {
   return {
-    ip: raw.ip || '',
+    ip: raw.ip || "",
 
     location: {
-      continent_code: raw.location?.continent_code || '',
-      continent_name: raw.location?.continent_name || '',
+      continent_code: raw.location?.continent_code || "",
+      continent_name: raw.location?.continent_name || "",
 
-      country_code2: raw.location?.country_code2 || '',
-      country_code3: raw.location?.country_code3 || '',
+      country_code2: raw.location?.country_code2 || "",
+      country_code3: raw.location?.country_code3 || "",
 
-      country_name: raw.location?.country_name || '',
-      country_name_official:
-        raw.location?.country_name_official || '',
+      country_name: raw.location?.country_name || "",
+      country_name_official: raw.location?.country_name_official || "",
 
-      country_capital:
-        raw.location?.country_capital || '',
+      country_capital: raw.location?.country_capital || "",
 
-      state_prov: raw.location?.state_prov || '',
-      state_code: raw.location?.state_code || '',
+      state_prov: raw.location?.state_prov || "",
+      state_code: raw.location?.state_code || "",
 
-      district: raw.location?.district || '',
-      city: raw.location?.city || '',
-      zipcode: raw.location?.zipcode || '',
+      district: raw.location?.district || "",
+      city: raw.location?.city || "",
+      zipcode: raw.location?.zipcode || "",
 
-      latitude: Number(
-        raw.location?.latitude || 0
-      ),
+      latitude: Number(raw.location?.latitude || 0),
 
-      longitude: Number(
-        raw.location?.longitude || 0
-      ),
+      longitude: Number(raw.location?.longitude || 0),
 
       is_eu: Boolean(raw.location?.is_eu),
 
-      country_flag:
-        raw.location?.country_flag || '',
+      country_flag: raw.location?.country_flag || "",
 
-      geoname_id:
-        raw.location?.geoname_id || '',
+      geoname_id: raw.location?.geoname_id || "",
 
-      country_emoji:
-        raw.location?.country_emoji || '',
+      country_emoji: raw.location?.country_emoji || "",
     },
 
     country_metadata: {
-      calling_code:
-        raw.country_metadata?.calling_code || '',
+      calling_code: raw.country_metadata?.calling_code || "",
 
-      tld:
-        raw.country_metadata?.tld || '',
+      tld: raw.country_metadata?.tld || "",
 
-      languages:
-        raw.country_metadata?.languages || [],
+      languages: raw.country_metadata?.languages || [],
     },
 
     currency: {
-      code: raw.currency?.code || '',
-      name: raw.currency?.name || '',
-      symbol: raw.currency?.symbol || '',
+      code: raw.currency?.code || "",
+      name: raw.currency?.name || "",
+      symbol: raw.currency?.symbol || "",
     },
 
     asn: {
-      as_number:
-        raw.asn?.as_number || '',
+      as_number: raw.asn?.as_number || "",
 
-      organization:
-        raw.asn?.organization || '',
+      organization: raw.asn?.organization || "",
 
-      country:
-        raw.asn?.country || '',
+      country: raw.asn?.country || "",
     },
 
     time_zone: {
-      name: raw.time_zone?.name || '',
+      name: raw.time_zone?.name || "",
 
-      offset: Number(
-        raw.time_zone?.offset || 0
-      ),
+      offset: Number(raw.time_zone?.offset || 0),
 
-      current_time:
-        raw.time_zone?.current_time || '',
+      current_time: raw.time_zone?.current_time || "",
 
-      current_time_unix: Number(
-        raw.time_zone?.current_time_unix || 0
-      ),
+      current_time_unix: Number(raw.time_zone?.current_time_unix || 0),
 
-      is_dst: Boolean(
-        raw.time_zone?.is_dst
-      ),
+      is_dst: Boolean(raw.time_zone?.is_dst),
     },
   };
 }
@@ -270,10 +242,10 @@ async function requestGeolocation(
 
   try {
     const response = await fetch(url, {
-      method: 'GET',
+      method: "GET",
 
       headers: {
-        Accept: 'application/json',
+        Accept: "application/json",
       },
 
       signal: controller.signal,
@@ -291,18 +263,10 @@ async function requestGeolocation(
 
     return normalizeResponse(raw);
   } catch (error) {
-    if (
-      error instanceof DOMException &&
-      error.name === 'AbortError'
-    ) {
-      console.warn(
-        '[geolocation] Request timeout'
-      );
+    if (error instanceof DOMException && error.name === "AbortError") {
+      console.warn("[geolocation] Request timeout");
     } else {
-      console.warn(
-        '[geolocation] Request failed',
-        error
-      );
+      console.warn("[geolocation] Request failed", error);
     }
 
     return null;
@@ -319,13 +283,10 @@ export async function fetchGeolocation(
 ): Promise<GeolocationData | null> {
   cleanupCache();
 
-  const apiKey =
-    import.meta.env.VITE_GEOLOCATION_API_KEY;
+  const apiKey = import.meta.env.VITE_GEOLOCATION_API_KEY;
 
   if (!apiKey) {
-    console.error(
-      '[geolocation] Missing VITE_GEOLOCATION_API_KEY'
-    );
+    console.error("[geolocation] Missing VITE_GEOLOCATION_API_KEY");
 
     return null;
   }
@@ -343,11 +304,10 @@ export async function fetchGeolocation(
   });
 
   if (ip) {
-    params.append('ip', ip);
+    params.append("ip", ip);
   }
 
-  const url =
-    `${GEOLOCATION_API}?${params.toString()}`;
+  const url = `${GEOLOCATION_API}?${params.toString()}`;
 
   let attempt = 0;
 
@@ -380,9 +340,7 @@ export function clearGeolocationCache(): void {
 /**
  * Remove a specific IP from cache
  */
-export function removeCachedGeolocation(
-  ip?: string
-): void {
+export function removeCachedGeolocation(ip?: string): void {
   const cacheKey = buildCacheKey(ip);
 
   cache.delete(cacheKey);

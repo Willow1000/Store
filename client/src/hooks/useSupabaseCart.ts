@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
-import { CartItem, WishlistItem, Product } from '@/types/supabase';
-import { toast } from 'sonner';
-import { trackRecommendationEvent } from '@/lib/recommendations';
+import { useState, useCallback, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase";
+import { CartItem, WishlistItem, Product } from "@/types/supabase";
+import { toast } from "sonner";
+import { trackRecommendationEvent } from "@/lib/recommendations";
 
 export function useSupabaseCart(userId: string | null) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -16,31 +16,30 @@ export function useSupabaseCart(userId: string | null) {
 
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) {
-      console.error('Unable to resolve authenticated user for profile sync:', userError);
+      console.error(
+        "Unable to resolve authenticated user for profile sync:",
+        userError
+      );
       return false;
     }
 
     const authUser = userData.user;
     const email = authUser.email || `${userId}@placeholder.local`;
     const fullName =
-      authUser.user_metadata?.name ||
-      authUser.user_metadata?.full_name ||
-      null;
+      authUser.user_metadata?.name || authUser.user_metadata?.full_name || null;
 
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert(
-        {
-          id: userId,
-          email,
-          full_name: fullName,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'id' }
-      );
+    const { error: profileError } = await supabase.from("profiles").upsert(
+      {
+        id: userId,
+        email,
+        full_name: fullName,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" }
+    );
 
     if (profileError) {
-      console.error('Failed to ensure profile exists:', profileError);
+      console.error("Failed to ensure profile exists:", profileError);
       return false;
     }
 
@@ -48,29 +47,32 @@ export function useSupabaseCart(userId: string | null) {
   }, [userId]);
 
   const syncLocalCartSnapshot = useCallback((cartData: CartItem[]) => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
-    const localCart = cartData.map((item) => ({
+    const localCart = cartData.map(item => ({
       productId: item.product_id,
       productIndex: Number.NaN,
-      title: item.product?.title || 'Product',
+      title: item.product?.title || "Product",
       price: String(item.product?.price ?? 0),
-      image: item.product?.cover_image_url || '',
+      image: item.product?.cover_image_url || "",
       quantity: Math.max(1, Number(item.quantity) || 1),
     }));
     const nextJson = JSON.stringify(localCart);
 
     try {
-      if (localStorage.getItem('cart') === nextJson) {
+      if (localStorage.getItem("cart") === nextJson) {
         lastLocalCartJsonRef.current = nextJson;
         return;
       }
 
-      localStorage.setItem('cart', nextJson);
+      localStorage.setItem("cart", nextJson);
       lastLocalCartJsonRef.current = nextJson;
-      window.dispatchEvent(new Event('cartUpdated'));
+      window.dispatchEvent(new Event("cartUpdated"));
     } catch (storageError) {
-      console.warn('[useSupabaseCart] Failed to mirror cart snapshot locally:', storageError);
+      console.warn(
+        "[useSupabaseCart] Failed to mirror cart snapshot locally:",
+        storageError
+      );
     }
   }, []);
 
@@ -92,13 +94,15 @@ export function useSupabaseCart(userId: string | null) {
       if (!profileReady) {
         // Profile upsert may lag briefly right after OAuth completion; continue
         // and rely on cart query result instead of hard-failing to an empty cart.
-        console.warn('[useSupabaseCart] Profile not ready yet; continuing cart fetch');
+        console.warn(
+          "[useSupabaseCart] Profile not ready yet; continuing cart fetch"
+        );
       }
 
       const { data, error: supabaseError } = await supabase
-        .from('cart_items')
-        .select('*, product:products(*)')
-        .eq('user_id', userId);
+        .from("cart_items")
+        .select("*, product:products(*)")
+        .eq("user_id", userId);
 
       if (supabaseError) throw supabaseError;
 
@@ -110,9 +114,10 @@ export function useSupabaseCart(userId: string | null) {
     } catch (err) {
       if (requestId !== fetchRequestIdRef.current) return;
 
-      const message = err instanceof Error ? err.message : 'Failed to fetch cart';
+      const message =
+        err instanceof Error ? err.message : "Failed to fetch cart";
       setError(message);
-      console.error('Error fetching cart:', err);
+      console.error("Error fetching cart:", err);
     } finally {
       if (requestId === fetchRequestIdRef.current) {
         setIsLoading(false);
@@ -127,49 +132,52 @@ export function useSupabaseCart(userId: string | null) {
         // Guest: persist to localStorage cart
         try {
           const nextQuantity = Math.max(1, quantity);
-          const { addToLocalCart } = await import('@/lib/cart');
+          const { addToLocalCart } = await import("@/lib/cart");
           const { data: productData, error: productError } = await supabase
-            .from('products')
-            .select('id, title, price, cover_image_url, stock, category_name, brand, model, condition, discount, part_number, item_specifics, created_at')
-            .eq('id', productId)
+            .from("products")
+            .select(
+              "id, title, price, cover_image_url, stock, category_name, brand, model, condition, discount, part_number, item_specifics, created_at"
+            )
+            .eq("id", productId)
             .maybeSingle();
 
           if (productError) throw productError;
 
           const availableStock = Number(productData?.stock ?? 0);
           if (availableStock <= 0) {
-            toast.error('This item is out of stock');
+            toast.error("This item is out of stock");
             return false;
           }
 
           const item = {
             productId: productData?.id || productId,
             productIndex: -1,
-            title: productData?.title || 'Product',
-            price: String(productData?.price ?? '0'),
-            image: productData?.cover_image_url || '',
+            title: productData?.title || "Product",
+            price: String(productData?.price ?? "0"),
+            image: productData?.cover_image_url || "",
             quantity: nextQuantity,
           } as any;
 
           const ok = addToLocalCart(item);
           if (ok) {
             trackRecommendationEvent({
-              eventType: 'add_to_cart',
+              eventType: "add_to_cart",
               product: productData as Product,
               productId,
               quantity: nextQuantity,
               userId: null,
-              metadata: { source: 'guest_cart' },
+              metadata: { source: "guest_cart" },
             });
-            toast.success('Added to cart');
+            toast.success("Added to cart");
             return true;
           }
-          toast.error('Failed to add to cart');
+          toast.error("Failed to add to cart");
           return false;
         } catch (err) {
-          const message = err instanceof Error ? err.message : 'Failed to add to cart';
+          const message =
+            err instanceof Error ? err.message : "Failed to add to cart";
           toast.error(message);
-          console.error('Error adding to local cart:', err);
+          console.error("Error adding to local cart:", err);
           return false;
         }
       }
@@ -177,50 +185,54 @@ export function useSupabaseCart(userId: string | null) {
       try {
         const profileReady = await ensureProfile();
         if (!profileReady) {
-          toast.error('Unable to create your profile. Please try again.');
+          toast.error("Unable to create your profile. Please try again.");
           return false;
         }
 
         const nextQuantity = Math.max(1, quantity);
 
         const { data: productData, error: productError } = await supabase
-          .from('products')
-          .select('id, title, price, cover_image_url, stock, category_name, brand, model, condition, discount, part_number, item_specifics, created_at')
-          .eq('id', productId)
+          .from("products")
+          .select(
+            "id, title, price, cover_image_url, stock, category_name, brand, model, condition, discount, part_number, item_specifics, created_at"
+          )
+          .eq("id", productId)
           .maybeSingle();
 
         if (productError) throw productError;
 
         const availableStock = Number(productData?.stock ?? 0);
         if (availableStock <= 0) {
-          toast.error('This item is out of stock');
+          toast.error("This item is out of stock");
           return false;
         }
 
         const { data: existingItem, error: existingError } = await supabase
-          .from('cart_items')
-          .select('id, quantity')
-          .eq('user_id', userId)
-          .eq('product_id', productId)
+          .from("cart_items")
+          .select("id, quantity")
+          .eq("user_id", userId)
+          .eq("product_id", productId)
           .maybeSingle();
 
         if (existingError) throw existingError;
 
         const currentQuantity = Number(existingItem?.quantity || 0);
         if (currentQuantity + nextQuantity > availableStock) {
-          toast.error(`Only ${availableStock} item${availableStock === 1 ? '' : 's'} in stock`);
+          toast.error(
+            `Only ${availableStock} item${availableStock === 1 ? "" : "s"} in stock`
+          );
           return false;
         }
 
         if (existingItem?.id) {
           const { error: updateError } = await supabase
-            .from('cart_items')
+            .from("cart_items")
             .update({ quantity: (existingItem.quantity || 0) + nextQuantity })
-            .eq('id', existingItem.id);
+            .eq("id", existingItem.id);
           if (updateError) throw updateError;
         } else {
           const { error: insertError } = await supabase
-            .from('cart_items')
+            .from("cart_items")
             .insert({
               user_id: userId,
               product_id: productId,
@@ -229,21 +241,22 @@ export function useSupabaseCart(userId: string | null) {
           if (insertError) throw insertError;
         }
 
-        toast.success('Added to cart');
+        toast.success("Added to cart");
         trackRecommendationEvent({
-          eventType: 'add_to_cart',
+          eventType: "add_to_cart",
           product: productData as Product,
           productId,
           quantity: nextQuantity,
           userId,
-          metadata: { source: 'supabase_cart' },
+          metadata: { source: "supabase_cart" },
         });
         await fetchCart();
         return true;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to add to cart';
+        const message =
+          err instanceof Error ? err.message : "Failed to add to cart";
         toast.error(message);
-        console.error('Error adding to cart:', err);
+        console.error("Error adding to cart:", err);
         return false;
       }
     },
@@ -259,28 +272,29 @@ export function useSupabaseCart(userId: string | null) {
         }
 
         const { error: supabaseError } = await supabase
-          .from('cart_items')
+          .from("cart_items")
           .update({ quantity })
-          .eq('id', cartItemId);
+          .eq("id", cartItemId);
 
         if (supabaseError) throw supabaseError;
 
-        toast.success('Cart updated');
-        const updatedItem = items.find((item) => item.id === cartItemId);
+        toast.success("Cart updated");
+        const updatedItem = items.find(item => item.id === cartItemId);
         trackRecommendationEvent({
-          eventType: 'quantity_change',
+          eventType: "quantity_change",
           product: updatedItem?.product || null,
           productId: updatedItem?.product_id,
           quantity,
           userId,
-          metadata: { source: 'supabase_cart' },
+          metadata: { source: "supabase_cart" },
         });
         await fetchCart();
         return true;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to update quantity';
+        const message =
+          err instanceof Error ? err.message : "Failed to update quantity";
         toast.error(message);
-        console.error('Error updating quantity:', err);
+        console.error("Error updating quantity:", err);
         return false;
       }
     },
@@ -292,27 +306,28 @@ export function useSupabaseCart(userId: string | null) {
     async (cartItemId: string) => {
       try {
         const { error: supabaseError } = await supabase
-          .from('cart_items')
+          .from("cart_items")
           .delete()
-          .eq('id', cartItemId);
+          .eq("id", cartItemId);
 
         if (supabaseError) throw supabaseError;
 
-        toast.success('Removed from cart');
-        const removedItem = items.find((item) => item.id === cartItemId);
+        toast.success("Removed from cart");
+        const removedItem = items.find(item => item.id === cartItemId);
         trackRecommendationEvent({
-          eventType: 'remove_from_cart',
+          eventType: "remove_from_cart",
           product: removedItem?.product || null,
           productId: removedItem?.product_id,
           userId,
-          metadata: { source: 'supabase_cart' },
+          metadata: { source: "supabase_cart" },
         });
         await fetchCart();
         return true;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to remove from cart';
+        const message =
+          err instanceof Error ? err.message : "Failed to remove from cart";
         toast.error(message);
-        console.error('Error removing from cart:', err);
+        console.error("Error removing from cart:", err);
         return false;
       }
     },
@@ -325,19 +340,20 @@ export function useSupabaseCart(userId: string | null) {
 
     try {
       const { error: supabaseError } = await supabase
-        .from('cart_items')
+        .from("cart_items")
         .delete()
-        .eq('user_id', userId);
+        .eq("user_id", userId);
 
       if (supabaseError) throw supabaseError;
 
-      toast.success('Cart cleared');
+      toast.success("Cart cleared");
       await fetchCart();
       return true;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to clear cart';
+      const message =
+        err instanceof Error ? err.message : "Failed to clear cart";
       toast.error(message);
-      console.error('Error clearing cart:', err);
+      console.error("Error clearing cart:", err);
       return false;
     }
   }, [userId, fetchCart]);
@@ -347,23 +363,27 @@ export function useSupabaseCart(userId: string | null) {
     let cancelled = false;
     (async () => {
       try {
-        if (typeof window !== 'undefined') {
+        if (typeof window !== "undefined") {
           const w = window as any;
           // Prefer promise-based migration handshake when available
           if (w.__cartMigrationPromise) {
             await w.__cartMigrationPromise;
             if (cancelled) return;
-          } else if (localStorage.getItem('isMigratingCart')) {
+          } else if (localStorage.getItem("isMigratingCart")) {
             // Fallback to event-based listener for older flows
-            await new Promise<void>((resolve) => {
+            await new Promise<void>(resolve => {
               const onMerged = () => {
                 resolve();
-                try { window.removeEventListener('cartMerged', onMerged); } catch (e) {}
+                try {
+                  window.removeEventListener("cartMerged", onMerged);
+                } catch (e) {}
               };
-              window.addEventListener('cartMerged', onMerged);
+              window.addEventListener("cartMerged", onMerged);
               // Safety timeout
               setTimeout(() => {
-                try { window.removeEventListener('cartMerged', onMerged); } catch (e) {}
+                try {
+                  window.removeEventListener("cartMerged", onMerged);
+                } catch (e) {}
                 resolve();
               }, 3000);
             });
@@ -375,7 +395,9 @@ export function useSupabaseCart(userId: string | null) {
         await fetchCart();
       } catch (e) {
         if (!cancelled) {
-          try { fetchCart(); } catch (_) {}
+          try {
+            fetchCart();
+          } catch (_) {}
         }
       }
     })();
@@ -386,7 +408,7 @@ export function useSupabaseCart(userId: string | null) {
   }, [userId, fetchCart]);
 
   useEffect(() => {
-    if (!userId || typeof window === 'undefined') return;
+    if (!userId || typeof window === "undefined") return;
 
     let refreshTimer: number | undefined;
     const queueCartRefresh = () => {
@@ -399,13 +421,14 @@ export function useSupabaseCart(userId: string | null) {
     };
 
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== 'cart') return;
-      if (event.newValue && event.newValue === lastLocalCartJsonRef.current) return;
+      if (event.key !== "cart") return;
+      if (event.newValue && event.newValue === lastLocalCartJsonRef.current)
+        return;
       queueCartRefresh();
     };
 
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         queueCartRefresh();
       }
     };
@@ -413,30 +436,30 @@ export function useSupabaseCart(userId: string | null) {
     const channel = supabase
       .channel(`cart_items:${userId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'cart_items',
+          event: "*",
+          schema: "public",
+          table: "cart_items",
           filter: `user_id=eq.${userId}`,
         },
         queueCartRefresh
       )
       .subscribe();
 
-    window.addEventListener('cartMerged', queueCartRefresh);
-    window.addEventListener('storage', onStorage);
-    window.addEventListener('focus', queueCartRefresh);
-    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener("cartMerged", queueCartRefresh);
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", queueCartRefresh);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       if (refreshTimer) {
         window.clearTimeout(refreshTimer);
       }
-      window.removeEventListener('cartMerged', queueCartRefresh);
-      window.removeEventListener('storage', onStorage);
-      window.removeEventListener('focus', queueCartRefresh);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener("cartMerged", queueCartRefresh);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", queueCartRefresh);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       void supabase.removeChannel(channel);
     };
   }, [userId, fetchCart]);
@@ -455,7 +478,9 @@ export function useSupabaseCart(userId: string | null) {
 
 export function useSupabaseWishlist(userId: string | null) {
   const [items, setItems] = useState<WishlistItem[]>([]);
-  const [wishedProductIds, setWishedProductIds] = useState<Set<string>>(new Set());
+  const [wishedProductIds, setWishedProductIds] = useState<Set<string>>(
+    new Set()
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -464,7 +489,7 @@ export function useSupabaseWishlist(userId: string | null) {
     if (!userId) {
       // Guest: load wishlist from localStorage
       try {
-        const { readWishlistFromStorage } = await import('@/lib/cart');
+        const { readWishlistFromStorage } = await import("@/lib/cart");
         const ids = readWishlistFromStorage();
         setItems([]);
         setWishedProductIds(new Set(ids));
@@ -480,18 +505,19 @@ export function useSupabaseWishlist(userId: string | null) {
       setError(null);
 
       const { data, error: supabaseError } = await supabase
-        .from('wishlists')
-        .select('*, product:products(*)')
-        .eq('user_id', userId);
+        .from("wishlists")
+        .select("*, product:products(*)")
+        .eq("user_id", userId);
 
       if (supabaseError) throw supabaseError;
 
       setItems(data as WishlistItem[]);
       setWishedProductIds(new Set(data.map(item => item.product_id)));
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch wishlist';
+      const message =
+        err instanceof Error ? err.message : "Failed to fetch wishlist";
       setError(message);
-      console.error('Error fetching wishlist:', err);
+      console.error("Error fetching wishlist:", err);
     } finally {
       setIsLoading(false);
     }
@@ -502,31 +528,34 @@ export function useSupabaseWishlist(userId: string | null) {
     async (productId: string) => {
       const loadProductForSignal = async () => {
         const { data } = await supabase
-          .from('products')
-          .select('id, title, price, cover_image_url, stock, category_name, brand, model, condition, discount, part_number, item_specifics, created_at')
-          .eq('id', productId)
+          .from("products")
+          .select(
+            "id, title, price, cover_image_url, stock, category_name, brand, model, condition, discount, part_number, item_specifics, created_at"
+          )
+          .eq("id", productId)
           .maybeSingle();
         return data as Product | null;
       };
 
       if (!userId) {
         try {
-          const { readWishlistFromStorage, writeWishlistToStorage } = await import('@/lib/cart');
+          const { readWishlistFromStorage, writeWishlistToStorage } =
+            await import("@/lib/cart");
           const list = readWishlistFromStorage();
           if (!list.includes(productId)) list.push(productId);
           writeWishlistToStorage(list);
           trackRecommendationEvent({
-            eventType: 'wishlist_add',
+            eventType: "wishlist_add",
             product: await loadProductForSignal(),
             productId,
             userId: null,
-            metadata: { source: 'guest_wishlist' },
+            metadata: { source: "guest_wishlist" },
           });
-          toast.success('Added to wishlist');
+          toast.success("Added to wishlist");
           setWishedProductIds(new Set(list));
           return true;
         } catch (e) {
-          toast.error('Failed to add to wishlist');
+          toast.error("Failed to add to wishlist");
           console.error(e);
           return false;
         }
@@ -534,7 +563,7 @@ export function useSupabaseWishlist(userId: string | null) {
 
       try {
         const { error: supabaseError } = await supabase
-          .from('wishlists')
+          .from("wishlists")
           .insert({
             user_id: userId,
             product_id: productId,
@@ -542,20 +571,21 @@ export function useSupabaseWishlist(userId: string | null) {
 
         if (supabaseError) throw supabaseError;
 
-        toast.success('Added to wishlist');
+        toast.success("Added to wishlist");
         trackRecommendationEvent({
-          eventType: 'wishlist_add',
+          eventType: "wishlist_add",
           product: await loadProductForSignal(),
           productId,
           userId,
-          metadata: { source: 'supabase_wishlist' },
+          metadata: { source: "supabase_wishlist" },
         });
         await fetchWishlist();
         return true;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to add to wishlist';
+        const message =
+          err instanceof Error ? err.message : "Failed to add to wishlist";
         toast.error(message);
-        console.error('Error adding to wishlist:', err);
+        console.error("Error adding to wishlist:", err);
         return false;
       }
     },
@@ -567,30 +597,33 @@ export function useSupabaseWishlist(userId: string | null) {
     async (productId: string) => {
       const loadProductForSignal = async () => {
         const { data } = await supabase
-          .from('products')
-          .select('id, title, price, cover_image_url, stock, category_name, brand, model, condition, discount, part_number, item_specifics, created_at')
-          .eq('id', productId)
+          .from("products")
+          .select(
+            "id, title, price, cover_image_url, stock, category_name, brand, model, condition, discount, part_number, item_specifics, created_at"
+          )
+          .eq("id", productId)
           .maybeSingle();
         return data as Product | null;
       };
 
       if (!userId) {
         try {
-          const { readWishlistFromStorage, writeWishlistToStorage } = await import('@/lib/cart');
-          const list = readWishlistFromStorage().filter((id) => id !== productId);
+          const { readWishlistFromStorage, writeWishlistToStorage } =
+            await import("@/lib/cart");
+          const list = readWishlistFromStorage().filter(id => id !== productId);
           writeWishlistToStorage(list);
           setWishedProductIds(new Set(list));
           trackRecommendationEvent({
-            eventType: 'wishlist_remove',
+            eventType: "wishlist_remove",
             product: await loadProductForSignal(),
             productId,
             userId: null,
-            metadata: { source: 'guest_wishlist' },
+            metadata: { source: "guest_wishlist" },
           });
-          toast.success('Removed from wishlist');
+          toast.success("Removed from wishlist");
           return true;
         } catch (e) {
-          toast.error('Failed to remove from wishlist');
+          toast.error("Failed to remove from wishlist");
           console.error(e);
           return false;
         }
@@ -598,27 +631,28 @@ export function useSupabaseWishlist(userId: string | null) {
 
       try {
         const { error: supabaseError } = await supabase
-          .from('wishlists')
+          .from("wishlists")
           .delete()
-          .eq('user_id', userId)
-          .eq('product_id', productId);
+          .eq("user_id", userId)
+          .eq("product_id", productId);
 
         if (supabaseError) throw supabaseError;
 
-        toast.success('Removed from wishlist');
+        toast.success("Removed from wishlist");
         trackRecommendationEvent({
-          eventType: 'wishlist_remove',
+          eventType: "wishlist_remove",
           product: await loadProductForSignal(),
           productId,
           userId,
-          metadata: { source: 'supabase_wishlist' },
+          metadata: { source: "supabase_wishlist" },
         });
         await fetchWishlist();
         return true;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to remove from wishlist';
+        const message =
+          err instanceof Error ? err.message : "Failed to remove from wishlist";
         toast.error(message);
-        console.error('Error removing from wishlist:', err);
+        console.error("Error removing from wishlist:", err);
         return false;
       }
     },

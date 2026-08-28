@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Order, OrderItem, Payment } from '@/types/supabase';
-import { toast } from 'sonner';
+import { useState, useCallback, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { Order, OrderItem, Payment } from "@/types/supabase";
+import { toast } from "sonner";
 
 export function useSupabaseOrders(userId: string | null) {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -20,18 +20,19 @@ export function useSupabaseOrders(userId: string | null) {
       setError(null);
 
       const { data, error: supabaseError } = await supabase
-        .from('orders')
-        .select('*, items:order_items(*, product:products(*))')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .from("orders")
+        .select("*, items:order_items(*, product:products(*))")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
 
       if (supabaseError) throw supabaseError;
 
       setOrders(data as Order[]);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch orders';
+      const message =
+        err instanceof Error ? err.message : "Failed to fetch orders";
       setError(message);
-      console.error('Error fetching orders:', err);
+      console.error("Error fetching orders:", err);
     } finally {
       setIsLoading(false);
     }
@@ -42,22 +43,22 @@ export function useSupabaseOrders(userId: string | null) {
     async (
       totalAmount: number,
       items: { product_id: string; quantity: number; price: number }[],
-      currency: string = 'KES'
+      currency: string = "KES"
     ) => {
       if (!userId) {
-        toast.error('Please sign in to place an order');
+        toast.error("Please sign in to place an order");
         return null;
       }
 
       try {
         // Create order
         const { data: orderData, error: orderError } = await supabase
-          .from('orders')
+          .from("orders")
           .insert({
             user_id: userId,
             total_amount: totalAmount,
             currency,
-            status: 'pending',
+            status: "pending",
           })
           .select()
           .single();
@@ -67,26 +68,25 @@ export function useSupabaseOrders(userId: string | null) {
         const orderId = orderData.id;
 
         // Add order items
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .insert(
-            items.map(item => ({
-              order_id: orderId,
-              product_id: item.product_id,
-              quantity: item.quantity,
-              price: item.price,
-            }))
-          );
+        const { error: itemsError } = await supabase.from("order_items").insert(
+          items.map(item => ({
+            order_id: orderId,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: item.price,
+          }))
+        );
 
         if (itemsError) throw itemsError;
 
-        toast.success('Order created successfully');
+        toast.success("Order created successfully");
         await fetchOrders();
         return orderId;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to create order';
+        const message =
+          err instanceof Error ? err.message : "Failed to create order";
         toast.error(message);
-        console.error('Error creating order:', err);
+        console.error("Error creating order:", err);
         return null;
       }
     },
@@ -95,22 +95,26 @@ export function useSupabaseOrders(userId: string | null) {
 
   // Update order status
   const updateOrderStatus = useCallback(
-    async (orderId: string, status: 'pending' | 'completed' | 'failed' | 'refunded') => {
+    async (
+      orderId: string,
+      status: "pending" | "completed" | "failed" | "refunded"
+    ) => {
       try {
         const { error: supabaseError } = await supabase
-          .from('orders')
+          .from("orders")
           .update({ status })
-          .eq('id', orderId);
+          .eq("id", orderId);
 
         if (supabaseError) throw supabaseError;
 
-        toast.success('Order status updated');
+        toast.success("Order status updated");
         await fetchOrders();
         return true;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to update order';
+        const message =
+          err instanceof Error ? err.message : "Failed to update order";
         toast.error(message);
-        console.error('Error updating order:', err);
+        console.error("Error updating order:", err);
         return false;
       }
     },
@@ -138,16 +142,22 @@ export function useSupabasePayments() {
 
   // Record payment
   const recordPayment = useCallback(
-    async (orderId: string, provider: string, reference: string, amount: number, status: 'pending' | 'success' | 'failed') => {
+    async (
+      orderId: string,
+      provider: string,
+      reference: string,
+      amount: number,
+      status: "pending" | "success" | "failed"
+    ) => {
       try {
         setIsProcessing(true);
         setError(null);
 
         const { data, error: supabaseError } = await supabase
-          .from('payments')
+          .from("payments")
           .insert({
             order_id: orderId,
-            provider: provider as 'paystack' | 'stripe' | 'mpesa' | 'paypal',
+            provider: provider as "paystack" | "stripe" | "mpesa" | "paypal",
             reference,
             amount,
             status,
@@ -157,22 +167,23 @@ export function useSupabasePayments() {
 
         if (supabaseError) throw supabaseError;
 
-        if (status === 'success') {
+        if (status === "success") {
           // Update order status to completed
           await supabase
-            .from('orders')
-            .update({ status: 'completed' })
-            .eq('id', orderId);
+            .from("orders")
+            .update({ status: "completed" })
+            .eq("id", orderId);
 
-          toast.success('Payment recorded successfully');
+          toast.success("Payment recorded successfully");
         }
 
         return data as Payment;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to record payment';
+        const message =
+          err instanceof Error ? err.message : "Failed to record payment";
         setError(message);
         toast.error(message);
-        console.error('Error recording payment:', err);
+        console.error("Error recording payment:", err);
         return null;
       } finally {
         setIsProcessing(false);
@@ -183,25 +194,26 @@ export function useSupabasePayments() {
 
   // Update payment status
   const updatePaymentStatus = useCallback(
-    async (paymentId: string, status: 'pending' | 'success' | 'failed') => {
+    async (paymentId: string, status: "pending" | "success" | "failed") => {
       try {
         setIsProcessing(true);
         setError(null);
 
         const { error: supabaseError } = await supabase
-          .from('payments')
+          .from("payments")
           .update({ status })
-          .eq('id', paymentId);
+          .eq("id", paymentId);
 
         if (supabaseError) throw supabaseError;
 
-        toast.success('Payment status updated');
+        toast.success("Payment status updated");
         return true;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to update payment';
+        const message =
+          err instanceof Error ? err.message : "Failed to update payment";
         setError(message);
         toast.error(message);
-        console.error('Error updating payment:', err);
+        console.error("Error updating payment:", err);
         return false;
       } finally {
         setIsProcessing(false);

@@ -9,10 +9,10 @@ export function generateUUID(): string {
   array[6] = (array[6] & 0x0f) | 0x40; // Version 4
   array[8] = (array[8] & 0x3f) | 0x80; // Variant RFC4122
 
-  let uuid = '';
+  let uuid = "";
   for (let i = 0; i < 16; i++) {
-    uuid += array[i].toString(16).padStart(2, '0');
-    if ([3, 5, 7, 9].includes(i)) uuid += '-';
+    uuid += array[i].toString(16).padStart(2, "0");
+    if ([3, 5, 7, 9].includes(i)) uuid += "-";
   }
   return uuid;
 }
@@ -44,7 +44,9 @@ export interface PaystackResponse {
 function loadPaystackScript(): Promise<void> {
   return new Promise((resolve, reject) => {
     // Check if already loaded
-    const existing = document.querySelector('script[src="https://js.paystack.co/v1/inline.js"]');
+    const existing = document.querySelector(
+      'script[src="https://js.paystack.co/v1/inline.js"]'
+    );
     if (existing) {
       const checkPop = () => {
         if ((window as any).PaystackPop) {
@@ -58,8 +60,8 @@ function loadPaystackScript(): Promise<void> {
     }
 
     // Load script
-    const script = document.createElement('script');
-    script.src = 'https://js.paystack.co/v1/inline.js';
+    const script = document.createElement("script");
+    script.src = "https://js.paystack.co/v1/inline.js";
     script.async = true;
     script.onload = () => {
       // Wait for PaystackPop to be available
@@ -71,31 +73,34 @@ function loadPaystackScript(): Promise<void> {
           attempts++;
           setTimeout(checkPop, 50);
         } else {
-          reject(new Error('PaystackPop did not load'));
+          reject(new Error("PaystackPop did not load"));
         }
       };
       checkPop();
     };
     script.onerror = () => {
-      reject(new Error('Failed to load Paystack script'));
+      reject(new Error("Failed to load Paystack script"));
     };
     document.body.appendChild(script);
   });
 }
 
 // Helper: Open modal with inline config (legacy Tutorial 1 approach)
-function openInlineModal(publicKey: string, config: PaystackConfig): Promise<PaystackResponse> {
+function openInlineModal(
+  publicKey: string,
+  config: PaystackConfig
+): Promise<PaystackResponse> {
   return new Promise((resolve, reject) => {
     const PaystackPop = (window as any).PaystackPop;
-    
+
     if (!PaystackPop) {
-      reject(new Error('PaystackPop is not available'));
+      reject(new Error("PaystackPop is not available"));
       return;
     }
 
     const amountInSubunits = Math.round(Number(config.amount) * 100);
     if (!Number.isFinite(amountInSubunits) || amountInSubunits <= 0) {
-      reject(new Error('Amount must be a valid positive number'));
+      reject(new Error("Amount must be a valid positive number"));
       return;
     }
 
@@ -107,12 +112,12 @@ function openInlineModal(publicKey: string, config: PaystackConfig): Promise<Pay
         ref: config.reference,
         description: config.description,
         metadata: config.metadata,
-        firstName: config.firstName || '',
-        lastName: config.lastName || '',
+        firstName: config.firstName || "",
+        lastName: config.lastName || "",
         channels: config.channels,
         onClose: () => {
           config.onClose?.();
-          reject(new Error('Payment cancelled by user'));
+          reject(new Error("Payment cancelled by user"));
         },
         onSuccess: (response: PaystackResponse) => {
           config.onSuccess(response.reference);
@@ -122,8 +127,9 @@ function openInlineModal(publicKey: string, config: PaystackConfig): Promise<Pay
 
       handler.openIframe();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Paystack setup failed';
-      console.error('[Paystack] Setup error:', message);
+      const message =
+        error instanceof Error ? error.message : "Paystack setup failed";
+      console.error("[Paystack] Setup error:", message);
       reject(new Error(message));
     }
   });
@@ -132,9 +138,9 @@ function openInlineModal(publicKey: string, config: PaystackConfig): Promise<Pay
 // Initialize Paystack script
 export function initializePaystack() {
   const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
-  
+
   if (!publicKey) {
-    console.warn('Paystack public key is not configured');
+    console.warn("Paystack public key is not configured");
     return false;
   }
 
@@ -147,22 +153,23 @@ export function openPaystackModal(config: PaystackConfig) {
   const passedKey = config.publicKey?.trim();
   const envKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY?.trim();
   const publicKey = passedKey || envKey;
-  
+
   if (!publicKey) {
-    const error = 'Paystack public key is not configured. Set VITE_PAYSTACK_PUBLIC_KEY in .env.local';
-    console.error('[Paystack]', error);
+    const error =
+      "Paystack public key is not configured. Set VITE_PAYSTACK_PUBLIC_KEY in .env.local";
+    console.error("[Paystack]", error);
     throw new Error(error);
   }
 
-  if (!publicKey.startsWith('pk_')) {
+  if (!publicKey.startsWith("pk_")) {
     const error = `Invalid Paystack public key format. Expected pk_test_* or pk_live_*, got: ${publicKey.substring(0, 10)}...`;
-    console.error('[Paystack]', error);
+    console.error("[Paystack]", error);
     throw new Error(error);
   }
 
   // Validate email
-  if (!config.email || !config.email.includes('@')) {
-    throw new Error('Invalid email address provided');
+  if (!config.email || !config.email.includes("@")) {
+    throw new Error("Invalid email address provided");
   }
 
   // Load script and open modal
@@ -170,4 +177,3 @@ export function openPaystackModal(config: PaystackConfig) {
 }
 
 // Access-code resume flow intentionally removed.
-

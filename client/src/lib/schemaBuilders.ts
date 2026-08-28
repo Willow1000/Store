@@ -1,16 +1,16 @@
-import { SEO_CONFIG } from '@/lib/seoConfig';
+import { SEO_CONFIG } from "@/lib/seoConfig";
 
 export type SEOPageType =
-  | 'generic'
-  | 'homepage'
-  | 'category'
-  | 'product'
-  | 'article'
-  | 'faq'
-  | 'contact'
-  | 'about'
-  | 'policy'
-  | 'search';
+  | "generic"
+  | "homepage"
+  | "category"
+  | "product"
+  | "article"
+  | "faq"
+  | "contact"
+  | "about"
+  | "policy"
+  | "search";
 
 export type BreadcrumbItem = {
   name: string;
@@ -24,7 +24,7 @@ export type ProductSchemaInput = {
   originalPrice?: number;
   rating?: number;
   reviews?: number;
-  availability?: 'InStock' | 'OutOfStock' | 'PreOrder';
+  availability?: "InStock" | "OutOfStock" | "PreOrder";
   image?: string | string[];
   images?: string[];
   category?: string;
@@ -67,7 +67,7 @@ type BuildSchemaOptions = {
 function toAbsoluteUrl(value?: string, baseUrl?: string): string | undefined {
   if (!value) return undefined;
   const trimmed = value.trim();
-  if (!trimmed || trimmed.startsWith('data:')) return undefined;
+  if (!trimmed || trimmed.startsWith("data:")) return undefined;
 
   try {
     return new URL(trimmed, baseUrl).href;
@@ -86,22 +86,31 @@ function normalizeCondition(condition?: string): string | undefined {
   if (!condition) return undefined;
   const normalized = condition.trim().toLowerCase();
   if (!normalized) return undefined;
-  if (normalized.includes('new')) return 'https://schema.org/NewCondition';
-  if (normalized.includes('refurb')) return 'https://schema.org/RefurbishedCondition';
-  if (normalized.includes('damaged')) return 'https://schema.org/DamagedCondition';
-  return 'https://schema.org/UsedCondition';
+  if (normalized.includes("new")) return "https://schema.org/NewCondition";
+  if (normalized.includes("refurb"))
+    return "https://schema.org/RefurbishedCondition";
+  if (normalized.includes("damaged"))
+    return "https://schema.org/DamagedCondition";
+  return "https://schema.org/UsedCondition";
 }
 
-function normalizeImageList(input: ProductSchemaInput, pageUrl: string): string[] {
+function normalizeImageList(
+  input: ProductSchemaInput,
+  pageUrl: string
+): string[] {
   const raw = [
-    ...(Array.isArray(input.image) ? input.image : input.image ? [input.image] : []),
+    ...(Array.isArray(input.image)
+      ? input.image
+      : input.image
+        ? [input.image]
+        : []),
     ...(input.images || []),
   ];
 
   return Array.from(
     new Set(
       raw
-        .map((image) => toAbsoluteUrl(image, pageUrl))
+        .map(image => toAbsoluteUrl(image, pageUrl))
         .filter((image): image is string => Boolean(image))
     )
   );
@@ -110,12 +119,16 @@ function normalizeImageList(input: ProductSchemaInput, pageUrl: string): string[
 function stripEmpty<T>(value: T): T {
   if (Array.isArray(value)) {
     const normalized = value
-      .map((entry) => stripEmpty(entry))
-      .filter((entry) => {
+      .map(entry => stripEmpty(entry))
+      .filter(entry => {
         if (entry === null || entry === undefined) return false;
-        if (typeof entry === 'string' && entry.trim() === '') return false;
+        if (typeof entry === "string" && entry.trim() === "") return false;
         if (Array.isArray(entry) && entry.length === 0) return false;
-        if (typeof entry === 'object' && !Array.isArray(entry) && Object.keys(entry as Record<string, unknown>).length === 0) {
+        if (
+          typeof entry === "object" &&
+          !Array.isArray(entry) &&
+          Object.keys(entry as Record<string, unknown>).length === 0
+        ) {
           return false;
         }
         return true;
@@ -123,14 +136,18 @@ function stripEmpty<T>(value: T): T {
     return normalized as T;
   }
 
-  if (value && typeof value === 'object') {
+  if (value && typeof value === "object") {
     const entries = Object.entries(value as Record<string, unknown>)
       .map(([key, entry]) => [key, stripEmpty(entry)] as const)
       .filter(([, entry]) => {
         if (entry === null || entry === undefined) return false;
-        if (typeof entry === 'string' && entry.trim() === '') return false;
+        if (typeof entry === "string" && entry.trim() === "") return false;
         if (Array.isArray(entry) && entry.length === 0) return false;
-        if (typeof entry === 'object' && !Array.isArray(entry) && Object.keys(entry as Record<string, unknown>).length === 0) {
+        if (
+          typeof entry === "object" &&
+          !Array.isArray(entry) &&
+          Object.keys(entry as Record<string, unknown>).length === 0
+        ) {
           return false;
         }
         return true;
@@ -143,43 +160,45 @@ function stripEmpty<T>(value: T): T {
 
 function buildOrganization(siteOrigin: string, language: string) {
   const logoUrl = toAbsoluteUrl(SEO_CONFIG.site.logo, siteOrigin);
-  const socialProfiles = Object.values(SEO_CONFIG.contact.social || {}).filter(Boolean);
+  const socialProfiles = Object.values(SEO_CONFIG.contact.social || {}).filter(
+    Boolean
+  );
 
   return stripEmpty({
-    '@type': 'Organization',
-    '@id': `${siteOrigin}#organization`,
+    "@type": "Organization",
+    "@id": `${siteOrigin}#organization`,
     name: SEO_CONFIG.site.name,
     url: siteOrigin,
     logo: logoUrl,
     description: SEO_CONFIG.site.description,
     sameAs: socialProfiles,
     contactPoint: {
-      '@type': 'ContactPoint',
-      contactType: 'Customer Support',
+      "@type": "ContactPoint",
+      contactType: "Customer Support",
       email: SEO_CONFIG.contact.email,
       telephone: SEO_CONFIG.contact.phone,
-      availableLanguage: [language, 'en'],
+      availableLanguage: [language, "en"],
     },
   });
 }
 
 function buildWebsite(siteOrigin: string, includeSearchAction: boolean) {
   const website: Record<string, unknown> = {
-    '@type': 'WebSite',
-    '@id': `${siteOrigin}#website`,
+    "@type": "WebSite",
+    "@id": `${siteOrigin}#website`,
     name: SEO_CONFIG.site.name,
     url: siteOrigin,
     description: SEO_CONFIG.site.description,
     publisher: {
-      '@id': `${siteOrigin}#organization`,
+      "@id": `${siteOrigin}#organization`,
     },
   };
 
   if (includeSearchAction) {
     website.potentialAction = {
-      '@type': 'SearchAction',
+      "@type": "SearchAction",
       target: `${siteOrigin}/products?query={search_term_string}`,
-      'query-input': 'required name=search_term_string',
+      "query-input": "required name=search_term_string",
     };
   }
 
@@ -187,12 +206,13 @@ function buildWebsite(siteOrigin: string, includeSearchAction: boolean) {
 }
 
 function buildPageEntity(options: BuildSchemaOptions): Record<string, unknown> {
-  const { pageType, title, description, pageUrl, articleData, faqData } = options;
+  const { pageType, title, description, pageUrl, articleData, faqData } =
+    options;
 
-  if (pageType === 'article' && articleData) {
+  if (pageType === "article" && articleData) {
     return stripEmpty({
-      '@type': 'BlogPosting',
-      '@id': `${pageUrl}#article`,
+      "@type": "BlogPosting",
+      "@id": `${pageUrl}#article`,
       headline: title,
       description,
       image: toAbsoluteUrl(articleData.image, pageUrl),
@@ -200,64 +220,64 @@ function buildPageEntity(options: BuildSchemaOptions): Record<string, unknown> {
       dateModified: articleData.modifiedDate || articleData.publishedDate,
       author: articleData.author
         ? {
-            '@type': 'Person',
+            "@type": "Person",
             name: articleData.author,
           }
         : undefined,
       publisher: {
-        '@id': `${options.siteOrigin}#organization`,
+        "@id": `${options.siteOrigin}#organization`,
       },
       mainEntityOfPage: pageUrl,
     });
   }
 
-  if (pageType === 'faq' && Array.isArray(faqData) && faqData.length > 0) {
+  if (pageType === "faq" && Array.isArray(faqData) && faqData.length > 0) {
     return stripEmpty({
-      '@type': 'FAQPage',
-      '@id': `${pageUrl}#faq`,
+      "@type": "FAQPage",
+      "@id": `${pageUrl}#faq`,
       mainEntity: faqData
-        .filter((item) => item.question?.trim() && item.answer?.trim())
-        .map((item) => ({
-          '@type': 'Question',
+        .filter(item => item.question?.trim() && item.answer?.trim())
+        .map(item => ({
+          "@type": "Question",
           name: item.question.trim(),
           acceptedAnswer: {
-            '@type': 'Answer',
+            "@type": "Answer",
             text: item.answer.trim(),
           },
         })),
     });
   }
 
-  if (pageType === 'contact') {
+  if (pageType === "contact") {
     return stripEmpty({
-      '@type': 'ContactPage',
-      '@id': `${pageUrl}#contact`,
+      "@type": "ContactPage",
+      "@id": `${pageUrl}#contact`,
       name: title,
       description,
       url: pageUrl,
       mainEntity: {
-        '@id': `${options.siteOrigin}#organization`,
+        "@id": `${options.siteOrigin}#organization`,
       },
     });
   }
 
-  if (pageType === 'about') {
+  if (pageType === "about") {
     return stripEmpty({
-      '@type': 'AboutPage',
-      '@id': `${pageUrl}#about`,
+      "@type": "AboutPage",
+      "@id": `${pageUrl}#about`,
       name: title,
       description,
       url: pageUrl,
       mainEntity: {
-        '@id': `${options.siteOrigin}#organization`,
+        "@id": `${options.siteOrigin}#organization`,
       },
     });
   }
 
-  if (pageType === 'category' || pageType === 'search') {
+  if (pageType === "category" || pageType === "search") {
     return stripEmpty({
-      '@type': 'CollectionPage',
-      '@id': `${pageUrl}#collection`,
+      "@type": "CollectionPage",
+      "@id": `${pageUrl}#collection`,
       name: title,
       description,
       url: pageUrl,
@@ -265,27 +285,31 @@ function buildPageEntity(options: BuildSchemaOptions): Record<string, unknown> {
   }
 
   return stripEmpty({
-    '@type': 'WebPage',
-    '@id': `${pageUrl}#webpage`,
+    "@type": "WebPage",
+    "@id": `${pageUrl}#webpage`,
     name: title,
     description,
     url: pageUrl,
   });
 }
 
-function buildProduct(options: BuildSchemaOptions): Record<string, unknown> | null {
+function buildProduct(
+  options: BuildSchemaOptions
+): Record<string, unknown> | null {
   const input = options.productData;
   if (!input?.name) return null;
 
-  const productUrl = toAbsoluteUrl(input.url || options.pageUrl, options.pageUrl) || options.pageUrl;
+  const productUrl =
+    toAbsoluteUrl(input.url || options.pageUrl, options.pageUrl) ||
+    options.pageUrl;
   const imageList = normalizeImageList(input, options.pageUrl);
   const price = normalizePrice(input.price);
-  const offerCurrency = (input.priceCurrency || 'USD').toUpperCase();
+  const offerCurrency = (input.priceCurrency || "USD").toUpperCase();
   const condition = normalizeCondition(input.condition);
 
   const product: Record<string, unknown> = {
-    '@type': 'Product',
-    '@id': `${productUrl}#product`,
+    "@type": "Product",
+    "@id": `${productUrl}#product`,
     name: input.name,
     description: input.description || options.description,
     url: productUrl,
@@ -296,23 +320,23 @@ function buildProduct(options: BuildSchemaOptions): Record<string, unknown> | nu
     category: input.category,
     brand: input.brand
       ? {
-          '@type': 'Brand',
+          "@type": "Brand",
           name: input.brand,
         }
       : undefined,
     mainEntityOfPage: {
-      '@type': 'WebPage',
-      '@id': productUrl,
+      "@type": "WebPage",
+      "@id": productUrl,
     },
   };
 
   if (price) {
     product.offers = stripEmpty({
-      '@type': 'Offer',
+      "@type": "Offer",
       url: productUrl,
       price,
       priceCurrency: offerCurrency,
-      availability: `https://schema.org/${input.availability || 'InStock'}`,
+      availability: `https://schema.org/${input.availability || "InStock"}`,
       itemCondition: condition,
       shippingDetails: input.shippingDetails,
       hasMerchantReturnPolicy: input.hasMerchantReturnPolicy,
@@ -326,7 +350,7 @@ function buildProduct(options: BuildSchemaOptions): Record<string, unknown> | nu
     Number(input.reviews) > 0
   ) {
     product.aggregateRating = {
-      '@type': 'AggregateRating',
+      "@type": "AggregateRating",
       ratingValue: Number(input.rating),
       reviewCount: Number(input.reviews),
     };
@@ -337,14 +361,14 @@ function buildProduct(options: BuildSchemaOptions): Record<string, unknown> | nu
 
 function buildBreadcrumbs(
   breadcrumbs: BreadcrumbItem[] | undefined,
-  pageUrl: string,
+  pageUrl: string
 ): Record<string, unknown> | null {
   if (!Array.isArray(breadcrumbs) || breadcrumbs.length === 0) return null;
 
   const list = breadcrumbs
-    .filter((entry) => entry?.name?.trim() && entry?.url?.trim())
+    .filter(entry => entry?.name?.trim() && entry?.url?.trim())
     .map((entry, index) => ({
-      '@type': 'ListItem',
+      "@type": "ListItem",
       position: index + 1,
       name: entry.name.trim(),
       item: toAbsoluteUrl(entry.url, pageUrl) || entry.url,
@@ -353,21 +377,24 @@ function buildBreadcrumbs(
   if (list.length === 0) return null;
 
   return {
-    '@type': 'BreadcrumbList',
+    "@type": "BreadcrumbList",
     itemListElement: list,
   };
 }
 
-function buildFaqPage(faqData: FAQSchemaInput[] | undefined, pageUrl: string): Record<string, unknown> | null {
+function buildFaqPage(
+  faqData: FAQSchemaInput[] | undefined,
+  pageUrl: string
+): Record<string, unknown> | null {
   if (!Array.isArray(faqData) || faqData.length === 0) return null;
 
   const mainEntity = faqData
-    .filter((item) => item.question?.trim() && item.answer?.trim())
-    .map((item) => ({
-      '@type': 'Question',
+    .filter(item => item.question?.trim() && item.answer?.trim())
+    .map(item => ({
+      "@type": "Question",
       name: item.question.trim(),
       acceptedAnswer: {
-        '@type': 'Answer',
+        "@type": "Answer",
         text: item.answer.trim(),
       },
     }));
@@ -375,17 +402,24 @@ function buildFaqPage(faqData: FAQSchemaInput[] | undefined, pageUrl: string): R
   if (mainEntity.length === 0) return null;
 
   return {
-    '@type': 'FAQPage',
-    '@id': `${pageUrl}#faq`,
+    "@type": "FAQPage",
+    "@id": `${pageUrl}#faq`,
     mainEntity,
   };
 }
 
-export function buildStructuredDataGraph(options: BuildSchemaOptions): Record<string, unknown> {
+export function buildStructuredDataGraph(
+  options: BuildSchemaOptions
+): Record<string, unknown> {
   const graph: Record<string, unknown>[] = [];
 
   graph.push(buildOrganization(options.siteOrigin, options.language));
-  graph.push(buildWebsite(options.siteOrigin, options.pageType === 'homepage' || options.pageType === 'search'));
+  graph.push(
+    buildWebsite(
+      options.siteOrigin,
+      options.pageType === "homepage" || options.pageType === "search"
+    )
+  );
   graph.push(buildPageEntity(options));
 
   const product = buildProduct(options);
@@ -404,7 +438,7 @@ export function buildStructuredDataGraph(options: BuildSchemaOptions): Record<st
   }
 
   return stripEmpty({
-    '@context': 'https://schema.org',
-    '@graph': graph,
+    "@context": "https://schema.org",
+    "@graph": graph,
   });
 }

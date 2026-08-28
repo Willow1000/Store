@@ -1,4 +1,4 @@
-import { TRPCError } from '@trpc/server';
+import { TRPCError } from "@trpc/server";
 
 export interface VinDecodedData {
   year?: string | number;
@@ -26,14 +26,14 @@ export interface VinDecoderResponse {
   attribution: string;
 }
 
-const VIN_DECODER_API_BASE = 'https://vinwhere.com/api/v1';
+const VIN_DECODER_API_BASE = "https://vinwhere.com/api/v1";
 
 /**
  * Validate VIN format (basic check)
  * VIN should be 17 characters alphanumeric
  */
 function validateVin(vin: string): boolean {
-  if (!vin || typeof vin !== 'string') return false;
+  if (!vin || typeof vin !== "string") return false;
   const vinPattern = /^[A-HJ-NPR-Z0-9]{17}$/i;
   return vinPattern.test(vin.trim());
 }
@@ -48,38 +48,41 @@ export async function decodeVin(vin: string): Promise<VinDecoderResponse> {
 
   if (!trimmedVin) {
     throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'VIN is required',
+      code: "BAD_REQUEST",
+      message: "VIN is required",
     });
   }
 
   if (!validateVin(trimmedVin)) {
     throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Invalid VIN format. VIN must be 17 alphanumeric characters.',
+      code: "BAD_REQUEST",
+      message: "Invalid VIN format. VIN must be 17 alphanumeric characters.",
     });
   }
 
   try {
-    const response = await fetch(`${VIN_DECODER_API_BASE}/decode?vin=${encodeURIComponent(trimmedVin)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await fetch(
+      `${VIN_DECODER_API_BASE}/decode?vin=${encodeURIComponent(trimmedVin)}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     let data: VinDecoderResponse;
     try {
       const text = await response.text();
       if (!text) {
-        throw new Error('Empty response body');
+        throw new Error("Empty response body");
       }
       data = JSON.parse(text);
     } catch (parseError) {
-      console.error('[VIN Decoder] Response parse error:', parseError);
+      console.error("[VIN Decoder] Response parse error:", parseError);
       throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Failed to parse VIN decoder response',
+        code: "BAD_REQUEST",
+        message: "Failed to parse VIN decoder response",
       });
     }
 
@@ -87,13 +90,14 @@ export async function decodeVin(vin: string): Promise<VinDecoderResponse> {
       // Check if the API returned an error in the response
       if (data?.decodeError || !data?.ok) {
         throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: data?.decodeError || `Failed to decode VIN (${response.status})`,
+          code: "BAD_REQUEST",
+          message:
+            data?.decodeError || `Failed to decode VIN (${response.status})`,
         });
       }
 
       throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
+        code: "INTERNAL_SERVER_ERROR",
         message: `VIN decoder API returned status ${response.status}`,
       });
     }
@@ -101,8 +105,8 @@ export async function decodeVin(vin: string): Promise<VinDecoderResponse> {
     // Ensure the response has the expected structure
     if (!data.decode || !data.ok) {
       throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Invalid VIN or unable to decode',
+        code: "BAD_REQUEST",
+        message: "Invalid VIN or unable to decode",
       });
     }
 
@@ -113,17 +117,17 @@ export async function decodeVin(vin: string): Promise<VinDecoderResponse> {
       throw error;
     }
 
-    if (error instanceof TypeError && error.message.includes('fetch')) {
+    if (error instanceof TypeError && error.message.includes("fetch")) {
       throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to reach VIN decoder service. Please try again later.',
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to reach VIN decoder service. Please try again later.",
       });
     }
 
-    console.error('[VIN Decoder] Unexpected error:', error);
+    console.error("[VIN Decoder] Unexpected error:", error);
     throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: error instanceof Error ? error.message : 'Failed to decode VIN',
+      code: "INTERNAL_SERVER_ERROR",
+      message: error instanceof Error ? error.message : "Failed to decode VIN",
     });
   }
 }

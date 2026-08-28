@@ -9,10 +9,22 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AuthModal from "./components/AuthModal";
 import { AuthModalProvider } from "./contexts/AuthModalContext";
-import { SITE_LANGUAGE_CHANGED_EVENT, getSiteLanguage, getSiteLanguageSource, translateText, type SiteLanguageCode } from "./lib/language";
-import { preloadTranslations, useGlobalAutoTranslation } from "./lib/autoTranslate";
+import {
+  SITE_LANGUAGE_CHANGED_EVENT,
+  getSiteLanguage,
+  getSiteLanguageSource,
+  translateText,
+  type SiteLanguageCode,
+} from "./lib/language";
+import {
+  preloadTranslations,
+  useGlobalAutoTranslation,
+} from "./lib/autoTranslate";
 import currencyClient from "./lib/currencyClient";
-import { GLOBAL_TRANSLATION_PRELOAD_TEXTS, TRANSLATION_PRELOAD_VERSION } from "./lib/translationPreload";
+import {
+  GLOBAL_TRANSLATION_PRELOAD_TEXTS,
+  TRANSLATION_PRELOAD_VERSION,
+} from "./lib/translationPreload";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomePageSkeleton } from "@/components/skeletons/HomePageSkeleton";
 import { ProductsPageSkeleton } from "@/components/skeletons/ProductsPageSkeleton";
@@ -45,7 +57,9 @@ const SiteMap = lazy(() => import("./pages/SiteMap.tsx"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const Tickets = lazy(() => import("./pages/Tickets"));
-const AutoMotorblokkenNederland = lazy(() => import("./pages/AutoMotorblokkenNederland"));
+const AutoMotorblokkenNederland = lazy(
+  () => import("./pages/AutoMotorblokkenNederland")
+);
 const VinDecoder = lazy(() => import("./pages/VinDecoder"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const PaymentFailed = lazy(() => import("./pages/PaymentFailed"));
@@ -53,48 +67,59 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Header = lazy(() => import("./components/Header"));
 const Footer = lazy(() => import("./components/Footer"));
 
-const PRELOAD_DONE_KEY_PREFIX = 'site-translation-preload-done';
-const ROUTE_TRANSLATION_DONE_KEY_PREFIX = 'route-translation-done-v1';
+const PRELOAD_DONE_KEY_PREFIX = "site-translation-preload-done";
+const ROUTE_TRANSLATION_DONE_KEY_PREFIX = "route-translation-done-v1";
 
 function getPreloadDoneKey(language: SiteLanguageCode): string {
   return `${PRELOAD_DONE_KEY_PREFIX}:${TRANSLATION_PRELOAD_VERSION}:${language}`;
 }
 
 function isPreloadDone(language: SiteLanguageCode): boolean {
-  if (language === 'en') return true;
+  if (language === "en") return true;
   try {
-    return localStorage.getItem(getPreloadDoneKey(language)) === '1';
+    return localStorage.getItem(getPreloadDoneKey(language)) === "1";
   } catch {
     return false;
   }
 }
 
 function markPreloadDone(language: SiteLanguageCode): void {
-  if (language === 'en') return;
+  if (language === "en") return;
   try {
-    localStorage.setItem(getPreloadDoneKey(language), '1');
+    localStorage.setItem(getPreloadDoneKey(language), "1");
   } catch {
     // ignore storage issues
   }
 }
 
-function getRouteTranslationDoneKey(language: SiteLanguageCode, path: string): string {
+function getRouteTranslationDoneKey(
+  language: SiteLanguageCode,
+  path: string
+): string {
   return `${ROUTE_TRANSLATION_DONE_KEY_PREFIX}:${language}:${path}`;
 }
 
-function isRouteTranslationDone(language: SiteLanguageCode, path: string): boolean {
-  if (language === 'en') return true;
+function isRouteTranslationDone(
+  language: SiteLanguageCode,
+  path: string
+): boolean {
+  if (language === "en") return true;
   try {
-    return localStorage.getItem(getRouteTranslationDoneKey(language, path)) === '1';
+    return (
+      localStorage.getItem(getRouteTranslationDoneKey(language, path)) === "1"
+    );
   } catch {
     return false;
   }
 }
 
-function markRouteTranslationDone(language: SiteLanguageCode, path: string): void {
-  if (language === 'en') return;
+function markRouteTranslationDone(
+  language: SiteLanguageCode,
+  path: string
+): void {
+  if (language === "en") return;
   try {
-    localStorage.setItem(getRouteTranslationDoneKey(language, path), '1');
+    localStorage.setItem(getRouteTranslationDoneKey(language, path), "1");
   } catch {
     // ignore storage issues
   }
@@ -123,7 +148,10 @@ function AppRoutes() {
       <Route path={"/terms"} component={Terms} />
       <Route path={"/cookies"} component={Cookies} />
       <Route path={"/tickets"} component={Tickets} />
-      <Route path={"/nl/auto-motorblokken"} component={AutoMotorblokkenNederland} />
+      <Route
+        path={"/nl/auto-motorblokken"}
+        component={AutoMotorblokkenNederland}
+      />
       <Route path={"/vin-decoder"} component={VinDecoder} />
       <Route path={"/accessibility"} component={Accessibility} />
       <Route path={"/faq"} component={FAQ} />
@@ -171,7 +199,10 @@ function DashboardSkeleton() {
       <div className="space-y-4">
         <Skeleton className="h-5 w-44" />
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-xl border border-border bg-white p-4 space-y-3">
+          <div
+            key={i}
+            className="rounded-xl border border-border bg-white p-4 space-y-3"
+          >
             <Skeleton className="h-4 w-3/5" />
             <Skeleton className="h-4 w-2/5" />
             <Skeleton className="h-10 w-32 rounded-lg" />
@@ -191,7 +222,10 @@ function OrderDetailPageSkeleton() {
         <div className="lg:col-span-2 space-y-4">
           <Skeleton className="h-28 w-full rounded-xl" />
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-border bg-white p-4 flex gap-4">
+            <div
+              key={i}
+              className="rounded-xl border border-border bg-white p-4 flex gap-4"
+            >
               <Skeleton className="h-20 w-20 rounded-lg" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-3/4" />
@@ -257,7 +291,10 @@ function LegalPageSkeleton() {
       <Skeleton className="h-10 w-56 mb-6" />
       <div className="rounded-xl border border-border bg-white p-5 sm:p-6 space-y-4">
         {Array.from({ length: 9 }).map((_, i) => (
-          <Skeleton key={i} className={`h-4 ${i % 3 === 0 ? 'w-11/12' : i % 2 === 0 ? 'w-4/5' : 'w-full'}`} />
+          <Skeleton
+            key={i}
+            className={`h-4 ${i % 3 === 0 ? "w-11/12" : i % 2 === 0 ? "w-4/5" : "w-full"}`}
+          />
         ))}
       </div>
     </div>
@@ -265,30 +302,33 @@ function LegalPageSkeleton() {
 }
 
 function RouteTranslationSkeleton({ path }: { path: string }) {
-  if (path === '/') {
+  if (path === "/") {
     return <HomePageSkeleton />;
   }
 
-  if (path === '/products' || path.startsWith('/search')) {
+  if (path === "/products" || path.startsWith("/search")) {
     return <ProductsPageSkeleton />;
   }
 
-  if (path.startsWith('/product/')) {
+  if (path.startsWith("/product/")) {
     return <ProductDetailSkeleton />;
   }
 
-  if (path === '/about') {
+  if (path === "/about") {
     return <AboutPageSkeleton />;
   }
 
-  if (path === '/cart') {
+  if (path === "/cart") {
     return (
       <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <Skeleton className="h-10 w-56 mb-6" />
         <div className="grid gap-6 md:gap-8 md:grid-cols-3">
           <div className="md:col-span-2 space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex gap-4 rounded-lg border border-border bg-white p-4">
+              <div
+                key={i}
+                className="flex gap-4 rounded-lg border border-border bg-white p-4"
+              >
                 <Skeleton className="h-24 w-24 rounded-lg bg-gray-100 flex-shrink-0" />
                 <div className="flex-1 space-y-3">
                   <Skeleton className="h-5 w-11/12" />
@@ -309,7 +349,7 @@ function RouteTranslationSkeleton({ path }: { path: string }) {
     );
   }
 
-  if (path === '/checkout' || path === '/checkout/meta') {
+  if (path === "/checkout" || path === "/checkout/meta") {
     return (
       <div className="min-h-screen bg-white w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         <Skeleton className="h-10 w-48 mb-6" />
@@ -330,30 +370,35 @@ function RouteTranslationSkeleton({ path }: { path: string }) {
     );
   }
 
-  if (path === '/account' || path === '/orders' || path === '/tickets') {
+  if (path === "/account" || path === "/orders" || path === "/tickets") {
     return <DashboardSkeleton />;
   }
 
-  if (path.startsWith('/orders/')) {
+  if (path.startsWith("/orders/")) {
     return <OrderDetailPageSkeleton />;
   }
 
-  if (path === '/auth/callback' || path === '/payment/success' || path === '/payment/failed' || path === '/404') {
+  if (
+    path === "/auth/callback" ||
+    path === "/payment/success" ||
+    path === "/payment/failed" ||
+    path === "/404"
+  ) {
     return <CenteredStatusSkeleton />;
   }
 
-  if (path === '/privacy' || path === '/terms' || path === '/cookies') {
+  if (path === "/privacy" || path === "/terms" || path === "/cookies") {
     return <LegalPageSkeleton />;
   }
 
   if (
-    path === '/contact' ||
-    path === '/help' ||
-    path === '/shipping' ||
-    path === '/returns' ||
-    path === '/accessibility' ||
-    path === '/faq' ||
-    path === '/site-map'
+    path === "/contact" ||
+    path === "/help" ||
+    path === "/shipping" ||
+    path === "/returns" ||
+    path === "/accessibility" ||
+    path === "/faq" ||
+    path === "/site-map"
   ) {
     return <ContentPageSkeleton />;
   }
@@ -374,15 +419,20 @@ function AppContent() {
   const queryClient = useQueryClient();
   const [location] = useLocation();
   const [, setCurrencyVersion] = useState(0);
-  const isHomePage = location === '/';
-  const canonicalPath = location.startsWith('/') ? location : `/${location}`;
-  const [language, setLanguage] = useState<SiteLanguageCode>(() => getSiteLanguage());
-  const [pendingLanguage, setPendingLanguage] = useState<SiteLanguageCode | null>(null);
+  const isHomePage = location === "/";
+  const canonicalPath = location.startsWith("/") ? location : `/${location}`;
+  const [language, setLanguage] = useState<SiteLanguageCode>(() =>
+    getSiteLanguage()
+  );
+  const [pendingLanguage, setPendingLanguage] =
+    useState<SiteLanguageCode | null>(null);
   const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
-  const [preloadedLanguage, setPreloadedLanguage] = useState<SiteLanguageCode | null>(null);
+  const [preloadedLanguage, setPreloadedLanguage] =
+    useState<SiteLanguageCode | null>(null);
   const [showTranslationOverlay, setShowTranslationOverlay] = useState(false);
 
-  const { isTranslating, hasTranslationError, readyLanguage } = useGlobalAutoTranslation(language);
+  const { isTranslating, hasTranslationError, readyLanguage } =
+    useGlobalAutoTranslation(language);
 
   useEffect(() => {
     // Bootstrap sync: if geo auto-detection updated localStorage before listeners mounted,
@@ -405,12 +455,16 @@ function AppContent() {
     readyLanguage !== pendingLanguage;
 
   const showTranslationLoading =
-    language !== 'en' &&
+    language !== "en" &&
     isLanguageSwitching &&
     pendingLanguage !== null &&
     !hasTranslationError &&
     (isAwaitingLanguage || isTranslating);
-  const loadingLabel = translateText(language, 'loading.selectedLanguage', 'Loading selected language...');
+  const loadingLabel = translateText(
+    language,
+    "loading.selectedLanguage",
+    "Loading selected language..."
+  );
 
   useEffect(() => {
     if (!pendingLanguage) return;
@@ -421,7 +475,7 @@ function AppContent() {
   }, [pendingLanguage, readyLanguage, hasTranslationError]);
 
   useEffect(() => {
-    if (language === 'en') return;
+    if (language === "en") return;
     if (readyLanguage !== language) return;
     if (isTranslating) return;
 
@@ -453,12 +507,18 @@ function AppContent() {
     const onLanguageChanged = () => {
       const nextLanguage = getSiteLanguage();
       if (nextLanguage === language) return;
-      const alreadyTranslatedRoute = isRouteTranslationDone(nextLanguage, canonicalPath);
+      const alreadyTranslatedRoute = isRouteTranslationDone(
+        nextLanguage,
+        canonicalPath
+      );
       setPendingLanguage(alreadyTranslatedRoute ? null : nextLanguage);
-      setIsLanguageSwitching(nextLanguage !== 'en' && !alreadyTranslatedRoute);
+      setIsLanguageSwitching(nextLanguage !== "en" && !alreadyTranslatedRoute);
       setLanguage(nextLanguage);
-      if (!isPreloadDone(nextLanguage) && nextLanguage !== 'en') {
-        void preloadTranslations(nextLanguage, GLOBAL_TRANSLATION_PRELOAD_TEXTS).then(() => {
+      if (!isPreloadDone(nextLanguage) && nextLanguage !== "en") {
+        void preloadTranslations(
+          nextLanguage,
+          GLOBAL_TRANSLATION_PRELOAD_TEXTS
+        ).then(() => {
           markPreloadDone(nextLanguage);
           setPreloadedLanguage(nextLanguage);
         });
@@ -466,45 +526,59 @@ function AppContent() {
     };
 
     const onStorageLanguageChanged = (event: StorageEvent) => {
-      if (event.key !== 'site-language') return;
+      if (event.key !== "site-language") return;
       onLanguageChanged();
     };
 
-    window.addEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
-    window.addEventListener('storage', onStorageLanguageChanged);
+    window.addEventListener(
+      SITE_LANGUAGE_CHANGED_EVENT,
+      onLanguageChanged as EventListener
+    );
+    window.addEventListener("storage", onStorageLanguageChanged);
     return () => {
-      window.removeEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
-      window.removeEventListener('storage', onStorageLanguageChanged);
+      window.removeEventListener(
+        SITE_LANGUAGE_CHANGED_EVENT,
+        onLanguageChanged as EventListener
+      );
+      window.removeEventListener("storage", onStorageLanguageChanged);
     };
   }, [canonicalPath, language]);
 
   useEffect(() => {
     const onCurrencyUpdated = () => {
       // Trigger a top-level rerender so pages reading currencyClient values update immediately.
-      setCurrencyVersion((value) => value + 1);
+      setCurrencyVersion(value => value + 1);
     };
 
-    window.addEventListener('currency-client-updated', onCurrencyUpdated as EventListener);
+    window.addEventListener(
+      "currency-client-updated",
+      onCurrencyUpdated as EventListener
+    );
     return () => {
-      window.removeEventListener('currency-client-updated', onCurrencyUpdated as EventListener);
+      window.removeEventListener(
+        "currency-client-updated",
+        onCurrencyUpdated as EventListener
+      );
     };
   }, []);
 
   useEffect(() => {
-    if (language === 'en') return;
+    if (language === "en") return;
     if (isPreloadDone(language) || preloadedLanguage === language) return;
 
     const run = () => {
-      void preloadTranslations(language, GLOBAL_TRANSLATION_PRELOAD_TEXTS).then(() => {
-        markPreloadDone(language);
-        setPreloadedLanguage(language);
-      });
+      void preloadTranslations(language, GLOBAL_TRANSLATION_PRELOAD_TEXTS).then(
+        () => {
+          markPreloadDone(language);
+          setPreloadedLanguage(language);
+        }
+      );
     };
 
-    if ('requestIdleCallback' in window) {
+    if ("requestIdleCallback" in window) {
       const id = (window as any).requestIdleCallback(run, { timeout: 1500 });
       return () => {
-        if ('cancelIdleCallback' in window) {
+        if ("cancelIdleCallback" in window) {
           (window as any).cancelIdleCallback(id);
         }
       };
@@ -515,20 +589,25 @@ function AppContent() {
   }, [language, preloadedLanguage]);
 
   useEffect(() => {
-    if (language === 'en') return;
+    if (language === "en") return;
     if (isPreloadDone(language)) return;
 
     // Warm translations again when user changes page so text needed on upcoming pages is already cached.
-    void preloadTranslations(language, GLOBAL_TRANSLATION_PRELOAD_TEXTS).then(() => {
-      markPreloadDone(language);
-      setPreloadedLanguage(language);
-    });
+    void preloadTranslations(language, GLOBAL_TRANSLATION_PRELOAD_TEXTS).then(
+      () => {
+        markPreloadDone(language);
+        setPreloadedLanguage(language);
+      }
+    );
   }, [location, language]);
 
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === "undefined") return;
     document.documentElement.lang = language;
-    document.documentElement.setAttribute('data-language-source', getSiteLanguageSource());
+    document.documentElement.setAttribute(
+      "data-language-source",
+      getSiteLanguageSource()
+    );
   }, [language]);
 
   useEffect(() => {
@@ -546,9 +625,14 @@ function AppContent() {
       }
 
       queryClient.invalidateQueries({
-        predicate: (query) => {
-          const rootKey = String(query.queryKey?.[0] || '');
-          return rootKey.includes('auth') || rootKey.includes('order') || rootKey.includes('ticket') || rootKey.includes('account');
+        predicate: query => {
+          const rootKey = String(query.queryKey?.[0] || "");
+          return (
+            rootKey.includes("auth") ||
+            rootKey.includes("order") ||
+            rootKey.includes("ticket") ||
+            rootKey.includes("account")
+          );
         },
       });
     };
@@ -559,14 +643,14 @@ function AppContent() {
       }
     };
 
-    window.addEventListener('focus', revalidateProtectedState);
-    window.addEventListener('pageshow', revalidateProtectedState);
-    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener("focus", revalidateProtectedState);
+    window.addEventListener("pageshow", revalidateProtectedState);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
-      window.removeEventListener('focus', revalidateProtectedState);
-      window.removeEventListener('pageshow', revalidateProtectedState);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener("focus", revalidateProtectedState);
+      window.removeEventListener("pageshow", revalidateProtectedState);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [queryClient]);
 
@@ -581,13 +665,17 @@ function AppContent() {
 
             <div
               className="flex min-h-screen flex-col bg-background w-full overflow-x-hidden"
-              style={{ visibility: 'visible' }}
+              style={{ visibility: "visible" }}
             >
               <Suspense fallback={<HeaderFallback />}>
                 <Header />
               </Suspense>
-              <main className={`flex-1 w-full overflow-x-hidden ${isHomePage ? '' : 'pt-0'}`}>
-                <Suspense fallback={<RouteTranslationSkeleton path={location} />}>
+              <main
+                className={`flex-1 w-full overflow-x-hidden ${isHomePage ? "" : "pt-0"}`}
+              >
+                <Suspense
+                  fallback={<RouteTranslationSkeleton path={location} />}
+                >
                   <AppRoutes />
                 </Suspense>
               </main>
@@ -604,7 +692,6 @@ function AppContent() {
                 <RouteTranslationSkeleton path={location} />
               </div>
             )}
-
           </TooltipProvider>
         </AuthModalProvider>
       </ThemeProvider>
@@ -617,8 +704,8 @@ type AppProps = {
   ssr?: boolean;
 };
 
-function App({ initialPath = '/', ssr = false }: AppProps) {
-  const shouldUseStaticRouting = ssr || typeof window === 'undefined';
+function App({ initialPath = "/", ssr = false }: AppProps) {
+  const shouldUseStaticRouting = ssr || typeof window === "undefined";
 
   if (!shouldUseStaticRouting) {
     return <AppContent />;

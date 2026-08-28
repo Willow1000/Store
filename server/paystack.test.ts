@@ -1,6 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { TRPCError } from '@trpc/server';
-import { initializeTransaction, verifyTransaction, buildPaystackCallbackUrl } from './paystack';
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { TRPCError } from "@trpc/server";
+import {
+  initializeTransaction,
+  verifyTransaction,
+  buildPaystackCallbackUrl,
+} from "./paystack";
 
 /**
  * paystackRequest() reads the response body via response.text() and JSON.parses
@@ -11,7 +15,7 @@ function mockFetchOnce(status: number, ok: boolean, body: unknown) {
     Promise.resolve({
       ok,
       status,
-      statusText: ok ? 'OK' : 'Error',
+      statusText: ok ? "OK" : "Error",
       text: () => Promise.resolve(JSON.stringify(body)),
     } as unknown as Response)
   );
@@ -19,28 +23,28 @@ function mockFetchOnce(status: number, ok: boolean, body: unknown) {
 
 const mockInitializeSuccess = {
   status: true,
-  message: 'Authorization URL created',
+  message: "Authorization URL created",
   data: {
-    authorization_url: 'https://checkout.paystack.com/test-reference',
-    access_code: 'test-access-code',
-    reference: 'TEST-REF-12345',
+    authorization_url: "https://checkout.paystack.com/test-reference",
+    access_code: "test-access-code",
+    reference: "TEST-REF-12345",
   },
 };
 
 const mockVerifySuccess = {
   status: true,
-  message: 'Verification successful',
+  message: "Verification successful",
   data: {
-    reference: 'TEST-REF-12345',
+    reference: "TEST-REF-12345",
     amount: 100000,
-    currency: 'USD',
-    status: 'success',
-    domain: 'test',
-    metadata: { userId: 'user-123' },
+    currency: "USD",
+    status: "success",
+    domain: "test",
+    metadata: { userId: "user-123" },
   },
 };
 
-describe('Paystack Payment Integration', () => {
+describe("Paystack Payment Integration", () => {
   const originalFetch = global.fetch;
 
   beforeEach(() => {
@@ -51,140 +55,146 @@ describe('Paystack Payment Integration', () => {
     global.fetch = originalFetch;
   });
 
-  describe('initializeTransaction', () => {
-    it('initializes a transaction with valid parameters', async () => {
+  describe("initializeTransaction", () => {
+    it("initializes a transaction with valid parameters", async () => {
       mockFetchOnce(200, true, mockInitializeSuccess);
 
       const result = await initializeTransaction({
-        email: 'customer@example.com',
+        email: "customer@example.com",
         amount: 100000,
-        reference: 'ORD-12345',
-        metadata: { userId: 'user-123' },
+        reference: "ORD-12345",
+        metadata: { userId: "user-123" },
       });
 
       expect(result.status).toBe(true);
-      expect(result.data.reference).toBe('TEST-REF-12345');
-      expect(result.data.authorization_url).toBe('https://checkout.paystack.com/test-reference');
+      expect(result.data.reference).toBe("TEST-REF-12345");
+      expect(result.data.authorization_url).toBe(
+        "https://checkout.paystack.com/test-reference"
+      );
     });
 
-    it('sends email, amount, reference and metadata in the request body', async () => {
+    it("sends email, amount, reference and metadata in the request body", async () => {
       mockFetchOnce(200, true, mockInitializeSuccess);
 
       await initializeTransaction({
-        email: 'customer@example.com',
+        email: "customer@example.com",
         amount: 100000,
-        reference: 'ORD-12345',
-        metadata: { userId: 'user-123' },
+        reference: "ORD-12345",
+        metadata: { userId: "user-123" },
       });
 
       const call = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
       const [url, init] = call;
-      expect(url).toBe('https://api.paystack.co/transaction/initialize');
+      expect(url).toBe("https://api.paystack.co/transaction/initialize");
       const body = JSON.parse(init.body as string);
-      expect(body.email).toBe('customer@example.com');
+      expect(body.email).toBe("customer@example.com");
       expect(body.amount).toBe(100000);
-      expect(body.reference).toBe('ORD-12345');
-      expect(body.metadata).toEqual({ userId: 'user-123' });
+      expect(body.reference).toBe("ORD-12345");
+      expect(body.metadata).toEqual({ userId: "user-123" });
     });
 
-    it('throws when email is missing', async () => {
+    it("throws when email is missing", async () => {
       await expect(
-        initializeTransaction({ email: '', amount: 100000 })
-      ).rejects.toThrow('Initialize transaction requires email and amount');
+        initializeTransaction({ email: "", amount: 100000 })
+      ).rejects.toThrow("Initialize transaction requires email and amount");
     });
 
-    it('throws when amount is missing', async () => {
+    it("throws when amount is missing", async () => {
       await expect(
-        initializeTransaction({ email: 'customer@example.com', amount: 0 })
-      ).rejects.toThrow('Initialize transaction requires email and amount');
+        initializeTransaction({ email: "customer@example.com", amount: 0 })
+      ).rejects.toThrow("Initialize transaction requires email and amount");
     });
 
-    it('throws when the email has no @', async () => {
+    it("throws when the email has no @", async () => {
       await expect(
-        initializeTransaction({ email: 'not-an-email', amount: 100000 })
-      ).rejects.toThrow('Invalid email address provided');
+        initializeTransaction({ email: "not-an-email", amount: 100000 })
+      ).rejects.toThrow("Invalid email address provided");
     });
 
-    it('throws when the amount is negative', async () => {
+    it("throws when the amount is negative", async () => {
       await expect(
-        initializeTransaction({ email: 'customer@example.com', amount: -5 })
-      ).rejects.toThrow('Amount must be greater than zero');
+        initializeTransaction({ email: "customer@example.com", amount: -5 })
+      ).rejects.toThrow("Amount must be greater than zero");
     });
 
-    it('throws a TRPCError when Paystack returns a non-OK response', async () => {
-      mockFetchOnce(400, false, { status: false, message: 'Invalid request' });
+    it("throws a TRPCError when Paystack returns a non-OK response", async () => {
+      mockFetchOnce(400, false, { status: false, message: "Invalid request" });
 
       await expect(
-        initializeTransaction({ email: 'customer@example.com', amount: 100000 })
-      ).rejects.toMatchObject({ message: 'Invalid request' } satisfies Partial<TRPCError>);
+        initializeTransaction({ email: "customer@example.com", amount: 100000 })
+      ).rejects.toMatchObject({
+        message: "Invalid request",
+      } satisfies Partial<TRPCError>);
     });
 
-    it('throws a TRPCError when the response body is not valid JSON', async () => {
+    it("throws a TRPCError when the response body is not valid JSON", async () => {
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
           status: 200,
-          statusText: 'OK',
-          text: () => Promise.resolve('not json'),
+          statusText: "OK",
+          text: () => Promise.resolve("not json"),
         } as unknown as Response)
       );
 
       await expect(
-        initializeTransaction({ email: 'customer@example.com', amount: 100000 })
+        initializeTransaction({ email: "customer@example.com", amount: 100000 })
       ).rejects.toThrow(/Invalid JSON response/);
     });
   });
 
-  describe('verifyTransaction', () => {
-    it('verifies a completed transaction', async () => {
+  describe("verifyTransaction", () => {
+    it("verifies a completed transaction", async () => {
       mockFetchOnce(200, true, mockVerifySuccess);
 
-      const result = await verifyTransaction('TEST-REF-12345');
+      const result = await verifyTransaction("TEST-REF-12345");
 
       expect(result.status).toBe(true);
-      expect(result.data.status).toBe('success');
+      expect(result.data.status).toBe("success");
       expect(result.data.amount).toBe(100000);
-      expect(result.data.reference).toBe('TEST-REF-12345');
+      expect(result.data.reference).toBe("TEST-REF-12345");
     });
 
-    it('requests the correctly encoded verify URL', async () => {
+    it("requests the correctly encoded verify URL", async () => {
       mockFetchOnce(200, true, mockVerifySuccess);
 
-      await verifyTransaction('ref with spaces');
+      await verifyTransaction("ref with spaces");
 
       const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-      expect(url).toBe('https://api.paystack.co/transaction/verify/ref%20with%20spaces');
-    });
-
-    it('throws when reference is empty', async () => {
-      await expect(verifyTransaction('')).rejects.toThrow(
-        'Reference is required to verify transaction'
+      expect(url).toBe(
+        "https://api.paystack.co/transaction/verify/ref%20with%20spaces"
       );
     });
 
-    it('throws a TRPCError when the API reports an error', async () => {
-      mockFetchOnce(500, false, { status: false, message: 'Server error' });
+    it("throws when reference is empty", async () => {
+      await expect(verifyTransaction("")).rejects.toThrow(
+        "Reference is required to verify transaction"
+      );
+    });
 
-      await expect(verifyTransaction('TEST-REF-ERROR')).rejects.toMatchObject({
-        message: 'Server error',
+    it("throws a TRPCError when the API reports an error", async () => {
+      mockFetchOnce(500, false, { status: false, message: "Server error" });
+
+      await expect(verifyTransaction("TEST-REF-ERROR")).rejects.toMatchObject({
+        message: "Server error",
       } satisfies Partial<TRPCError>);
     });
   });
 
-  describe('buildPaystackCallbackUrl', () => {
-    it('appends /payment/callback to the origin', () => {
-      expect(buildPaystackCallbackUrl('https://motorvault.shop')).toBe(
-        'https://motorvault.shop/payment/callback'
+  describe("buildPaystackCallbackUrl", () => {
+    it("appends /payment/callback to the origin", () => {
+      expect(buildPaystackCallbackUrl("https://motorvault.shop")).toBe(
+        "https://motorvault.shop/payment/callback"
       );
     });
 
-    it('strips a trailing slash from the origin', () => {
-      expect(buildPaystackCallbackUrl('https://motorvault.shop/')).toBe(
-        'https://motorvault.shop/payment/callback'
+    it("strips a trailing slash from the origin", () => {
+      expect(buildPaystackCallbackUrl("https://motorvault.shop/")).toBe(
+        "https://motorvault.shop/payment/callback"
       );
     });
 
-    it('returns undefined when no origin is given', () => {
+    it("returns undefined when no origin is given", () => {
       expect(buildPaystackCallbackUrl(null)).toBeUndefined();
       expect(buildPaystackCallbackUrl(undefined)).toBeUndefined();
     });

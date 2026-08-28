@@ -6,7 +6,7 @@ export type Profile = {
   full_name: string | null;
   phone: string | null;
   avatar_url: string | null;
-  role: 'user' | 'admin' | 'seller';
+  role: "user" | "admin" | "seller";
   created_at: string;
   updated_at: string;
 };
@@ -101,7 +101,7 @@ export type Order = {
   discountAmount?: number;
   total_amount?: number;
   currency?: string;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  status: "pending" | "completed" | "failed" | "refunded";
   created_at: string;
   updated_at?: string;
   items?: OrderItem[];
@@ -120,9 +120,9 @@ export type OrderItem = {
 export type Payment = {
   id: string;
   order_id: string;
-  provider: 'paystack' | 'stripe' | 'mpesa' | 'paypal';
+  provider: "paystack" | "stripe" | "mpesa" | "paypal";
   reference: string;
-  status: 'pending' | 'success' | 'failed';
+  status: "pending" | "success" | "failed";
   amount: number;
   created_at: string;
 };

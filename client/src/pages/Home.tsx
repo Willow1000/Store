@@ -1,60 +1,69 @@
-import { Link } from 'wouter';
-import { ChevronRight, Heart, Eye } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { QuickViewModal } from '@/components/QuickViewModal';
-import { SEOHead } from '@/components/SEOHead';
-import { HeroSlideshow } from '@/components/HeroSlideshow';
-import { BannerCarousel } from '@/components/BannerCarousel';
-import { ProductRecommendationSection } from '@/components/ProductRecommendationSection';
-import { BlootrueWidget } from '@/components/TrustindexWidget';
-import { toast } from 'sonner';
-import { useProducts, useCategories } from '@/hooks/useSupabaseProducts';
-import { useAuth } from '@/_core/hooks/useAuth';
-import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
-import { useIsMobile } from '@/hooks/useMobile';
-import { useState, useEffect, useMemo } from 'react';
-import currencyClient from '@/lib/currencyClient';
-import { getHighResImageUrl } from '@/lib/images';
-import { calculateShipping } from '@shared/shipping';
-import { useRecommendations } from '@/hooks/useRecommendations';
-import { Product } from '@/types/supabase';
+import { Link } from "wouter";
+import { ChevronRight, Heart, Eye } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { QuickViewModal } from "@/components/QuickViewModal";
+import { SEOHead } from "@/components/SEOHead";
+import { HeroSlideshow } from "@/components/HeroSlideshow";
+import { BannerCarousel } from "@/components/BannerCarousel";
+import { ProductRecommendationSection } from "@/components/ProductRecommendationSection";
+import { BlootrueWidget } from "@/components/TrustindexWidget";
+import { toast } from "sonner";
+import { useProducts, useCategories } from "@/hooks/useSupabaseProducts";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useSupabaseWishlist } from "@/hooks/useSupabaseCart";
+import { useIsMobile } from "@/hooks/useMobile";
+import { useState, useEffect, useMemo } from "react";
+import currencyClient from "@/lib/currencyClient";
+import { getHighResImageUrl } from "@/lib/images";
+import { calculateShipping } from "@shared/shipping";
+import { useRecommendations } from "@/hooks/useRecommendations";
+import { Product } from "@/types/supabase";
 
 const homeBannerSlides = [
   {
-    image: '/images/banners/european-car-bumper-parts-banner-home.avif',
-    imageWebp: '/images/banners/european-car-bumper-parts-banner-home.webp',
-    imageAlt: 'European car bumper replacement parts for collision repair and front-end restoration',
-    title: 'Built to Bring Front Ends Back',
-    subtitle: 'Rugged bumper parts for repairs, refreshes, and the kind of fitment that keeps cars looking sharp.',
-    cta: 'Explore bumpers',
-    ctaLink: '/products',
+    image: "/images/banners/european-car-bumper-parts-banner-home.avif",
+    imageWebp: "/images/banners/european-car-bumper-parts-banner-home.webp",
+    imageAlt:
+      "European car bumper replacement parts for collision repair and front-end restoration",
+    title: "Built to Bring Front Ends Back",
+    subtitle:
+      "Rugged bumper parts for repairs, refreshes, and the kind of fitment that keeps cars looking sharp.",
+    cta: "Explore bumpers",
+    ctaLink: "/products",
   },
   {
-    image: '/images/banners/european-car-seat-parts-banner-home.avif',
-    imageWebp: '/images/banners/european-car-seat-parts-banner-home.webp',
-    imageAlt: 'European car interior seat components and upholstery replacement parts',
-    title: 'Comfort You Can Feel on Every Drive',
-    subtitle: 'Seat components and interior upgrades chosen to restore support, style, and everyday comfort.',
-    cta: 'Browse seats',
-    ctaLink: '/products?category=seats',
+    image: "/images/banners/european-car-seat-parts-banner-home.avif",
+    imageWebp: "/images/banners/european-car-seat-parts-banner-home.webp",
+    imageAlt:
+      "European car interior seat components and upholstery replacement parts",
+    title: "Comfort You Can Feel on Every Drive",
+    subtitle:
+      "Seat components and interior upgrades chosen to restore support, style, and everyday comfort.",
+    cta: "Browse seats",
+    ctaLink: "/products?category=seats",
   },
   {
-    image: '/images/banners/european-car-tire-parts-banner-home.avif',
-    imageWebp: '/images/banners/european-car-tire-parts-banner-home.webp',
-    imageAlt: 'European car tire and wheel parts focused on road grip and handling performance',
-    title: 'Grip the Road with Confidence',
-    subtitle: 'A tire-focused showcase for drivers who want dependable traction, better handling, and a stronger road presence.',
-    cta: 'See tire options',
-    ctaLink: '/products',
+    image: "/images/banners/european-car-tire-parts-banner-home.avif",
+    imageWebp: "/images/banners/european-car-tire-parts-banner-home.webp",
+    imageAlt:
+      "European car tire and wheel parts focused on road grip and handling performance",
+    title: "Grip the Road with Confidence",
+    subtitle:
+      "A tire-focused showcase for drivers who want dependable traction, better handling, and a stronger road presence.",
+    cta: "See tire options",
+    ctaLink: "/products",
   },
   {
-    image: '/images/banners/european-car-transmission-parts-banner-home.avif',
-    imageWebp: '/images/banners/european-car-transmission-parts-banner-home.webp',
-    imageAlt: 'European transmission and drivetrain replacement parts for smooth shifting reliability',
-    title: 'Powertrain Parts That Keep Things Moving',
-    subtitle: 'Transmission-focused parts and support for customers who want smooth shifting and reliable performance.',
-    cta: 'View driveline parts',
-    ctaLink: '/products',
+    image: "/images/banners/european-car-transmission-parts-banner-home.avif",
+    imageWebp:
+      "/images/banners/european-car-transmission-parts-banner-home.webp",
+    imageAlt:
+      "European transmission and drivetrain replacement parts for smooth shifting reliability",
+    title: "Powertrain Parts That Keep Things Moving",
+    subtitle:
+      "Transmission-focused parts and support for customers who want smooth shifting and reliable performance.",
+    cta: "View driveline parts",
+    ctaLink: "/products",
   },
 ];
 
@@ -64,10 +73,14 @@ export default function Home() {
   const isMobile = useIsMobile();
   const homepageProductFetchLimit = isMobile ? 24 : 48;
   const { products } = useProducts(1, homepageProductFetchLimit);
-  const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
+  const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(
+    user?.id || null
+  );
   const { categories, isLoading: categoriesLoading } = useCategories();
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
-  const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
+  const [quickViewProductId, setQuickViewProductId] = useState<string | null>(
+    null
+  );
   const [showBelowFoldContent, setShowBelowFoldContent] = useState(false);
 
   useEffect(() => {
@@ -80,11 +93,17 @@ export default function Home() {
     };
 
     const onUserIntent = () => reveal();
-    window.addEventListener('scroll', onUserIntent, { once: true, passive: true });
-    window.addEventListener('pointerdown', onUserIntent, { once: true, passive: true });
-    window.addEventListener('keydown', onUserIntent, { once: true });
+    window.addEventListener("scroll", onUserIntent, {
+      once: true,
+      passive: true,
+    });
+    window.addEventListener("pointerdown", onUserIntent, {
+      once: true,
+      passive: true,
+    });
+    window.addEventListener("keydown", onUserIntent, { once: true });
 
-    if ('requestIdleCallback' in window) {
+    if ("requestIdleCallback" in window) {
       (window as any).requestIdleCallback(reveal, { timeout: 1400 });
     } else {
       globalThis.setTimeout(reveal, 900);
@@ -92,19 +111,19 @@ export default function Home() {
 
     return () => {
       cancelled = true;
-      window.removeEventListener('scroll', onUserIntent);
-      window.removeEventListener('pointerdown', onUserIntent);
-      window.removeEventListener('keydown', onUserIntent);
+      window.removeEventListener("scroll", onUserIntent);
+      window.removeEventListener("pointerdown", onUserIntent);
+      window.removeEventListener("keydown", onUserIntent);
     };
   }, []);
 
   // Load recently viewed items from localStorage
   useEffect(() => {
     try {
-      const ids = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
+      const ids = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
       setRecentlyViewedIds(ids);
     } catch (error) {
-      console.error('Failed to load recently viewed items:', error);
+      console.error("Failed to load recently viewed items:", error);
     }
   }, []);
 
@@ -119,16 +138,22 @@ export default function Home() {
   const hasRecentlyViewedProducts = recentlyViewedProducts.length > 0;
 
   const recommendedForYouProducts = useMemo(() => {
-    return recommendations.recommendedProducts(products || [], recommendationVisibleCount);
+    return recommendations.recommendedProducts(
+      products || [],
+      recommendationVisibleCount
+    );
   }, [products, recommendations, recommendationVisibleCount]);
 
   const personalizedDealProducts = useMemo(() => {
-    return recommendations.personalizedDeals(products || [], recommendationVisibleCount);
+    return recommendations.personalizedDeals(
+      products || [],
+      recommendationVisibleCount
+    );
   }, [products, recommendations, recommendationVisibleCount]);
 
   const handleRecommendationClick = (source: string, product: Product) => {
     recommendations.track({
-      eventType: 'recommendation_click',
+      eventType: "recommendation_click",
       product,
       productId: product.id,
       metadata: { source },
@@ -136,10 +161,12 @@ export default function Home() {
   };
 
   const handleRecommendationQuickView = (source: string, productId: string) => {
-    const product = products?.find((item) => String(item.id) === String(productId));
+    const product = products?.find(
+      item => String(item.id) === String(productId)
+    );
     if (product) {
       recommendations.track({
-        eventType: 'product_view',
+        eventType: "product_view",
         product,
         productId,
         metadata: { source, quickView: true },
@@ -151,14 +178,23 @@ export default function Home() {
   const handleRecommendationWishlistToggle = async (product: Product) => {
     const isWished = wishedProductIds.has(product.id);
     await toggleWishlist(product.id);
-    toast.success(isWished ? 'Removed from wishlist' : 'Added to wishlist!');
+    toast.success(isWished ? "Removed from wishlist" : "Added to wishlist!");
   };
 
-  const getDiscountPercentage = (price: number | string, discount: number | null | undefined) => {
+  const getDiscountPercentage = (
+    price: number | string,
+    discount: number | null | undefined
+  ) => {
     if (!discount) return null;
-    const currentPrice = price !== null && price !== undefined ? parseFloat(String(price)) : 0;
+    const currentPrice =
+      price !== null && price !== undefined ? parseFloat(String(price)) : 0;
     const discountPrice = parseFloat(String(discount));
-    if (isNaN(currentPrice) || isNaN(discountPrice) || discountPrice <= currentPrice) return null;
+    if (
+      isNaN(currentPrice) ||
+      isNaN(discountPrice) ||
+      discountPrice <= currentPrice
+    )
+      return null;
     return Math.round(((discountPrice - currentPrice) / discountPrice) * 100);
   };
 
@@ -172,7 +208,14 @@ export default function Home() {
         pageType="homepage"
         title="MotorVault - Buy Automotive Parts Online | OEM & Aftermarket"
         description="Find premium OEM and aftermarket parts for European cars. MotorVault offers fitment-focused parts for Opel, Fiat, Volvo, Saab, Dacia, Lancia, BMW, Mercedes, Audi, VW, and Porsche."
-        keywords={['automobile parts', 'car parts', 'auto parts', 'aftermarket parts', 'OEM parts', 'motor parts online']}
+        keywords={[
+          "automobile parts",
+          "car parts",
+          "auto parts",
+          "aftermarket parts",
+          "OEM parts",
+          "motor parts online",
+        ]}
         canonical="https://motorvault.shop"
       />
       <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
@@ -183,8 +226,12 @@ export default function Home() {
           <div className="rounded-[2rem] bg-white border border-slate-200 shadow-sm p-6 sm:p-8">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">Trusted Reviews</p>
-                <h2 className="mt-2 text-3xl font-extrabold text-slate-900">Why buyers trust our fitment-first approach</h2>
+                <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
+                  Trusted Reviews
+                </p>
+                <h2 className="mt-2 text-3xl font-extrabold text-slate-900">
+                  Why buyers trust our fitment-first approach
+                </h2>
               </div>
             </div>
             <BlootrueWidget />
@@ -193,51 +240,100 @@ export default function Home() {
 
         <section className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 pb-8 sm:pb-10">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Link href="/faq" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Fitment</p>
-              <h3 className="mt-2 text-lg font-bold text-slate-900">Will this part fit my vehicle?</h3>
-              <p className="mt-2 text-sm text-slate-600">See VIN and compatibility guidance before you buy.</p>
+            <Link
+              href="/faq"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                Fitment
+              </p>
+              <h3 className="mt-2 text-lg font-bold text-slate-900">
+                Will this part fit my vehicle?
+              </h3>
+              <p className="mt-2 text-sm text-slate-600">
+                See VIN and compatibility guidance before you buy.
+              </p>
             </Link>
-            <Link href="/faq" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Part Quality</p>
-              <h3 className="mt-2 text-lg font-bold text-slate-900">OEM vs aftermarket vs used?</h3>
-              <p className="mt-2 text-sm text-slate-600">Compare options by quality tier, risk, and budget.</p>
+            <Link
+              href="/faq"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                Part Quality
+              </p>
+              <h3 className="mt-2 text-lg font-bold text-slate-900">
+                OEM vs aftermarket vs used?
+              </h3>
+              <p className="mt-2 text-sm text-slate-600">
+                Compare options by quality tier, risk, and budget.
+              </p>
             </Link>
-            <Link href="/faq" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Post-Purchase</p>
-              <h3 className="mt-2 text-lg font-bold text-slate-900">Returns, warranty, and shipping timing</h3>
-              <p className="mt-2 text-sm text-slate-600">Get clarity on what happens after checkout.</p>
+            <Link
+              href="/faq"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                Post-Purchase
+              </p>
+              <h3 className="mt-2 text-lg font-bold text-slate-900">
+                Returns, warranty, and shipping timing
+              </h3>
+              <p className="mt-2 text-sm text-slate-600">
+                Get clarity on what happens after checkout.
+              </p>
             </Link>
-            <Link href="/blog" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Knowledge Hub</p>
-              <h3 className="mt-2 text-lg font-bold text-slate-900">Read fitment and repair guides</h3>
-              <p className="mt-2 text-sm text-slate-600">Explore VIN, OEM, DPF, ECU, and EV buying playbooks.</p>
+            <Link
+              href="/blog"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                Knowledge Hub
+              </p>
+              <h3 className="mt-2 text-lg font-bold text-slate-900">
+                Read fitment and repair guides
+              </h3>
+              <p className="mt-2 text-sm text-slate-600">
+                Explore VIN, OEM, DPF, ECU, and EV buying playbooks.
+              </p>
             </Link>
           </div>
         </section>
 
         {/* Your Recently Viewed Items Section */}
-      {showBelowFoldContent && hasRecentlyViewedProducts && (
-        <div className="bg-white border-b">
-          <div className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-3xl font-extrabold text-gray-900">Your Recently Viewed</h2>
-              <Link href="/products" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                View all <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
+        {showBelowFoldContent && hasRecentlyViewedProducts && (
+          <div className="bg-white border-b">
+            <div className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-3xl font-extrabold text-gray-900">
+                  Your Recently Viewed
+                </h2>
+                <Link
+                  href="/products"
+                  className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                >
+                  View all <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
 
-            {/* Recently Viewed Grid */}
-            <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5">
-              {recentlyViewedProducts.map((product, idx) => {
-                if (!product) return null;
-                const discountPercentage = getDiscountPercentage(product.price, product.discount);
-                const isWished = product.id && wishedProductIds.has(product.id);
-                const stock = Number(product.stock ?? 0);
-                const price = parseFloat(String(product.price ?? 0));
+              {/* Recently Viewed Grid */}
+              <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5">
+                {recentlyViewedProducts.map((product, idx) => {
+                  if (!product) return null;
+                  const discountPercentage = getDiscountPercentage(
+                    product.price,
+                    product.discount
+                  );
+                  const isWished =
+                    product.id && wishedProductIds.has(product.id);
+                  const stock = Number(product.stock ?? 0);
+                  const price = parseFloat(String(product.price ?? 0));
 
-                return (
-                  <Link key={product.id} href={`/product/${product.id}`} className="product-card group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition-shadow">
+                  return (
+                    <Link
+                      key={product.id}
+                      href={`/product/${product.id}`}
+                      className="product-card group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition-shadow"
+                    >
                       {/* Image Container */}
                       <div className="relative w-full pt-[100%] bg-white group-hover:opacity-75 transition-opacity">
                         <img
@@ -247,8 +343,8 @@ export default function Home() {
                           loading="lazy"
                           decoding="async"
                           crossOrigin="anonymous"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
+                          onError={e => {
+                            e.currentTarget.style.display = "none";
                           }}
                         />
                         {discountPercentage && (
@@ -256,27 +352,33 @@ export default function Home() {
                             -{discountPercentage}%
                           </div>
                         )}
-                        <div className={`absolute bottom-2 sm:bottom-3 left-2 sm:left-3 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-bold ${stock === 0 ? 'bg-red-600 text-white' : 'bg-white/90 text-gray-800'}`}>
-                          {stock === 0 ? 'Out of stock' : `${stock} in stock`}
+                        <div
+                          className={`absolute bottom-2 sm:bottom-3 left-2 sm:left-3 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-bold ${stock === 0 ? "bg-red-600 text-white" : "bg-white/90 text-gray-800"}`}
+                        >
+                          {stock === 0 ? "Out of stock" : `${stock} in stock`}
                         </div>
                         {/* Wishlist Button */}
                         <button
-                          onClick={(e) => {
+                          onClick={e => {
                             e.preventDefault();
                             toggleWishlist(product.id);
-                            toast.success(isWished ? 'Removed from wishlist' : 'Added to wishlist!');
+                            toast.success(
+                              isWished
+                                ? "Removed from wishlist"
+                                : "Added to wishlist!"
+                            );
                           }}
                           className="absolute top-3 right-3 bg-white p-2 rounded-full hover:bg-gray-100 shadow opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <Heart
                             className="w-5 h-5"
-                            fill={isWished ? 'currentColor' : 'none'}
-                            color={isWished ? '#ef4444' : '#999'}
+                            fill={isWished ? "currentColor" : "none"}
+                            color={isWished ? "#ef4444" : "#999"}
                           />
                         </button>
                         {/* Quick View Button */}
                         <button
-                          onClick={(e) => {
+                          onClick={e => {
                             e.preventDefault();
                             setQuickViewProductId(product.id);
                           }}
@@ -299,28 +401,32 @@ export default function Home() {
                             {currencyClient.isAfricanUser()
                               ? currencyClient.formatUSD(product.price)
                               : (() => {
-                                  const rate = currencyClient.getCurrencyRate() || 1;
-                                  const symbol = currencyClient.getCurrencySymbolLocal();
+                                  const rate =
+                                    currencyClient.getCurrencyRate() || 1;
+                                  const symbol =
+                                    currencyClient.getCurrencySymbolLocal();
                                   return `${symbol}${(parseFloat(String(product.price)) * rate).toFixed(2)}`;
-                                })()
-                            }
+                                })()}
                           </span>
                           {product.discount && (
                             <span className="text-xs sm:text-sm text-gray-500 line-through">
                               {currencyClient.isAfricanUser()
                                 ? currencyClient.formatUSD(product.discount)
                                 : (() => {
-                                    const rate = currencyClient.getCurrencyRate() || 1;
-                                    const symbol = currencyClient.getCurrencySymbolLocal();
+                                    const rate =
+                                      currencyClient.getCurrencyRate() || 1;
+                                    const symbol =
+                                      currencyClient.getCurrencySymbolLocal();
                                     return `${symbol}${(parseFloat(String(product.discount)) * rate).toFixed(2)}`;
-                                  })()
-                              }
+                                  })()}
                             </span>
                           )}
                         </div>
                         {/* Shipping Info */}
                         {calculateShipping(price) === 0 && (
-                          <p className="mt-1 text-xs sm:text-xs md:text-sm text-green-600 font-medium">Free shipping</p>
+                          <p className="mt-1 text-xs sm:text-xs md:text-sm text-green-600 font-medium">
+                            Free shipping
+                          </p>
                         )}
 
                         {/* View Deal Button */}
@@ -330,103 +436,128 @@ export default function Home() {
                           </button>
                         </div>
                       </div>
-                </Link>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showBelowFoldContent && (
-        <>
-          <ProductRecommendationSection
-            title="Recommended For You"
-            products={recommendedForYouProducts}
-            wishedProductIds={wishedProductIds}
-            onWishlistToggle={handleRecommendationWishlistToggle}
-            onQuickView={(productId) => handleRecommendationQuickView('home_recommended_for_you', productId)}
-            onProductClick={(product) => handleRecommendationClick('home_recommended_for_you', product)}
-            ctaHref="/products"
-            compact
-          />
-
-          <section className="bg-gray-50 py-10 sm:py-14 lg:py-16">
-            <BannerCarousel slides={homeBannerSlides} tone="dark" />
-          </section>
-
-          <ProductRecommendationSection
-            title="Deals You May Like"
-            products={personalizedDealProducts}
-            wishedProductIds={wishedProductIds}
-            onWishlistToggle={handleRecommendationWishlistToggle}
-            onQuickView={(productId) => handleRecommendationQuickView('home_personalized_deals', productId)}
-            onProductClick={(product) => handleRecommendationClick('home_personalized_deals', product)}
-            ctaHref="/products"
-            ctaLabel="Shop deals"
-            compact
-          />
-
-          <div className="bg-white py-6">
-            <div className="max-w-screen-xl mx-auto px-2 sm:px-3 md:px-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Shop by Category</h2>
-                <Link href="/products" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                  View all <ChevronRight className="w-4 h-4" />
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {categoriesLoading ? (
-                  Array.from({ length: isMobile ? 6 : 10 }).map((_, i) => (
-                    <Skeleton key={i} className="h-40 w-full rounded-lg" />
-                  ))
-                ) : displayedCategories.length > 0 ? (
-                  displayedCategories.map((cat) => (
-                    <Link key={cat.id} href={`/products?category=${encodeURIComponent(cat.slug || cat.name || '')}`}>
-                      <div className="group relative h-40 overflow-hidden rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
-                        <div className="absolute inset-0 flex items-center justify-center text-5xl leading-none text-white/90">
-                          {cat.icon || '📦'}
-                        </div>
-
-                        {cat.image_url && (
-                          <img
-                            src={getHighResImageUrl(cat.image_url)}
-                            alt={cat.name}
-                            className="absolute inset-0 h-full w-full object-cover"
-                            loading="lazy"
-                            decoding="async"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        )}
-
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-                        <p className="absolute bottom-2 left-2 right-2 font-semibold text-white text-sm text-center line-clamp-2">
-                          {cat.name}
-                        </p>
-                      </div>
                     </Link>
-                  ))
-                ) : (
-                  <div className="col-span-full py-12 text-center">
-                    <p className="text-gray-500 text-lg">No categories available ({categories.length} categories loaded)</p>
-                  </div>
-                )}
+                  );
+                })}
               </div>
             </div>
           </div>
-        </>
-      )}
+        )}
 
-      {showBelowFoldContent && quickViewProductId && (
-        <QuickViewModal
-          productId={quickViewProductId}
-          isOpen={!!quickViewProductId}
-          onClose={() => setQuickViewProductId(null)}
-        />
-      )}
+        {showBelowFoldContent && (
+          <>
+            <ProductRecommendationSection
+              title="Recommended For You"
+              products={recommendedForYouProducts}
+              wishedProductIds={wishedProductIds}
+              onWishlistToggle={handleRecommendationWishlistToggle}
+              onQuickView={productId =>
+                handleRecommendationQuickView(
+                  "home_recommended_for_you",
+                  productId
+                )
+              }
+              onProductClick={product =>
+                handleRecommendationClick("home_recommended_for_you", product)
+              }
+              ctaHref="/products"
+              compact
+            />
+
+            <section className="bg-gray-50 py-10 sm:py-14 lg:py-16">
+              <BannerCarousel slides={homeBannerSlides} tone="dark" />
+            </section>
+
+            <ProductRecommendationSection
+              title="Deals You May Like"
+              products={personalizedDealProducts}
+              wishedProductIds={wishedProductIds}
+              onWishlistToggle={handleRecommendationWishlistToggle}
+              onQuickView={productId =>
+                handleRecommendationQuickView(
+                  "home_personalized_deals",
+                  productId
+                )
+              }
+              onProductClick={product =>
+                handleRecommendationClick("home_personalized_deals", product)
+              }
+              ctaHref="/products"
+              ctaLabel="Shop deals"
+              compact
+            />
+
+            <div className="bg-white py-6">
+              <div className="max-w-screen-xl mx-auto px-2 sm:px-3 md:px-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
+                    Shop by Category
+                  </h2>
+                  <Link
+                    href="/products"
+                    className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  >
+                    View all <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {categoriesLoading ? (
+                    Array.from({ length: isMobile ? 6 : 10 }).map((_, i) => (
+                      <Skeleton key={i} className="h-40 w-full rounded-lg" />
+                    ))
+                  ) : displayedCategories.length > 0 ? (
+                    displayedCategories.map(cat => (
+                      <Link
+                        key={cat.id}
+                        href={`/products?category=${encodeURIComponent(cat.slug || cat.name || "")}`}
+                      >
+                        <div className="group relative h-40 overflow-hidden rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
+                          <div className="absolute inset-0 flex items-center justify-center text-5xl leading-none text-white/90">
+                            {cat.icon || "📦"}
+                          </div>
+
+                          {cat.image_url && (
+                            <img
+                              src={getHighResImageUrl(cat.image_url)}
+                              alt={cat.name}
+                              className="absolute inset-0 h-full w-full object-cover"
+                              loading="lazy"
+                              decoding="async"
+                              onError={e => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          )}
+
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                          <p className="absolute bottom-2 left-2 right-2 font-semibold text-white text-sm text-center line-clamp-2">
+                            {cat.name}
+                          </p>
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="col-span-full py-12 text-center">
+                      <p className="text-gray-500 text-lg">
+                        No categories available ({categories.length} categories
+                        loaded)
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {showBelowFoldContent && quickViewProductId && (
+          <QuickViewModal
+            productId={quickViewProductId}
+            isOpen={!!quickViewProductId}
+            onClose={() => setQuickViewProductId(null)}
+          />
+        )}
       </div>
     </>
   );

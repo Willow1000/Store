@@ -1,22 +1,22 @@
-import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 let recoveryInProgress = false;
 
 function clearBrowserStorage() {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   const authKeys = [
-    'motorvault_auth_redirect',
-    'oauth_return_to',
-    'pending_auth_action',
-    'auth_session_started_at',
-    'manus-runtime-user-info',
-    'isMigratingCart',
-    'cart',
-    'checkout-cart-snapshot-v1',
+    "motorvault_auth_redirect",
+    "oauth_return_to",
+    "pending_auth_action",
+    "auth_session_started_at",
+    "manus-runtime-user-info",
+    "isMigratingCart",
+    "cart",
+    "checkout-cart-snapshot-v1",
   ];
-  const sessionKeys = ['cart-auth-redirect-pending-v1'];
+  const sessionKeys = ["cart-auth-redirect-pending-v1"];
 
   try {
     for (const key of authKeys) {
@@ -26,11 +26,13 @@ function clearBrowserStorage() {
       window.sessionStorage.removeItem(key);
     }
   } catch (error) {
-    console.warn('[sessionRecovery] Failed to clear browser storage', error);
+    console.warn("[sessionRecovery] Failed to clear browser storage", error);
   }
 }
 
-export async function recoverFromTimeout(reason = 'Session expired. Please log in again.') {
+export async function recoverFromTimeout(
+  reason = "Session expired. Please log in again."
+) {
   if (recoveryInProgress) return;
   recoveryInProgress = true;
 
@@ -38,16 +40,16 @@ export async function recoverFromTimeout(reason = 'Session expired. Please log i
     try {
       await supabase.auth.signOut();
     } catch (error) {
-      console.warn('[sessionRecovery] Failed to sign out after timeout', error);
+      console.warn("[sessionRecovery] Failed to sign out after timeout", error);
     }
 
     clearBrowserStorage();
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       window.dispatchEvent(
-        new CustomEvent('auth:required', {
+        new CustomEvent("auth:required", {
           detail: {
-            reason: 'session-timeout',
+            reason: "session-timeout",
             message: reason,
           },
         })
@@ -66,12 +68,12 @@ export async function recoverFromTimeout(reason = 'Session expired. Please log i
 }
 
 function normalizeErrorMessage(error: unknown): string {
-  if (typeof error === 'string') return error.toLowerCase();
+  if (typeof error === "string") return error.toLowerCase();
   if (error instanceof Error) return error.message.toLowerCase();
-  if (error && typeof (error as any).message === 'string') {
+  if (error && typeof (error as any).message === "string") {
     return (error as any).message.toLowerCase();
   }
-  return '';
+  return "";
 }
 
 export function isTimeoutError(error: unknown) {
@@ -79,14 +81,14 @@ export function isTimeoutError(error: unknown) {
   if (!message) return false;
 
   return (
-    message.includes('session expired') ||
-    message.includes('refresh token') ||
-    message.includes('jwt expired') ||
-    message.includes('invalid token') ||
-    message.includes('unauthorized') ||
-    message.includes('access denied') ||
-    message.includes('token has expired') ||
-    message.includes('invalid jwt') ||
-    message.includes('jwt')
+    message.includes("session expired") ||
+    message.includes("refresh token") ||
+    message.includes("jwt expired") ||
+    message.includes("invalid token") ||
+    message.includes("unauthorized") ||
+    message.includes("access denied") ||
+    message.includes("token has expired") ||
+    message.includes("invalid jwt") ||
+    message.includes("jwt")
   );
 }

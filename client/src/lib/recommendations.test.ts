@@ -4,7 +4,7 @@
 // and reads/writes localStorage), so it needs a real DOM environment to
 // exercise that code path instead of always hitting the server-side
 // fallback.
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   scoreProduct,
   rankProducts,
@@ -12,22 +12,22 @@ import {
   type InterestProfile,
   type SmartScoreBreakdown,
   type Product,
-} from './recommendations';
+} from "./recommendations";
 
 /**
  * Mock product fixture for testing
  */
 const mockProduct = (overrides: Partial<Product> = {}): Product => ({
-  id: 'prod-001',
-  uuid: 'uuid-001',
-  title: 'Premium Tire Set',
-  name: 'Premium Tire Set',
-  brand: 'Michelin',
-  category_name: 'Tires',
-  price: 450.00,
+  id: "prod-001",
+  uuid: "uuid-001",
+  title: "Premium Tire Set",
+  name: "Premium Tire Set",
+  brand: "Michelin",
+  category_name: "Tires",
+  price: 450.0,
   sale_price: null,
   stock: 15,
-  description: 'High-quality tire set for all seasons',
+  description: "High-quality tire set for all seasons",
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   ...overrides,
@@ -36,10 +36,12 @@ const mockProduct = (overrides: Partial<Product> = {}): Product => ({
 /**
  * Mock interest profile for testing
  */
-const mockProfile = (overrides: Partial<InterestProfile> = {}): InterestProfile => ({
+const mockProfile = (
+  overrides: Partial<InterestProfile> = {}
+): InterestProfile => ({
   version: 1,
-  scope: 'guest',
-  sessionId: 'test-session-123',
+  scope: "guest",
+  sessionId: "test-session-123",
   userId: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
@@ -48,27 +50,27 @@ const mockProfile = (overrides: Partial<InterestProfile> = {}): InterestProfile 
   modelWeights: {},
   vehicleBrandWeights: { toyota: 50, honda: 35 },
   vehicleModelWeights: {},
-  termWeights: { 'all-season': 25, 'performance': 15 },
-  productWeights: { 'prod-001': 20 },
+  termWeights: { "all-season": 25, performance: 15 },
+  productWeights: { "prod-001": 20 },
   eventCounts: { product_view: 15, search: 8 },
   recentSearches: [
     {
-      raw: 'michelin tires',
-      tokens: ['michelin', 'tires'],
+      raw: "michelin tires",
+      tokens: ["michelin", "tires"],
       at: new Date().toISOString(),
     },
   ],
-  recentlyViewedProductIds: ['prod-001', 'prod-002'],
+  recentlyViewedProductIds: ["prod-001", "prod-002"],
   cartProductIds: [],
-  purchasedProductIds: ['prod-003'],
+  purchasedProductIds: ["prod-003"],
   wishlistedProductIds: [],
   ...overrides,
 });
 
-describe('Product Scoring and Breakdown', () => {
+describe("Product Scoring and Breakdown", () => {
   beforeEach(() => {
     // Store original localStorage
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       (window.localStorage as any) = {
         items: {} as Record<string, string>,
         getItem(key: string) {
@@ -91,13 +93,16 @@ describe('Product Scoring and Breakdown', () => {
     vi.clearAllMocks();
   });
 
-  describe('scoreProduct', () => {
-    it('should score a product with a matching profile', () => {
-      const product = mockProduct({ brand: 'Michelin', category_name: 'Tires' });
+  describe("scoreProduct", () => {
+    it("should score a product with a matching profile", () => {
+      const product = mockProduct({
+        brand: "Michelin",
+        category_name: "Tires",
+      });
       const profile = mockProfile({
         brandWeights: { michelin: 50 },
         categoryWeights: { tires: 60 },
-        productWeights: { 'prod-001': 20 },
+        productWeights: { "prod-001": 20 },
       });
 
       const result = scoreProduct(product, { profile });
@@ -109,13 +114,13 @@ describe('Product Scoring and Breakdown', () => {
       expect(result.breakdown.categoryAffinity).toBeGreaterThan(0);
     });
 
-    it('should calculate search relevance when search term is provided', () => {
-      const product = mockProduct({ title: 'Michelin All-Season Tires' });
+    it("should calculate search relevance when search term is provided", () => {
+      const product = mockProduct({ title: "Michelin All-Season Tires" });
       const profile = mockProfile();
 
       const resultWithSearch = scoreProduct(product, {
         profile,
-        searchTerm: 'michelin tires',
+        searchTerm: "michelin tires",
       });
 
       const resultWithoutSearch = scoreProduct(product, { profile });
@@ -124,7 +129,7 @@ describe('Product Scoring and Breakdown', () => {
       expect(resultWithSearch.score).toBeGreaterThan(resultWithoutSearch.score);
     });
 
-    it('should factor in deal score when sale price is lower than regular price', () => {
+    it("should factor in deal score when sale price is lower than regular price", () => {
       // calculateDealScore compares `price` against `original_price`/`discount`
       // (the pre-markdown reference price) - `sale_price` isn't part of that
       // calculation at all.
@@ -148,7 +153,7 @@ describe('Product Scoring and Breakdown', () => {
       );
     });
 
-    it('should penalize products with low or no stock', () => {
+    it("should penalize products with low or no stock", () => {
       const inStockProduct = mockProduct({ stock: 10 });
       const outOfStockProduct = mockProduct({ stock: 0 });
       const profile = mockProfile();
@@ -161,24 +166,30 @@ describe('Product Scoring and Breakdown', () => {
       expect(inStockScore.score).toBeGreaterThan(outOfStockScore.score);
     });
 
-    it('should boost score for previously purchased products', () => {
-      const product = mockProduct({ id: 'prod-003' });
+    it("should boost score for previously purchased products", () => {
+      const product = mockProduct({ id: "prod-003" });
       const profileWithPurchase = mockProfile({
-        purchasedProductIds: ['prod-003'],
+        purchasedProductIds: ["prod-003"],
       });
       const profileWithoutPurchase = mockProfile({
         purchasedProductIds: [],
       });
 
-      const scoreWithPurchase = scoreProduct(product, { profile: profileWithPurchase });
-      const scoreWithoutPurchase = scoreProduct(product, { profile: profileWithoutPurchase });
+      const scoreWithPurchase = scoreProduct(product, {
+        profile: profileWithPurchase,
+      });
+      const scoreWithoutPurchase = scoreProduct(product, {
+        profile: profileWithoutPurchase,
+      });
 
       expect(scoreWithPurchase.breakdown.purchaseHistory).toBeGreaterThan(0);
       expect(scoreWithoutPurchase.breakdown.purchaseHistory).toBe(0);
-      expect(scoreWithPurchase.score).toBeGreaterThan(scoreWithoutPurchase.score);
+      expect(scoreWithPurchase.score).toBeGreaterThan(
+        scoreWithoutPurchase.score
+      );
     });
 
-    it('should handle products with missing data gracefully', () => {
+    it("should handle products with missing data gracefully", () => {
       const incompleteProduct = mockProduct({
         brand: undefined,
         price: undefined,
@@ -189,36 +200,36 @@ describe('Product Scoring and Breakdown', () => {
       const result = scoreProduct(incompleteProduct, { profile });
 
       expect(result.score).toBeDefined();
-      expect(typeof result.score).toBe('number');
+      expect(typeof result.score).toBe("number");
       expect(Number.isFinite(result.score)).toBe(true);
     });
 
-    it('should return breakdown with all expected fields', () => {
+    it("should return breakdown with all expected fields", () => {
       const product = mockProduct();
       const profile = mockProfile();
 
       const result = scoreProduct(product, { profile });
       const breakdown = result.breakdown;
 
-      expect(breakdown).toHaveProperty('searchRelevance');
-      expect(breakdown).toHaveProperty('brandAffinity');
-      expect(breakdown).toHaveProperty('vehicleAffinity');
-      expect(breakdown).toHaveProperty('categoryAffinity');
-      expect(breakdown).toHaveProperty('purchaseHistory');
-      expect(breakdown).toHaveProperty('dealScore');
-      expect(breakdown).toHaveProperty('popularity');
-      expect(breakdown).toHaveProperty('stock');
-      expect(breakdown).toHaveProperty('recency');
-      expect(breakdown).toHaveProperty('total');
+      expect(breakdown).toHaveProperty("searchRelevance");
+      expect(breakdown).toHaveProperty("brandAffinity");
+      expect(breakdown).toHaveProperty("vehicleAffinity");
+      expect(breakdown).toHaveProperty("categoryAffinity");
+      expect(breakdown).toHaveProperty("purchaseHistory");
+      expect(breakdown).toHaveProperty("dealScore");
+      expect(breakdown).toHaveProperty("popularity");
+      expect(breakdown).toHaveProperty("stock");
+      expect(breakdown).toHaveProperty("recency");
+      expect(breakdown).toHaveProperty("total");
     });
   });
 
-  describe('rankProducts', () => {
-    it('should rank products by score in descending order', () => {
+  describe("rankProducts", () => {
+    it("should rank products by score in descending order", () => {
       const products = [
-        mockProduct({ id: 'prod-1', brand: 'Michelin', price: 100 }),
-        mockProduct({ id: 'prod-2', brand: 'Continental', price: 200 }),
-        mockProduct({ id: 'prod-3', brand: 'Bridgestone', price: 150 }),
+        mockProduct({ id: "prod-1", brand: "Michelin", price: 100 }),
+        mockProduct({ id: "prod-2", brand: "Continental", price: 200 }),
+        mockProduct({ id: "prod-3", brand: "Bridgestone", price: 150 }),
       ];
       const profile = mockProfile({
         brandWeights: { michelin: 80, continental: 20 },
@@ -226,30 +237,30 @@ describe('Product Scoring and Breakdown', () => {
 
       const ranked = rankProducts(products, { profile });
 
-      expect(ranked[0].brand).toBe('Michelin');
+      expect(ranked[0].brand).toBe("Michelin");
       expect(ranked).toHaveLength(3);
     });
 
-    it('should handle empty product arrays', () => {
+    it("should handle empty product arrays", () => {
       const result = rankProducts([]);
       expect(result).toEqual([]);
     });
 
-    it('should return unchanged products array if only one product', () => {
+    it("should return unchanged products array if only one product", () => {
       const products = [mockProduct()];
       const result = rankProducts(products);
       expect(result).toEqual(products);
     });
 
-    it('should preserve product order when no signals are available', () => {
+    it("should preserve product order when no signals are available", () => {
       const products = [
-        mockProduct({ id: 'prod-1', brand: 'Michelin' }),
-        mockProduct({ id: 'prod-2', brand: 'Continental' }),
+        mockProduct({ id: "prod-1", brand: "Michelin" }),
+        mockProduct({ id: "prod-2", brand: "Continental" }),
       ];
       const emptyProfile: InterestProfile = {
         version: 1,
-        scope: 'guest',
-        sessionId: 'test',
+        scope: "guest",
+        sessionId: "test",
         userId: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -276,11 +287,11 @@ describe('Product Scoring and Breakdown', () => {
       expect(result).toEqual(products);
     });
 
-    it('should sort by price ascending when priceDirection is asc', () => {
+    it("should sort by price ascending when priceDirection is asc", () => {
       const products = [
-        mockProduct({ id: 'prod-1', price: 300 }),
-        mockProduct({ id: 'prod-2', price: 100 }),
-        mockProduct({ id: 'prod-3', price: 200 }),
+        mockProduct({ id: "prod-1", price: 300 }),
+        mockProduct({ id: "prod-2", price: 100 }),
+        mockProduct({ id: "prod-3", price: 200 }),
       ];
 
       // preserveWhenNoSignals is intentionally omitted: when it's true and
@@ -288,31 +299,39 @@ describe('Product Scoring and Breakdown', () => {
       // and returns the input order untouched, before the price tiebreak in
       // its sort comparator ever runs.
       const ranked = rankProducts(products, {
-        priceDirection: 'asc',
+        priceDirection: "asc",
       });
 
-      expect(Number(ranked[0].price)).toBeLessThanOrEqual(Number(ranked[1].price));
-      expect(Number(ranked[1].price)).toBeLessThanOrEqual(Number(ranked[2].price));
+      expect(Number(ranked[0].price)).toBeLessThanOrEqual(
+        Number(ranked[1].price)
+      );
+      expect(Number(ranked[1].price)).toBeLessThanOrEqual(
+        Number(ranked[2].price)
+      );
     });
 
-    it('should sort by price descending when priceDirection is desc', () => {
+    it("should sort by price descending when priceDirection is desc", () => {
       const products = [
-        mockProduct({ id: 'prod-1', price: 100 }),
-        mockProduct({ id: 'prod-2', price: 300 }),
-        mockProduct({ id: 'prod-3', price: 200 }),
+        mockProduct({ id: "prod-1", price: 100 }),
+        mockProduct({ id: "prod-2", price: 300 }),
+        mockProduct({ id: "prod-3", price: 200 }),
       ];
 
       const ranked = rankProducts(products, {
-        priceDirection: 'desc',
+        priceDirection: "desc",
       });
 
-      expect(Number(ranked[0].price)).toBeGreaterThanOrEqual(Number(ranked[1].price));
-      expect(Number(ranked[1].price)).toBeGreaterThanOrEqual(Number(ranked[2].price));
+      expect(Number(ranked[0].price)).toBeGreaterThanOrEqual(
+        Number(ranked[1].price)
+      );
+      expect(Number(ranked[1].price)).toBeGreaterThanOrEqual(
+        Number(ranked[2].price)
+      );
     });
   });
 
-  describe('Session ID Management', () => {
-    it('should generate and cache a session ID', () => {
+  describe("Session ID Management", () => {
+    it("should generate and cache a session ID", () => {
       const id1 = getRecommendationSessionId();
       const id2 = getRecommendationSessionId();
 
@@ -321,10 +340,10 @@ describe('Product Scoring and Breakdown', () => {
       expect(id1).toBe(id2);
     });
 
-    it('should generate different session IDs on separate runs', () => {
+    it("should generate different session IDs on separate runs", () => {
       const id1 = getRecommendationSessionId();
 
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         (window.localStorage as any).clear?.();
       }
 
@@ -333,8 +352,8 @@ describe('Product Scoring and Breakdown', () => {
     });
   });
 
-  describe('Edge cases and error handling', () => {
-    it('should handle null profiles gracefully', () => {
+  describe("Edge cases and error handling", () => {
+    it("should handle null profiles gracefully", () => {
       const product = mockProduct();
       const result = scoreProduct(product, { profile: null });
 
@@ -342,7 +361,7 @@ describe('Product Scoring and Breakdown', () => {
       expect(Number.isFinite(result.score)).toBe(true);
     });
 
-    it('should handle products with negative prices', () => {
+    it("should handle products with negative prices", () => {
       const product = mockProduct({ price: -100 });
       const profile = mockProfile();
 
@@ -350,7 +369,7 @@ describe('Product Scoring and Breakdown', () => {
       expect(Number.isFinite(result.score)).toBe(true);
     });
 
-    it('should handle extremely large stock numbers', () => {
+    it("should handle extremely large stock numbers", () => {
       const product = mockProduct({ stock: 999999 });
       const profile = mockProfile();
 

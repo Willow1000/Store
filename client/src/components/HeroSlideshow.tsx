@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'wouter';
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "wouter";
 
 interface Slide {
   id: number;
@@ -19,47 +19,55 @@ interface Slide {
 const slides: Slide[] = [
   {
     id: 1,
-    image: '/images/hero/premium-european-auto-parts-hero.avif',
-    imageWebp: '/images/hero/premium-european-auto-parts-hero.webp',
-    imageAlt: 'Premium European car parts including OEM and aftermarket components',
-    title: 'Find The Right Part First Time',
-    subtitle: 'VIN-aware sourcing, fitment support, and clear options',
-    cta: 'Start with fitment-safe parts',
-    ctaLink: '/products',
-    description: 'Not sure about exact model details? Shop with confidence using compatibility-focused listings and support.'
+    image: "/images/hero/premium-european-auto-parts-hero.avif",
+    imageWebp: "/images/hero/premium-european-auto-parts-hero.webp",
+    imageAlt:
+      "Premium European car parts including OEM and aftermarket components",
+    title: "Find The Right Part First Time",
+    subtitle: "VIN-aware sourcing, fitment support, and clear options",
+    cta: "Start with fitment-safe parts",
+    ctaLink: "/products",
+    description:
+      "Not sure about exact model details? Shop with confidence using compatibility-focused listings and support.",
   },
   {
     id: 2,
-    image: '/images/hero/certified-auto-parts-inspection-hero.avif',
-    imageWebp: '/images/hero/certified-auto-parts-inspection-hero.webp',
-    imageAlt: 'Certified technicians inspecting rare European auto parts for quality assurance',
-    title: 'OEM, Aftermarket, or Used?',
-    subtitle: 'Choose by quality tier, budget, and repair priority',
-    cta: 'Compare part options',
-    ctaLink: '/faq',
-    description: 'Understand the real differences before you buy, including where premium options make the most sense.'
+    image: "/images/hero/certified-auto-parts-inspection-hero.avif",
+    imageWebp: "/images/hero/certified-auto-parts-inspection-hero.webp",
+    imageAlt:
+      "Certified technicians inspecting rare European auto parts for quality assurance",
+    title: "OEM, Aftermarket, or Used?",
+    subtitle: "Choose by quality tier, budget, and repair priority",
+    cta: "Compare part options",
+    ctaLink: "/faq",
+    description:
+      "Understand the real differences before you buy, including where premium options make the most sense.",
   },
   {
     id: 3,
-    image: '/images/hero/professional-auto-parts-installation-hero.avif',
-    imageWebp: '/images/hero/professional-auto-parts-installation-hero.webp',
-    imageAlt: 'Professional mechanic installing European automotive replacement parts',
-    title: 'DIY Or Mechanic?',
-    subtitle: 'Know when to install yourself and when to get pro help',
-    cta: 'See practical guidance',
-    ctaLink: '/help',
-    description: 'Use clearer buying and installation decisions for safety-critical and specification-sensitive parts.'
+    image: "/images/hero/professional-auto-parts-installation-hero.avif",
+    imageWebp: "/images/hero/professional-auto-parts-installation-hero.webp",
+    imageAlt:
+      "Professional mechanic installing European automotive replacement parts",
+    title: "DIY Or Mechanic?",
+    subtitle: "Know when to install yourself and when to get pro help",
+    cta: "See practical guidance",
+    ctaLink: "/help",
+    description:
+      "Use clearer buying and installation decisions for safety-critical and specification-sensitive parts.",
   },
   {
     id: 4,
-    image: '/images/hero/home-hero-section-last-image.avif',
-    imageWebp: '/images/hero/home-hero-section-last-image.avif',
-    imageAlt: 'Featured European automotive parts displayed in a premium showroom setting',
-    title: 'Know Returns, Warranty, and Delivery Upfront',
-    subtitle: 'Transparent policies before you commit',
-    cta: 'Review key FAQs',
-    ctaLink: '/products',
-    description: 'See fitment support, shipping expectations, and return guidance so there are fewer surprises after purchase.'
+    image: "/images/hero/home-hero-section-last-image.avif",
+    imageWebp: "/images/hero/home-hero-section-last-image.avif",
+    imageAlt:
+      "Featured European automotive parts displayed in a premium showroom setting",
+    title: "Know Returns, Warranty, and Delivery Upfront",
+    subtitle: "Transparent policies before you commit",
+    cta: "Review key FAQs",
+    ctaLink: "/products",
+    description:
+      "See fitment support, shipping expectations, and return guidance so there are fewer surprises after purchase.",
   },
 ];
 
@@ -72,7 +80,7 @@ export function HeroSlideshow() {
     if (!isAutoPlaying) return;
 
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
+      setCurrentSlide(prev => (prev + 1) % slides.length);
     }, 6000);
 
     return () => clearInterval(timer);
@@ -99,7 +107,10 @@ export function HeroSlideshow() {
     <div className="relative w-full h-screen max-h-[600px] bg-gray-900 overflow-hidden -mt-0">
       {/* Slides Container */}
       <div className="relative w-full h-full">
-        <div key={activeSlide.id} className="absolute inset-0 transition-opacity duration-700 ease-in-out opacity-100">
+        <div
+          key={activeSlide.id}
+          className="absolute inset-0 transition-opacity duration-700 ease-in-out opacity-100"
+        >
           {/* Background Image */}
           <picture>
             <source srcSet={activeSlide.image} type="image/avif" />
@@ -138,7 +149,10 @@ export function HeroSlideshow() {
           </p>
 
           {/* CTA Button */}
-          <Link href={activeSlide.ctaLink} className="inline-block px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl">
+          <Link
+            href={activeSlide.ctaLink}
+            className="inline-block px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
+          >
             {activeSlide.cta}
           </Link>
         </div>
@@ -168,15 +182,15 @@ export function HeroSlideshow() {
             key={index}
             onClick={() => goToSlide(index)}
             className={`relative p-4 -m-4 min-h-[44px] min-w-[44px] flex items-center justify-center transition-all duration-300 ${
-              index === currentSlide
-                ? ''
-                : ''
+              index === currentSlide ? "" : ""
             }`}
             aria-label={`Go to slide ${index + 1}`}
           >
             <span
               className={`h-3 w-3 rounded-full transition-all duration-300 ${
-                index === currentSlide ? 'bg-white w-8' : 'bg-white/50 hover:bg-white/75'
+                index === currentSlide
+                  ? "bg-white w-8"
+                  : "bg-white/50 hover:bg-white/75"
               }`}
             />
           </button>

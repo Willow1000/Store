@@ -1,18 +1,35 @@
 <!doctype html>
 <html lang="en">
-
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#000000" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <meta name="apple-mobile-web-app-title" content="MotorVault" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/images/motorvault_profile.png" />
-    <link rel="icon" type="image/png" sizes="48x48" href="/images/motorvault_profile.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/images/motorvault_profile.png" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/images/motorvault_profile.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="48x48"
+      href="/images/motorvault_profile.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="/images/motorvault_profile.png"
+    />
     <link rel="apple-touch-icon" href="/images/motorvault_profile.png" />
 
     <!--SSR_HEAD-->
@@ -21,117 +38,165 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://img.kleinanzeigen.de" crossorigin />
-    <link rel="preconnect" href="https://dormxdlqbstebbsumdjj.supabase.co" crossorigin />
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <link
+      rel="preconnect"
+      href="https://dormxdlqbstebbsumdjj.supabase.co"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
     <noscript>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+      />
     </noscript>
-    
+
     <!-- JSON-LD Structured Data for WebSite -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "MotorVault",
-      "url": "%VITE_APP_URL%",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": {
-          "@type": "EntryPoint",
-          "urlTemplate": "%VITE_APP_URL%/products?q={search_term_string}"
-        },
-        "query-input": "required name=search_term_string"
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "MotorVault",
+        "url": "%VITE_APP_URL%",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "%VITE_APP_URL%/products?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
       }
-    }
     </script>
-    
+
     <!-- JSON-LD Structured Data for LocalBusiness -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "LocalBusiness",
-      "name": "MotorVault",
-      "description": "Premium e-commerce marketplace with verified sellers",
-      "url": "%VITE_APP_URL%",
-      "image": "%VITE_APP_URL%/images/hero/premium-european-auto-parts-hero.webp",
-      "priceRange": "$0-$10000",
-      "areaServed": "US",
-      "availableLanguage": "en"
-    }
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "MotorVault",
+        "description": "Premium e-commerce marketplace with verified sellers",
+        "url": "%VITE_APP_URL%",
+        "image": "%VITE_APP_URL%/images/hero/premium-european-auto-parts-hero.webp",
+        "priceRange": "$0-$10000",
+        "areaServed": "US",
+        "availableLanguage": "en"
+      }
     </script>
-    
+
     <!-- Sitemap and Robots -->
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 
     <script>
       (function () {
         try {
-          var origin = window.location.origin.replace(/\/$/, '');
-          var path = window.location.pathname + window.location.search + window.location.hash;
+          var origin = window.location.origin.replace(/\/$/, "");
+          var path =
+            window.location.pathname +
+            window.location.search +
+            window.location.hash;
           var canonical = document.querySelector('link[rel="canonical"]');
           var ogUrl = document.querySelector('meta[property="og:url"]');
-          var twitterUrl = document.querySelector('meta[property="twitter:url"]');
+          var twitterUrl = document.querySelector(
+            'meta[property="twitter:url"]'
+          );
 
           if (canonical) canonical.href = origin + path;
-          if (ogUrl) ogUrl.setAttribute('content', origin + path);
-          if (twitterUrl) twitterUrl.setAttribute('content', origin + path);
+          if (ogUrl) ogUrl.setAttribute("content", origin + path);
+          if (twitterUrl) twitterUrl.setAttribute("content", origin + path);
         } catch (e) {
           // ignore
         }
       })();
     </script>
-    
+
     <!-- Preload Critical Resources -->
-    
+
     <!-- Analytics (optional - disabled by default) -->
     <!-- To enable analytics, configure VITE_ANALYTICS_ENDPOINT and VITE_ANALYTICS_WEBSITE_ID in .env.local -->
     <!-- <script
       defer
       src="%VITE_ANALYTICS_ENDPOINT%/umami"
       data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script> -->
-    
+
     <!-- Meta Pixel Code (deferred until first user interaction to reduce render impact) -->
     <script>
-    (function () {
-      var initialized = false;
+      (function () {
+        var initialized = false;
 
-      function initPixel() {
-        if (initialized) return;
-        initialized = true;
+        function initPixel() {
+          if (initialized) return;
+          initialized = true;
 
-        !function(f,b,e,v,n,t,s)
-        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-        n.queue=[];t=b.createElement(e);t.async=!0;
-        t.src=v;s=b.getElementsByTagName(e)[0];
-        s.parentNode.insertBefore(t,s)}(window, document,'script',
-        'https://connect.facebook.net/en_US/fbevents.js');
+          !(function (f, b, e, v, n, t, s) {
+            if (f.fbq) return;
+            n = f.fbq = function () {
+              n.callMethod
+                ? n.callMethod.apply(n, arguments)
+                : n.queue.push(arguments);
+            };
+            if (!f._fbq) f._fbq = n;
+            n.push = n;
+            n.loaded = !0;
+            n.version = "2.0";
+            n.queue = [];
+            t = b.createElement(e);
+            t.async = !0;
+            t.src = v;
+            s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s);
+          })(
+            window,
+            document,
+            "script",
+            "https://connect.facebook.net/en_US/fbevents.js"
+          );
 
-        fbq('init', '2056673991610593');
-        fbq('track', 'PageView');
+          fbq("init", "2056673991610593");
+          fbq("track", "PageView");
 
-        window.removeEventListener('pointerdown', initPixel, { passive: true });
-        window.removeEventListener('keydown', initPixel);
-        window.removeEventListener('scroll', initPixel, { passive: true });
-        window.removeEventListener('touchstart', initPixel, { passive: true });
-      }
+          window.removeEventListener("pointerdown", initPixel, {
+            passive: true,
+          });
+          window.removeEventListener("keydown", initPixel);
+          window.removeEventListener("scroll", initPixel, { passive: true });
+          window.removeEventListener("touchstart", initPixel, {
+            passive: true,
+          });
+        }
 
-      window.addEventListener('pointerdown', initPixel, { once: true, passive: true });
-      window.addEventListener('keydown', initPixel, { once: true });
-      window.addEventListener('scroll', initPixel, { once: true, passive: true });
-      window.addEventListener('touchstart', initPixel, { once: true, passive: true });
-    })();
+        window.addEventListener("pointerdown", initPixel, {
+          once: true,
+          passive: true,
+        });
+        window.addEventListener("keydown", initPixel, { once: true });
+        window.addEventListener("scroll", initPixel, {
+          once: true,
+          passive: true,
+        });
+        window.addEventListener("touchstart", initPixel, {
+          once: true,
+          passive: true,
+        });
+      })();
     </script>
     <!-- End Meta Pixel Code -->
   </head>
 
   <body>
-    <noscript><img height="1" width="1" style="display:none"
-    src="https://www.facebook.com/tr?id=2056673991610593&ev=PageView&noscript=1"
+    <noscript
+      ><img
+        height="1"
+        width="1"
+        style="display: none"
+        src="https://www.facebook.com/tr?id=2056673991610593&ev=PageView&noscript=1"
     /></noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
-
 </html>

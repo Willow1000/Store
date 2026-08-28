@@ -1,16 +1,19 @@
-import { useAuth } from '@/_core/hooks/useAuth';
-import { useEffect, useRef } from 'react';
-import { Bell, CheckCircle, AlertCircle, Package, Trash2 } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
-import { Skeleton } from '@/components/ui/skeleton';
-import { requestAuthenticationForPath } from '@/lib/authRequired';
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useEffect, useRef } from "react";
+import { Bell, CheckCircle, AlertCircle, Package, Trash2 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { Skeleton } from "@/components/ui/skeleton";
+import { requestAuthenticationForPath } from "@/lib/authRequired";
 
 export default function Notifications() {
   const { isAuthenticated, sessionRestored } = useAuth();
   const authPromptedRef = useRef(false);
-  const { data: notifications, isLoading } = trpc.notifications.list.useQuery(undefined, {
-    enabled: sessionRestored && isAuthenticated,
-  });
+  const { data: notifications, isLoading } = trpc.notifications.list.useQuery(
+    undefined,
+    {
+      enabled: sessionRestored && isAuthenticated,
+    }
+  );
 
   useEffect(() => {
     if (!sessionRestored || isAuthenticated || authPromptedRef.current) return;
@@ -26,7 +29,9 @@ export default function Notifications() {
     return (
       <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <h1 className="mb-8 text-4xl font-bold">Notifications</h1>
-        <div className="rounded-lg border border-border bg-white p-6">{/* blank for guests */}</div>
+        <div className="rounded-lg border border-border bg-white p-6">
+          {/* blank for guests */}
+        </div>
       </div>
     );
   }
@@ -74,13 +79,13 @@ export default function Notifications() {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'order_placed':
+      case "order_placed":
         return <Package className="text-blue-600" size={20} />;
-      case 'order_confirmed':
+      case "order_confirmed":
         return <CheckCircle className="text-green-600" size={20} />;
-      case 'order_shipped':
+      case "order_shipped":
         return <Package className="text-purple-600" size={20} />;
-      case 'payment_failed':
+      case "payment_failed":
         return <AlertCircle className="text-red-600" size={20} />;
       default:
         return <Bell className="text-gray-600" size={20} />;
@@ -97,7 +102,7 @@ export default function Notifications() {
             <div
               key={notification.id}
               className={`flex items-start gap-4 rounded-lg border border-border p-4 ${
-                notification.read ? 'bg-white' : 'bg-blue-50'
+                notification.read ? "bg-white" : "bg-blue-50"
               }`}
             >
               <div className="flex-shrink-0 mt-1">
@@ -107,10 +112,12 @@ export default function Notifications() {
               <div className="flex-1">
                 <h3 className="font-semibold">{notification.title}</h3>
                 {notification.content && (
-                  <p className="mt-1 text-sm text-gray-600">{notification.content}</p>
+                  <p className="mt-1 text-sm text-gray-600">
+                    {notification.content}
+                  </p>
                 )}
                 <p className="mt-2 text-xs text-gray-500">
-                  {new Date(notification.createdAt).toLocaleDateString()} at{' '}
+                  {new Date(notification.createdAt).toLocaleDateString()} at{" "}
                   {new Date(notification.createdAt).toLocaleTimeString()}
                 </p>
               </div>

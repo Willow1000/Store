@@ -7,8 +7,8 @@ import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 const isFastBuild = process.env.FAST_BUILD === "1";
-const isSsrBuild = process.argv.some((arg) => arg === '--ssr');
-const isDevServer = process.argv.some((arg) => arg === 'serve');
+const isSsrBuild = process.argv.some(arg => arg === "--ssr");
+const isDevServer = process.argv.some(arg => arg === "serve");
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -60,7 +60,7 @@ function writeToLogFile(source: LogSource, entries: unknown[]) {
   const logPath = path.join(LOG_DIR, `${source}.log`);
 
   // Format entries with timestamps
-  const lines = entries.map((entry) => {
+  const lines = entries.map(entry => {
     const ts = new Date().toISOString();
     return `[${ts}] ${JSON.stringify(entry)}`;
   });
@@ -102,15 +102,20 @@ function vitePluginManusDebugCollector(): Plugin {
     },
 
     configureServer(server: ViteDevServer) {
-      server.middlewares.use("/__manus__/debug-collector.js", (req, res, next) => {
-        if (req.method !== "GET") {
-          return next();
-        }
+      server.middlewares.use(
+        "/__manus__/debug-collector.js",
+        (req, res, next) => {
+          if (req.method !== "GET") {
+            return next();
+          }
 
-        // Fallback no-op collector so the injected dev script path never 404s.
-        res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8" });
-        res.end("window.__manusDebugCollectorLoaded = true;\n");
-      });
+          // Fallback no-op collector so the injected dev script path never 404s.
+          res.writeHead(200, {
+            "Content-Type": "application/javascript; charset=utf-8",
+          });
+          res.end("window.__manusDebugCollectorLoaded = true;\n");
+        }
+      );
 
       // POST /__manus__/logs: Browser sends logs (written directly to files)
       server.middlewares.use("/__manus__/logs", (req, res, next) => {
@@ -146,7 +151,7 @@ function vitePluginManusDebugCollector(): Plugin {
         }
 
         let body = "";
-        req.on("data", (chunk) => {
+        req.on("data", chunk => {
           body += chunk.toString();
         });
 
@@ -167,7 +172,13 @@ function vitePluginManusDebugCollector(): Plugin {
 const plugins = [
   react(),
   tailwindcss(),
-  ...(isFastBuild || !isDevServer ? [] : [jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()]),
+  ...(isFastBuild || !isDevServer
+    ? []
+    : [
+        jsxLocPlugin(),
+        vitePluginManusRuntime(),
+        vitePluginManusDebugCollector(),
+      ]),
 ];
 
 export default defineConfig({
@@ -194,50 +205,50 @@ export default defineConfig({
           ? undefined
           : {
               // Split vendor libraries into separate chunks for the browser build only
-              'react-vendor': ['react', 'react-dom'],
-              'ui-vendor': ['lucide-react', 'sonner'],
-              'router-vendor': ['wouter'],
-              'supabase-vendor': ['@supabase/supabase-js'],
-              'form-vendor': ['react-hook-form', 'zod'],
-              'country-data-vendor': ['country-state-city'],
+              "react-vendor": ["react", "react-dom"],
+              "ui-vendor": ["lucide-react", "sonner"],
+              "router-vendor": ["wouter"],
+              "supabase-vendor": ["@supabase/supabase-js"],
+              "form-vendor": ["react-hook-form", "zod"],
+              "country-data-vendor": ["country-state-city"],
             },
       },
     },
   },
   server: {
     port: 3000,
-    host: '127.0.0.1',
+    host: "127.0.0.1",
     proxy: {
-      '/api': {
-        target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001',
+      "/api": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
         changeOrigin: true,
       },
-      '/feed.xml': {
-        target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001',
+      "/feed.xml": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
         changeOrigin: true,
       },
-      '/robots.txt': {
-        target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001',
+      "/robots.txt": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
         changeOrigin: true,
       },
-      '/llms.txt': {
-        target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001',
+      "/llms.txt": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
         changeOrigin: true,
       },
-      '/sitemap.xml': {
-        target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001',
+      "/sitemap.xml": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
         changeOrigin: true,
       },
-      '/sitemap-products.xml': {
-        target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001',
+      "/sitemap-products.xml": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
         changeOrigin: true,
       },
-      '/initialize-payment': {
-        target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001',
+      "/initialize-payment": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
         changeOrigin: true,
       },
-      '/payment': {
-        target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001',
+      "/payment": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
         changeOrigin: true,
       },
     },

@@ -3,9 +3,9 @@
  * Improves UX and provides context for search engines and LLMs
  */
 
-import { Link } from 'wouter';
-import { ChevronRight, Home } from 'lucide-react';
-import { useEffect } from 'react';
+import { Link } from "wouter";
+import { ChevronRight, Home } from "lucide-react";
+import { useEffect } from "react";
 
 interface BreadcrumbItem {
   label: string;
@@ -18,33 +18,41 @@ interface BreadcrumbProps {
   includeStructuredData?: boolean;
 }
 
-export function Breadcrumb({ items, className = '', includeStructuredData = true }: BreadcrumbProps) {
+export function Breadcrumb({
+  items,
+  className = "",
+  includeStructuredData = true,
+}: BreadcrumbProps) {
   // Include home in the breadcrumb
-  const allItems: BreadcrumbItem[] = [
-    { label: 'Home', href: '/' },
-    ...items,
-  ];
+  const allItems: BreadcrumbItem[] = [{ label: "Home", href: "/" }, ...items];
 
   // Create structured data for breadcrumbs
   const structuredData = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
     itemListElement: allItems.map((item, index) => ({
-      '@type': 'ListItem',
+      "@type": "ListItem",
       position: index + 1,
       name: item.label,
-      item: new URL(item.href, typeof window !== 'undefined' ? window.location.origin : 'https://motorvault.shop').href,
+      item: new URL(
+        item.href,
+        typeof window !== "undefined"
+          ? window.location.origin
+          : "https://motorvault.shop"
+      ).href,
     })),
   };
 
   useEffect(() => {
-    if (!includeStructuredData || typeof document === 'undefined') return;
+    if (!includeStructuredData || typeof document === "undefined") return;
 
-    let scriptTag = document.querySelector('script[data-breadcrumb="true"]') as HTMLScriptElement;
+    let scriptTag = document.querySelector(
+      'script[data-breadcrumb="true"]'
+    ) as HTMLScriptElement;
     if (!scriptTag) {
-      scriptTag = document.createElement('script');
-      scriptTag.type = 'application/ld+json';
-      scriptTag.setAttribute('data-breadcrumb', 'true');
+      scriptTag = document.createElement("script");
+      scriptTag.type = "application/ld+json";
+      scriptTag.setAttribute("data-breadcrumb", "true");
       document.head.appendChild(scriptTag);
     }
     scriptTag.textContent = JSON.stringify(structuredData);
@@ -58,13 +66,10 @@ export function Breadcrumb({ items, className = '', includeStructuredData = true
       {allItems.map((item, index) => (
         <div key={item.href} className="flex items-center gap-2">
           {index > 0 && <ChevronRight size={16} className="text-gray-400" />}
-          
+
           {index === allItems.length - 1 ? (
             // Current page (not a link)
-            <span
-              className="text-gray-900 font-medium"
-              aria-current="page"
-            >
+            <span className="text-gray-900 font-medium" aria-current="page">
               {item.label}
             </span>
           ) : (

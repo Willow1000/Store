@@ -10,7 +10,7 @@ import * as db from "../db";
 const supabase = ENV.supabaseUrl
   ? createClient(
       ENV.supabaseUrl,
-      ENV.supabaseServiceKey || ENV.supabaseAnonKey || ''
+      ENV.supabaseServiceKey || ENV.supabaseAnonKey || ""
     )
   : null;
 
@@ -29,7 +29,6 @@ export async function createContext(
   try {
     user = await sdk.authenticateRequest(opts.req);
     if (user) {
-
       return {
         req: opts.req,
         res: opts.res,
@@ -43,43 +42,42 @@ export async function createContext(
   // Method 2: Try Supabase token from Authorization header
   try {
     const authHeader = opts.req.headers.authorization;
-    if (authHeader?.startsWith('Bearer ')) {
+    if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.slice(7);
 
-      
       if (supabase) {
         // Verify the Supabase token and get user info
-        const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(token);
-        
+        const {
+          data: { user: supabaseUser },
+          error,
+        } = await supabase.auth.getUser(token);
+
         if (error) {
           // Token verification failed; continue to unauthenticated context.
         } else if (supabaseUser?.id) {
           if (db.isDatabaseConfigured()) {
             // Look up user in our database by Supabase user ID
             const dbUser = await db.getUserByOpenId(supabaseUser.id);
-            
-            if (dbUser) {
 
+            if (dbUser) {
               return {
                 req: opts.req,
                 res: opts.res,
                 user: dbUser,
               };
             }
-            
+
             // If user doesn't exist in DB, create them
             try {
-
               await db.upsertUser({
                 openId: supabaseUser.id,
                 email: supabaseUser.email,
                 name: supabaseUser.user_metadata?.name,
-                loginMethod: supabaseUser.user_metadata?.provider || 'email',
+                loginMethod: supabaseUser.user_metadata?.provider || "email",
                 lastSignedIn: new Date(),
               });
               const newUser = await db.getUserByOpenId(supabaseUser.id);
               if (newUser) {
-
                 return {
                   req: opts.req,
                   res: opts.res,
@@ -94,7 +92,9 @@ export async function createContext(
           }
         }
       } else {
-        console.warn('[Auth] Supabase client not configured - check VITE_SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables');
+        console.warn(
+          "[Auth] Supabase client not configured - check VITE_SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables"
+        );
       }
     }
   } catch (supabaseError) {

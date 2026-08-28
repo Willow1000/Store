@@ -31,7 +31,10 @@ export function registerOAuthRoutes(app: Express) {
           }
         </script>
       </body></html>`;
-      res.status(200).setHeader('Content-Type', 'text/html; charset=utf-8').send(html);
+      res
+        .status(200)
+        .setHeader("Content-Type", "text/html; charset=utf-8")
+        .send(html);
       return;
     }
 
@@ -58,7 +61,10 @@ export function registerOAuthRoutes(app: Express) {
       });
 
       const cookieOptions = getSessionCookieOptions(req);
-      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: SESSION_DURATION_MS });
+      res.cookie(COOKIE_NAME, sessionToken, {
+        ...cookieOptions,
+        maxAge: SESSION_DURATION_MS,
+      });
 
       // Redirect to client-side auth callback page.
       // Client will handle reading oauth_return_to from localStorage and redirecting appropriately.

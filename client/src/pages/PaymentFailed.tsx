@@ -1,16 +1,18 @@
-import { Link, useLocation } from 'wouter';
-import { AlertTriangle, MessageSquare, ArrowRight } from 'lucide-react';
-import { SEOHead } from '@/components/SEOHead';
+import { Link, useLocation } from "wouter";
+import { AlertTriangle, MessageSquare, ArrowRight } from "lucide-react";
+import { SEOHead } from "@/components/SEOHead";
 
 function getQueryValue(search: string, key: string): string {
-  return new URLSearchParams(search).get(key) || '';
+  return new URLSearchParams(search).get(key) || "";
 }
 
 export default function PaymentFailed() {
   const [location] = useLocation();
-  const search = location.includes('?') ? location.slice(location.indexOf('?')) : '';
-  const reference = getQueryValue(search, 'reference');
-  const status = getQueryValue(search, 'status');
+  const search = location.includes("?")
+    ? location.slice(location.indexOf("?"))
+    : "";
+  const reference = getQueryValue(search, "reference");
+  const status = getQueryValue(search, "status");
 
   return (
     <>
@@ -23,16 +25,32 @@ export default function PaymentFailed() {
       <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-slate-50 px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl rounded-[2rem] border border-rose-100 bg-white p-8 sm:p-10 shadow-2xl">
           <AlertTriangle className="h-14 w-14 text-rose-600" />
-          <p className="mt-5 text-sm font-semibold uppercase tracking-[0.35em] text-rose-700">Payment not completed</p>
+          <p className="mt-5 text-sm font-semibold uppercase tracking-[0.35em] text-rose-700">
+            Payment not completed
+          </p>
           <h1 className="mt-4 text-3xl sm:text-4xl font-black tracking-tight text-slate-950">
             We could not confirm the payment.
           </h1>
           <p className="mt-4 text-base sm:text-lg leading-relaxed text-slate-700">
-            If Paystack returned a failed or abandoned status, you can try the checkout again. If the payment already went through, contact support with the reference so we can verify it.
+            If Paystack returned a failed or abandoned status, you can try the
+            checkout again. If the payment already went through, contact support
+            with the reference so we can verify it.
           </p>
           <div className="mt-4 space-y-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
-            {reference ? <p>Reference: <span className="font-semibold text-slate-950">{reference}</span></p> : null}
-            {status ? <p>Status: <span className="font-semibold text-slate-950">{status}</span></p> : null}
+            {reference ? (
+              <p>
+                Reference:{" "}
+                <span className="font-semibold text-slate-950">
+                  {reference}
+                </span>
+              </p>
+            ) : null}
+            {status ? (
+              <p>
+                Status:{" "}
+                <span className="font-semibold text-slate-950">{status}</span>
+              </p>
+            ) : null}
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/checkout">

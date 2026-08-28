@@ -1,5 +1,5 @@
-import { TRPCError } from '@trpc/server';
-import { ENV } from './_core/env';
+import { TRPCError } from "@trpc/server";
+import { ENV } from "./_core/env";
 
 interface PaystackApiResponse<T> {
   status: boolean;
@@ -18,8 +18,12 @@ interface PaystackInitializeTransactionPayload {
   callback_url?: string;
 }
 
-export function buildPaystackCallbackUrl(requestOrigin?: string | null): string | undefined {
-  const origin = String(requestOrigin || '').trim().replace(/\/$/, '');
+export function buildPaystackCallbackUrl(
+  requestOrigin?: string | null
+): string | undefined {
+  const origin = String(requestOrigin || "")
+    .trim()
+    .replace(/\/$/, "");
   if (!origin) return undefined;
   return `${origin}/payment/callback`;
 }
@@ -30,26 +34,30 @@ interface PaystackInitializeResponse {
   reference: string;
 }
 
-const PAYSTACK_API_BASE = 'https://api.paystack.co';
+const PAYSTACK_API_BASE = "https://api.paystack.co";
 const SECRET_KEY = ENV.paystackSecretKey;
 const PUBLIC_KEY = ENV.paystackPublicKey;
 
 if (!SECRET_KEY) {
-  console.warn('[Paystack] PAYSTACK_SECRET_KEY not configured in environment');
+  console.warn("[Paystack] PAYSTACK_SECRET_KEY not configured in environment");
 }
 
-async function paystackRequest<T>(path: string, init: RequestInit = {}): Promise<PaystackApiResponse<T>> {
+async function paystackRequest<T>(
+  path: string,
+  init: RequestInit = {}
+): Promise<PaystackApiResponse<T>> {
   if (!SECRET_KEY) {
     throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'Paystack secret key not configured. Set PAYSTACK_SECRET_KEY in the environment.',
+      code: "INTERNAL_SERVER_ERROR",
+      message:
+        "Paystack secret key not configured. Set PAYSTACK_SECRET_KEY in the environment.",
     });
   }
 
   const response = await fetch(`${PAYSTACK_API_BASE}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${SECRET_KEY}`,
       ...(init.headers ?? {}),
     },
@@ -59,21 +67,21 @@ async function paystackRequest<T>(path: string, init: RequestInit = {}): Promise
   try {
     const text = await response.text();
     if (!text) {
-      throw new Error('Empty response body');
+      throw new Error("Empty response body");
     }
     data = JSON.parse(text);
   } catch (parseError) {
     const statusText = response.statusText || `HTTP ${response.status}`;
-    console.error('[Paystack] Response parse error:', parseError);
+    console.error("[Paystack] Response parse error:", parseError);
     throw new TRPCError({
-      code: 'BAD_REQUEST',
+      code: "BAD_REQUEST",
       message: `Paystack API error (${statusText}): Invalid JSON response`,
     });
   }
 
   if (!response.ok) {
     throw new TRPCError({
-      code: 'BAD_REQUEST',
+      code: "BAD_REQUEST",
       message: data?.message || `Paystack request failed (${response.status})`,
     });
   }
@@ -82,42 +90,53 @@ async function paystackRequest<T>(path: string, init: RequestInit = {}): Promise
 }
 
 export async function initializeTransaction(
-  payload: PaystackInitializeTransactionPayload,
+  payload: PaystackInitializeTransactionPayload
 ): Promise<PaystackApiResponse<PaystackInitializeResponse>> {
   if (!payload.email || !payload.amount) {
-    throw new Error('Initialize transaction requires email and amount');
+    throw new Error("Initialize transaction requires email and amount");
   }
 
-  if (!payload.email.includes('@')) {
-    throw new Error('Invalid email address provided');
+  if (!payload.email.includes("@")) {
+    throw new Error("Invalid email address provided");
   }
 
   if (payload.amount <= 0) {
-    throw new Error('Amount must be greater than zero');
+    throw new Error("Amount must be greater than zero");
   }
 
-  const reference = payload.reference || `ref_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const reference =
+    payload.reference ||
+    `ref_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
   // Amount is already in cents from client (e.g., 1 = $0.01, 100 = $1.00)
   // Paystack expects amount in the smallest currency unit
 
-  return paystackRequest<PaystackInitializeResponse>('/transaction/initialize', {
-    method: 'POST',
-    body: JSON.stringify({
-      email: payload.email,
-      amount: payload.amount,
-      reference,
-      currency: payload.currency || 'USD',
-      callback_url: payload.callback_url || process.env.PAYSTACK_CALLBACK_URL || undefined,
-      ...(payload.channels && payload.channels.length > 0 ? { channels: payload.channels } : {}),
-      ...(payload.description ? { description: payload.description } : {}),
-      ...(payload.metadata ? { metadata: payload.metadata } : {}),
-    }),
-  });
+  return paystackRequest<PaystackInitializeResponse>(
+    "/transaction/initialize",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        email: payload.email,
+        amount: payload.amount,
+        reference,
+        currency: payload.currency || "USD",
+        callback_url:
+          payload.callback_url ||
+          process.env.PAYSTACK_CALLBACK_URL ||
+          undefined,
+        ...(payload.channels && payload.channels.length > 0
+          ? { channels: payload.channels }
+          : {}),
+        ...(payload.description ? { description: payload.description } : {}),
+        ...(payload.metadata ? { metadata: payload.metadata } : {}),
+      }),
+    }
+  );
 }
 
 export async function verifyTransaction(reference: string) {
-  if (!reference) throw new Error('Reference is required to verify transaction');
+  if (!reference)
+    throw new Error("Reference is required to verify transaction");
 
   return paystackRequest<{
     amount: number;
@@ -127,7 +146,7 @@ export async function verifyTransaction(reference: string) {
     domain: string;
     metadata: Record<string, unknown> | null;
   }>(`/transaction/verify/${encodeURIComponent(reference)}`, {
-    method: 'GET',
+    method: "GET",
   });
 }
 
@@ -147,21 +166,26 @@ interface PrepareTransactionForClientResponse {
  * popup.newTransaction({ key: PUBLIC_KEY, amount, email, reference, metadata });
  */
 export function prepareTransactionForClient(
-  payload: Pick<PaystackInitializeTransactionPayload, 'email' | 'amount' | 'currency' | 'description' | 'metadata' | 'reference'>,
+  payload: Pick<
+    PaystackInitializeTransactionPayload,
+    "email" | "amount" | "currency" | "description" | "metadata" | "reference"
+  >
 ): PrepareTransactionForClientResponse {
   if (!payload.email || !payload.amount) {
-    throw new Error('Prepare transaction requires email and amount');
+    throw new Error("Prepare transaction requires email and amount");
   }
 
-  if (!payload.email.includes('@')) {
-    throw new Error('Invalid email address provided');
+  if (!payload.email.includes("@")) {
+    throw new Error("Invalid email address provided");
   }
 
   if (payload.amount <= 0) {
-    throw new Error('Amount must be greater than zero');
+    throw new Error("Amount must be greater than zero");
   }
 
-  const reference = payload.reference || `ref_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const reference =
+    payload.reference ||
+    `ref_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
   return {
     publicKey: PUBLIC_KEY,

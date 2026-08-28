@@ -16,14 +16,16 @@ export const trpcClient = createTRPCProxyClient<AppRouter>({
       transformer: superjson,
       async headers() {
         try {
-          const { data: { session } } = await supabase.auth.getSession();
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
           if (session?.access_token) {
             return {
               Authorization: `Bearer ${session.access_token}`,
             };
           }
         } catch (error) {
-          console.warn('[tRPC] Failed to get Supabase session:', error);
+          console.warn("[tRPC] Failed to get Supabase session:", error);
         }
 
         return {};

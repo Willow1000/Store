@@ -1,10 +1,10 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { httpBatchLink } from '@trpc/client';
-import { renderToReadableStream } from 'react-dom/server';
-import superjson from 'superjson';
-import App from './App';
-import { trpc } from './lib/trpc';
-import { createHeadCollector, HeadProvider } from './lib/headManager';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { httpBatchLink } from "@trpc/client";
+import { renderToReadableStream } from "react-dom/server";
+import superjson from "superjson";
+import App from "./App";
+import { trpc } from "./lib/trpc";
+import { createHeadCollector, HeadProvider } from "./lib/headManager";
 
 type MemoryStorage = {
   getItem: (key: string) => string | null;
@@ -32,22 +32,24 @@ function createMemoryStorage(): MemoryStorage {
 
 function ensureServerPolyfills(): void {
   const g = globalThis as any;
-  if (typeof g.localStorage === 'undefined') {
+  if (typeof g.localStorage === "undefined") {
     g.localStorage = createMemoryStorage();
   }
-  if (typeof g.sessionStorage === 'undefined') {
+  if (typeof g.sessionStorage === "undefined") {
     g.sessionStorage = createMemoryStorage();
   }
 }
 
-export async function render(url: string): Promise<{ html: string; head: string }> {
+export async function render(
+  url: string
+): Promise<{ html: string; head: string }> {
   ensureServerPolyfills();
 
   const queryClient = new QueryClient();
   const trpcClient = trpc.createClient({
     links: [
       httpBatchLink({
-        url: '/api/trpc',
+        url: "/api/trpc",
         transformer: superjson,
       }),
     ],
@@ -67,13 +69,13 @@ export async function render(url: string): Promise<{ html: string; head: string 
 
   const stream = await renderToReadableStream(app, {
     onError(error) {
-      console.error('[SSR] render error:', error);
+      console.error("[SSR] render error:", error);
     },
   });
 
   const reader = stream.getReader();
   const decoder = new TextDecoder();
-  let html = '';
+  let html = "";
 
   while (true) {
     const { done, value } = await reader.read();

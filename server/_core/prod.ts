@@ -46,15 +46,21 @@ function serveStatic(app: Express) {
   }
 
   const ssrEntryPath = path.resolve(__dirname, "server", "entry-server.js");
-  let render: ((url: string) => Promise<{ html: string; head: string }>) | null = null;
+  let render:
+    | ((url: string) => Promise<{ html: string; head: string }>)
+    | null = null;
 
   async function getRender() {
     if (render) return render;
     const mod = await import(pathToFileURL(ssrEntryPath).href);
     if (typeof mod?.render !== "function") {
-      throw new Error("SSR render function not found in dist/server/entry-server.js");
+      throw new Error(
+        "SSR render function not found in dist/server/entry-server.js"
+      );
     }
-    render = mod.render as ((url: string) => Promise<{ html: string; head: string }>);
+    render = mod.render as (
+      url: string
+    ) => Promise<{ html: string; head: string }>;
     return render;
   }
 
@@ -66,19 +72,22 @@ function serveStatic(app: Express) {
     }
 
     getRender()
-      .then((ssrRender) => {
+      .then(ssrRender => {
         if (!ssrRender) {
-          throw new Error('SSR render function unavailable');
+          throw new Error("SSR render function unavailable");
         }
         return ssrRender(req.originalUrl || req.url || "/");
       })
-      .then((renderResult) => {
-        const headMarkup = renderResult.head || '';
-        const appHtml = renderResult.html || '';
+      .then(renderResult => {
+        const headMarkup = renderResult.head || "";
+        const appHtml = renderResult.html || "";
         const html = template
-          .replace('<!--SSR_HEAD-->', headMarkup)
+          .replace("<!--SSR_HEAD-->", headMarkup)
           .replace('<div id="root"></div>', `<div id="root">${appHtml}</div>`);
-        res.status(200).setHeader("Content-Type", "text/html; charset=utf-8").send(html);
+        res
+          .status(200)
+          .setHeader("Content-Type", "text/html; charset=utf-8")
+          .send(html);
       })
       .catch(() => {
         res.sendFile(indexHtmlPath);

@@ -1,16 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { getHighResImageUrl } from '@/lib/images';
-import { Product, ProductImage } from '@/types/supabase';
-import { toast } from 'sonner';
-import { searchProducts, filterProducts, sortProducts } from '@/lib/productSearch';
-import { isTimeoutError, recoverFromTimeout } from '@/lib/sessionRecovery';
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { getHighResImageUrl } from "@/lib/images";
+import { Product, ProductImage } from "@/types/supabase";
+import { toast } from "sonner";
+import {
+  searchProducts,
+  filterProducts,
+  sortProducts,
+} from "@/lib/productSearch";
+import { isTimeoutError, recoverFromTimeout } from "@/lib/sessionRecovery";
 
-const PRODUCTS_CACHE_KEY = 'products_cache_v2';
-const CATEGORIES_CACHE_KEY = 'categories_cache_v2';
+const PRODUCTS_CACHE_KEY = "products_cache_v2";
+const CATEGORIES_CACHE_KEY = "categories_cache_v2";
 
 function readCachedArray<T>(key: string): T[] {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === "undefined") return [];
 
   try {
     const raw = localStorage.getItem(key);
@@ -23,7 +27,7 @@ function readCachedArray<T>(key: string): T[] {
 }
 
 function writeCachedArray<T>(key: string, value: T[]) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   try {
     localStorage.setItem(key, JSON.stringify(value));
@@ -39,63 +43,80 @@ export function useProducts(
     enableRealtime?: boolean;
   }
 ) {
-  const [products, setProducts] = useState<Product[]>(() => readCachedArray<Product>(PRODUCTS_CACHE_KEY));
-  const [isLoading, setIsLoading] = useState(() => readCachedArray<Product>(PRODUCTS_CACHE_KEY).length === 0);
+  const [products, setProducts] = useState<Product[]>(() =>
+    readCachedArray<Product>(PRODUCTS_CACHE_KEY)
+  );
+  const [isLoading, setIsLoading] = useState(
+    () => readCachedArray<Product>(PRODUCTS_CACHE_KEY).length === 0
+  );
   const [error, setError] = useState<string | null>(null);
   const enableRealtime = options?.enableRealtime ?? true;
 
-  const fetchProducts = useCallback(async (limit = 20, offset = 0) => {
-    try {
-      setIsLoading(products.length === 0);
-      setError(null);
+  const fetchProducts = useCallback(
+    async (limit = 20, offset = 0) => {
+      try {
+        setIsLoading(products.length === 0);
+        setError(null);
 
-      // Create a timeout promise that rejects after 15 seconds
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error('Products fetch timed out. Please refresh the page.')),
-          15000
-        )
-      );
+        // Create a timeout promise that rejects after 15 seconds
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error("Products fetch timed out. Please refresh the page.")
+              ),
+            15000
+          )
+        );
 
-      // Race between the actual fetch and the timeout
-      const fetchPromise = (async () => {
-        let query = supabase
-          .from('products')
-          .select('*')
-          .order('created_at', { ascending: false });
+        // Race between the actual fetch and the timeout
+        const fetchPromise = (async () => {
+          let query = supabase
+            .from("products")
+            .select("*")
+            .order("created_at", { ascending: false });
 
-        // If limit is -1, fetch all products (no range). Otherwise use range for pagination.
-        if (limit === -1) {
-          const { data, error: supabaseError } = await query.limit(1000);
+          // If limit is -1, fetch all products (no range). Otherwise use range for pagination.
+          if (limit === -1) {
+            const { data, error: supabaseError } = await query.limit(1000);
+            if (supabaseError) throw supabaseError;
+            return (data || []) as Product[];
+          }
+
+          const { data, error: supabaseError } = await query.range(
+            offset,
+            offset + limit - 1
+          );
           if (supabaseError) throw supabaseError;
-          return (data || []) as Product[];
+          return data as Product[];
+        })();
+
+        const fetchedProducts = (await Promise.race([
+          fetchPromise,
+          timeoutPromise,
+        ])) as Product[];
+
+        // Normalize cover image URLs so webp and storage paths resolve correctly
+        const normalized = (fetchedProducts || []).map(p => ({
+          ...p,
+          cover_image_url: getHighResImageUrl(p?.cover_image_url || ""),
+        }));
+        setProducts(normalized);
+        writeCachedArray(PRODUCTS_CACHE_KEY, normalized);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to fetch products";
+        setError(message);
+        console.error("[useProducts] Error fetching products:", err);
+        if (isTimeoutError(err)) {
+          await recoverFromTimeout(message);
         }
-
-        const { data, error: supabaseError } = await query.range(offset, offset + limit - 1);
-        if (supabaseError) throw supabaseError;
-        return data as Product[];
-      })();
-
-      const fetchedProducts = await Promise.race([fetchPromise, timeoutPromise]) as Product[];
-
-      // Normalize cover image URLs so webp and storage paths resolve correctly
-      const normalized = (fetchedProducts || []).map((p) => ({
-        ...p,
-        cover_image_url: getHighResImageUrl(p?.cover_image_url || ''),
-      }));
-      setProducts(normalized);
-      writeCachedArray(PRODUCTS_CACHE_KEY, normalized);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch products';
-      setError(message);
-      console.error('[useProducts] Error fetching products:', err);
-      if (isTimeoutError(err)) {
-        await recoverFromTimeout(message);
+      } finally {
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [products.length]);
+    },
+    [products.length]
+  );
 
   // Realtime subscription: update products list when DB changes occur
   useEffect(() => {
@@ -103,49 +124,59 @@ export function useProducts(
 
     try {
       const channel = supabase
-        .channel('public:products')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
-          try {
-            const record = payload?.new || payload?.old;
-            if (!record) return;
-            const recordId = (record as any).id;
+        .channel("public:products")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "products" },
+          payload => {
+            try {
+              const record = payload?.new || payload?.old;
+              if (!record) return;
+              const recordId = (record as any).id;
 
-            const normalizedRecord: Product = {
-              ...record,
-              cover_image_url: getHighResImageUrl((record as any).cover_image_url || ''),
-            } as Product;
+              const normalizedRecord: Product = {
+                ...record,
+                cover_image_url: getHighResImageUrl(
+                  (record as any).cover_image_url || ""
+                ),
+              } as Product;
 
-            setProducts((prev) => {
-              if (!prev) return [normalizedRecord];
+              setProducts(prev => {
+                if (!prev) return [normalizedRecord];
 
-              switch (payload.eventType) {
-                case 'INSERT':
-                case 'UPDATE': {
-                  // Replace existing or add new at front for newest-first ordering
-                  const idx = prev.findIndex((p) => String(p.id) === String(normalizedRecord.id));
-                  if (idx === -1) {
-                    const next = [normalizedRecord, ...prev];
+                switch (payload.eventType) {
+                  case "INSERT":
+                  case "UPDATE": {
+                    // Replace existing or add new at front for newest-first ordering
+                    const idx = prev.findIndex(
+                      p => String(p.id) === String(normalizedRecord.id)
+                    );
+                    if (idx === -1) {
+                      const next = [normalizedRecord, ...prev];
+                      writeCachedArray(PRODUCTS_CACHE_KEY, next);
+                      return next;
+                    }
+                    const next = prev.slice();
+                    next[idx] = { ...next[idx], ...normalizedRecord };
                     writeCachedArray(PRODUCTS_CACHE_KEY, next);
                     return next;
                   }
-                  const next = prev.slice();
-                  next[idx] = { ...next[idx], ...normalizedRecord };
-                  writeCachedArray(PRODUCTS_CACHE_KEY, next);
-                  return next;
+                  case "DELETE": {
+                    const next = prev.filter(
+                      p => String(p.id) !== String(recordId)
+                    );
+                    writeCachedArray(PRODUCTS_CACHE_KEY, next);
+                    return next;
+                  }
+                  default:
+                    return prev;
                 }
-                case 'DELETE': {
-                  const next = prev.filter((p) => String(p.id) !== String(recordId));
-                  writeCachedArray(PRODUCTS_CACHE_KEY, next);
-                  return next;
-                }
-                default:
-                  return prev;
-              }
-            });
-          } catch (err) {
-            console.error('Realtime products handler error:', err);
+              });
+            } catch (err) {
+              console.error("Realtime products handler error:", err);
+            }
           }
-        })
+        )
         .subscribe();
 
       return () => {
@@ -157,7 +188,7 @@ export function useProducts(
       };
     } catch (err) {
       // subscription failure shouldn't break app
-      console.warn('Failed to subscribe to products realtime updates', err);
+      console.warn("Failed to subscribe to products realtime updates", err);
     }
   }, [enableRealtime]);
 
@@ -189,7 +220,10 @@ export function useProductById(productId: string) {
         // Create a timeout promise that rejects after 15 seconds
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(
-            () => reject(new Error('Product fetch timed out. Please refresh the page.')),
+            () =>
+              reject(
+                new Error("Product fetch timed out. Please refresh the page.")
+              ),
             15000
           )
         );
@@ -198,9 +232,9 @@ export function useProductById(productId: string) {
         const fetchPromise = (async () => {
           // Fetch product
           const { data: productData, error: productError } = await supabase
-            .from('products')
-            .select('*')
-            .eq('id', productId)
+            .from("products")
+            .select("*")
+            .eq("id", productId)
             .maybeSingle();
 
           if (productError) throw productError;
@@ -209,9 +243,9 @@ export function useProductById(productId: string) {
             // Legacy fallback for numeric product routes that originated from older JSON catalog links.
             const numericId = Number(productId);
             if (Number.isFinite(numericId) && numericId > 0) {
-              const res = await fetch('/data/products.json');
+              const res = await fetch("/data/products.json");
               if (!res.ok) {
-                throw new Error('Product not found');
+                throw new Error("Product not found");
               }
 
               const json = await res.json();
@@ -219,13 +253,15 @@ export function useProductById(productId: string) {
                 .flat()
                 .map((item: any, idx: number) => ({
                   id: String(idx + 1),
-                  title: String(item?.title || 'Product'),
-                  category_name: String(item?.category || 'General'),
+                  title: String(item?.title || "Product"),
+                  category_name: String(item?.category || "General"),
                   owner_id: null,
-                  price: Number(String(item?.price || '0').replace(/[^\d.]/g, '') || 0),
+                  price: Number(
+                    String(item?.price || "0").replace(/[^\d.]/g, "") || 0
+                  ),
                   original_price: undefined,
-                  condition: 'used',
-                  cover_image_url: String(item?.image_urls?.[0] || ''),
+                  condition: "used",
+                  cover_image_url: String(item?.image_urls?.[0] || ""),
                   brand: null,
                   model: null,
                   stock: 1,
@@ -235,62 +271,74 @@ export function useProductById(productId: string) {
                   created_at: new Date().toISOString(),
                 }));
 
-              const fallbackProduct = flattened[numericId - 1] as Product | undefined;
+              const fallbackProduct = flattened[numericId - 1] as
+                | Product
+                | undefined;
               if (!fallbackProduct) {
-                throw new Error('Product not found');
+                throw new Error("Product not found");
               }
 
               setProduct(fallbackProduct);
               setImages(
-                (json && Object.values(json as Record<string, any[]>).flat()[numericId - 1]?.image_urls || []).map(
-                  (url: string, i: number) => ({
-                    id: `legacy-${numericId}-${i}`,
-                    product_id: fallbackProduct.id,
-                    image_url: url,
-                    created_at: new Date().toISOString(),
-                  })
-                ) as ProductImage[]
+                (
+                  (json &&
+                    Object.values(json as Record<string, any[]>).flat()[
+                      numericId - 1
+                    ]?.image_urls) ||
+                  []
+                ).map((url: string, i: number) => ({
+                  id: `legacy-${numericId}-${i}`,
+                  product_id: fallbackProduct.id,
+                  image_url: url,
+                  created_at: new Date().toISOString(),
+                })) as ProductImage[]
               );
               return;
             }
 
-            throw new Error('Product not found');
+            throw new Error("Product not found");
           }
-          
+
           // Fetch brand details if brand exists
           let productWithBrand: Product = productData as Product;
           if (productData?.brand) {
             try {
               const { data: brandData, error: brandError } = await supabase
-                .from('Brand')
-                .select('*')
-                .eq('name', productData.brand)
+                .from("Brand")
+                .select("*")
+                .eq("name", productData.brand)
                 .single();
 
               if (!brandError && brandData) {
                 productWithBrand = {
                   ...productData,
-                  brand_details: brandData as typeof productWithBrand.brand_details
+                  brand_details:
+                    brandData as typeof productWithBrand.brand_details,
                 };
               }
             } catch (err) {
-              console.warn('[useProductById] Failed to fetch brand details:', err);
+              console.warn(
+                "[useProductById] Failed to fetch brand details:",
+                err
+              );
             }
           }
-          
+
           // Normalize product cover image
           const normalizedProduct = {
             ...productWithBrand,
-            cover_image_url: getHighResImageUrl(productWithBrand?.cover_image_url || ''),
+            cover_image_url: getHighResImageUrl(
+              productWithBrand?.cover_image_url || ""
+            ),
           } as Product;
 
           setProduct(normalizedProduct);
 
           // Fetch product images
           const { data: imagesData, error: imagesError } = await supabase
-            .from('product_images')
-            .select('*')
-            .eq('product_id', productId);
+            .from("product_images")
+            .select("*")
+            .eq("product_id", productId);
 
           if (imagesError) throw imagesError;
 
@@ -306,9 +354,10 @@ export function useProductById(productId: string) {
         // Wait for whichever completes first (fetch or timeout)
         await Promise.race([fetchPromise, timeoutPromise]);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to fetch product';
+        const message =
+          err instanceof Error ? err.message : "Failed to fetch product";
         setError(message);
-        console.error('[useProductById] Error fetching product:', err);
+        console.error("[useProductById] Error fetching product:", err);
         if (isTimeoutError(err)) {
           await recoverFromTimeout(message);
         }
@@ -337,29 +386,36 @@ export function useProductsByCategory(categoryName: string) {
         // Create a timeout promise that rejects after 15 seconds
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(
-            () => reject(new Error('Products fetch timed out. Please refresh the page.')),
+            () =>
+              reject(
+                new Error("Products fetch timed out. Please refresh the page.")
+              ),
             15000
           )
         );
 
         const fetchPromise = (async () => {
           const { data, error: supabaseError } = await supabase
-            .from('products')
-            .select('*')
-            .eq('category_name', categoryName)
-            .order('created_at', { ascending: false })
+            .from("products")
+            .select("*")
+            .eq("category_name", categoryName)
+            .order("created_at", { ascending: false })
             .limit(1000);
 
           if (supabaseError) throw supabaseError;
           return data as Product[];
         })();
 
-        const fetchedProducts = await Promise.race([fetchPromise, timeoutPromise]) as Product[];
+        const fetchedProducts = (await Promise.race([
+          fetchPromise,
+          timeoutPromise,
+        ])) as Product[];
         setProducts(fetchedProducts);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to fetch products';
+        const message =
+          err instanceof Error ? err.message : "Failed to fetch products";
         setError(message);
-        console.error('Error fetching products:', err);
+        console.error("Error fetching products:", err);
         if (isTimeoutError(err)) {
           await recoverFromTimeout(message);
         }
@@ -395,7 +451,7 @@ export function useSearchProducts(searchTerm: string) {
         // Create a timeout promise that rejects after 15 seconds
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(
-            () => reject(new Error('Search timed out. Please try again.')),
+            () => reject(new Error("Search timed out. Please try again.")),
             15000
           )
         );
@@ -404,26 +460,26 @@ export function useSearchProducts(searchTerm: string) {
           // First, try to get exact matches using Supabase full-text search
           // Search across title, brand, model, and condition fields
           const { data, error: supabaseError } = await supabase
-            .from('products')
-            .select('*')
+            .from("products")
+            .select("*")
             .or(
               `title.ilike.%${searchTerm}%,` +
-              `brand.ilike.%${searchTerm}%,` +
-              `model.ilike.%${searchTerm}%,` +
-              `category_name.ilike.%${searchTerm}%,` +
-              `condition.ilike.%${searchTerm}%,` +
-              `part_number.ilike.%${searchTerm}%`
+                `brand.ilike.%${searchTerm}%,` +
+                `model.ilike.%${searchTerm}%,` +
+                `category_name.ilike.%${searchTerm}%,` +
+                `condition.ilike.%${searchTerm}%,` +
+                `part_number.ilike.%${searchTerm}%`
             )
             .limit(300); // Fetch more for local scoring
 
           if (supabaseError) throw supabaseError;
-          
+
           // If no results, fetch more products for client-side similarity matching
           let productsToSearch = (data || []) as Product[];
           if (productsToSearch.length === 0) {
             const { data: allData, error: allError } = await supabase
-              .from('products')
-              .select('*')
+              .from("products")
+              .select("*")
               .limit(500);
             if (allError) throw allError;
             productsToSearch = (allData || []) as Product[];
@@ -432,7 +488,10 @@ export function useSearchProducts(searchTerm: string) {
           return productsToSearch;
         })();
 
-        let allProducts = await Promise.race([fetchPromise, timeoutPromise]) as Product[];
+        let allProducts = (await Promise.race([
+          fetchPromise,
+          timeoutPromise,
+        ])) as Product[];
 
         // Apply comprehensive client-side search with relevance scoring
         const searchedProducts = searchProducts(allProducts, searchTerm, {
@@ -443,9 +502,9 @@ export function useSearchProducts(searchTerm: string) {
 
         setResults(searchedProducts);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Search failed';
+        const message = err instanceof Error ? err.message : "Search failed";
         setError(message);
-        console.error('Search error:', err);
+        console.error("Search error:", err);
       } finally {
         setIsLoading(false);
       }
@@ -468,8 +527,12 @@ export interface Category {
 }
 
 export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>(() => readCachedArray<Category>(CATEGORIES_CACHE_KEY));
-  const [isLoading, setIsLoading] = useState(() => readCachedArray<Category>(CATEGORIES_CACHE_KEY).length === 0);
+  const [categories, setCategories] = useState<Category[]>(() =>
+    readCachedArray<Category>(CATEGORIES_CACHE_KEY)
+  );
+  const [isLoading, setIsLoading] = useState(
+    () => readCachedArray<Category>(CATEGORIES_CACHE_KEY).length === 0
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -481,28 +544,37 @@ export function useCategories() {
         // Create a timeout promise that rejects after 15 seconds
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(
-            () => reject(new Error('Categories fetch timed out. Please refresh the page.')),
+            () =>
+              reject(
+                new Error(
+                  "Categories fetch timed out. Please refresh the page."
+                )
+              ),
             15000
           )
         );
 
         const fetchPromise = (async () => {
           const { data, error: supabaseError } = await supabase
-            .from('categories')
-            .select('id,name,slug,description,icon,image_url,created_at')
-            .order('name', { ascending: true });
+            .from("categories")
+            .select("id,name,slug,description,icon,image_url,created_at")
+            .order("name", { ascending: true });
 
           if (supabaseError) throw supabaseError;
           return data as Category[];
         })();
 
-        const fetchedCategories = await Promise.race([fetchPromise, timeoutPromise]) as Category[];
+        const fetchedCategories = (await Promise.race([
+          fetchPromise,
+          timeoutPromise,
+        ])) as Category[];
         setCategories(fetchedCategories);
         writeCachedArray(CATEGORIES_CACHE_KEY, fetchedCategories);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to fetch categories';
+        const message =
+          err instanceof Error ? err.message : "Failed to fetch categories";
         setError(message);
-        console.error('Error fetching categories:', err);
+        console.error("Error fetching categories:", err);
         if (isTimeoutError(err)) {
           await recoverFromTimeout(message);
         }
@@ -536,7 +608,10 @@ export function useProductsBySlug(categorySlug: string) {
         // Create a timeout promise that rejects after 15 seconds
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(
-            () => reject(new Error('Products fetch timed out. Please refresh the page.')),
+            () =>
+              reject(
+                new Error("Products fetch timed out. Please refresh the page.")
+              ),
             15000
           )
         );
@@ -544,31 +619,35 @@ export function useProductsBySlug(categorySlug: string) {
         const fetchPromise = (async () => {
           // First, get the category by slug to get its name
           const { data: categoryData, error: categoryError } = await supabase
-            .from('categories')
-            .select('name')
-            .eq('slug', categorySlug)
+            .from("categories")
+            .select("name")
+            .eq("slug", categorySlug)
             .single();
 
           if (categoryError) throw categoryError;
 
           // Then fetch products by category_name
           const { data, error: supabaseError } = await supabase
-            .from('products')
-            .select('*')
-            .eq('category_name', categoryData.name)
-            .order('created_at', { ascending: false })
+            .from("products")
+            .select("*")
+            .eq("category_name", categoryData.name)
+            .order("created_at", { ascending: false })
             .limit(1000);
 
           if (supabaseError) throw supabaseError;
           return data as Product[];
         })();
 
-        const fetchedProducts = await Promise.race([fetchPromise, timeoutPromise]) as Product[];
+        const fetchedProducts = (await Promise.race([
+          fetchPromise,
+          timeoutPromise,
+        ])) as Product[];
         setProducts(fetchedProducts);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to fetch products';
+        const message =
+          err instanceof Error ? err.message : "Failed to fetch products";
         setError(message);
-        console.error('Error fetching products by slug:', err);
+        console.error("Error fetching products by slug:", err);
         if (isTimeoutError(err)) {
           await recoverFromTimeout(message);
         }

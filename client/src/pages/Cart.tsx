@@ -1,20 +1,31 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'wouter';
-import { Trash2, Plus, Minus, ArrowRight } from 'lucide-react';
-import { SEOHead } from '@/components/SEOHead';
-import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
-import { readCartFromStorage } from '@/lib/cart';
-import { useAuth } from '@/_core/hooks/useAuth';
-import { useSupabaseCart } from '@/hooks/useSupabaseCart';
-import { useRecommendations } from '@/hooks/useRecommendations';
-import { useProducts } from '@/hooks/useSupabaseProducts';
-import { getHighResImageUrl } from '@/lib/images';
-import { calculateShipping, getFreeShippingThresholdUsd } from '@shared/shipping';
-import currencyClient from '@/lib/currencyClient';
-import { calculateVariableVat } from '@/lib/vat';
-import { SITE_LANGUAGE_CHANGED_EVENT, getSiteLanguage, translateText, type SiteLanguageCode } from '@/lib/language';
-import { savePendingAuthAction, waitForCartMigration } from '@/lib/authPendingAction';
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation } from "wouter";
+import { Trash2, Plus, Minus, ArrowRight } from "lucide-react";
+import { SEOHead } from "@/components/SEOHead";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { readCartFromStorage } from "@/lib/cart";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useSupabaseCart } from "@/hooks/useSupabaseCart";
+import { useRecommendations } from "@/hooks/useRecommendations";
+import { useProducts } from "@/hooks/useSupabaseProducts";
+import { getHighResImageUrl } from "@/lib/images";
+import {
+  calculateShipping,
+  getFreeShippingThresholdUsd,
+} from "@shared/shipping";
+import currencyClient from "@/lib/currencyClient";
+import { calculateVariableVat } from "@/lib/vat";
+import {
+  SITE_LANGUAGE_CHANGED_EVENT,
+  getSiteLanguage,
+  translateText,
+  type SiteLanguageCode,
+} from "@/lib/language";
+import {
+  savePendingAuthAction,
+  waitForCartMigration,
+} from "@/lib/authPendingAction";
 
 interface CartItem {
   productId?: string;
@@ -35,7 +46,12 @@ type ProductLookup = {
 
 export default function Cart() {
   const [, navigate] = useLocation();
-  const { user, isAuthenticated, loading: authLoading, sessionRestored } = useAuth();
+  const {
+    user,
+    isAuthenticated,
+    loading: authLoading,
+    sessionRestored,
+  } = useAuth();
   const {
     items: supabaseCartItems,
     isLoading: isSupabaseLoading,
@@ -48,16 +64,22 @@ export default function Cart() {
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [language, setLanguage] = useState<SiteLanguageCode>(() => getSiteLanguage());
+  const [language, setLanguage] = useState<SiteLanguageCode>(() =>
+    getSiteLanguage()
+  );
   const [awaitingCartHydration, setAwaitingCartHydration] = useState(() => {
     try {
-      return typeof window !== 'undefined' && sessionStorage.getItem('cart-auth-redirect-pending-v1') === '1';
+      return (
+        typeof window !== "undefined" &&
+        sessionStorage.getItem("cart-auth-redirect-pending-v1") === "1"
+      );
     } catch {
       return false;
     }
   });
 
-  const t = (key: string, fallback: string) => translateText(language, key, fallback);
+  const t = (key: string, fallback: string) =>
+    translateText(language, key, fallback);
 
   // Load cart items from localStorage
   useEffect(() => {
@@ -66,7 +88,7 @@ export default function Cart() {
       return;
     }
 
-    const savedCart = localStorage.getItem('cart');
+    const savedCart = localStorage.getItem("cart");
     const items = readCartFromStorage(savedCart);
     setCartItems(items);
     setIsLoading(false);
@@ -74,21 +96,27 @@ export default function Cart() {
 
   useEffect(() => {
     const onLanguageChanged = () => setLanguage(getSiteLanguage());
-    window.addEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
-    window.addEventListener('storage', onLanguageChanged);
+    window.addEventListener(
+      SITE_LANGUAGE_CHANGED_EVENT,
+      onLanguageChanged as EventListener
+    );
+    window.addEventListener("storage", onLanguageChanged);
     return () => {
-      window.removeEventListener(SITE_LANGUAGE_CHANGED_EVENT, onLanguageChanged as EventListener);
-      window.removeEventListener('storage', onLanguageChanged);
+      window.removeEventListener(
+        SITE_LANGUAGE_CHANGED_EVENT,
+        onLanguageChanged as EventListener
+      );
+      window.removeEventListener("storage", onLanguageChanged);
     };
   }, []);
 
   const effectiveCartItems: CartItem[] = isAuthenticated
-    ? supabaseCartItems.map((item) => ({
+    ? supabaseCartItems.map(item => ({
         productIndex: item.product_id,
         productId: item.product_id,
-        title: item.product?.title || 'Product',
+        title: item.product?.title || "Product",
         price: `$ ${Number(item.product?.price || 0).toFixed(2)}`,
-        image: item.product?.cover_image_url || '',
+        image: item.product?.cover_image_url || "",
         quantity: item.quantity,
       }))
     : cartItems;
@@ -100,7 +128,7 @@ export default function Cart() {
     if (effectiveCartItems.length > 0) {
       setAwaitingCartHydration(false);
       try {
-        sessionStorage.removeItem('cart-auth-redirect-pending-v1');
+        sessionStorage.removeItem("cart-auth-redirect-pending-v1");
       } catch {
         // ignore storage issues
       }
@@ -117,7 +145,7 @@ export default function Cart() {
     const timer = window.setTimeout(() => {
       setAwaitingCartHydration(false);
       try {
-        sessionStorage.removeItem('cart-auth-redirect-pending-v1');
+        sessionStorage.removeItem("cart-auth-redirect-pending-v1");
       } catch {
         // ignore storage issues
       }
@@ -127,17 +155,27 @@ export default function Cart() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [awaitingCartHydration, isAuthenticated, effectiveCartItems.length, refetchSupabaseCart]);
+  }, [
+    awaitingCartHydration,
+    isAuthenticated,
+    effectiveCartItems.length,
+    refetchSupabaseCart,
+  ]);
 
   const productsById = useMemo(() => {
-    return new Map((dbProducts as ProductLookup[]).map((product) => [product.id, product]));
+    return new Map(
+      (dbProducts as ProductLookup[]).map(product => [product.id, product])
+    );
   }, [dbProducts]);
 
   const resolveProduct = (item: CartItem) => {
     const byId = item.productId ? productsById.get(item.productId) : undefined;
     if (byId) return byId;
 
-    const legacyIndex = typeof item.productIndex === 'number' ? item.productIndex : Number(item.productIndex);
+    const legacyIndex =
+      typeof item.productIndex === "number"
+        ? item.productIndex
+        : Number(item.productIndex);
     if (Number.isFinite(legacyIndex) && legacyIndex >= 0) {
       return dbProducts[legacyIndex] as ProductLookup | undefined;
     }
@@ -147,15 +185,20 @@ export default function Cart() {
 
   const persistLocalCart = (updatedCart: CartItem[]) => {
     setCartItems(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event('cartUpdated'));
+    localStorage.setItem("cart", JSON.stringify(updatedCart));
+    window.dispatchEvent(new Event("cartUpdated"));
   };
 
-  const updateCartQuantity = async (productIndex: string | number, newQuantity: number) => {
+  const updateCartQuantity = async (
+    productIndex: string | number,
+    newQuantity: number
+  ) => {
     if (isAuthenticated) {
-      const item = supabaseCartItems.find((cartItem) => String(cartItem.product_id) === String(productIndex));
+      const item = supabaseCartItems.find(
+        cartItem => String(cartItem.product_id) === String(productIndex)
+      );
       if (!item?.id) {
-        toast.error(t('cart.itemNotFound', 'Cart item not found'));
+        toast.error(t("cart.itemNotFound", "Cart item not found"));
         return;
       }
       await updateSupabaseQuantity(item.id, newQuantity);
@@ -168,65 +211,85 @@ export default function Cart() {
     }
 
     const updatedCart = cartItems.map(item =>
-      item.productIndex === productIndex ? { ...item, quantity: newQuantity } : item
+      item.productIndex === productIndex
+        ? { ...item, quantity: newQuantity }
+        : item
     );
-    const changedItem = cartItems.find((item) => String(item.productIndex) === String(productIndex) || String(item.productId) === String(productIndex));
+    const changedItem = cartItems.find(
+      item =>
+        String(item.productIndex) === String(productIndex) ||
+        String(item.productId) === String(productIndex)
+    );
     persistLocalCart(updatedCart);
     recommendations.track({
-      eventType: 'quantity_change',
+      eventType: "quantity_change",
       product: changedItem ? resolveProduct(changedItem) : null,
       productId: changedItem?.productId || String(productIndex),
       quantity: newQuantity,
-      metadata: { source: 'guest_cart_page' },
+      metadata: { source: "guest_cart_page" },
     });
-    toast.success(t('cart.updated', 'Cart updated!'));
+    toast.success(t("cart.updated", "Cart updated!"));
   };
 
   const removeFromCart = async (productIndex: string | number) => {
     if (isAuthenticated) {
-      const item = supabaseCartItems.find((cartItem) => String(cartItem.product_id) === String(productIndex));
+      const item = supabaseCartItems.find(
+        cartItem => String(cartItem.product_id) === String(productIndex)
+      );
       if (!item?.id) {
-        toast.error(t('cart.itemNotFound', 'Cart item not found'));
+        toast.error(t("cart.itemNotFound", "Cart item not found"));
         return;
       }
       await removeSupabaseItem(item.id);
       return;
     }
 
-    const removedItem = cartItems.find((item) => String(item.productIndex) === String(productIndex) || String(item.productId) === String(productIndex));
-    const updatedCart = cartItems.filter(item => item.productIndex !== productIndex);
+    const removedItem = cartItems.find(
+      item =>
+        String(item.productIndex) === String(productIndex) ||
+        String(item.productId) === String(productIndex)
+    );
+    const updatedCart = cartItems.filter(
+      item => item.productIndex !== productIndex
+    );
     persistLocalCart(updatedCart);
     recommendations.track({
-      eventType: 'remove_from_cart',
+      eventType: "remove_from_cart",
       product: removedItem ? resolveProduct(removedItem) : null,
       productId: removedItem?.productId || String(productIndex),
-      metadata: { source: 'guest_cart_page' },
+      metadata: { source: "guest_cart_page" },
     });
-    toast.success(t('cart.itemRemoved', 'Item removed from cart!'));
+    toast.success(t("cart.itemRemoved", "Item removed from cart!"));
   };
 
   // Calculate totals
   const subtotal = effectiveCartItems.reduce((sum, item) => {
-    const price = parseFloat(item.price.replace(/[^\d.]/g, '') || '0');
-    return sum + (price * item.quantity);
+    const price = parseFloat(item.price.replace(/[^\d.]/g, "") || "0");
+    return sum + price * item.quantity;
   }, 0);
 
   const shipping = calculateShipping(subtotal);
   const vatSummary = calculateVariableVat(
-    effectiveCartItems.map((item) => ({
-      productId: item.productId ? String(item.productId) : String(item.productIndex),
+    effectiveCartItems.map(item => ({
+      productId: item.productId
+        ? String(item.productId)
+        : String(item.productIndex),
       title: item.title,
-      unitPrice: parseFloat(item.price.replace(/[^\d.]/g, '') || '0'),
+      unitPrice: parseFloat(item.price.replace(/[^\d.]/g, "") || "0"),
       quantity: item.quantity,
     }))
   );
   const vat = vatSummary.totalVat;
   const total = subtotal + shipping + vat;
 
-  const shouldShowLoadingState = !sessionRestored || authLoading || awaitingCartHydration || (isAuthenticated && isSupabaseLoading);
+  const shouldShowLoadingState =
+    !sessionRestored ||
+    authLoading ||
+    awaitingCartHydration ||
+    (isAuthenticated && isSupabaseLoading);
   const showCartLoading = isLoading || shouldShowLoadingState;
 
-  const enrichedCartItems = effectiveCartItems.map((item) => {
+  const enrichedCartItems = effectiveCartItems.map(item => {
     const product = resolveProduct(item);
     return {
       ...item,
@@ -237,10 +300,17 @@ export default function Cart() {
 
   if (!showCartLoading && effectiveCartItems.length === 0) {
     return (
-          <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
+      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
         <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-secondary py-12 sm:py-16">
-          <p className="mb-4 text-lg sm:text-xl font-semibold text-gray-900">{t('cart.empty', 'Your cart is empty')}</p>
-          <p className="mb-8 text-sm sm:text-base text-gray-600 text-center max-w-sm">{t('cart.startShopping', 'Start shopping to add items to your cart')}</p>
+          <p className="mb-4 text-lg sm:text-xl font-semibold text-gray-900">
+            {t("cart.empty", "Your cart is empty")}
+          </p>
+          <p className="mb-8 text-sm sm:text-base text-gray-600 text-center max-w-sm">
+            {t(
+              "cart.startShopping",
+              "Start shopping to add items to your cart"
+            )}
+          </p>
 
           {!isAuthenticated && (
             <div className="mb-6 w-full max-w-md flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
@@ -250,19 +320,19 @@ export default function Cart() {
               <button
                 onClick={() => {
                   try {
-                    localStorage.setItem('oauth_return_to', '/cart');
+                    localStorage.setItem("oauth_return_to", "/cart");
                     savePendingAuthAction({
-                      type: 'cart',
-                      redirectTo: '/cart',
+                      type: "cart",
+                      redirectTo: "/cart",
                     });
                   } catch {
                     // ignore storage issues
                   }
                   window.dispatchEvent(
-                    new CustomEvent('auth:required', {
+                    new CustomEvent("auth:required", {
                       detail: {
-                        actionType: 'cart',
-                        redirectTo: '/cart',
+                        actionType: "cart",
+                        redirectTo: "/cart",
                       },
                     })
                   );
@@ -276,7 +346,7 @@ export default function Cart() {
 
           <Link href="/products">
             <a className="inline-flex items-center gap-2 px-6 py-3 sm:py-3.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base">
-              {t('header.browseProducts', 'Browse Products')}
+              {t("header.browseProducts", "Browse Products")}
               <ArrowRight size={18} />
             </a>
           </Link>
@@ -288,7 +358,9 @@ export default function Cart() {
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <div className="container px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
-        <h1 className="mb-6 sm:mb-8 text-3xl sm:text-4xl font-bold text-gray-900">{t('common.cart', 'Shopping Cart')}</h1>
+        <h1 className="mb-6 sm:mb-8 text-3xl sm:text-4xl font-bold text-gray-900">
+          {t("common.cart", "Shopping Cart")}
+        </h1>
 
         {!isAuthenticated && (
           <div className="mb-6 flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -298,19 +370,19 @@ export default function Cart() {
             <button
               onClick={() => {
                 try {
-                  localStorage.setItem('oauth_return_to', '/cart');
+                  localStorage.setItem("oauth_return_to", "/cart");
                   savePendingAuthAction({
-                    type: 'cart',
-                    redirectTo: '/cart',
+                    type: "cart",
+                    redirectTo: "/cart",
                   });
                 } catch {
                   // ignore storage issues
                 }
                 window.dispatchEvent(
-                  new CustomEvent('auth:required', {
+                  new CustomEvent("auth:required", {
                     detail: {
-                      actionType: 'cart',
-                      redirectTo: '/cart',
+                      actionType: "cart",
+                      redirectTo: "/cart",
                     },
                   })
                 );
@@ -328,104 +400,134 @@ export default function Cart() {
             <div className="space-y-4">
               {showCartLoading
                 ? [...Array(3)].map((_, i) => (
-                  <div key={i} className="flex gap-4 rounded-lg border border-border bg-white p-4">
-                    <Skeleton className="h-24 w-24 rounded-lg bg-gray-100 flex-shrink-0" />
-                    <div className="flex-1 space-y-3">
-                      <Skeleton className="h-5 w-11/12" />
-                      <Skeleton className="h-4 w-28" />
-                      <Skeleton className="h-4 w-20" />
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="h-10 w-10 rounded-md" />
-                        <Skeleton className="h-4 w-8" />
-                        <Skeleton className="h-10 w-10 rounded-md" />
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end justify-between">
-                      <Skeleton className="h-5 w-20" />
-                      <Skeleton className="h-10 w-10 rounded-md" />
-                    </div>
-                  </div>
-                ))
-                : enrichedCartItems.map((item) => (
-                <div key={item.productId || item.productIndex} className="flex gap-4 rounded-lg border border-border bg-white p-4">
-                  {/* Product Image */}
-                  <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-secondary">
-                    {item.image ? (
-                      <img
-                        src={getHighResImageUrl(item.image)}
-                        alt={item.title}
-                        className="h-full w-full object-contain p-2"
-                        crossOrigin="anonymous"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-gray-400 text-xs">
-                        No Image
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Product Info */}
-                  <div className="flex-1">
-                    <Link href={`/product/${item.productId || item.productIndex}`}>
-                      <span className="font-semibold hover:text-blue-600 line-clamp-2">{item.title}</span>
-                    </Link>
-                    <p className="mb-3 text-sm text-gray-600">
-                      {currencyClient.formatUSD(parseFloat(item.price.replace(/[^\d.]/g, '') || '0'))}
-                    </p>
-                    <p className={`mb-3 text-xs font-semibold ${item.stock === 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                      {item.stock === 0
-                        ? 'Out of stock'
-                        : item.stock != null
-                          ? `${item.stock} in stock`
-                          : 'Stock information unavailable'}
-                    </p>
-
-                    {/* Quantity Controls */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => updateCartQuantity(item.productIndex, item.quantity - 1)}
-                        className="rounded-md border border-border px-3 py-2 hover:bg-secondary transition-colors min-h-10 min-w-10 flex items-center justify-center"
-                        aria-label="Decrease quantity"
-                      >
-                        <Minus size={16} />
-                      </button>
-                      <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
-                      <button
-                        onClick={() => updateCartQuantity(item.productIndex, item.quantity + 1)}
-                        disabled={item.stock === 0}
-                        className="rounded-md border border-border px-3 py-2 hover:bg-secondary transition-colors min-h-10 min-w-10 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label="Increase quantity"
-                      >
-                        <Plus size={16} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Price & Remove */}
-                  <div className="flex flex-col items-end justify-between">
-                    <p className="font-bold text-sm sm:text-base">
-                      {currencyClient.formatUSD((parseFloat(item.price.replace(/[^\d.]/g, '') || '0') * item.quantity))}
-                    </p>
-                    <button
-                      onClick={() => removeFromCart(item.productIndex)}
-                      className="text-red-600 hover:text-red-700 p-2 rounded hover:bg-red-50 transition-colors min-h-10 min-w-10 flex items-center justify-center"
-                      aria-label="Remove from cart"
+                    <div
+                      key={i}
+                      className="flex gap-4 rounded-lg border border-border bg-white p-4"
                     >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-                ))}
+                      <Skeleton className="h-24 w-24 rounded-lg bg-gray-100 flex-shrink-0" />
+                      <div className="flex-1 space-y-3">
+                        <Skeleton className="h-5 w-11/12" />
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-4 w-20" />
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-10 w-10 rounded-md" />
+                          <Skeleton className="h-4 w-8" />
+                          <Skeleton className="h-10 w-10 rounded-md" />
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end justify-between">
+                        <Skeleton className="h-5 w-20" />
+                        <Skeleton className="h-10 w-10 rounded-md" />
+                      </div>
+                    </div>
+                  ))
+                : enrichedCartItems.map(item => (
+                    <div
+                      key={item.productId || item.productIndex}
+                      className="flex gap-4 rounded-lg border border-border bg-white p-4"
+                    >
+                      {/* Product Image */}
+                      <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-secondary">
+                        {item.image ? (
+                          <img
+                            src={getHighResImageUrl(item.image)}
+                            alt={item.title}
+                            className="h-full w-full object-contain p-2"
+                            crossOrigin="anonymous"
+                            onError={e => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-gray-400 text-xs">
+                            No Image
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Product Info */}
+                      <div className="flex-1">
+                        <Link
+                          href={`/product/${item.productId || item.productIndex}`}
+                        >
+                          <span className="font-semibold hover:text-blue-600 line-clamp-2">
+                            {item.title}
+                          </span>
+                        </Link>
+                        <p className="mb-3 text-sm text-gray-600">
+                          {currencyClient.formatUSD(
+                            parseFloat(item.price.replace(/[^\d.]/g, "") || "0")
+                          )}
+                        </p>
+                        <p
+                          className={`mb-3 text-xs font-semibold ${item.stock === 0 ? "text-red-600" : "text-gray-500"}`}
+                        >
+                          {item.stock === 0
+                            ? "Out of stock"
+                            : item.stock != null
+                              ? `${item.stock} in stock`
+                              : "Stock information unavailable"}
+                        </p>
+
+                        {/* Quantity Controls */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              updateCartQuantity(
+                                item.productIndex,
+                                item.quantity - 1
+                              )
+                            }
+                            className="rounded-md border border-border px-3 py-2 hover:bg-secondary transition-colors min-h-10 min-w-10 flex items-center justify-center"
+                            aria-label="Decrease quantity"
+                          >
+                            <Minus size={16} />
+                          </button>
+                          <span className="w-8 text-center text-sm font-semibold">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() =>
+                              updateCartQuantity(
+                                item.productIndex,
+                                item.quantity + 1
+                              )
+                            }
+                            disabled={item.stock === 0}
+                            className="rounded-md border border-border px-3 py-2 hover:bg-secondary transition-colors min-h-10 min-w-10 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Increase quantity"
+                          >
+                            <Plus size={16} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Price & Remove */}
+                      <div className="flex flex-col items-end justify-between">
+                        <p className="font-bold text-sm sm:text-base">
+                          {currencyClient.formatUSD(
+                            parseFloat(
+                              item.price.replace(/[^\d.]/g, "") || "0"
+                            ) * item.quantity
+                          )}
+                        </p>
+                        <button
+                          onClick={() => removeFromCart(item.productIndex)}
+                          className="text-red-600 hover:text-red-700 p-2 rounded hover:bg-red-50 transition-colors min-h-10 min-w-10 flex items-center justify-center"
+                          aria-label="Remove from cart"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
             </div>
 
             {/* Continue Shopping */}
             {!showCartLoading && (
               <Link href="/products">
                 <a className="mt-6 inline-flex items-center gap-2 text-sm font-semibold hover:text-gray-600">
-                  ← {t('cart.continueShopping', 'Continue Shopping')}
+                  ← {t("cart.continueShopping", "Continue Shopping")}
                 </a>
               </Link>
             )}
@@ -433,7 +535,9 @@ export default function Cart() {
 
           {/* Order Summary */}
           <div className="rounded-lg border border-border bg-white p-4 sm:p-6 h-fit">
-            <h2 className="mb-4 sm:mb-6 text-lg sm:text-xl font-bold">{t('checkout.orderSummary', 'Order Summary')}</h2>
+            <h2 className="mb-4 sm:mb-6 text-lg sm:text-xl font-bold">
+              {t("checkout.orderSummary", "Order Summary")}
+            </h2>
 
             {showCartLoading ? (
               <div className="space-y-4">
@@ -450,50 +554,72 @@ export default function Cart() {
               <>
                 <div className="space-y-3 sm:space-y-4 border-b border-border pb-4">
                   <div className="flex justify-between text-xs sm:text-sm">
-                    <span className="text-gray-600">{t('checkout.subtotal', 'Subtotal')}</span>
-                    <span className="font-semibold">{currencyClient.formatUSD(subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs sm:text-sm">
-                    <span className="text-gray-600">{t('checkout.estimatedShipping', 'Estimated shipping')}</span>
+                    <span className="text-gray-600">
+                      {t("checkout.subtotal", "Subtotal")}
+                    </span>
                     <span className="font-semibold">
-                      {shipping === 0 ? t('checkout.free', 'FREE') : currencyClient.formatUSD(shipping)}
+                      {currencyClient.formatUSD(subtotal)}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs sm:text-sm">
                     <span className="text-gray-600">
-                      {t('checkout.vat', 'V.A.T')} ({(vatSummary.weightedAverageRate * 100).toFixed(2)}%, max {(vatSummary.maxRate * 100).toFixed(0)}%)
+                      {t("checkout.estimatedShipping", "Estimated shipping")}
                     </span>
-                    <span className="font-semibold">{currencyClient.formatUSD(vat)}</span>
+                    <span className="font-semibold">
+                      {shipping === 0
+                        ? t("checkout.free", "FREE")
+                        : currencyClient.formatUSD(shipping)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs sm:text-sm">
+                    <span className="text-gray-600">
+                      {t("checkout.vat", "V.A.T")} (
+                      {(vatSummary.weightedAverageRate * 100).toFixed(2)}%, max{" "}
+                      {(vatSummary.maxRate * 100).toFixed(0)}%)
+                    </span>
+                    <span className="font-semibold">
+                      {currencyClient.formatUSD(vat)}
+                    </span>
                   </div>
                 </div>
 
                 <div className="my-4 flex justify-between">
-                  <span className="font-bold text-base sm:text-lg">{t('checkout.total', 'Total')}</span>
-                  <span className="text-xl sm:text-2xl font-bold">{currencyClient.formatUSD(total)}</span>
+                  <span className="font-bold text-base sm:text-lg">
+                    {t("checkout.total", "Total")}
+                  </span>
+                  <span className="text-xl sm:text-2xl font-bold">
+                    {currencyClient.formatUSD(total)}
+                  </span>
                 </div>
 
                 <p className="mb-2 text-xs text-gray-600">
-                  {t('checkout.shippingEstimateDisclaimer', 'Shipping shown is an estimate. Final shipping is confirmed at checkout.')}
+                  {t(
+                    "checkout.shippingEstimateDisclaimer",
+                    "Shipping shown is an estimate. Final shipping is confirmed at checkout."
+                  )}
                 </p>
                 {shipping > 0 && (
                   <p className="mb-4 text-xs text-gray-600">
-                    {t('checkout.freeShippingNotice', `Shipping fee is 5% for orders under $${getFreeShippingThresholdUsd().toLocaleString('en-US')}`)}
+                    {t(
+                      "checkout.freeShippingNotice",
+                      `Shipping fee is 5% for orders under $${getFreeShippingThresholdUsd().toLocaleString("en-US")}`
+                    )}
                   </p>
                 )}
 
                 <button
                   onClick={() => {
                     // Always allow navigating to checkout; inline auth will be shown on the checkout page
-                    navigate('/checkout');
+                    navigate("/checkout");
                   }}
                   className="w-full py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base"
                 >
-                  {t('checkout.proceedToCheckout', 'Proceed to Checkout')}
+                  {t("checkout.proceedToCheckout", "Proceed to Checkout")}
                 </button>
 
                 <Link href="/products">
                   <a className="mt-3 w-full inline-block text-center py-2.5 sm:py-3 rounded-lg border border-border bg-background font-semibold hover:bg-secondary transition-colors text-sm sm:text-base">
-                    {t('cart.continueShopping', 'Continue Shopping')}
+                    {t("cart.continueShopping", "Continue Shopping")}
                   </a>
                 </Link>
               </>

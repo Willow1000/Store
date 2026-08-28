@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Brand } from '@/types/supabase';
-import { isTimeoutError, recoverFromTimeout } from '@/lib/sessionRecovery';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "@/lib/supabase";
+import { Brand } from "@/types/supabase";
+import { isTimeoutError, recoverFromTimeout } from "@/lib/sessionRecovery";
 
-const BRANDS_CACHE_KEY = 'brands_cache_v1';
+const BRANDS_CACHE_KEY = "brands_cache_v1";
 
 function readCachedArray<T>(key: string): T[] {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === "undefined") return [];
 
   try {
     const raw = localStorage.getItem(key);
@@ -19,7 +19,7 @@ function readCachedArray<T>(key: string): T[] {
 }
 
 function writeCachedArray<T>(key: string, value: T[]) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   try {
     localStorage.setItem(key, JSON.stringify(value));
@@ -29,7 +29,9 @@ function writeCachedArray<T>(key: string, value: T[]) {
 }
 
 export function useBrands() {
-  const [brands, setBrands] = useState<Brand[]>(() => readCachedArray<Brand>(BRANDS_CACHE_KEY));
+  const [brands, setBrands] = useState<Brand[]>(() =>
+    readCachedArray<Brand>(BRANDS_CACHE_KEY)
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const fetchAttempted = useRef(false);
@@ -44,52 +46,56 @@ export function useBrands() {
         setError(null);
 
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Brands fetch timed out')), 10000)
+          setTimeout(() => reject(new Error("Brands fetch timed out")), 10000)
         );
 
         const fetchPromise = (async () => {
-          console.log('[useBrands] Fetching brands from Supabase...');
+          console.log("[useBrands] Fetching brands from Supabase...");
           const { data, error: supabaseError } = await supabase
-            .from('brand')
-            .select('id, name, image_url, created_at')
-            .order('name', { ascending: true });
+            .from("brand")
+            .select("id, name, image_url, created_at")
+            .order("name", { ascending: true });
 
           if (supabaseError) {
-            console.error('[useBrands] Supabase error:', supabaseError);
+            console.error("[useBrands] Supabase error:", supabaseError);
             throw supabaseError;
           }
-          console.log('[useBrands] Fetched brands:', data);
+          console.log("[useBrands] Fetched brands:", data);
           return (data || []) as Brand[];
         })();
 
-        const fetchedBrands = await Promise.race([fetchPromise, timeoutPromise]);
+        const fetchedBrands = await Promise.race([
+          fetchPromise,
+          timeoutPromise,
+        ]);
 
         if (fetchedBrands.length > 0) {
-          console.log('[useBrands] Setting brands and cache:', fetchedBrands);
+          console.log("[useBrands] Setting brands and cache:", fetchedBrands);
           setBrands(fetchedBrands);
           writeCachedArray(BRANDS_CACHE_KEY, fetchedBrands);
         } else {
-          console.warn('[useBrands] No brands returned from query');
+          console.warn("[useBrands] No brands returned from query");
           // Still try to use cache if available
           const cached = readCachedArray<Brand>(BRANDS_CACHE_KEY);
           if (cached.length > 0) {
-            console.log('[useBrands] Using cached brands:', cached);
+            console.log("[useBrands] Using cached brands:", cached);
             setBrands(cached);
           }
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to fetch brands';
-        console.error('[useBrands] Error:', message, err);
+        const message =
+          err instanceof Error ? err.message : "Failed to fetch brands";
+        console.error("[useBrands] Error:", message, err);
         setError(message);
 
         if (isTimeoutError(err)) {
           await recoverFromTimeout(message);
         }
-        
+
         // Try to use cached data if available
         const cached = readCachedArray<Brand>(BRANDS_CACHE_KEY);
         if (cached.length > 0) {
-          console.log('[useBrands] Using cached brands after error:', cached);
+          console.log("[useBrands] Using cached brands after error:", cached);
           setBrands(cached);
           setError(null); // Clear error if we have cache
         }

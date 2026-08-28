@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function AboutPageSkeleton() {
   return (
@@ -16,7 +16,10 @@ export function AboutPageSkeleton() {
         <Skeleton className="absolute right-4 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full bg-white/15" />
         <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2">
           {Array.from({ length: 3 }).map((_, index) => (
-            <Skeleton key={index} className={`h-3 rounded-full bg-white/20 ${index === 0 ? 'w-8' : 'w-3'}`} />
+            <Skeleton
+              key={index}
+              className={`h-3 rounded-full bg-white/20 ${index === 0 ? "w-8" : "w-3"}`}
+            />
           ))}
         </div>
       </div>
@@ -55,7 +58,10 @@ export function AboutPageSkeleton() {
 
         <div className="mt-16 grid gap-6 md:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div
+              key={index}
+              className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+            >
               <Skeleton className="mb-4 h-12 w-12 rounded-2xl" />
               <Skeleton className="h-7 w-3/4" />
               <Skeleton className="mt-4 h-5 w-full" />
@@ -88,7 +94,10 @@ export function AboutPageSkeleton() {
 
         <div className="mt-16 grid gap-6 md:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="rounded-3xl border border-gray-200 bg-gray-50 p-6">
+            <div
+              key={index}
+              className="rounded-3xl border border-gray-200 bg-gray-50 p-6"
+            >
               <Skeleton className="h-8 w-8 rounded-md" />
               <Skeleton className="mt-4 h-7 w-3/4" />
               <Skeleton className="mt-3 h-5 w-full" />
@@ -115,4 +124,3 @@ export function AboutPageSkeleton() {
     </div>
   );
 }
-

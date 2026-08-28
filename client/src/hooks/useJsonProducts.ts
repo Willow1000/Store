@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from "react";
 
 export interface Product {
   title: string;
@@ -9,16 +9,19 @@ export interface Product {
 }
 
 export function useJsonProducts() {
-  const [data, setData] = useState<{ all: Product[]; byCategory: Record<string, Product[]> }>({
+  const [data, setData] = useState<{
+    all: Product[];
+    byCategory: Record<string, Product[]>;
+  }>({
     all: [],
     byCategory: {},
   });
 
   useEffect(() => {
-    fetch('/data/products.json')
-      .then((res) => res.json())
-      .then((productsData) => {
-        if (!productsData || typeof productsData !== 'object') {
+    fetch("/data/products.json")
+      .then(res => res.json())
+      .then(productsData => {
+        if (!productsData || typeof productsData !== "object") {
           setData({ all: [], byCategory: {} });
           return;
         }
@@ -41,8 +44,8 @@ export function useJsonProducts() {
 
         setData({ all, byCategory });
       })
-      .catch((err) => {
-        console.error('Failed to load products:', err);
+      .catch(err => {
+        console.error("Failed to load products:", err);
         setData({ all: [], byCategory: {} });
       });
   }, []);
@@ -55,12 +58,14 @@ export function useJsonProductsByCategory(category: string) {
   return byCategory[category] || [];
 }
 
-export async function getFeaturedProducts(limit: number = 8): Promise<Product[]> {
+export async function getFeaturedProducts(
+  limit: number = 8
+): Promise<Product[]> {
   try {
-    const res = await fetch('/data/products.json');
+    const res = await fetch("/data/products.json");
     const productsData = await res.json();
 
-    if (!productsData || typeof productsData !== 'object') {
+    if (!productsData || typeof productsData !== "object") {
       return [];
     }
 
@@ -74,7 +79,9 @@ export async function getFeaturedProducts(limit: number = 8): Promise<Product[]>
       for (const category of categories) {
         const items = productsData[category];
         if (Array.isArray(items)) {
-          products.push(...items.slice(0, Math.ceil(limit / categories.length)));
+          products.push(
+            ...items.slice(0, Math.ceil(limit / categories.length))
+          );
         }
         if (products.length >= limit) break;
       }
@@ -82,7 +89,7 @@ export async function getFeaturedProducts(limit: number = 8): Promise<Product[]>
 
     return products.slice(0, limit);
   } catch (err) {
-    console.error('Failed to load featured products:', err);
+    console.error("Failed to load featured products:", err);
     return [];
   }
 }

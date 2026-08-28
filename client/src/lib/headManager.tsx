@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from "react";
 
 export type HeadCollector = {
   addMarkup: (markup: string) => void;
@@ -14,7 +14,7 @@ export function createHeadCollector(): HeadCollector {
       markup.push(markupString);
     },
     getMarkup() {
-      return markup.join('\n');
+      return markup.join("\n");
     },
   };
 }
@@ -28,7 +28,9 @@ export function HeadProvider({
   collector: HeadCollector;
   children: ReactNode;
 }) {
-  return <HeadContext.Provider value={collector}>{children}</HeadContext.Provider>;
+  return (
+    <HeadContext.Provider value={collector}>{children}</HeadContext.Provider>
+  );
 }
 
 export function useHeadCollector(): HeadCollector | null {

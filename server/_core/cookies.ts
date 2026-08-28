@@ -47,7 +47,7 @@ export function getSessionCookieOptions(
   // Use `lax` for non-secure requests so cookies remain available on reloads
   // and after navigations that are same-site, and use `none` when the
   // connection is secure so cross-site flows continue to work in production.
-  const sameSite: CookieOptions['sameSite'] = secure ? 'none' : 'lax';
+  const sameSite: CookieOptions["sameSite"] = secure ? "none" : "lax";
 
   return {
     httpOnly: true,

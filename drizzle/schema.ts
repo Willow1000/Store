@@ -1,16 +1,55 @@
-import { decimal, integer, pgEnum, pgTable, text, timestamp, varchar, boolean, jsonb, uuid } from "drizzle-orm/pg-core";
+import {
+  decimal,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  varchar,
+  boolean,
+  jsonb,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // Define enums at the top level
 export const roleEnum = pgEnum("role", ["user", "admin"]);
-export const statusEnum = pgEnum("status", ["pending", "confirmed", "shipped", "delivered", "cancelled"]);
-export const typeEnum = pgEnum("type", ["order_placed", "order_confirmed", "order_shipped", "order_delivered", "payment_failed", "system"]);
-export const conditionEnum = pgEnum("condition", ["new", "like-new", "good", "fair", "used"]);
+export const statusEnum = pgEnum("status", [
+  "pending",
+  "confirmed",
+  "shipped",
+  "delivered",
+  "cancelled",
+]);
+export const typeEnum = pgEnum("type", [
+  "order_placed",
+  "order_confirmed",
+  "order_shipped",
+  "order_delivered",
+  "payment_failed",
+  "system",
+]);
+export const conditionEnum = pgEnum("condition", [
+  "new",
+  "like-new",
+  "good",
+  "fair",
+  "used",
+]);
 export const offerTypeEnum = pgEnum("offer_type", ["percentage", "fixed"]);
 
 // Ticketing enums
-export const ticketStatusEnum = pgEnum("ticket_status", ["open", "in_progress", "resolved", "closed"]);
-export const ticketPriorityEnum = pgEnum("ticket_priority", ["low", "medium", "high"]);
+export const ticketStatusEnum = pgEnum("ticket_status", [
+  "open",
+  "in_progress",
+  "resolved",
+  "closed",
+]);
+export const ticketPriorityEnum = pgEnum("ticket_priority", [
+  "low",
+  "medium",
+  "high",
+]);
 
 /**
  * Core user table backing auth flow.
@@ -30,7 +69,9 @@ export const users = pgTable("users", {
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: roleEnum("role").default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
@@ -60,7 +101,9 @@ export const sellers = pgTable("sellers", {
   verified: boolean("verified").default(false),
   totalSales: integer("totalSales").default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type Seller = typeof sellers.$inferSelect;
@@ -87,7 +130,9 @@ export const products = pgTable("products", {
   model: varchar("model", { length: 255 }),
   partNumber: text("part_number"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type Product = typeof products.$inferSelect;
@@ -116,7 +161,9 @@ export const cartItems = pgTable("cartItems", {
   variantId: integer("variantId"),
   quantity: integer("quantity").default(1),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type CartItem = typeof cartItems.$inferSelect;
@@ -148,7 +195,9 @@ export const offers = pgTable("offers", {
   startsAt: timestamp("startsAt", { withTimezone: true }),
   endsAt: timestamp("endsAt", { withTimezone: true }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type Offer = typeof offers.$inferSelect;
@@ -161,7 +210,9 @@ export const orders = pgTable("orders", {
   orderNumber: varchar("orderNumber", { length: 50 }).notNull().unique(),
   status: statusEnum("status").default("pending"),
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
-  shippingCost: decimal("shippingCost", { precision: 10, scale: 2 }).default("0"),
+  shippingCost: decimal("shippingCost", { precision: 10, scale: 2 }).default(
+    "0"
+  ),
   tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   shippingAddress: jsonb("shippingAddress"),
@@ -169,12 +220,16 @@ export const orders = pgTable("orders", {
   paymentMethod: varchar("paymentMethod", { length: 50 }),
   offerId: integer("offerId"),
   offerCode: varchar("offerCode", { length: 64 }),
-  discountAmount: decimal("discountAmount", { precision: 10, scale: 2 }).default("0").notNull(),
+  discountAmount: decimal("discountAmount", { precision: 10, scale: 2 })
+    .default("0")
+    .notNull(),
   stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 255 }),
   paystackPaymentId: varchar("paystackPaymentId", { length: 255 }),
   trackingNumber: varchar("trackingNumber", { length: 100 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type Order = typeof orders.$inferSelect;
@@ -217,7 +272,7 @@ export const payments = pgTable("payments", {
   provider: varchar("provider", { length: 50 }).notNull(), // 'paystack', 'stripe', 'mpesa', 'paypal'
   reference: varchar("reference", { length: 255 }).notNull().unique(), // Paystack reference or Stripe intent ID
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Amount in currency smallest unit
-  currency: varchar("currency", { length: 3 }).notNull().default('USD'), // Currency code
+  currency: varchar("currency", { length: 3 }).notNull().default("USD"), // Currency code
   status: varchar("status", { length: 50 }).notNull(), // 'success', 'pending', 'failed'
   channel: varchar("channel", { length: 50 }), // 'card', 'bank_transfer', 'ussd', 'mobile_money'
   gatewayResponse: text("gatewayResponse"), // Raw response from payment gateway
@@ -231,7 +286,9 @@ export const payments = pgTable("payments", {
   fees: decimal("fees", { precision: 10, scale: 2 }), // Processing fees
   paidAt: timestamp("paidAt"), // When payment was confirmed
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type Payment = typeof payments.$inferSelect;
@@ -244,19 +301,22 @@ export const productSearchTracking = pgTable("product_search_tracking", {
   userId: uuid("userId"),
   eventType: varchar("eventType", { length: 32 }).notNull(),
   searchTerm: text("searchTerm"),
-  filters: jsonb("filters").default('{}'),
+  filters: jsonb("filters").default("{}"),
   resultsCount: integer("resultsCount").default(0),
-  matchedProductIds: jsonb("matchedProductIds").default('[]'),
+  matchedProductIds: jsonb("matchedProductIds").default("[]"),
   clickedProductId: text("clickedProductId"),
   pageUrl: text("pageUrl"),
   referrer: text("referrer"),
   userAgent: text("userAgent"),
-  metadata: jsonb("metadata").default('{}'),
-  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  metadata: jsonb("metadata").default("{}"),
+  createdAt: timestamp("createdAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type ProductSearchTracking = typeof productSearchTracking.$inferSelect;
-export type InsertProductSearchTracking = typeof productSearchTracking.$inferInsert;
+export type InsertProductSearchTracking =
+  typeof productSearchTracking.$inferInsert;
 
 // Recommendation event stream and precomputed preference/score tables.
 // Client-side personalization can work immediately, while these tables give
@@ -272,12 +332,16 @@ export const userProductInteractions = pgTable("user_product_interactions", {
   brand: varchar("brand", { length: 255 }),
   model: varchar("model", { length: 255 }),
   weight: decimal("weight", { precision: 10, scale: 2 }).default("0").notNull(),
-  metadata: jsonb("metadata").default('{}'),
-  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  metadata: jsonb("metadata").default("{}"),
+  createdAt: timestamp("createdAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
-export type UserProductInteraction = typeof userProductInteractions.$inferSelect;
-export type InsertUserProductInteraction = typeof userProductInteractions.$inferInsert;
+export type UserProductInteraction =
+  typeof userProductInteractions.$inferSelect;
+export type InsertUserProductInteraction =
+  typeof userProductInteractions.$inferInsert;
 
 export const userBrandPreferences = pgTable("user_brand_preferences", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -286,11 +350,14 @@ export const userBrandPreferences = pgTable("user_brand_preferences", {
   brand: varchar("brand", { length: 255 }).notNull(),
   weight: decimal("weight", { precision: 10, scale: 2 }).default("0").notNull(),
   interactionCount: integer("interactionCount").default(0).notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type UserBrandPreference = typeof userBrandPreferences.$inferSelect;
-export type InsertUserBrandPreference = typeof userBrandPreferences.$inferInsert;
+export type InsertUserBrandPreference =
+  typeof userBrandPreferences.$inferInsert;
 
 export const userCategoryPreferences = pgTable("user_category_preferences", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -299,11 +366,15 @@ export const userCategoryPreferences = pgTable("user_category_preferences", {
   category: varchar("category", { length: 255 }).notNull(),
   weight: decimal("weight", { precision: 10, scale: 2 }).default("0").notNull(),
   interactionCount: integer("interactionCount").default(0).notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
-export type UserCategoryPreference = typeof userCategoryPreferences.$inferSelect;
-export type InsertUserCategoryPreference = typeof userCategoryPreferences.$inferInsert;
+export type UserCategoryPreference =
+  typeof userCategoryPreferences.$inferSelect;
+export type InsertUserCategoryPreference =
+  typeof userCategoryPreferences.$inferInsert;
 
 export const userVehiclePreferences = pgTable("user_vehicle_preferences", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -315,11 +386,14 @@ export const userVehiclePreferences = pgTable("user_vehicle_preferences", {
   category: varchar("category", { length: 255 }),
   confidence: integer("confidence").default(0).notNull(),
   weight: decimal("weight", { precision: 10, scale: 2 }).default("0").notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type UserVehiclePreference = typeof userVehiclePreferences.$inferSelect;
-export type InsertUserVehiclePreference = typeof userVehiclePreferences.$inferInsert;
+export type InsertUserVehiclePreference =
+  typeof userVehiclePreferences.$inferInsert;
 
 export const recommendationScores = pgTable("recommendation_scores", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -327,16 +401,21 @@ export const recommendationScores = pgTable("recommendation_scores", {
   userId: uuid("userId"),
   productId: text("productId").notNull(),
   score: decimal("score", { precision: 12, scale: 4 }).default("0").notNull(),
-  scoreBreakdown: jsonb("scoreBreakdown").default('{}'),
+  scoreBreakdown: jsonb("scoreBreakdown").default("{}"),
   reason: varchar("reason", { length: 255 }),
   source: varchar("source", { length: 64 }).default("profile").notNull(),
   expiresAt: timestamp("expiresAt", { withTimezone: true }),
-  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type RecommendationScore = typeof recommendationScores.$inferSelect;
-export type InsertRecommendationScore = typeof recommendationScores.$inferInsert;
+export type InsertRecommendationScore =
+  typeof recommendationScores.$inferInsert;
 
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -372,12 +451,15 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   orderItems: many(orderItems),
 }));
 
-export const productVariantsRelations = relations(productVariants, ({ one }) => ({
-  product: one(products, {
-    fields: [productVariants.productId],
-    references: [products.id],
-  }),
-}));
+export const productVariantsRelations = relations(
+  productVariants,
+  ({ one }) => ({
+    product: one(products, {
+      fields: [productVariants.productId],
+      references: [products.id],
+    }),
+  })
+);
 
 export const cartItemsRelations = relations(cartItems, ({ one }) => ({
   user: one(users, {
@@ -465,11 +547,13 @@ export const tickets = pgTable("tickets", {
   priority: ticketPriorityEnum("priority").default("medium").notNull(),
   channel: varchar("channel", { length: 50 }).default("web"),
   assignedTo: varchar("assignedTo", { length: 36 }),
-  tags: jsonb("tags").default('[]'),
-  attachments: jsonb("attachments").default('[]'),
-  metadata: jsonb("metadata").default('{}'),
+  tags: jsonb("tags").default("[]"),
+  attachments: jsonb("attachments").default("[]"),
+  metadata: jsonb("metadata").default("{}"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type Ticket = typeof tickets.$inferSelect;

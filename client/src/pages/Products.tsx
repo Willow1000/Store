@@ -1,26 +1,35 @@
-  // ...existing code...
- 'use client';
+// ...existing code...
+"use client";
 
-import { useState, useMemo, useEffect, useRef } from 'react';
-import currencyClient from '@/lib/currencyClient';
-import { useLocation } from 'wouter';
-import { Link } from 'wouter';
-import { Filter, X, Star, Heart, Eye } from 'lucide-react';
-import { toast } from 'sonner';
-import { SEOHead } from '@/components/SEOHead';
-import { Skeleton } from '@/components/ui/skeleton';
-import { QuickViewModal } from '@/components/QuickViewModal';
-import { BrandFilter } from '@/components/BrandFilter';
-import { useProducts, useCategories, useProductsBySlug } from '@/hooks/useSupabaseProducts';
-import { useBrands } from '@/hooks/useBrands';
-import { useAuth } from '@/_core/hooks/useAuth';
-import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
-import { getHighResImageUrl } from '@/lib/images';
-import { getBrandSuggestions, getModelSuggestions, getSimilarProducts, searchProducts } from '@/lib/productSearch';
-import { Product } from '@/types/supabase';
-import { useRecommendations } from '@/hooks/useRecommendations';
-import { buildContactHref, getEnquiryCopy } from '@/lib/enquiry';
-import { getSiteLanguage } from '@/lib/language';
+import { useState, useMemo, useEffect, useRef } from "react";
+import currencyClient from "@/lib/currencyClient";
+import { useLocation } from "wouter";
+import { Link } from "wouter";
+import { Filter, X, Star, Heart, Eye } from "lucide-react";
+import { toast } from "sonner";
+import { SEOHead } from "@/components/SEOHead";
+import { Skeleton } from "@/components/ui/skeleton";
+import { QuickViewModal } from "@/components/QuickViewModal";
+import { BrandFilter } from "@/components/BrandFilter";
+import {
+  useProducts,
+  useCategories,
+  useProductsBySlug,
+} from "@/hooks/useSupabaseProducts";
+import { useBrands } from "@/hooks/useBrands";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useSupabaseWishlist } from "@/hooks/useSupabaseCart";
+import { getHighResImageUrl } from "@/lib/images";
+import {
+  getBrandSuggestions,
+  getModelSuggestions,
+  getSimilarProducts,
+  searchProducts,
+} from "@/lib/productSearch";
+import { Product } from "@/types/supabase";
+import { useRecommendations } from "@/hooks/useRecommendations";
+import { buildContactHref, getEnquiryCopy } from "@/lib/enquiry";
+import { getSiteLanguage } from "@/lib/language";
 import {
   Pagination,
   PaginationContent,
@@ -28,13 +37,18 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from '@/components/ui/pagination';
+} from "@/components/ui/pagination";
 
-type SortOption = 'recommended' | 'newest' | 'price-low' | 'price-high' | 'popular';
+type SortOption =
+  | "recommended"
+  | "newest"
+  | "price-low"
+  | "price-high"
+  | "popular";
 
 interface FallbackResult {
   products: Product[];
-  reason: 'similar' | 'recently-viewed';
+  reason: "similar" | "recently-viewed";
   message: string;
 }
 
@@ -53,10 +67,10 @@ const PRODUCTS_PER_PAGE = 32;
 const normalizeCategoryValue = (value: string) => value.trim().toLowerCase();
 
 const getCategoryFromUrl = () => {
-  if (typeof window === 'undefined') return '';
+  if (typeof window === "undefined") return "";
 
   const params = new URLSearchParams(window.location.search);
-  return decodeURIComponent(params.get('category') || '');
+  return decodeURIComponent(params.get("category") || "");
 };
 
 export default function Products() {
@@ -64,47 +78,62 @@ export default function Products() {
   const currencyCode = currencyClient.getCurrencyCode();
   const currencyRate = currencyClient.getCurrencyRate();
   const [location, navigate] = useLocation();
-  const [searchQuery, setSearchQuery] = useState('');
-  const lastTrackedSearchRef = useRef('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const lastTrackedSearchRef = useRef("");
   const activeSearchRef = useRef<string | null>(null);
   const pendingCompletedSearchRef = useRef<string | null>(null);
   const searchResolvedByClickRef = useRef(false);
   const lastCompletedSearchTermRef = useRef<string | null>(null);
   const pendingSearchSnapshotRef = useRef<SearchSnapshot | null>(null);
-  const lastSearchSnapshotRef = useRef<{ count: number; productIds: Array<string | number> }>({ count: 0, productIds: [] });
-  const lastProfiledSearchRef = useRef('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const lastSearchSnapshotRef = useRef<{
+    count: number;
+    productIds: Array<string | number>;
+  }>({ count: 0, productIds: [] });
+  const lastProfiledSearchRef = useRef("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState<string[]>([]);
   const [modelFilter, setModelFilter] = useState<string[]>([]);
   const [conditionFilter, setConditionFilter] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<SortOption>('recommended');
+  const [sortBy, setSortBy] = useState<SortOption>("recommended");
   const [priceRange, setPriceRange] = useState([0, 20000]);
   const [showFilters, setShowFilters] = useState(false);
-  const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
+  const [quickViewProductId, setQuickViewProductId] = useState<string | null>(
+    null
+  );
   const [dealsOnly, setDealsOnly] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
-  const [fallbackResult, setFallbackResult] = useState<FallbackResult | null>(null);
+  const [fallbackResult, setFallbackResult] = useState<FallbackResult | null>(
+    null
+  );
 
   const { user, isAuthenticated } = useAuth();
   const recommendations = useRecommendations(user?.id || null);
   const { products: allProducts, isLoading } = useProducts(1, -1);
-  const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
+  const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(
+    user?.id || null
+  );
   const { categories, isLoading: categoriesLoading } = useCategories();
   const { brands, isLoading: brandsLoading, error: brandsError } = useBrands();
-  const { products: categoryProducts, isLoading: isCategoryLoading } = useProductsBySlug(categoryFilter);
+  const { products: categoryProducts, isLoading: isCategoryLoading } =
+    useProductsBySlug(categoryFilter);
   const categoryQueryValue = normalizeCategoryValue(getCategoryFromUrl());
 
   const brandsWithLogos = useMemo(
-    () => brands.filter((brand) => Boolean(brand.image_url && brand.image_url.trim())),
+    () =>
+      brands.filter(brand =>
+        Boolean(brand.image_url && brand.image_url.trim())
+      ),
     [brands]
   );
 
   // Compute a dynamic maximum price from product data (fallback to 20000)
   const computedMaxPrice = useMemo(() => {
     try {
-      const vals = Array.isArray(allProducts) ? allProducts.map(p => Number(p.price) || 0) : [];
+      const vals = Array.isArray(allProducts)
+        ? allProducts.map(p => Number(p.price) || 0)
+        : [];
       if (vals.length === 0) return 20000;
       const max = Math.max(...vals, 20000);
       // round up to nearest 10 or 100 for nicer slider steps
@@ -128,23 +157,39 @@ export default function Products() {
     try {
       // Ensure a persistent session id exists for anonymous users
       try {
-        if (typeof window !== 'undefined') {
-          let sid = localStorage.getItem('sessionId') || '';
+        if (typeof window !== "undefined") {
+          let sid = localStorage.getItem("sessionId") || "";
           if (!sid) {
-            sid = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `anon-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-            try { localStorage.setItem('sessionId', sid); } catch (e) {}
+            sid =
+              typeof crypto !== "undefined" && (crypto as any).randomUUID
+                ? (crypto as any).randomUUID()
+                : `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            try {
+              localStorage.setItem("sessionId", sid);
+            } catch (e) {}
           }
           payload.sessionId = payload.sessionId || sid;
         }
       } catch (e) {}
 
       const body = JSON.stringify(payload);
-      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-        navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
+      if (
+        typeof navigator !== "undefined" &&
+        typeof navigator.sendBeacon === "function"
+      ) {
+        navigator.sendBeacon(
+          "/api/track",
+          new Blob([body], { type: "application/json" })
+        );
         return;
       }
       // Fallback: fire-and-forget fetch with keepalive
-      fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      }).catch(() => {});
     } catch (err) {
       // ignore tracking errors
     }
@@ -162,17 +207,24 @@ export default function Products() {
 
   const trackProductClick = (productId: string | number) => {
     try {
-      const trackedSearchTerm = (activeSearchRef.current || pendingCompletedSearchRef.current || searchQuery || '').trim();
-      const clickedProduct = filteredProducts.find((product) => String(product.id) === String(productId));
+      const trackedSearchTerm = (
+        activeSearchRef.current ||
+        pendingCompletedSearchRef.current ||
+        searchQuery ||
+        ""
+      ).trim();
+      const clickedProduct = filteredProducts.find(
+        product => String(product.id) === String(productId)
+      );
 
       recommendations.track({
-        eventType: 'product_click',
+        eventType: "product_click",
         product: clickedProduct || null,
         productId,
         searchTerm: trackedSearchTerm.length > 0 ? trackedSearchTerm : null,
         products: filteredProducts.slice(0, 50),
         metadata: {
-          source: 'products_grid',
+          source: "products_grid",
           filters: getCurrentTrackingFilters(),
         },
       });
@@ -184,14 +236,17 @@ export default function Products() {
       searchResolvedByClickRef.current = true;
 
       sendTrackingEvent({
-        sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
-        eventType: 'product_click',
+        sessionId:
+          typeof window !== "undefined"
+            ? localStorage.getItem("sessionId") || ""
+            : "",
+        eventType: "product_click",
         clickedProductId: productId,
         searchTerm: trackedSearchTerm.length > 0 ? trackedSearchTerm : null,
         filters: getCurrentTrackingFilters(),
         resultsCount: filteredProducts.length,
         pageUrl: window.location.href,
-        matchedProductIds: filteredProducts.slice(0, 50).map((p) => p.id),
+        matchedProductIds: filteredProducts.slice(0, 50).map(p => p.id),
       });
     } catch (e) {
       // ignore
@@ -210,24 +265,36 @@ export default function Products() {
   };
 
   const isSearchOrFiltersActive = () => {
-    const q = (activeSearchRef.current || pendingCompletedSearchRef.current || searchQuery || '').trim();
+    const q = (
+      activeSearchRef.current ||
+      pendingCompletedSearchRef.current ||
+      searchQuery ||
+      ""
+    ).trim();
     return Boolean(q) || areFiltersActive();
   };
 
   // Return true only when there is an active or recently-completed search term
   const hasSearchTermActive = () => {
-    const q = (activeSearchRef.current || pendingCompletedSearchRef.current || searchQuery || '').trim();
+    const q = (
+      activeSearchRef.current ||
+      pendingCompletedSearchRef.current ||
+      searchQuery ||
+      ""
+    ).trim();
     return Boolean(q);
   };
 
   const selectedCategory = useMemo(() => {
     if (!categoryFilter) return null;
     const normalizedFilter = normalizeCategoryValue(categoryFilter);
-    return categories.find(
-      (c) =>
-        normalizeCategoryValue(String(c.slug ?? '')) === normalizedFilter ||
-        normalizeCategoryValue(String(c.name ?? '')) === normalizedFilter
-    ) || null;
+    return (
+      categories.find(
+        c =>
+          normalizeCategoryValue(String(c.slug ?? "")) === normalizedFilter ||
+          normalizeCategoryValue(String(c.name ?? "")) === normalizedFilter
+      ) || null
+    );
   }, [categories, categoryFilter]);
 
   useEffect(() => {
@@ -237,9 +304,9 @@ export default function Products() {
   useEffect(() => {
     if (!categoryFilter) return;
     recommendations.track({
-      eventType: 'category_view',
+      eventType: "category_view",
       category: categoryFilter,
-      metadata: { source: 'products_filter' },
+      metadata: { source: "products_filter" },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryFilter]);
@@ -247,10 +314,10 @@ export default function Products() {
   // Load recently viewed items from localStorage
   useEffect(() => {
     try {
-      const ids = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-      setRecentlyViewedIds(ids.filter((id: any) => typeof id === 'string'));
+      const ids = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
+      setRecentlyViewedIds(ids.filter((id: any) => typeof id === "string"));
     } catch (error) {
-      console.error('[Products] Failed to load recently viewed items:', error);
+      console.error("[Products] Failed to load recently viewed items:", error);
     }
   }, []);
 
@@ -268,31 +335,44 @@ export default function Products() {
       lastCompletedSearchTermRef.current = q;
       searchResolvedByClickRef.current = false;
       try {
-        sessionStorage.setItem('activeSearchTerm', q);
+        sessionStorage.setItem("activeSearchTerm", q);
       } catch (e) {}
       // If there is a pending completed term (user cleared before) and they now start a new search, emit the pending term
-      const pending = pendingCompletedSearchRef.current || (() => {
-        try { return sessionStorage.getItem('pendingSearchTerm'); } catch { return null; }
-      })();
+      const pending =
+        pendingCompletedSearchRef.current ||
+        (() => {
+          try {
+            return sessionStorage.getItem("pendingSearchTerm");
+          } catch {
+            return null;
+          }
+        })();
 
       if (pending && pending !== q) {
         pendingCompletedSearchRef.current = null;
-        try { sessionStorage.removeItem('pendingSearchTerm'); } catch (e) {}
+        try {
+          sessionStorage.removeItem("pendingSearchTerm");
+        } catch (e) {}
       }
     } else {
       // search cleared: if there was an active term, emit it as a "cleared" search
-      const clearedSearchTerm = prevActive || lastCompletedSearchTermRef.current || '';
+      const clearedSearchTerm =
+        prevActive || lastCompletedSearchTermRef.current || "";
       if (clearedSearchTerm) {
         const shouldTrackAbandonedSearch = !searchResolvedByClickRef.current;
         searchResolvedByClickRef.current = false;
 
         pendingCompletedSearchRef.current = null;
-        try { sessionStorage.removeItem('pendingSearchTerm'); } catch (e) {}
+        try {
+          sessionStorage.removeItem("pendingSearchTerm");
+        } catch (e) {}
         pendingSearchSnapshotRef.current = null;
 
         if (!shouldTrackAbandonedSearch) {
           activeSearchRef.current = null;
-          try { sessionStorage.removeItem('activeSearchTerm'); } catch (e) {}
+          try {
+            sessionStorage.removeItem("activeSearchTerm");
+          } catch (e) {}
           return;
         }
 
@@ -300,33 +380,42 @@ export default function Products() {
         const signature = [
           clearedSearchTerm,
           categoryFilter,
-          brandFilter.join(','),
-          modelFilter.join(','),
-          conditionFilter.join(','),
+          brandFilter.join(","),
+          modelFilter.join(","),
+          conditionFilter.join(","),
           `${priceRange[0]}-${priceRange[1]}`,
-          inStockOnly ? '1' : '0',
-          dealsOnly ? '1' : '0',
-        ].join('|');
+          inStockOnly ? "1" : "0",
+          dealsOnly ? "1" : "0",
+        ].join("|");
 
         if (lastTrackedSearchRef.current !== signature) {
           // Prefer the buffered snapshot if it matches
           const snap = pendingSearchSnapshotRef.current;
-          const payloadBase = snap && (snap as any).signature === signature ? snap : {
-            searchTerm: clearedSearchTerm,
-            filters: getCurrentTrackingFilters(),
-            resultsCount: filteredProducts.length,
-            matchedProductIds: filteredProducts.slice(0, 50).map((p) => p.id),
-            pageUrl: typeof window !== 'undefined' ? window.location.href : null,
-            metadata: {
-              noResults: filteredProducts.length === 0,
-              cleared: true,
-              trackedAt: new Date().toISOString(),
-            },
-          };
+          const payloadBase =
+            snap && (snap as any).signature === signature
+              ? snap
+              : {
+                  searchTerm: clearedSearchTerm,
+                  filters: getCurrentTrackingFilters(),
+                  resultsCount: filteredProducts.length,
+                  matchedProductIds: filteredProducts
+                    .slice(0, 50)
+                    .map(p => p.id),
+                  pageUrl:
+                    typeof window !== "undefined" ? window.location.href : null,
+                  metadata: {
+                    noResults: filteredProducts.length === 0,
+                    cleared: true,
+                    trackedAt: new Date().toISOString(),
+                  },
+                };
 
           sendTrackingEvent({
-            sessionId: typeof window !== 'undefined' ? (localStorage.getItem('sessionId') || '') : '',
-            eventType: 'search',
+            sessionId:
+              typeof window !== "undefined"
+                ? localStorage.getItem("sessionId") || ""
+                : "",
+            eventType: "search",
             searchTerm: payloadBase.searchTerm || clearedSearchTerm,
             filters: payloadBase.filters,
             resultsCount: payloadBase.resultsCount || 0,
@@ -340,47 +429,53 @@ export default function Products() {
       }
 
       activeSearchRef.current = null;
-      try { sessionStorage.removeItem('activeSearchTerm'); } catch (e) {}
+      try {
+        sessionStorage.removeItem("activeSearchTerm");
+      } catch (e) {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
-  const selectedCategoryName = normalizeCategoryValue(String(selectedCategory?.name ?? ''));
-  const selectedCategorySlug = normalizeCategoryValue(String(selectedCategory?.slug ?? ''));
-  const canonicalCategoryParam = selectedCategory?.slug || categoryFilter || categoryQueryValue;
+  const selectedCategoryName = normalizeCategoryValue(
+    String(selectedCategory?.name ?? "")
+  );
+  const selectedCategorySlug = normalizeCategoryValue(
+    String(selectedCategory?.slug ?? "")
+  );
+  const canonicalCategoryParam =
+    selectedCategory?.slug || categoryFilter || categoryQueryValue;
   const canonicalPath = canonicalCategoryParam
     ? `/products?category=${encodeURIComponent(canonicalCategoryParam)}`
-    : '/products';
-  const canonicalUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}${canonicalPath}`
-    : canonicalPath;
+    : "/products";
+  const canonicalUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${canonicalPath}`
+      : canonicalPath;
   const seoTitle = selectedCategory?.name
     ? `${selectedCategory.name} Parts | MotorVault`
-    : 'MotorVault Products | OEM & Aftermarket Automotive Parts';
+    : "MotorVault Products | OEM & Aftermarket Automotive Parts";
   const seoDescription = selectedCategory?.description
     ? selectedCategory.description
-    : 'Browse MotorVault\'s complete catalog of automotive parts and accessories. Filter by brand, model, category, condition, price, and availability.';
+    : "Browse MotorVault's complete catalog of automotive parts and accessories. Filter by brand, model, category, condition, price, and availability.";
 
   const conditionOptions = useMemo(() => {
     if (!allProducts || allProducts.length === 0) return [] as string[];
 
     return Array.from(
       new Set(
-        allProducts
-          .map((p) => String(p.condition || '').trim())
-          .filter(Boolean)
+        allProducts.map(p => String(p.condition || "").trim()).filter(Boolean)
       )
     );
   }, [allProducts]);
 
   const updateCategoryInUrl = (nextCategory: string) => {
-    const [path, query = ''] = location.split('?');
+    const [path, query = ""] = location.split("?");
     const params = new URLSearchParams(query);
 
     if (nextCategory) {
-      params.set('category', nextCategory);
+      params.set("category", nextCategory);
     } else {
-      params.delete('category');
+      params.delete("category");
     }
 
     const nextQuery = params.toString();
@@ -389,7 +484,9 @@ export default function Products() {
   };
 
   // Get fallback products when no exact matches
-  const getFallbackProducts = (exactResults: typeof allProducts): FallbackResult | null => {
+  const getFallbackProducts = (
+    exactResults: typeof allProducts
+  ): FallbackResult | null => {
     if (exactResults.length > 0) return null;
 
     // 1. Try to find similar products respecting selected filters
@@ -411,7 +508,7 @@ export default function Products() {
 
     // Get all available products and filter them
     const availableProducts = allProducts || [];
-    
+
     // Create a relaxed filter by removing the most restrictive constraints
     let similarResults: typeof allProducts = [];
 
@@ -419,10 +516,17 @@ export default function Products() {
     if (availableProducts.length > 0) {
       // Try without price constraint first
       const withoutPrice = availableProducts.filter(p => {
-        if (brandFilter.length > 0 && !brandFilter.includes(p.brand || '')) return false;
-        if (modelFilter.length > 0 && !modelFilter.includes(p.model || '')) return false;
-        if (conditionFilter.length > 0 && !conditionFilter.includes(p.condition || '')) return false;
-        if (categoryFilter && categoryFilter !== (p.category_name || '')) return false;
+        if (brandFilter.length > 0 && !brandFilter.includes(p.brand || ""))
+          return false;
+        if (modelFilter.length > 0 && !modelFilter.includes(p.model || ""))
+          return false;
+        if (
+          conditionFilter.length > 0 &&
+          !conditionFilter.includes(p.condition || "")
+        )
+          return false;
+        if (categoryFilter && categoryFilter !== (p.category_name || ""))
+          return false;
         return true;
       });
       if (withoutPrice.length > 0) {
@@ -430,9 +534,15 @@ export default function Products() {
       } else {
         // Try without category filter
         const withoutCategory = availableProducts.filter(p => {
-          if (brandFilter.length > 0 && !brandFilter.includes(p.brand || '')) return false;
-          if (modelFilter.length > 0 && !modelFilter.includes(p.model || '')) return false;
-          if (conditionFilter.length > 0 && !conditionFilter.includes(p.condition || '')) return false;
+          if (brandFilter.length > 0 && !brandFilter.includes(p.brand || ""))
+            return false;
+          if (modelFilter.length > 0 && !modelFilter.includes(p.model || ""))
+            return false;
+          if (
+            conditionFilter.length > 0 &&
+            !conditionFilter.includes(p.condition || "")
+          )
+            return false;
           return true;
         });
         if (withoutCategory.length > 0) {
@@ -440,12 +550,16 @@ export default function Products() {
         } else {
           // Try without condition filter
           const withoutCondition = availableProducts.filter(p => {
-            if (brandFilter.length > 0 && !brandFilter.includes(p.brand || '')) return false;
-            if (modelFilter.length > 0 && !modelFilter.includes(p.model || '')) return false;
-            if (categoryFilter && categoryFilter !== (p.category_name || '')) return false;
+            if (brandFilter.length > 0 && !brandFilter.includes(p.brand || ""))
+              return false;
+            if (modelFilter.length > 0 && !modelFilter.includes(p.model || ""))
+              return false;
+            if (categoryFilter && categoryFilter !== (p.category_name || ""))
+              return false;
             return true;
           });
-          similarResults = withoutCondition.length > 0 ? withoutCondition : availableProducts;
+          similarResults =
+            withoutCondition.length > 0 ? withoutCondition : availableProducts;
         }
       }
     }
@@ -454,21 +568,23 @@ export default function Products() {
     if (similarResults.length > 0) {
       return {
         products: similarResults,
-        reason: 'similar',
-        message: 'No exact matches found. Showing similar products based on available filters.',
+        reason: "similar",
+        message:
+          "No exact matches found. Showing similar products based on available filters.",
       };
     }
 
     // 3. Fall back to recently viewed products
-    const recentlyViewedProducts = availableProducts.filter(p => 
+    const recentlyViewedProducts = availableProducts.filter(p =>
       recentlyViewedIds.includes(String(p.id))
     );
 
     if (recentlyViewedProducts.length > 0) {
       return {
         products: recentlyViewedProducts,
-        reason: 'recently-viewed',
-        message: 'No products match your search. Here are items you\'ve recently viewed.',
+        reason: "recently-viewed",
+        message:
+          "No products match your search. Here are items you've recently viewed.",
       };
     }
 
@@ -481,7 +597,7 @@ export default function Products() {
     if (categoryParam) {
       setCategoryFilter(categoryParam);
     } else {
-      setCategoryFilter('');
+      setCategoryFilter("");
     }
   }, [location]);
 
@@ -489,11 +605,11 @@ export default function Products() {
   const baseProducts = categoryFilter ? categoryProducts : allProducts;
 
   // Helper to get brand match priority (0 = no match, 1 = brand in title, 2 = exact brand match)
-  const getBrandMatchPriority = (product: typeof baseProducts[0]): number => {
+  const getBrandMatchPriority = (product: (typeof baseProducts)[0]): number => {
     if (brandFilter.length === 0) return 0;
 
-    const productBrand = (product.brand || '').toLowerCase();
-    const productTitle = (product.title || '').toLowerCase();
+    const productBrand = (product.brand || "").toLowerCase();
+    const productTitle = (product.title || "").toLowerCase();
 
     for (const selectedBrand of brandFilter) {
       const selectedBrandLower = selectedBrand.toLowerCase();
@@ -521,21 +637,27 @@ export default function Products() {
         })
       : baseProducts;
 
-    let filtered = searchFiltered.filter((p) => {
-      const price = p.price !== null && p.price !== undefined 
-        ? parseFloat(String(p.price))
-        : null;
-      const priceMatch = price !== null && !isNaN(price) && price >= priceRange[0] && price <= priceRange[1];
-      
+    let filtered = searchFiltered.filter(p => {
+      const price =
+        p.price !== null && p.price !== undefined
+          ? parseFloat(String(p.price))
+          : null;
+      const priceMatch =
+        price !== null &&
+        !isNaN(price) &&
+        price >= priceRange[0] &&
+        price <= priceRange[1];
+
       // Get the category name from the selected slug
       let categoryMatch = true;
       if (categoryFilter) {
         // Support both category_name and category fields, compare with actual category name
-        const productCategory = (p.category_name || '').toLowerCase();
+        const productCategory = (p.category_name || "").toLowerCase();
         categoryMatch =
           productCategory === selectedCategoryName ||
           productCategory === selectedCategorySlug ||
-          (!selectedCategory && productCategory === normalizeCategoryValue(categoryFilter));
+          (!selectedCategory &&
+            productCategory === normalizeCategoryValue(categoryFilter));
       }
 
       // Brand filter - match by brand attribute OR brand in title
@@ -549,7 +671,7 @@ export default function Products() {
       let modelMatch = true;
       if (modelFilter.length > 0) {
         modelMatch = modelFilter.some(
-          m => (p.model || '').toLowerCase() === m.toLowerCase()
+          m => (p.model || "").toLowerCase() === m.toLowerCase()
         );
       }
 
@@ -557,7 +679,7 @@ export default function Products() {
       let conditionMatch = true;
       if (conditionFilter.length > 0) {
         conditionMatch = conditionFilter.some(
-          c => (p.condition || '').toLowerCase() === c.toLowerCase()
+          c => (p.condition || "").toLowerCase() === c.toLowerCase()
         );
       }
 
@@ -570,29 +692,30 @@ export default function Products() {
       // Deals filter - product has discount field
       let dealsMatch = true;
       if (dealsOnly) {
-        dealsMatch = p.discount !== null && p.discount !== undefined && p.discount > 0;
+        dealsMatch =
+          p.discount !== null && p.discount !== undefined && p.discount > 0;
       }
-      
+
       return (
-        priceMatch && 
-        categoryMatch && 
-        brandMatch && 
-        modelMatch && 
-        conditionMatch && 
-        stockMatch && 
+        priceMatch &&
+        categoryMatch &&
+        brandMatch &&
+        modelMatch &&
+        conditionMatch &&
+        stockMatch &&
         dealsMatch
       );
     });
 
     // Sort
     switch (sortBy) {
-      case 'recommended':
+      case "recommended":
         filtered = recommendations.rank(filtered, {
           searchTerm: searchQuery,
           newestFirst: true,
         }) as Product[];
         break;
-      case 'price-low':
+      case "price-low":
         filtered.sort((a, b) => {
           // First, prioritize by brand match if brand filter is active
           if (brandFilter.length > 0) {
@@ -608,7 +731,7 @@ export default function Products() {
           return aPrice - bPrice;
         });
         break;
-      case 'price-high':
+      case "price-high":
         filtered.sort((a, b) => {
           // First, prioritize by brand match if brand filter is active
           if (brandFilter.length > 0) {
@@ -624,13 +747,13 @@ export default function Products() {
           return bPrice - aPrice;
         });
         break;
-      case 'popular':
+      case "popular":
         filtered = recommendations.rank(filtered, {
           searchTerm: searchQuery,
           preserveWhenNoSignals: true,
         }) as Product[];
         break;
-      case 'newest':
+      case "newest":
       default:
         // Prioritize by brand match if active, then keep original order
         if (brandFilter.length > 0) {
@@ -657,12 +780,29 @@ export default function Products() {
     }
 
     return filtered;
-  }, [baseProducts, searchQuery, sortBy, priceRange, categoryFilter, selectedCategory, selectedCategoryName, selectedCategorySlug, dealsOnly, brandFilter, modelFilter, conditionFilter, inStockOnly, allProducts, recentlyViewedIds, recommendations]);
+  }, [
+    baseProducts,
+    searchQuery,
+    sortBy,
+    priceRange,
+    categoryFilter,
+    selectedCategory,
+    selectedCategoryName,
+    selectedCategorySlug,
+    dealsOnly,
+    brandFilter,
+    modelFilter,
+    conditionFilter,
+    inStockOnly,
+    allProducts,
+    recentlyViewedIds,
+    recommendations,
+  ]);
 
   useEffect(() => {
     lastSearchSnapshotRef.current = {
       count: filteredProducts.length,
-      productIds: filteredProducts.slice(0, 50).map((product) => product.id),
+      productIds: filteredProducts.slice(0, 50).map(product => product.id),
     };
   }, [filteredProducts]);
 
@@ -672,7 +812,7 @@ export default function Products() {
       return null;
     }
 
-    const hasExactMatch = baseProducts.some((product) => {
+    const hasExactMatch = baseProducts.some(product => {
       const exactFields = [
         product.title,
         product.brand,
@@ -681,7 +821,7 @@ export default function Products() {
         product.part_number,
       ]
         .filter(Boolean)
-        .map((value) => String(value).trim().toLowerCase());
+        .map(value => String(value).trim().toLowerCase());
 
       return exactFields.includes(query);
     });
@@ -705,13 +845,13 @@ export default function Products() {
     const trackingSignature = [
       searchTerm,
       categoryFilter,
-      brandFilter.join(','),
-      modelFilter.join(','),
-      conditionFilter.join(','),
+      brandFilter.join(","),
+      modelFilter.join(","),
+      conditionFilter.join(","),
       `${priceRange[0]}-${priceRange[1]}`,
-      inStockOnly ? '1' : '0',
-      dealsOnly ? '1' : '0',
-    ].join('|');
+      inStockOnly ? "1" : "0",
+      dealsOnly ? "1" : "0",
+    ].join("|");
 
     const timer = window.setTimeout(() => {
       pendingSearchSnapshotRef.current = {
@@ -727,10 +867,14 @@ export default function Products() {
           dealsOnly,
         },
         resultsCount: filteredProducts.length,
-        matchedProductIds: filteredProducts.slice(0, 50).map((product) => product.id),
-        pageUrl: typeof window !== 'undefined' ? window.location.href : null,
+        matchedProductIds: filteredProducts
+          .slice(0, 50)
+          .map(product => product.id),
+        pageUrl: typeof window !== "undefined" ? window.location.href : null,
         metadata: {
-          exactMatch: Boolean(searchFeedback === null && filteredProducts.length > 0),
+          exactMatch: Boolean(
+            searchFeedback === null && filteredProducts.length > 0
+          ),
           noResults: filteredProducts.length === 0,
           fallbackShown: Boolean(fallbackResult),
           trackedAt: new Date().toISOString(),
@@ -739,11 +883,11 @@ export default function Products() {
 
       if (lastProfiledSearchRef.current !== trackingSignature) {
         recommendations.track({
-          eventType: 'search',
+          eventType: "search",
           searchTerm,
           products: filteredProducts.slice(0, 50),
           metadata: {
-            source: 'products_search',
+            source: "products_search",
             filters: {
               category: categoryFilter,
               brands: brandFilter,
@@ -753,7 +897,9 @@ export default function Products() {
               inStockOnly,
               dealsOnly,
             },
-            exactMatch: Boolean(searchFeedback === null && filteredProducts.length > 0),
+            exactMatch: Boolean(
+              searchFeedback === null && filteredProducts.length > 0
+            ),
             noResults: filteredProducts.length === 0,
             fallbackShown: Boolean(fallbackResult),
           },
@@ -778,25 +924,38 @@ export default function Products() {
     recommendations,
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE)
+  );
   const paginationPages = useMemo<(number | string)[]>(() => {
     if (totalPages <= 8) {
       return Array.from({ length: totalPages }, (_, index) => index + 1);
     }
 
-    return [1, 2, 3, 4, 5, 6, 7, 'ellipsis', totalPages];
+    return [1, 2, 3, 4, 5, 6, 7, "ellipsis", totalPages];
   }, [totalPages]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, categoryFilter, sortBy, priceRange, dealsOnly, inStockOnly, brandFilter, modelFilter, conditionFilter]);
+  }, [
+    searchQuery,
+    categoryFilter,
+    sortBy,
+    priceRange,
+    dealsOnly,
+    inStockOnly,
+    brandFilter,
+    modelFilter,
+    conditionFilter,
+  ]);
 
   useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalPages));
+    setCurrentPage(page => Math.min(page, totalPages));
   }, [totalPages]);
 
   const allDisplayedProducts = useMemo(() => {
-    // When search is active and results fit on one page (specific/limited results), 
+    // When search is active and results fit on one page (specific/limited results),
     // show all of them without pagination. Otherwise, use normal pagination.
     if (hasSearchTermActive() && filteredProducts.length <= PRODUCTS_PER_PAGE) {
       return filteredProducts;
@@ -817,571 +976,685 @@ export default function Products() {
         pageType="category"
         title={seoTitle}
         description={seoDescription}
-        keywords={['automotive parts', 'car parts', 'OEM parts', 'aftermarket parts', 'auto accessories']}
+        keywords={[
+          "automotive parts",
+          "car parts",
+          "OEM parts",
+          "aftermarket parts",
+          "auto accessories",
+        ]}
         canonical={canonicalUrl}
       />
       <div className="min-h-screen bg-white w-full overflow-x-hidden">
-      {/* Header */}
-      <div className="border-b border-gray-200 py-6 md:py-8">
-        <div className="w-full max-w-full mx-auto px-2 sm:px-3 md:px-4 lg:px-2">
-          {categoryFilter && (
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-sm text-gray-600">Viewing category:</span>
-              <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
-                {categories.find(
-                  (c) =>
-                    String(c.slug ?? '').toLowerCase() === categoryFilter.toLowerCase() ||
-                    String(c.name ?? '').toLowerCase() === categoryFilter.toLowerCase()
-                )?.name || categoryFilter}
-              </span>
-              <button
-                onClick={() => {
-                  setCategoryFilter('');
-                  updateCategoryInUrl('');
-                }}
-                className="text-xs text-gray-500 hover:text-gray-700 ml-2"
-              >
-                <X className="w-4 h-4 inline-block" />
-              </button>
-            </div>
-          )}
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black mb-2">All Products</h1>
-          <p className="text-sm sm:text-base text-gray-600">Browse our collection of {filteredProducts.length} products</p>
-        </div>
-      </div>
-
-      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-          {/* Sidebar Filters */}
-          <div className={`lg:col-span-1 ${showFilters ? 'block' : 'hidden lg:block'}`}>
-            <div className="bg-gray-50 p-6 rounded-lg sticky top-4">
-              <div className="flex items-center justify-between mb-6 lg:hidden">
-                <h2 className="text-lg font-bold">Filters</h2>
-                <button onClick={() => setShowFilters(false)}>
-                  <X className="w-5 h-5" />
+        {/* Header */}
+        <div className="border-b border-gray-200 py-6 md:py-8">
+          <div className="w-full max-w-full mx-auto px-2 sm:px-3 md:px-4 lg:px-2">
+            {categoryFilter && (
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm text-gray-600">Viewing category:</span>
+                <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+                  {categories.find(
+                    c =>
+                      String(c.slug ?? "").toLowerCase() ===
+                        categoryFilter.toLowerCase() ||
+                      String(c.name ?? "").toLowerCase() ===
+                        categoryFilter.toLowerCase()
+                  )?.name || categoryFilter}
+                </span>
+                <button
+                  onClick={() => {
+                    setCategoryFilter("");
+                    updateCategoryInUrl("");
+                  }}
+                  className="text-xs text-gray-500 hover:text-gray-700 ml-2"
+                >
+                  <X className="w-4 h-4 inline-block" />
                 </button>
               </div>
+            )}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black mb-2">
+              All Products
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600">
+              Browse our collection of {filteredProducts.length} products
+            </p>
+          </div>
+        </div>
 
-              {/* Category Filter */}
-              <div className="mb-6">
-                <h3 className="font-bold text-sm mb-3">Category</h3>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  <label className={`flex items-center cursor-pointer p-2 rounded transition-colors ${
-                    categoryFilter === '' 
-                      ? 'bg-blue-100 text-blue-900' 
-                      : 'hover:bg-gray-100'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="category"
-                      value=""
-                      checked={categoryFilter === ''}
-                      onChange={(e) => {
-                        const nextValue = e.target.value;
-                        setCategoryFilter(nextValue);
-                        updateCategoryInUrl(nextValue);
-                      }}
-                      className="w-4 h-4 cursor-pointer"
-                    />
-                    <span className="text-sm ml-2 font-medium">All Categories</span>
-                  </label>
-                  {categoriesLoading ? (
-                    Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-7 w-24" />
-                    ))
-                  ) : categories.length > 0 ? (
-                    categories.map((cat) => {
-                      const categoryValue = String(cat.slug || cat.name || '');
-                      const normalizedCategoryValue = normalizeCategoryValue(categoryValue);
-                      const normalizedCategoryFilter = normalizeCategoryValue(categoryFilter);
-                      const isSelected =
-                        normalizedCategoryFilter === normalizedCategoryValue ||
-                        normalizedCategoryFilter === normalizeCategoryValue(String(cat.name ?? ''));
-                      
-                      return (
-                        <label 
-                          key={cat.id} 
-                          className={`flex items-center cursor-pointer p-2 rounded transition-colors ${
-                            isSelected
-                              ? 'bg-blue-100 text-blue-900' 
-                              : 'hover:bg-gray-100'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="category"
-                            value={categoryValue}
-                            checked={isSelected}
-                            onChange={(e) => {
-                              const nextValue = e.target.value;
-                              setCategoryFilter(nextValue);
-                              updateCategoryInUrl(nextValue);
-                            }}
-                            className="w-4 h-4 cursor-pointer"
-                          />
-                          <span className="text-sm ml-2 font-medium">{cat.name}</span>
-                        </label>
-                      );
-                    })
-                  ) : (
-                    <p className="text-xs text-gray-500 p-2">No categories available</p>
-                  )}
+        <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+            {/* Sidebar Filters */}
+            <div
+              className={`lg:col-span-1 ${showFilters ? "block" : "hidden lg:block"}`}
+            >
+              <div className="bg-gray-50 p-6 rounded-lg sticky top-4">
+                <div className="flex items-center justify-between mb-6 lg:hidden">
+                  <h2 className="text-lg font-bold">Filters</h2>
+                  <button onClick={() => setShowFilters(false)}>
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-              </div>
 
-              {/* Model Filter */}
-              <div className="mb-6">
-                <h3 className="font-bold text-sm mb-3">Model</h3>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {allProducts && allProducts.length > 0 ? (
-                    Array.from(new Set(allProducts.map(p => p.model).filter(Boolean))).map((model) => (
-                      <label 
-                        key={model}
-                        className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={modelFilter.includes(model as string)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setModelFilter([...modelFilter, model as string]);
-                            } else {
-                              setModelFilter(modelFilter.filter(m => m !== model));
-                            }
-                          }}
-                          className="w-4 h-4 cursor-pointer"
-                        />
-                        <span className="text-sm ml-2">{model}</span>
-                      </label>
-                    ))
-                  ) : (
-                    <p className="text-xs text-gray-500 p-2">No models available</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Condition Filter */}
-              <div className="mb-6">
-                <h3 className="font-bold text-sm mb-3">Condition</h3>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {conditionOptions.length > 0 ? conditionOptions.map((condition) => (
+                {/* Category Filter */}
+                <div className="mb-6">
+                  <h3 className="font-bold text-sm mb-3">Category</h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
                     <label
-                      key={condition}
-                      className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors"
+                      className={`flex items-center cursor-pointer p-2 rounded transition-colors ${
+                        categoryFilter === ""
+                          ? "bg-blue-100 text-blue-900"
+                          : "hover:bg-gray-100"
+                      }`}
                     >
                       <input
-                        type="checkbox"
-                        checked={conditionFilter.includes(condition)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setConditionFilter([...conditionFilter, condition]);
-                          } else {
-                            setConditionFilter(conditionFilter.filter(c => c !== condition));
-                          }
+                        type="radio"
+                        name="category"
+                        value=""
+                        checked={categoryFilter === ""}
+                        onChange={e => {
+                          const nextValue = e.target.value;
+                          setCategoryFilter(nextValue);
+                          updateCategoryInUrl(nextValue);
                         }}
                         className="w-4 h-4 cursor-pointer"
                       />
-                      <span className="text-sm ml-2">{condition}</span>
+                      <span className="text-sm ml-2 font-medium">
+                        All Categories
+                      </span>
                     </label>
-                  )) : (
-                    <p className="text-xs text-gray-500 p-2">No conditions available</p>
-                  )}
-                </div>
-              </div>
+                    {categoriesLoading ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-7 w-24" />
+                      ))
+                    ) : categories.length > 0 ? (
+                      categories.map(cat => {
+                        const categoryValue = String(
+                          cat.slug || cat.name || ""
+                        );
+                        const normalizedCategoryValue =
+                          normalizeCategoryValue(categoryValue);
+                        const normalizedCategoryFilter =
+                          normalizeCategoryValue(categoryFilter);
+                        const isSelected =
+                          normalizedCategoryFilter ===
+                            normalizedCategoryValue ||
+                          normalizedCategoryFilter ===
+                            normalizeCategoryValue(String(cat.name ?? ""));
 
-              {/* In Stock Filter */}
-              <div className="mb-6">
-                <h3 className="font-bold text-sm mb-3">Availability</h3>
-                <label className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={inStockOnly}
-                    onChange={(e) => {
-                      setInStockOnly(e.target.checked);
-                    }}
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-sm ml-2 font-medium">In Stock Only</span>
-                </label>
-              </div>
-              <div className="mb-6">
-                <h3 className="font-bold text-sm mb-3">Price Range</h3>
-                <div className="space-y-2">
-                  <div>
-                    <label className="text-xs text-gray-600">Min: {currencyClient.getCurrencySymbolLocal()}{currencyClient.convertUSD(priceRange[0]).toFixed(2)}</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max={computedMaxPrice}
-                      value={priceRange[0]}
-                      onChange={(e) => {
-                        const newMin = parseInt(e.target.value);
-                        if (newMin <= priceRange[1]) {
-                          setPriceRange([newMin, priceRange[1]]);
-                        }
-                      }}
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-600">Max: {currencyClient.getCurrencySymbolLocal()}{currencyClient.convertUSD(priceRange[1]).toFixed(2)}</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max={computedMaxPrice}
-                      value={priceRange[1]}
-                      onChange={(e) => {
-                        const newMax = parseInt(e.target.value);
-                        if (newMax >= priceRange[0]) {
-                          setPriceRange([priceRange[0], newMax]);
-                        }
-                      }}
-                      className="w-full"
-                    />
+                        return (
+                          <label
+                            key={cat.id}
+                            className={`flex items-center cursor-pointer p-2 rounded transition-colors ${
+                              isSelected
+                                ? "bg-blue-100 text-blue-900"
+                                : "hover:bg-gray-100"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="category"
+                              value={categoryValue}
+                              checked={isSelected}
+                              onChange={e => {
+                                const nextValue = e.target.value;
+                                setCategoryFilter(nextValue);
+                                updateCategoryInUrl(nextValue);
+                              }}
+                              className="w-4 h-4 cursor-pointer"
+                            />
+                            <span className="text-sm ml-2 font-medium">
+                              {cat.name}
+                            </span>
+                          </label>
+                        );
+                      })
+                    ) : (
+                      <p className="text-xs text-gray-500 p-2">
+                        No categories available
+                      </p>
+                    )}
                   </div>
                 </div>
-              </div>
 
-              {/* Deals Filter */}
-              <div className="mb-6">
-                <h3 className="font-bold text-sm mb-3">Special Offers</h3>
-                <label className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={dealsOnly}
-                    onChange={(e) => {
-                      setDealsOnly(e.target.checked);
-                    }}
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-sm ml-2 font-medium">Deals Only</span>
-                </label>
-              </div>
+                {/* Model Filter */}
+                <div className="mb-6">
+                  <h3 className="font-bold text-sm mb-3">Model</h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {allProducts && allProducts.length > 0 ? (
+                      Array.from(
+                        new Set(allProducts.map(p => p.model).filter(Boolean))
+                      ).map(model => (
+                        <label
+                          key={model}
+                          className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={modelFilter.includes(model as string)}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setModelFilter([
+                                  ...modelFilter,
+                                  model as string,
+                                ]);
+                              } else {
+                                setModelFilter(
+                                  modelFilter.filter(m => m !== model)
+                                );
+                              }
+                            }}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                          <span className="text-sm ml-2">{model}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-500 p-2">
+                        No models available
+                      </p>
+                    )}
+                  </div>
+                </div>
 
-              {/* Sort Options */}
-              <div>
-                <h3 className="font-bold text-sm mb-3">Sort By</h3>
-                <select
-                  value={sortBy}
-                  onChange={(e) => {
-                    setSortBy(e.target.value as SortOption);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
-                >
-                  <option value="recommended">Recommended</option>
-                  <option value="newest">Newest</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                  <option value="popular">Popular</option>
-                </select>
-              </div>
-            </div>
-          </div>
+                {/* Condition Filter */}
+                <div className="mb-6">
+                  <h3 className="font-bold text-sm mb-3">Condition</h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {conditionOptions.length > 0 ? (
+                      conditionOptions.map(condition => (
+                        <label
+                          key={condition}
+                          className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={conditionFilter.includes(condition)}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setConditionFilter([
+                                  ...conditionFilter,
+                                  condition,
+                                ]);
+                              } else {
+                                setConditionFilter(
+                                  conditionFilter.filter(c => c !== condition)
+                                );
+                              }
+                            }}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                          <span className="text-sm ml-2">{condition}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-500 p-2">
+                        No conditions available
+                      </p>
+                    )}
+                  </div>
+                </div>
 
-          {/* Products Grid */}
-          <div className="lg:col-span-4">
-            {/* Mobile Filter and Brand Selection */}
-            <div className="lg:hidden mb-4">
-              <button
-                onClick={() => setShowFilters(true)}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded w-full"
-              >
-                <Filter className="w-4 h-4" />
-                Filters
-              </button>
-
-              {/* Mobile Brand Filter */}
-              <BrandFilter
-                brands={brandsWithLogos}
-                selectedBrands={brandFilter}
-                onBrandToggle={(brandName) => {
-                  setBrandFilter(prevBrands =>
-                    prevBrands.includes(brandName)
-                      ? prevBrands.filter(b => b !== brandName)
-                      : [...prevBrands, brandName]
-                  );
-                }}
-                isLoading={brandsLoading}
-                compact={true}
-                error={brandsError}
-              />
-            </div>
-
-            {/* Brand Filter - Desktop View */}
-            <div className="hidden lg:block mb-6">
-              <BrandFilter
-                brands={brandsWithLogos}
-                selectedBrands={brandFilter}
-                onBrandToggle={(brandName) => {
-                  setBrandFilter(prevBrands =>
-                    prevBrands.includes(brandName)
-                      ? prevBrands.filter(b => b !== brandName)
-                      : [...prevBrands, brandName]
-                  );
-                }}
-                isLoading={brandsLoading}
-                compact={false}
-                error={brandsError}
-              />
-            </div>
-
-            {/* Search Bar */}
-            <div className="mb-6">
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {searchFeedback && (
-              <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-                <p className="text-sm font-semibold text-blue-800">
-                  No exact product found for “{searchQuery.trim()}”. Showing {searchFeedback.count} matching result{searchFeedback.count !== 1 ? 's' : ''}.
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {searchFeedback.products.map((product) => (
-                    <Link
-                      key={product.id}
-                      href={`/product/${product.id}`}
-                      onClick={() => {
-                        trackProductClick(product.id);
+                {/* In Stock Filter */}
+                <div className="mb-6">
+                  <h3 className="font-bold text-sm mb-3">Availability</h3>
+                  <label className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={inStockOnly}
+                      onChange={e => {
+                        setInStockOnly(e.target.checked);
                       }}
-                    >
-                      <a className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-medium text-blue-800 border border-blue-200 hover:bg-blue-50">
-                        {product.title}
-                      </a>
-                    </Link>
-                  ))}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-sm ml-2 font-medium">
+                      In Stock Only
+                    </span>
+                  </label>
+                </div>
+                <div className="mb-6">
+                  <h3 className="font-bold text-sm mb-3">Price Range</h3>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-xs text-gray-600">
+                        Min: {currencyClient.getCurrencySymbolLocal()}
+                        {currencyClient.convertUSD(priceRange[0]).toFixed(2)}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max={computedMaxPrice}
+                        value={priceRange[0]}
+                        onChange={e => {
+                          const newMin = parseInt(e.target.value);
+                          if (newMin <= priceRange[1]) {
+                            setPriceRange([newMin, priceRange[1]]);
+                          }
+                        }}
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600">
+                        Max: {currencyClient.getCurrencySymbolLocal()}
+                        {currencyClient.convertUSD(priceRange[1]).toFixed(2)}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max={computedMaxPrice}
+                        value={priceRange[1]}
+                        onChange={e => {
+                          const newMax = parseInt(e.target.value);
+                          if (newMax >= priceRange[0]) {
+                            setPriceRange([priceRange[0], newMax]);
+                          }
+                        }}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Enquire CTA: show help message and blue enquire button (prefilled Product inquiry) */}
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-gray-800">can't find what you are looking for? let us help</p>
-                  {(() => {
-                    const activeFilters: string[] = [];
-                    if (categoryFilter) activeFilters.push(`category: ${categoryFilter}`);
-                    if (brandFilter.length) activeFilters.push(`brands: ${brandFilter.join(',')}`);
-                    if (modelFilter.length) activeFilters.push(`models: ${modelFilter.join(',')}`);
-                    if (conditionFilter.length) activeFilters.push(`conditions: ${conditionFilter.join(',')}`);
-                    if (inStockOnly) activeFilters.push('inStockOnly: true');
-                    if (dealsOnly) activeFilters.push('dealsOnly: true');
-                    if (priceRange && priceRange.length === 2) activeFilters.push(`priceRange: ${priceRange[0]}-${priceRange[1]}`);
+                {/* Deals Filter */}
+                <div className="mb-6">
+                  <h3 className="font-bold text-sm mb-3">Special Offers</h3>
+                  <label className="flex items-center cursor-pointer p-2 rounded hover:bg-gray-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={dealsOnly}
+                      onChange={e => {
+                        setDealsOnly(e.target.checked);
+                      }}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-sm ml-2 font-medium">Deals Only</span>
+                  </label>
+                </div>
 
-                    const filtersStr = activeFilters.length ? activeFilters.join('; ') : 'None';
-                    const enquiryCopy = getEnquiryCopy(getSiteLanguage());
-                    const subject = enquiryCopy.searchSubject;
-                    const message = `${enquiryCopy.searchItemLabel}: ${searchQuery.trim()}\n${enquiryCopy.searchSpecLabel}: ${filtersStr}`;
-                    const country = currencyClient.getCountryCode() || '';
-
-                    const params = new URLSearchParams();
-                    if (user && typeof user.name === 'string') params.set('name', user.name);
-                    if (user && typeof user.email === 'string') params.set('email', user.email);
-                    if (country) params.set('location', country);
-                    // Mark link as coming from enquiry CTA so contact can tailor the message template
-                    params.set('enquiry', '1');
-                    params.set('includeGeo', '0');
-                    params.set('subject', subject);
-                    params.set('message', message);
-
-                    const href = buildContactHref(params);
-
-                    return (
-                      <a
-                        href={href}
-                        className="mt-2 inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
-                      >
-                        Enquire
-                      </a>
-                    );
-                  })()}
+                {/* Sort Options */}
+                <div>
+                  <h3 className="font-bold text-sm mb-3">Sort By</h3>
+                  <select
+                    value={sortBy}
+                    onChange={e => {
+                      setSortBy(e.target.value as SortOption);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                  >
+                    <option value="recommended">Recommended</option>
+                    <option value="newest">Newest</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="popular">Popular</option>
+                  </select>
                 </div>
               </div>
-            )}
-
-            {/* Products Count */}
-            <div className="mb-4 text-sm text-gray-600 flex items-center justify-between gap-3 flex-wrap">
-              <span>
-                Showing {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
-              </span>
-              {filteredProducts.length > PRODUCTS_PER_PAGE && (
-                <span>
-                  Page {currentPage} of {totalPages}
-                </span>
-              )}
             </div>
 
-            {/* ...existing code... */}
             {/* Products Grid */}
-            {shouldShowGridSkeleton ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-4">
-                {Array.from({ length: 12 }).map((_, idx) => (
-                  <div key={idx} className="space-y-3">
-                    <Skeleton className="h-40 md:h-48 w-full rounded-lg" />
-                    <Skeleton className="h-4 w-4/5" />
-                    <Skeleton className="h-4 w-2/5" />
-                  </div>
-                ))}
+            <div className="lg:col-span-4">
+              {/* Mobile Filter and Brand Selection */}
+              <div className="lg:hidden mb-4">
+                <button
+                  onClick={() => setShowFilters(true)}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded w-full"
+                >
+                  <Filter className="w-4 h-4" />
+                  Filters
+                </button>
+
+                {/* Mobile Brand Filter */}
+                <BrandFilter
+                  brands={brandsWithLogos}
+                  selectedBrands={brandFilter}
+                  onBrandToggle={brandName => {
+                    setBrandFilter(prevBrands =>
+                      prevBrands.includes(brandName)
+                        ? prevBrands.filter(b => b !== brandName)
+                        : [...prevBrands, brandName]
+                    );
+                  }}
+                  isLoading={brandsLoading}
+                  compact={true}
+                  error={brandsError}
+                />
               </div>
-            ) : allDisplayedProducts.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-4">
-                {allDisplayedProducts.map((product: Product, idx: number) => {
-                  const priceUSD = product.price !== null && product.price !== undefined 
-                    ? parseFloat(String(product.price))
-                    : 0;
-                  const discountUSD = product.discount ? parseFloat(String(product.discount)) : null;
-                  const discountPercentage = discountUSD ? Math.round(((discountUSD - priceUSD) / discountUSD) * 100) : 0;
-                  const stock = Number(product.stock ?? 0);
-                  // Convert price for display
-                  // Always show USD for African users, else use detected currency and symbol
-                  const formatPrice = (n: number) => {
-                    if (currencyClient.isAfricanUser()) {
-                      return currencyClient.formatUSD(n);
-                    }
-                    const rate = currencyClient.getCurrencyRate() || 1;
-                    // Always get the symbol for the detected currency
-                    const symbol = currencyClient.getCurrencySymbolLocal();
-                    return `${symbol}${(parseFloat(String(n)) * rate).toFixed(2)}`;
-                  };
-                  // Use correct symbol and code for non-African users
-                  const priceDisplay = formatPrice(priceUSD);
-                  const discountDisplay = discountUSD ? formatPrice(discountUSD) : null;
-                  return (
-                    <Link key={product.id} href={`/product/${product.id}`}>
-                      <div
-                        className="group cursor-pointer min-h-[320px] flex flex-col justify-between"
-                        style={{ minHeight: 320 }}
+
+              {/* Brand Filter - Desktop View */}
+              <div className="hidden lg:block mb-6">
+                <BrandFilter
+                  brands={brandsWithLogos}
+                  selectedBrands={brandFilter}
+                  onBrandToggle={brandName => {
+                    setBrandFilter(prevBrands =>
+                      prevBrands.includes(brandName)
+                        ? prevBrands.filter(b => b !== brandName)
+                        : [...prevBrands, brandName]
+                    );
+                  }}
+                  isLoading={brandsLoading}
+                  compact={false}
+                  error={brandsError}
+                />
+              </div>
+
+              {/* Search Bar */}
+              <div className="mb-6">
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={e => {
+                    setSearchQuery(e.target.value);
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {searchFeedback && (
+                <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <p className="text-sm font-semibold text-blue-800">
+                    No exact product found for “{searchQuery.trim()}”. Showing{" "}
+                    {searchFeedback.count} matching result
+                    {searchFeedback.count !== 1 ? "s" : ""}.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {searchFeedback.products.map(product => (
+                      <Link
+                        key={product.id}
+                        href={`/product/${product.id}`}
                         onClick={() => {
                           trackProductClick(product.id);
                         }}
                       >
-                        <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden h-40 md:h-48 mb-3 flex items-center justify-center">
-                          {product.cover_image_url ? (
-                            <img
-                              src={getHighResImageUrl(product.cover_image_url)}
-                              alt={product.title}
-                              className="w-full h-full object-contain p-3"
-                              loading="lazy"
-                              decoding="async"
-                              crossOrigin="anonymous"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <div className="text-gray-400 text-center text-sm">No image available</div>
-                          )}
-                          {product.discount && (
-                            <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
-                              -{discountPercentage}%
-                            </div>
-                          )}
-                          <div className={`absolute bottom-2 left-2 px-2 py-1 rounded text-xs font-bold ${stock === 0 ? 'bg-red-600 text-white' : 'bg-white/90 text-gray-800'}`}>
-                            {stock === 0 ? 'Out of stock' : `${stock} in stock`}
-                          </div>
-                          <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={async (e) => {
-                                e.preventDefault();
-
-                                try {
-                                  await toggleWishlist(product.id);
-                                } catch (error) {
-                                  console.error('Failed to toggle wishlist from products page:', error);
-                                }
-                              }}
-                              className="bg-white p-2 rounded-full hover:bg-gray-100 shadow"
-                              aria-label={wishedProductIds.has(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
-                            >
-                              <Heart
-                                className={`w-4 h-4 ${wishedProductIds.has(product.id) ? 'text-red-500' : 'text-gray-600'}`}
-                                fill={wishedProductIds.has(product.id) ? 'currentColor' : 'none'}
-                              />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                recommendations.track({
-                                  eventType: 'product_view',
-                                  product,
-                                  productId: product.id,
-                                  metadata: { source: 'products_quick_view' },
-                                });
-                                setQuickViewProductId(product.id);
-                              }}
-                              className="bg-white p-2 rounded-full hover:bg-gray-100 shadow"
-                            >
-                              <Eye className="w-4 h-4 text-gray-600" />
-                            </button>
-                          </div>
-                        </div>
-                        <h3 className="text-xs md:text-sm font-medium line-clamp-2 group-hover:text-blue-600">{product.title}</h3>
-                        <div className="flex items-center gap-2">
-                          <p className="text-gray-900 font-bold text-xs md:text-sm">
-                            {priceDisplay}
-                          </p>
-                          {discountDisplay && (
-                            <p className="text-gray-500 line-through text-xs">
-                              {/* Discount as plain number for non-African users, already converted */}
-                              {currencyClient.isAfricanUser() ? discountDisplay : Number(discountDisplay.replace(/[^\d.]/g, ''))}
-                            </p>
-                          )}
-                        </div>
-                        <p className={`mt-1 text-xs font-semibold ${stock === 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                          {stock === 0 ? 'Out of stock' : `${stock} in stock`}
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                {fallbackResult ? (
-                  <div>
-                    <p className="text-blue-600 text-lg font-semibold mb-2">
-                      {fallbackResult.reason === 'similar' 
-                        ? '🔍 Similar Products' 
-                        : '👁️ Recently Viewed'}
-                    </p>
-                    <p className="text-gray-600 text-base mb-6">
-                      {fallbackResult.message}
-                    </p>
+                        <a className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-medium text-blue-800 border border-blue-200 hover:bg-blue-50">
+                          {product.title}
+                        </a>
+                      </Link>
+                    ))}
                   </div>
-                ) : (
-                  <p className="text-gray-500 text-lg">No products found</p>
+
+                  {/* Enquire CTA: show help message and blue enquire button (prefilled Product inquiry) */}
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-800">
+                      can't find what you are looking for? let us help
+                    </p>
+                    {(() => {
+                      const activeFilters: string[] = [];
+                      if (categoryFilter)
+                        activeFilters.push(`category: ${categoryFilter}`);
+                      if (brandFilter.length)
+                        activeFilters.push(`brands: ${brandFilter.join(",")}`);
+                      if (modelFilter.length)
+                        activeFilters.push(`models: ${modelFilter.join(",")}`);
+                      if (conditionFilter.length)
+                        activeFilters.push(
+                          `conditions: ${conditionFilter.join(",")}`
+                        );
+                      if (inStockOnly) activeFilters.push("inStockOnly: true");
+                      if (dealsOnly) activeFilters.push("dealsOnly: true");
+                      if (priceRange && priceRange.length === 2)
+                        activeFilters.push(
+                          `priceRange: ${priceRange[0]}-${priceRange[1]}`
+                        );
+
+                      const filtersStr = activeFilters.length
+                        ? activeFilters.join("; ")
+                        : "None";
+                      const enquiryCopy = getEnquiryCopy(getSiteLanguage());
+                      const subject = enquiryCopy.searchSubject;
+                      const message = `${enquiryCopy.searchItemLabel}: ${searchQuery.trim()}\n${enquiryCopy.searchSpecLabel}: ${filtersStr}`;
+                      const country = currencyClient.getCountryCode() || "";
+
+                      const params = new URLSearchParams();
+                      if (user && typeof user.name === "string")
+                        params.set("name", user.name);
+                      if (user && typeof user.email === "string")
+                        params.set("email", user.email);
+                      if (country) params.set("location", country);
+                      // Mark link as coming from enquiry CTA so contact can tailor the message template
+                      params.set("enquiry", "1");
+                      params.set("includeGeo", "0");
+                      params.set("subject", subject);
+                      params.set("message", message);
+
+                      const href = buildContactHref(params);
+
+                      return (
+                        <a
+                          href={href}
+                          className="mt-2 inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+                        >
+                          Enquire
+                        </a>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Products Count */}
+              <div className="mb-4 text-sm text-gray-600 flex items-center justify-between gap-3 flex-wrap">
+                <span>
+                  Showing {filteredProducts.length} product
+                  {filteredProducts.length !== 1 ? "s" : ""}
+                </span>
+                {filteredProducts.length > PRODUCTS_PER_PAGE && (
+                  <span>
+                    Page {currentPage} of {totalPages}
+                  </span>
                 )}
               </div>
-            )}
 
-            {filteredProducts.length > PRODUCTS_PER_PAGE && (
-              <div className="mt-8 flex justify-center">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setCurrentPage((page) => Math.max(1, page - 1));
-                        }}
-                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
-                      />
-                    </PaginationItem>
+              {/* ...existing code... */}
+              {/* Products Grid */}
+              {shouldShowGridSkeleton ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-4">
+                  {Array.from({ length: 12 }).map((_, idx) => (
+                    <div key={idx} className="space-y-3">
+                      <Skeleton className="h-40 md:h-48 w-full rounded-lg" />
+                      <Skeleton className="h-4 w-4/5" />
+                      <Skeleton className="h-4 w-2/5" />
+                    </div>
+                  ))}
+                </div>
+              ) : allDisplayedProducts.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-4">
+                  {allDisplayedProducts.map((product: Product, idx: number) => {
+                    const priceUSD =
+                      product.price !== null && product.price !== undefined
+                        ? parseFloat(String(product.price))
+                        : 0;
+                    const discountUSD = product.discount
+                      ? parseFloat(String(product.discount))
+                      : null;
+                    const discountPercentage = discountUSD
+                      ? Math.round(
+                          ((discountUSD - priceUSD) / discountUSD) * 100
+                        )
+                      : 0;
+                    const stock = Number(product.stock ?? 0);
+                    // Convert price for display
+                    // Always show USD for African users, else use detected currency and symbol
+                    const formatPrice = (n: number) => {
+                      if (currencyClient.isAfricanUser()) {
+                        return currencyClient.formatUSD(n);
+                      }
+                      const rate = currencyClient.getCurrencyRate() || 1;
+                      // Always get the symbol for the detected currency
+                      const symbol = currencyClient.getCurrencySymbolLocal();
+                      return `${symbol}${(parseFloat(String(n)) * rate).toFixed(2)}`;
+                    };
+                    // Use correct symbol and code for non-African users
+                    const priceDisplay = formatPrice(priceUSD);
+                    const discountDisplay = discountUSD
+                      ? formatPrice(discountUSD)
+                      : null;
+                    return (
+                      <Link key={product.id} href={`/product/${product.id}`}>
+                        <div
+                          className="group cursor-pointer min-h-[320px] flex flex-col justify-between"
+                          style={{ minHeight: 320 }}
+                          onClick={() => {
+                            trackProductClick(product.id);
+                          }}
+                        >
+                          <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden h-40 md:h-48 mb-3 flex items-center justify-center">
+                            {product.cover_image_url ? (
+                              <img
+                                src={getHighResImageUrl(
+                                  product.cover_image_url
+                                )}
+                                alt={product.title}
+                                className="w-full h-full object-contain p-3"
+                                loading="lazy"
+                                decoding="async"
+                                crossOrigin="anonymous"
+                                onError={e => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div className="text-gray-400 text-center text-sm">
+                                No image available
+                              </div>
+                            )}
+                            {product.discount && (
+                              <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
+                                -{discountPercentage}%
+                              </div>
+                            )}
+                            <div
+                              className={`absolute bottom-2 left-2 px-2 py-1 rounded text-xs font-bold ${stock === 0 ? "bg-red-600 text-white" : "bg-white/90 text-gray-800"}`}
+                            >
+                              {stock === 0
+                                ? "Out of stock"
+                                : `${stock} in stock`}
+                            </div>
+                            <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={async e => {
+                                  e.preventDefault();
 
-                    {paginationPages.map((page, index) => (
+                                  try {
+                                    await toggleWishlist(product.id);
+                                  } catch (error) {
+                                    console.error(
+                                      "Failed to toggle wishlist from products page:",
+                                      error
+                                    );
+                                  }
+                                }}
+                                className="bg-white p-2 rounded-full hover:bg-gray-100 shadow"
+                                aria-label={
+                                  wishedProductIds.has(product.id)
+                                    ? "Remove from wishlist"
+                                    : "Add to wishlist"
+                                }
+                              >
+                                <Heart
+                                  className={`w-4 h-4 ${wishedProductIds.has(product.id) ? "text-red-500" : "text-gray-600"}`}
+                                  fill={
+                                    wishedProductIds.has(product.id)
+                                      ? "currentColor"
+                                      : "none"
+                                  }
+                                />
+                              </button>
+                              <button
+                                onClick={e => {
+                                  e.preventDefault();
+                                  recommendations.track({
+                                    eventType: "product_view",
+                                    product,
+                                    productId: product.id,
+                                    metadata: { source: "products_quick_view" },
+                                  });
+                                  setQuickViewProductId(product.id);
+                                }}
+                                className="bg-white p-2 rounded-full hover:bg-gray-100 shadow"
+                              >
+                                <Eye className="w-4 h-4 text-gray-600" />
+                              </button>
+                            </div>
+                          </div>
+                          <h3 className="text-xs md:text-sm font-medium line-clamp-2 group-hover:text-blue-600">
+                            {product.title}
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            <p className="text-gray-900 font-bold text-xs md:text-sm">
+                              {priceDisplay}
+                            </p>
+                            {discountDisplay && (
+                              <p className="text-gray-500 line-through text-xs">
+                                {/* Discount as plain number for non-African users, already converted */}
+                                {currencyClient.isAfricanUser()
+                                  ? discountDisplay
+                                  : Number(
+                                      discountDisplay.replace(/[^\d.]/g, "")
+                                    )}
+                              </p>
+                            )}
+                          </div>
+                          <p
+                            className={`mt-1 text-xs font-semibold ${stock === 0 ? "text-red-600" : "text-gray-500"}`}
+                          >
+                            {stock === 0 ? "Out of stock" : `${stock} in stock`}
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  {fallbackResult ? (
+                    <div>
+                      <p className="text-blue-600 text-lg font-semibold mb-2">
+                        {fallbackResult.reason === "similar"
+                          ? "🔍 Similar Products"
+                          : "👁️ Recently Viewed"}
+                      </p>
+                      <p className="text-gray-600 text-base mb-6">
+                        {fallbackResult.message}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-lg">No products found</p>
+                  )}
+                </div>
+              )}
+
+              {filteredProducts.length > PRODUCTS_PER_PAGE && (
+                <div className="mt-8 flex justify-center">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            setCurrentPage(page => Math.max(1, page - 1));
+                          }}
+                          className={
+                            currentPage === 1
+                              ? "pointer-events-none opacity-50"
+                              : ""
+                          }
+                        />
+                      </PaginationItem>
+
+                      {paginationPages.map((page, index) => (
                         <PaginationItem key={`${page}-${index}`}>
-                          {page === 'ellipsis' ? (
-                            <span className="flex h-9 w-9 items-center justify-center text-sm text-gray-500">...</span>
+                          {page === "ellipsis" ? (
+                            <span className="flex h-9 w-9 items-center justify-center text-sm text-gray-500">
+                              ...
+                            </span>
                           ) : (
                             <PaginationLink
                               href="#"
                               isActive={page === currentPage}
-                              onClick={(e) => {
+                              onClick={e => {
                                 e.preventDefault();
                                 setCurrentPage(page as number);
                               }}
@@ -1392,34 +1665,38 @@ export default function Products() {
                         </PaginationItem>
                       ))}
 
-                    <PaginationItem>
-                      <PaginationNext
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setCurrentPage((page) => Math.min(totalPages, page + 1));
-                        }}
-                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
-
-
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            setCurrentPage(page =>
+                              Math.min(totalPages, page + 1)
+                            );
+                          }}
+                          className={
+                            currentPage === totalPages
+                              ? "pointer-events-none opacity-50"
+                              : ""
+                          }
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Quick View Modal */}
-      {quickViewProductId && (
-        <QuickViewModal
-          productId={quickViewProductId}
-          isOpen={!!quickViewProductId}
-          onClose={() => setQuickViewProductId(null)}
-        />
-      )}
+        {/* Quick View Modal */}
+        {quickViewProductId && (
+          <QuickViewModal
+            productId={quickViewProductId}
+            isOpen={!!quickViewProductId}
+            onClose={() => setQuickViewProductId(null)}
+          />
+        )}
       </div>
     </>
   );

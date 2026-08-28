@@ -10,16 +10,16 @@ if (import.meta.env.PROD) {
 }
 
 import { trpc } from "@/lib/trpc";
-import { UNAUTHED_ERR_MSG } from '@shared/const';
+import { UNAUTHED_ERR_MSG } from "@shared/const";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import { hydrateRoot } from "react-dom/client";
-import { initializeSiteLanguage } from './lib/language';
+import { initializeSiteLanguage } from "./lib/language";
 import superjson from "superjson";
 import App from "./App";
 import { supabase } from "@/lib/supabase";
-import { createHeadCollector, HeadProvider } from './lib/headManager';
+import { createHeadCollector, HeadProvider } from "./lib/headManager";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -45,7 +45,7 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
     }
 
     window.dispatchEvent(
-      new CustomEvent('auth:required', {
+      new CustomEvent("auth:required", {
         detail: {
           redirectTo: `${window.location.pathname}${window.location.search}`,
         },
@@ -78,10 +78,12 @@ const trpcClient = trpc.createClient({
       async fetch(input, init) {
         // Get Supabase session and add token to Authorization header
         try {
-          const { data: { session } } = await supabase.auth.getSession();
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
           if (session?.access_token) {
             const headers = new Headers(init?.headers);
-            headers.set('Authorization', `Bearer ${session.access_token}`);
+            headers.set("Authorization", `Bearer ${session.access_token}`);
 
             return globalThis.fetch(input, {
               ...(init ?? {}),
@@ -90,9 +92,9 @@ const trpcClient = trpc.createClient({
             });
           }
         } catch (error) {
-          console.warn('[tRPC] Failed to get Supabase session:', error);
+          console.warn("[tRPC] Failed to get Supabase session:", error);
         }
-        
+
         // Fallback: fetch without Authorization header
         return globalThis.fetch(input, {
           ...(init ?? {}),
@@ -107,7 +109,7 @@ async function bootstrapApp() {
   try {
     const rootElement = document.getElementById("root");
     if (!rootElement) {
-      throw new Error('Root element not found');
+      throw new Error("Root element not found");
     }
 
     const headCollector = createHeadCollector();
@@ -131,7 +133,7 @@ async function bootstrapApp() {
       try {
         await supabase.auth.getSession();
       } catch (sessionErr) {
-        console.warn('[auth] initial session bootstrap failed', sessionErr);
+        console.warn("[auth] initial session bootstrap failed", sessionErr);
       } finally {
         authBootstrapComplete = true;
       }
@@ -139,15 +141,15 @@ async function bootstrapApp() {
 
     // Initialize currency/geolocation in the background after mounting
     try {
-      const { default: currencyClient } = await import('./lib/currencyClient');
+      const { default: currencyClient } = await import("./lib/currencyClient");
       void currencyClient.init().then(() => {
         initializeSiteLanguage(currencyClient.getGeoData());
       });
     } catch (e) {
-      console.warn('[currencyClient] initialization failed', e);
+      console.warn("[currencyClient] initialization failed", e);
     }
   } catch (e) {
-    console.error('[bootstrap] Fatal error:', e);
+    console.error("[bootstrap] Fatal error:", e);
   }
 }
 

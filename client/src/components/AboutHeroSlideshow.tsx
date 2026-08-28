@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Slide {
   id: number;
@@ -15,35 +15,43 @@ interface Slide {
 const slides: Slide[] = [
   {
     id: 1,
-    image: '/images/hero/global-auto-parts-sourcing-team-hero.avif',
-    imageWebp: '/images/hero/global-auto-parts-sourcing-team-hero.webp',
-    imageAlt: 'Automotive sourcing team handling rare European car parts procurement',
-    title: 'Fitment Confidence Starts Here',
-    subtitle: 'Use VIN and part identifiers to reduce wrong-part risk before checkout.',
+    image: "/images/hero/global-auto-parts-sourcing-team-hero.avif",
+    imageWebp: "/images/hero/global-auto-parts-sourcing-team-hero.webp",
+    imageAlt:
+      "Automotive sourcing team handling rare European car parts procurement",
+    title: "Fitment Confidence Starts Here",
+    subtitle:
+      "Use VIN and part identifiers to reduce wrong-part risk before checkout.",
   },
   {
     id: 2,
-    image: '/images/hero/worldwide-auto-parts-shipping-team-hero.avif',
-    imageWebp: '/images/hero/worldwide-auto-parts-shipping-team-hero.webp',
-    imageAlt: 'Worldwide shipping support team for European auto spare parts delivery',
-    title: 'Know OEM vs Aftermarket vs Used',
-    subtitle: 'Choose the right quality tier for your budget, labor cost, and reliability target.',
+    image: "/images/hero/worldwide-auto-parts-shipping-team-hero.avif",
+    imageWebp: "/images/hero/worldwide-auto-parts-shipping-team-hero.webp",
+    imageAlt:
+      "Worldwide shipping support team for European auto spare parts delivery",
+    title: "Know OEM vs Aftermarket vs Used",
+    subtitle:
+      "Choose the right quality tier for your budget, labor cost, and reliability target.",
   },
   {
     id: 3,
-    image: '/images/hero/trusted-automotive-parts-network-hero.avif',
-    imageWebp: '/images/hero/trusted-automotive-parts-network-hero.webp',
-    imageAlt: 'Trusted European automotive parts network supporting garages and drivers',
-    title: 'Clear Policy Answers Before You Buy',
-    subtitle: 'Understand returns, warranty coverage, and delivery expectations up front.',
+    image: "/images/hero/trusted-automotive-parts-network-hero.avif",
+    imageWebp: "/images/hero/trusted-automotive-parts-network-hero.webp",
+    imageAlt:
+      "Trusted European automotive parts network supporting garages and drivers",
+    title: "Clear Policy Answers Before You Buy",
+    subtitle:
+      "Understand returns, warranty coverage, and delivery expectations up front.",
   },
   {
     id: 4,
-    image: '/images/hero/about-hero-section-last-image.avif',
-    imageWebp: '/images/hero/about-hero-section-last-image.avif',
-    imageAlt: 'MotorVault team coordinating sourcing, support, and quality checks for automotive parts',
-    title: 'Built To Answer Real Buyer Questions',
-    subtitle: 'From part identification to post-purchase support, we keep the process transparent.',
+    image: "/images/hero/about-hero-section-last-image.avif",
+    imageWebp: "/images/hero/about-hero-section-last-image.avif",
+    imageAlt:
+      "MotorVault team coordinating sourcing, support, and quality checks for automotive parts",
+    title: "Built To Answer Real Buyer Questions",
+    subtitle:
+      "From part identification to post-purchase support, we keep the process transparent.",
   },
 ];
 
@@ -55,7 +63,7 @@ export function AboutHeroSlideshow() {
     if (!isAutoPlaying) return;
 
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
+      setCurrentSlide(prev => (prev + 1) % slides.length);
     }, 6000);
 
     return () => clearInterval(timer);
@@ -85,7 +93,7 @@ export function AboutHeroSlideshow() {
           <div
             key={slide.id}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              index === currentSlide ? 'opacity-100' : 'opacity-0'
+              index === currentSlide ? "opacity-100" : "opacity-0"
             }`}
           >
             {/* Background Image */}
@@ -96,8 +104,8 @@ export function AboutHeroSlideshow() {
                 src={slide.imageWebp}
                 alt={slide.imageAlt}
                 className="w-full h-full object-cover"
-                loading={index === 0 ? 'eager' : 'lazy'}
-                fetchPriority={index === 0 ? 'high' : 'auto'}
+                loading={index === 0 ? "eager" : "lazy"}
+                fetchPriority={index === 0 ? "high" : "auto"}
                 decoding="async"
               />
             </picture>
@@ -147,15 +155,15 @@ export function AboutHeroSlideshow() {
             key={index}
             onClick={() => goToSlide(index)}
             className={`relative p-4 -m-4 min-h-[44px] min-w-[44px] flex items-center justify-center transition-all duration-300 ${
-              index === currentSlide
-                ? ''
-                : ''
+              index === currentSlide ? "" : ""
             }`}
             aria-label={`Go to slide ${index + 1}`}
           >
             <span
               className={`h-3 w-3 rounded-full transition-all duration-300 ${
-                index === currentSlide ? 'bg-white w-8' : 'bg-white/50 hover:bg-white/75'
+                index === currentSlide
+                  ? "bg-white w-8"
+                  : "bg-white/50 hover:bg-white/75"
               }`}
             />
           </button>

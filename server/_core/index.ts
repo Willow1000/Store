@@ -39,12 +39,9 @@ async function startServer() {
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-
   }
 
-  server.listen(port, () => {
-
-  });
+  server.listen(port, () => {});
 }
 
 startServer().catch(console.error);

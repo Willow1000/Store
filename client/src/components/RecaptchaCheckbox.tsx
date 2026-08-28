@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -9,10 +9,10 @@ declare global {
         container: HTMLElement | string,
         parameters: {
           sitekey: string;
-          theme?: 'light' | 'dark';
+          theme?: "light" | "dark";
           callback?: (token: string) => void;
-          'expired-callback'?: () => void;
-          'error-callback'?: () => void;
+          "expired-callback"?: () => void;
+          "error-callback"?: () => void;
         }
       ) => number;
       reset: (widgetId?: number) => void;
@@ -30,8 +30,8 @@ interface RecaptchaCheckboxProps {
   helperText?: string;
 }
 
-const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY?.trim() || '';
-const scriptId = 'google-recaptcha-v2-script';
+const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY?.trim() || "";
+const scriptId = "google-recaptcha-v2-script";
 
 let scriptLoaded = false;
 
@@ -42,19 +42,19 @@ function loadRecaptchaScript() {
       return;
     }
 
-    const script = document.createElement('script');
+    const script = document.createElement("script");
     script.id = scriptId;
-    script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+    script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
     script.async = true;
     script.defer = true;
-    
+
     script.onload = () => {
       scriptLoaded = true;
       resolve();
     };
-    
+
     script.onerror = () => {
-      reject(new Error('Failed to load reCAPTCHA script'));
+      reject(new Error("Failed to load reCAPTCHA script"));
     };
 
     document.body.appendChild(script);
@@ -65,13 +65,15 @@ export function RecaptchaCheckbox({
   onChange,
   onExpired,
   onError,
-  className = '',
-  label = 'Security check',
-  helperText = '',
+  className = "",
+  label = "Security check",
+  helperText = "",
 }: RecaptchaCheckboxProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<number | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(siteKey ? null : 'Add VITE_RECAPTCHA_SITE_KEY to show the widget.');
+  const [loadError, setLoadError] = useState<string | null>(
+    siteKey ? null : "Add VITE_RECAPTCHA_SITE_KEY to show the widget."
+  );
 
   useEffect(() => {
     if (!siteKey || !containerRef.current) {
@@ -85,7 +87,7 @@ export function RecaptchaCheckbox({
         if (!isMounted || !containerRef.current) return;
 
         if (!window.grecaptcha) {
-          setLoadError('reCAPTCHA not available');
+          setLoadError("reCAPTCHA not available");
           return;
         }
 
@@ -93,36 +95,42 @@ export function RecaptchaCheckbox({
         if (!grecaptcha) return;
 
         grecaptcha.ready(() => {
-          if (!isMounted || !containerRef.current || widgetIdRef.current !== null) {
+          if (
+            !isMounted ||
+            !containerRef.current ||
+            widgetIdRef.current !== null
+          ) {
             return;
           }
 
           try {
             widgetIdRef.current = grecaptcha.render(containerRef.current, {
               sitekey: siteKey,
-              theme: 'light',
+              theme: "light",
               callback: (token: string) => {
                 onChange?.(token);
               },
-              'expired-callback': () => {
+              "expired-callback": () => {
                 onChange?.(null);
                 onExpired?.();
               },
-              'error-callback': () => {
+              "error-callback": () => {
                 onChange?.(null);
                 onError?.();
               },
             });
           } catch (error) {
             if (isMounted) {
-              setLoadError('Failed to render reCAPTCHA');
+              setLoadError("Failed to render reCAPTCHA");
             }
           }
         });
       })
-      .catch((error) => {
+      .catch(error => {
         if (isMounted) {
-          setLoadError(error instanceof Error ? error.message : 'Failed to load reCAPTCHA');
+          setLoadError(
+            error instanceof Error ? error.message : "Failed to load reCAPTCHA"
+          );
         }
       });
 
@@ -154,11 +162,11 @@ export function RecaptchaCheckbox({
         </div>
       ) : (
         <div className="flex justify-center sm:justify-start overflow-x-auto">
-          <div 
-            ref={containerRef} 
+          <div
+            ref={containerRef}
             className="transform-gpu scale-90 sm:scale-100 origin-left sm:origin-top-left"
             style={{
-              minHeight: '78px',
+              minHeight: "78px",
             }}
           />
         </div>

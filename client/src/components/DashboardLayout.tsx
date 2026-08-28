@@ -24,7 +24,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
+import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 import { requestAuthenticationForPath } from "@/lib/authRequired";
 
@@ -55,13 +55,19 @@ export default function DashboardLayout({
   }, [sidebarWidth]);
 
   useEffect(() => {
-    if (!sessionRestored || loading || isAuthenticated || authPromptedRef.current) return;
+    if (
+      !sessionRestored ||
+      loading ||
+      isAuthenticated ||
+      authPromptedRef.current
+    )
+      return;
     authPromptedRef.current = true;
     requestAuthenticationForPath();
   }, [isAuthenticated, loading, sessionRestored]);
 
   if (loading || !sessionRestored) {
-    return <DashboardLayoutSkeleton />
+    return <DashboardLayoutSkeleton />;
   }
 
   if (!user || !isAuthenticated) {
@@ -73,7 +79,8 @@ export default function DashboardLayout({
               Sign in to continue
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
+              Access to this dashboard requires authentication. Continue to
+              launch the login flow.
             </p>
           </div>
           <Button

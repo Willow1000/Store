@@ -15,17 +15,21 @@ export type MetaCheckoutParams = {
   raw: Record<string, string>;
 };
 
-export const META_CART_ORIGINS = new Set(['facebook', 'instagram', 'meta_shops']);
+export const META_CART_ORIGINS = new Set([
+  "facebook",
+  "instagram",
+  "meta_shops",
+]);
 
 const META_CHECKOUT_PARAM_KEYS = [
-  'products',
-  'coupon',
-  'fbclid',
-  'cart_origin',
-  'utm_source',
-  'utm_medium',
-  'utm_campaign',
-  'utm_content',
+  "products",
+  "coupon",
+  "fbclid",
+  "cart_origin",
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
 ] as const;
 
 function decodeMetaCheckoutValue(value: string | null): string | null {
@@ -38,9 +42,11 @@ function decodeMetaCheckoutValue(value: string | null): string | null {
   }
 }
 
-function normalizeMetaCheckoutParams(searchParams: URLSearchParams): MetaCheckoutParams {
+function normalizeMetaCheckoutParams(
+  searchParams: URLSearchParams
+): MetaCheckoutParams {
   const raw = Object.fromEntries(
-    META_CHECKOUT_PARAM_KEYS.flatMap((key) => {
+    META_CHECKOUT_PARAM_KEYS.flatMap(key => {
       const value = decodeMetaCheckoutValue(searchParams.get(key));
       return value === null ? [] : [[key, value]];
     })
@@ -59,26 +65,31 @@ function normalizeMetaCheckoutParams(searchParams: URLSearchParams): MetaCheckou
   };
 }
 
-export function parseMetaCheckoutParams(input: URLSearchParams | string): MetaCheckoutParams {
-  const searchParams = typeof input === 'string'
-    ? new URLSearchParams(input.startsWith('?') ? input.slice(1) : input)
-    : input;
+export function parseMetaCheckoutParams(
+  input: URLSearchParams | string
+): MetaCheckoutParams {
+  const searchParams =
+    typeof input === "string"
+      ? new URLSearchParams(input.startsWith("?") ? input.slice(1) : input)
+      : input;
 
   return normalizeMetaCheckoutParams(searchParams);
 }
 
-export function parseMetaProductsParam(productsParam: string | null): MetaCartEntry[] {
+export function parseMetaProductsParam(
+  productsParam: string | null
+): MetaCartEntry[] {
   const normalizedProductsParam = decodeMetaCheckoutValue(productsParam);
   if (!normalizedProductsParam) return [];
 
   const entries = normalizedProductsParam
-    .split(',')
-    .map((entry) => entry.trim())
+    .split(",")
+    .map(entry => entry.trim())
     .filter(Boolean)
-    .map((entry) => {
-      const [rawProductId, rawQuantity] = entry.split(':');
-      const productId = (rawProductId || '').trim();
-      const quantity = Number.parseInt((rawQuantity || '').trim(), 10);
+    .map(entry => {
+      const [rawProductId, rawQuantity] = entry.split(":");
+      const productId = (rawProductId || "").trim();
+      const quantity = Number.parseInt((rawQuantity || "").trim(), 10);
 
       if (!productId || !Number.isFinite(quantity) || quantity <= 0) {
         return null;
@@ -94,7 +105,10 @@ export function parseMetaProductsParam(productsParam: string | null): MetaCartEn
   // Merge duplicate product IDs while preserving order.
   const merged = new Map<string, number>();
   for (const entry of entries) {
-    merged.set(entry.productId, (merged.get(entry.productId) || 0) + entry.quantity);
+    merged.set(
+      entry.productId,
+      (merged.get(entry.productId) || 0) + entry.quantity
+    );
   }
 
   return Array.from(merged.entries()).map(([productId, quantity]) => ({
@@ -103,13 +117,16 @@ export function parseMetaProductsParam(productsParam: string | null): MetaCartEn
   }));
 }
 
-export function isMetaCheckoutRequest(searchParams: URLSearchParams, pathname: string): boolean {
-  const cartOrigin = (searchParams.get('cart_origin') || '').toLowerCase();
+export function isMetaCheckoutRequest(
+  searchParams: URLSearchParams,
+  pathname: string
+): boolean {
+  const cartOrigin = (searchParams.get("cart_origin") || "").toLowerCase();
   if (META_CART_ORIGINS.has(cartOrigin)) return true;
 
-  if (pathname === '/checkout/meta') return true;
+  if (pathname === "/checkout/meta") return true;
 
-  return searchParams.has('products');
+  return searchParams.has("products");
 }
 
 export function parseMetaCouponPercent(coupon: string | null): number {

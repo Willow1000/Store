@@ -1,7 +1,7 @@
-import Stripe from 'stripe';
+import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2026-03-25.dahlia' as any,
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+  apiVersion: "2026-03-25.dahlia" as any,
 });
 
 export interface StripePaymentIntentInput {
@@ -26,9 +26,9 @@ export interface StripeCheckoutInput {
 export async function createPaymentIntent(input: StripePaymentIntentInput) {
   return stripe.paymentIntents.create({
     amount: input.amount,
-    currency: 'usd',
-    payment_method_types: ['card'],
-    statement_descriptor: 'MotorVault Purchase',
+    currency: "usd",
+    payment_method_types: ["card"],
+    statement_descriptor: "MotorVault Purchase",
     metadata: input.metadata || {},
     description: input.description,
     receipt_email: input.email,
@@ -67,9 +67,9 @@ export async function createCheckoutSession(
   origin: string,
   metadata?: Record<string, string>
 ) {
-  const lineItems = items.map((item) => ({
+  const lineItems = items.map(item => ({
     price_data: {
-      currency: 'usd',
+      currency: "usd",
       product_data: {
         name: `Product #${item.productId}`,
         metadata: {
@@ -84,16 +84,16 @@ export async function createCheckoutSession(
   const sessionMetadata = {
     user_id: userId.toString(),
     customer_email: userEmail,
-    customer_name: userName || 'Guest',
+    customer_name: userName || "Guest",
     email: userEmail,
     items: JSON.stringify(items),
     ...metadata,
   };
 
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
+    payment_method_types: ["card"],
     line_items: lineItems,
-    mode: 'payment',
+    mode: "payment",
     customer_email: userEmail,
     client_reference_id: userId.toString(),
     metadata: sessionMetadata,
@@ -122,7 +122,11 @@ export async function getCheckoutSession(sessionId: string) {
 /**
  * Construct and verify a Stripe webhook event
  */
-export async function constructWebhookEvent(body: Buffer, sig: string, secret: string) {
+export async function constructWebhookEvent(
+  body: Buffer,
+  sig: string,
+  secret: string
+) {
   return stripe.webhooks.constructEvent(body, sig, secret);
 }
 
@@ -132,14 +136,17 @@ export async function constructWebhookEvent(body: Buffer, sig: string, secret: s
 export async function listPaymentMethods(customerId: string) {
   return stripe.paymentMethods.list({
     customer: customerId,
-    type: 'card',
+    type: "card",
   });
 }
 
 /**
  * Refund a payment intent
  */
-export async function refundPayment(paymentIntentId: string, amountInCents?: number) {
+export async function refundPayment(
+  paymentIntentId: string,
+  amountInCents?: number
+) {
   return stripe.refunds.create({
     payment_intent: paymentIntentId,
     amount: amountInCents,

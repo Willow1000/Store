@@ -4,13 +4,15 @@ export { COOKIE_NAME, ONE_YEAR_MS, SESSION_DURATION_MS } from "@shared/const";
 export const getLoginUrl = () => {
   const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL || "";
   const appId = import.meta.env.VITE_APP_ID || "";
-  
+
   // If OAuth config is not available, return a placeholder or auth path
   if (!oauthPortalUrl || !appId) {
-    console.warn("OAuth environment variables not configured. Using fallback auth path.");
+    console.warn(
+      "OAuth environment variables not configured. Using fallback auth path."
+    );
     return "/auth/login";
   }
-  
+
   const redirectUri = `${window.location.origin}/api/oauth/callback`;
   const state = btoa(redirectUri);
 

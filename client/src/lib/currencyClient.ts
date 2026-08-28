@@ -1,14 +1,68 @@
 // Add isAfricanUser helper
 export function isAfricanUser(): boolean {
   const africanCountries = [
-    'DZ','AO','BJ','BW','BF','BI','CM','CV','CF','TD','KM','CG','CD','CI','DJ','EG','GQ','ER','SZ','ET','GA','GM','GH','GN','GW','KE','LS','LR','LY','MG','MW','ML','MR','MU','MA','MZ','NA','NE','NG','RW','ST','SN','SC','SL','SO','ZA','SS','SD','TZ','TG','TN','UG','EH','ZM','ZW'
+    "DZ",
+    "AO",
+    "BJ",
+    "BW",
+    "BF",
+    "BI",
+    "CM",
+    "CV",
+    "CF",
+    "TD",
+    "KM",
+    "CG",
+    "CD",
+    "CI",
+    "DJ",
+    "EG",
+    "GQ",
+    "ER",
+    "SZ",
+    "ET",
+    "GA",
+    "GM",
+    "GH",
+    "GN",
+    "GW",
+    "KE",
+    "LS",
+    "LR",
+    "LY",
+    "MG",
+    "MW",
+    "ML",
+    "MR",
+    "MU",
+    "MA",
+    "MZ",
+    "NA",
+    "NE",
+    "NG",
+    "RW",
+    "ST",
+    "SN",
+    "SC",
+    "SL",
+    "SO",
+    "ZA",
+    "SS",
+    "SD",
+    "TZ",
+    "TG",
+    "TN",
+    "UG",
+    "EH",
+    "ZM",
+    "ZW",
   ];
-  const country = geoData?.location?.country_code2 || '';
+  const country = geoData?.location?.country_code2 || "";
   return africanCountries.includes(country);
 }
-import { fetchGeolocation, GeolocationData } from '../utils/geolocation';
-import { fetchCurrencyRate } from '../utils/currency';
-import { getCurrencySymbol } from '../utils/currencySymbols';
+import { fetchGeolocation, GeolocationData } from "../utils/geolocation";
+import { fetchCurrencyRate } from "../utils/currency";
+import { getCurrencySymbol } from "../utils/currencySymbols";
 
 type CacheShape = {
   ip?: string;
@@ -17,19 +71,18 @@ type CacheShape = {
   fetchedAt?: number | null;
 };
 
-const CACHE_KEY = 'geo-currency-cache';
-const CURRENCY_UPDATED_EVENT = 'currency-client-updated';
+const CACHE_KEY = "geo-currency-cache";
+const CURRENCY_UPDATED_EVENT = "currency-client-updated";
 
 let initialized = false;
-let currencyCode = 'USD';
+let currencyCode = "USD";
 let currencyRate: number = 1;
 let geoData: GeolocationData | null = null;
 
 function emitCurrencyUpdated(): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(CURRENCY_UPDATED_EVENT));
 }
-
 
 export async function initCurrencyClient(): Promise<void> {
   if (initialized) return;
@@ -37,22 +90,24 @@ export async function initCurrencyClient(): Promise<void> {
 
   let cache: CacheShape = {};
   try {
-    cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    cache = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
   } catch (e) {
     cache = {};
   }
 
   // Try to use cached geo
   geoData = cache.geo || null;
-  const fetchedAt = typeof cache.fetchedAt === 'number' ? cache.fetchedAt : null;
+  const fetchedAt =
+    typeof cache.fetchedAt === "number" ? cache.fetchedAt : null;
   const TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
-  const cacheExpired = !fetchedAt || (Date.now() - fetchedAt) > TTL_MS;
+  const cacheExpired = !fetchedAt || Date.now() - fetchedAt > TTL_MS;
 
   // If cached currency exists, prefer it (unless African override applies)
   if (cache.currency && cache.currency.code) {
     try {
       const cc = cache.currency.code;
-      const cr = typeof cache.currency.rate === 'number' ? cache.currency.rate : 1;
+      const cr =
+        typeof cache.currency.rate === "number" ? cache.currency.rate : 1;
       currencyCode = cc;
       currencyRate = cr;
     } catch (e) {
@@ -76,15 +131,69 @@ export async function initCurrencyClient(): Promise<void> {
     }
   }
 
-    // (Removed unreachable and broken code from previous patch)
+  // (Removed unreachable and broken code from previous patch)
 
   // If country is in Africa, always use USD for display and do NOT fetch currency API
   const africanCountries = [
-    'DZ','AO','BJ','BW','BF','BI','CM','CV','CF','TD','KM','CG','CD','CI','DJ','EG','GQ','ER','SZ','ET','GA','GM','GH','GN','GW','KE','LS','LR','LY','MG','MW','ML','MR','MU','MA','MZ','NA','NE','NG','RW','ST','SN','SC','SL','SO','ZA','SS','SD','TZ','TG','TN','UG','EH','ZM','ZW'
+    "DZ",
+    "AO",
+    "BJ",
+    "BW",
+    "BF",
+    "BI",
+    "CM",
+    "CV",
+    "CF",
+    "TD",
+    "KM",
+    "CG",
+    "CD",
+    "CI",
+    "DJ",
+    "EG",
+    "GQ",
+    "ER",
+    "SZ",
+    "ET",
+    "GA",
+    "GM",
+    "GH",
+    "GN",
+    "GW",
+    "KE",
+    "LS",
+    "LR",
+    "LY",
+    "MG",
+    "MW",
+    "ML",
+    "MR",
+    "MU",
+    "MA",
+    "MZ",
+    "NA",
+    "NE",
+    "NG",
+    "RW",
+    "ST",
+    "SN",
+    "SC",
+    "SL",
+    "SO",
+    "ZA",
+    "SS",
+    "SD",
+    "TZ",
+    "TG",
+    "TN",
+    "UG",
+    "EH",
+    "ZM",
+    "ZW",
   ];
-  const country = geoData?.location?.country_code2 || '';
+  const country = geoData?.location?.country_code2 || "";
   if (africanCountries.includes(country)) {
-    currencyCode = 'USD';
+    currencyCode = "USD";
     currencyRate = 1;
     // Do not fetch currency API at all
     // Ensure we set a preferred locale for translations if possible
@@ -98,27 +207,66 @@ export async function initCurrencyClient(): Promise<void> {
   } else {
     // Prefer geoData.currency.code if present and not USD, else fallback by country
     let detectedCode = geoData?.currency?.code || currencyCode;
-    if (!detectedCode || detectedCode === 'USD') {
+    if (!detectedCode || detectedCode === "USD") {
       // Fallback: map by country code for Africa and others
       const fallbackMap: Record<string, string> = {
-        NG: 'NGN', ZA: 'ZAR', KE: 'KES', GH: 'GHS', EG: 'EGP', MA: 'MAD', DZ: 'DZD', TN: 'TND', AO: 'AOA', SD: 'SDG', UG: 'UGX', CM: 'XAF', CI: 'XOF', SN: 'XOF', ET: 'ETB', TZ: 'TZS', RW: 'RWF', MZ: 'MZN', BW: 'BWP', NA: 'NAD', MW: 'MWK', LS: 'LSL', SZ: 'SZL', MR: 'MRU',
-        AU: 'AUD', CA: 'CAD', US: 'USD', GB: 'GBP', EU: 'EUR', JP: 'JPY', IN: 'INR', CN: 'CNY', RU: 'RUB',
+        NG: "NGN",
+        ZA: "ZAR",
+        KE: "KES",
+        GH: "GHS",
+        EG: "EGP",
+        MA: "MAD",
+        DZ: "DZD",
+        TN: "TND",
+        AO: "AOA",
+        SD: "SDG",
+        UG: "UGX",
+        CM: "XAF",
+        CI: "XOF",
+        SN: "XOF",
+        ET: "ETB",
+        TZ: "TZS",
+        RW: "RWF",
+        MZ: "MZN",
+        BW: "BWP",
+        NA: "NAD",
+        MW: "MWK",
+        LS: "LSL",
+        SZ: "SZL",
+        MR: "MRU",
+        AU: "AUD",
+        CA: "CAD",
+        US: "USD",
+        GB: "GBP",
+        EU: "EUR",
+        JP: "JPY",
+        IN: "INR",
+        CN: "CNY",
+        RU: "RUB",
         // Add more as needed
       };
       if (country && fallbackMap[country]) {
         detectedCode = fallbackMap[country];
       }
     }
-    currencyCode = detectedCode || 'USD';
+    currencyCode = detectedCode || "USD";
 
-      if (currencyCode !== 'USD') {
+    if (currencyCode !== "USD") {
       // Use cached currency if matches
       const cachedCurrency = cache.currency;
-        if (cachedCurrency && cachedCurrency.code === currencyCode && typeof cachedCurrency.rate === 'number') {
-          currencyRate = cachedCurrency.rate ?? 1;
-        } else if (!cacheExpired && cachedCurrency && typeof cachedCurrency.rate === 'number') {
-          // Use cached currency rate if cache is fresh even if code mismatch (safe fallback)
-          currencyRate = cachedCurrency.rate ?? 1;
+      if (
+        cachedCurrency &&
+        cachedCurrency.code === currencyCode &&
+        typeof cachedCurrency.rate === "number"
+      ) {
+        currencyRate = cachedCurrency.rate ?? 1;
+      } else if (
+        !cacheExpired &&
+        cachedCurrency &&
+        typeof cachedCurrency.rate === "number"
+      ) {
+        // Use cached currency rate if cache is fresh even if code mismatch (safe fallback)
+        currencyRate = cachedCurrency.rate ?? 1;
       } else {
         try {
           const rate = await fetchCurrencyRate(currencyCode);
@@ -171,7 +319,7 @@ export function formatUSD(amountUSD: number): string {
 
 export function convertUSD(amountUSD: number): number {
   const rate = getCurrencyRate() || 1;
-  return Math.round((amountUSD * rate) * 100) / 100;
+  return Math.round(amountUSD * rate * 100) / 100;
 }
 
 export function getGeoData(): GeolocationData | null {
@@ -181,14 +329,19 @@ export function getGeoData(): GeolocationData | null {
       const raw = localStorage.getItem(CACHE_KEY);
       if (raw) {
         const parsedRaw = JSON.parse(raw);
-        const parsed: CacheShape = (parsedRaw && typeof parsedRaw === 'object') ? parsedRaw : null;
+        const parsed: CacheShape =
+          parsedRaw && typeof parsedRaw === "object" ? parsedRaw : null;
         if (parsed) {
           // geo may be double-encoded or nested differently; try multiple fallbacks
-          const looseParsed = parsed as CacheShape & { g?: unknown; location?: unknown };
-          const possibleGeo = parsed.geo || looseParsed.g || looseParsed.location || null;
+          const looseParsed = parsed as CacheShape & {
+            g?: unknown;
+            location?: unknown;
+          };
+          const possibleGeo =
+            parsed.geo || looseParsed.g || looseParsed.location || null;
           if (possibleGeo) {
             // If possibleGeo is a string, try to parse
-            if (typeof possibleGeo === 'string') {
+            if (typeof possibleGeo === "string") {
               try {
                 geoData = JSON.parse(possibleGeo) as GeolocationData;
               } catch (e) {
@@ -202,7 +355,8 @@ export function getGeoData(): GeolocationData | null {
           // Also ensure currencyCode/rate are populated from cache if present
           if (parsed.currency && parsed.currency.code) {
             currencyCode = parsed.currency.code;
-            if (typeof parsed.currency.rate === 'number') currencyRate = parsed.currency.rate ?? 1;
+            if (typeof parsed.currency.rate === "number")
+              currencyRate = parsed.currency.rate ?? 1;
           }
         }
       }
@@ -222,7 +376,10 @@ export function getPreferredLocale(): string | null {
   const g = getGeoData();
   if (!g) return null;
   // ipgeolocation returns languages in country_metadata.languages as array of short codes like ['de']
-  const langs = (g.country_metadata && (g.country_metadata as any).languages) || (g.location && (g.location as any).languages) || null;
+  const langs =
+    (g.country_metadata && (g.country_metadata as any).languages) ||
+    (g.location && (g.location as any).languages) ||
+    null;
   let langCode: string | null = null;
   if (Array.isArray(langs) && langs.length) {
     langCode = String(langs[0]);
@@ -235,7 +392,14 @@ export function getPreferredLocale(): string | null {
     return langCode;
   } else if (country) {
     // fallback mapping for some known countries
-    const map: Record<string, string> = { DE: 'de-DE', GB: 'en-GB', US: 'en-US', AU: 'en-AU', FR: 'fr-FR', ES: 'es-ES' };
+    const map: Record<string, string> = {
+      DE: "de-DE",
+      GB: "en-GB",
+      US: "en-US",
+      AU: "en-AU",
+      FR: "fr-FR",
+      ES: "es-ES",
+    };
     return map[country] || `en-${country}`;
   }
   return null;
@@ -243,10 +407,10 @@ export function getPreferredLocale(): string | null {
 
 export function ensureI18nextLocale(): void {
   try {
-    const existing = localStorage.getItem('i18nextLng');
+    const existing = localStorage.getItem("i18nextLng");
     if (!existing) {
       const pref = getPreferredLocale();
-      if (pref) localStorage.setItem('i18nextLng', pref);
+      if (pref) localStorage.setItem("i18nextLng", pref);
     }
   } catch (e) {
     // ignore

@@ -1,6 +1,6 @@
-import { Link } from 'wouter';
-import { Home } from 'lucide-react';
-import { SEOHead } from '@/components/SEOHead';
+import { Link } from "wouter";
+import { Home } from "lucide-react";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function NotFound() {
   return (
@@ -15,7 +15,9 @@ export default function NotFound() {
       <div className="text-center">
         <h1 className="text-6xl font-bold mb-4">404</h1>
         <p className="text-2xl font-semibold mb-2">Page Not Found</p>
-        <p className="text-gray-600 mb-8">The page you're looking for doesn't exist.</p>
+        <p className="text-gray-600 mb-8">
+          The page you're looking for doesn't exist.
+        </p>
         <Link href="/">
           <a className="btn-primary inline-flex items-center gap-2">
             <Home size={18} />

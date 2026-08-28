@@ -1,7 +1,21 @@
 // PostgreSQL schema definitions for Brand and Model tables
 // These should be added to drizzle/schema.ts or used alongside existing definitions
 
-import { pgTable, bigserial, text, timestamp, jsonb, integer, smallint, uuid, index, unique, foreignKey, numeric, real } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  bigserial,
+  text,
+  timestamp,
+  jsonb,
+  integer,
+  smallint,
+  uuid,
+  index,
+  unique,
+  foreignKey,
+  numeric,
+  real,
+} from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 /**
@@ -11,11 +25,13 @@ export const brands = pgTable(
   "Brand",
   {
     id: bigserial("id", { mode: "number" }).primaryKey(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     name: text("name").notNull().unique(),
     imageUrl: text("image_url"),
   },
-  (table) => ({
+  table => ({
     nameIdx: index("idx_brand_name").on(table.name),
   })
 );
@@ -30,12 +46,14 @@ export const models = pgTable(
   "model",
   {
     id: bigserial("id", { mode: "number" }).primaryKey(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     year: integer("year"),
     name: text("name").unique(),
     specs: text("specs"),
   },
-  (table) => ({
+  table => ({
     nameIdx: index("idx_model_name").on(table.name),
   })
 );
@@ -66,7 +84,7 @@ export const productsExtended = pgTable(
     stock: smallint("stock").notNull().default(0),
     partNumber: text("part_number"),
   },
-  (table) => ({
+  table => ({
     brandForeignKey: foreignKey({
       columns: [table.brand],
       foreignColumns: [brands.name],
@@ -108,13 +126,16 @@ export const modelsRelations = relations(models, ({ many }) => ({
 /**
  * Relations for Products (extended)
  */
-export const productsExtendedRelations = relations(productsExtended, ({ one }) => ({
-  brand: one(brands, {
-    fields: [productsExtended.brand],
-    references: [brands.name],
-  }),
-  model: one(models, {
-    fields: [productsExtended.model],
-    references: [models.name],
-  }),
-}));
+export const productsExtendedRelations = relations(
+  productsExtended,
+  ({ one }) => ({
+    brand: one(brands, {
+      fields: [productsExtended.brand],
+      references: [brands.name],
+    }),
+    model: one(models, {
+      fields: [productsExtended.model],
+      references: [models.name],
+    }),
+  })
+);
