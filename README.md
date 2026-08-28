@@ -15,28 +15,22 @@ Key features
 
 ## Getting started (developer)
 
-Prereqs: Node 18+, pnpm
+Prereqs: Node 18+, pnpm, Docker (for local Postgres)
 
-Install:
+This is a single package (not a pnpm workspace) - `client/` and `server/`
+are directories within it, not separate packages, so all commands below
+run from the repo root.
+
 ```bash
+cp .env.example .env.local   # fill in the values you need (see below)
+docker-compose up -d          # starts local Postgres at localhost:5432
 pnpm install
-```
-
-Run dev server (frontend + backend dev separately):
-
-- Frontend:
-```bash
-pnpm --filter client dev
-```
-
-- Backend (example):
-```bash
-pnpm --filter server dev
+pnpm dev                      # runs the Vite frontend and the Express/tRPC backend together
 ```
 
 Typecheck:
 ```bash
-pnpm -s tsc --noEmit
+pnpm run check
 ```
 
 Build:
@@ -58,7 +52,10 @@ pnpm test
 - `server/paystack.ts` — Paystack helpers and webhook verification.
 
 ## Environment variables
-Create a `.env.local` file with browser-exposed values prefixed by `VITE_` and server-only values left unprefixed. The canonical names used by the code are:
+Copy `.env.example` to `.env.local` (`cp .env.example .env.local`) and fill in
+the values you need - it documents every variable the app reads, with
+placeholder values and comments on which are client-exposed (`VITE_`
+prefixed) versus server-only. The canonical names used by the code are:
 
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — Supabase project URL and anon key for the client
 - `VITE_APP_ID`, `VITE_OAUTH_PORTAL_URL`, `VITE_SUPABASE_OAUTH_REDIRECT_URL` — OAuth portal and redirect config for the client. Keep the redirect value path-only when possible, for example `/api/oauth/callback`.

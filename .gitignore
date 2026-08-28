@@ -146,7 +146,5 @@ tools/scraper/node_modules/
 **/.cache/ms-playwright/
 
 scraper.txt
-*.md
 .claude
 *graphify*
-*.md
