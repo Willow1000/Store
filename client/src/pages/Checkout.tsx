@@ -2,11 +2,9 @@ import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import {
   ChevronRight,
-  Lock,
   Truck,
   AlertCircle,
   Check,
-  CreditCard,
   Apple,
   Globe,
   Eye,
@@ -2220,92 +2218,6 @@ export default function Checkout() {
             {/* Payment Step */}
             {step === "payment" && (
               <div className="space-y-6">
-                {/* Payment Methods */}
-                <div className="bg-white border border-gray-200 rounded p-4 sm:p-6 md:p-8 w-full">
-                  <h2 className="text-xl sm:text-2xl font-bold mb-6 sm:mb-8 text-black">
-                    {t("checkout.paymentMethod", "Payment Method")}
-                  </h2>
-
-                  <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 mb-6 sm:mb-8">
-                    {paymentMethods.map(method => (
-                      <button
-                        key={method.id}
-                        onClick={() => {
-                          if (method.disabled) {
-                            toast.info("Coming soon to your region");
-                            return;
-                          }
-                          setSelectedPayment(method.id);
-                        }}
-                        disabled={method.disabled}
-                        className={`p-4 sm:p-6 rounded border transition-all text-left ${
-                          method.disabled
-                            ? "border-gray-200 bg-gray-50 text-gray-500 opacity-60 cursor-not-allowed"
-                            : selectedPayment === method.id
-                              ? "border-black bg-black text-white"
-                              : "border-gray-300 hover:border-gray-400 bg-white text-black"
-                        }`}
-                      >
-                        <div
-                          className={`flex items-center gap-3 mb-2 ${selectedPayment === method.id && !method.disabled ? "opacity-100" : "opacity-70"}`}
-                        >
-                          {method.icon}
-                          <h3 className="font-bold">{method.name}</h3>
-                        </div>
-                        <p
-                          className={`text-sm ${
-                            selectedPayment === method.id && !method.disabled
-                              ? "text-gray-100"
-                              : method.disabled
-                                ? "text-gray-500"
-                                : "text-gray-600"
-                          }`}
-                        >
-                          {method.description}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Security Info */}
-                  <div className="p-4 bg-green-50 border border-green-200 rounded flex gap-3">
-                    <Lock className="text-green-700 flex-shrink-0" size={20} />
-                    <div>
-                      <p className="text-sm font-semibold text-green-900">
-                        {t("checkout.secureEncrypted", "Secure & Encrypted")}
-                      </p>
-                      <p className="text-xs text-green-700">
-                        {t(
-                          "checkout.paymentSecure",
-                          "Your payment information is encrypted and secure"
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Stripe Payment Info */}
-                  {selectedPayment === "stripe" && (
-                    <div className="mt-8 pt-8 border-t border-gray-200">
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded flex gap-3">
-                        <CreditCard
-                          className="text-blue-700 flex-shrink-0"
-                          size={20}
-                        />
-                        <div>
-                          <p className="text-sm font-semibold text-blue-900">
-                            Secure Stripe Checkout
-                          </p>
-                          <p className="text-xs text-blue-700 mt-1">
-                            You will be redirected to Stripe's secure payment
-                            page to enter your card details. Your payment
-                            information is never stored on our servers.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <button
