@@ -635,14 +635,6 @@ function isFeedRequest(req: express.Request): boolean {
   return getCandidateRequestPaths(req).includes("/feed.xml");
 }
 
-function getRateLimitClientKey(req: express.Request): string {
-  const forwardedFor = req.header("x-forwarded-for")?.split(",")[0]?.trim();
-  const realIp = req.header("x-real-ip")?.trim();
-  return (
-    forwardedFor || realIp || req.ip || req.socket.remoteAddress || "unknown"
-  );
-}
-
 async function getFeedProducts(): Promise<FeedProduct[]> {
   if (!ENV.supabaseUrl) {
     logger.warn("[Feed] Supabase URL is not configured");
