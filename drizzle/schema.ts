@@ -83,6 +83,9 @@ export const products = pgTable("products", {
   totalReviews: integer("totalReviews").default(0),
   featured: boolean("featured").default(false),
   freeShipping: boolean("freeShipping").default(false),
+  brand: varchar("brand", { length: 255 }),
+  model: varchar("model", { length: 255 }),
+  partNumber: text("part_number"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
 });

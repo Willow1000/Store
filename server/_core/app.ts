@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { registerOAuthRoutes } from "./oauth";
 import { verifyTransaction, initializeTransaction, buildPaystackCallbackUrl } from "../paystack";
+import { constructWebhookEvent, stripe } from "../stripe";
 import { generateSitemap } from "../sitemap";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
@@ -894,7 +895,7 @@ export function createApp() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   app.use(applySecurityHeaders);
   app.use(createRateLimitMiddleware({ windowMs: 10 * 60 * 1000, max: 600 }));
-  app.use(createRateLimitMiddleware({ windowMs: 10 * 60 * 1000, max: 90, pathPrefix: ['/api/trpc', '/api/track', '/initialize-payment', '/payment/callback'] }));
+  app.use(createRateLimitMiddleware({ windowMs: 10 * 60 * 1000, max: 90, pathPrefix: ['/api/trpc', '/api/track', '/initialize-payment', '/payment/callback', '/api/webhooks'] }));
   app.use(createRateLimitMiddleware({ windowMs: 10 * 60 * 1000, max: 8, pathPrefix: ['/api/contact-us'] }));
   app.use((req, res, next) => {
     const unsafeMethod = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
@@ -1228,6 +1229,185 @@ export function createApp() {
         },
         error: message,
       });
+    }
+  });
+
+  // Stripe Webhook Endpoint
+  app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req: express.Request, res: express.Response) => {
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!sig || !webhookSecret) {
+      console.warn('[Stripe Webhook] Missing signature or webhook secret');
+      return res.status(400).json({ error: 'Missing signature or webhook secret' });
+    }
+
+    let event: any;
+    try {
+      event = await constructWebhookEvent(req.body as Buffer, sig as string, webhookSecret);
+    } catch (err: any) {
+      console.error('[Stripe Webhook] Signature verification failed:', err.message);
+      return res.status(400).json({ error: `Webhook Error: ${err.message}` });
+    }
+
+    // Handle different event types
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object;
+      console.log('[Stripe Webhook] Payment succeeded:', paymentIntent.id);
+
+      try {
+        const userId = Number(paymentIntent.metadata?.user_id ?? NaN);
+        const stripePaymentIntentId = paymentIntent.id;
+        const totalAmount = (paymentIntent.amount / 100).toFixed(2);
+        const subtotalAmount = Number(paymentIntent.metadata?.subtotal ?? totalAmount);
+        const shippingCost = Number(paymentIntent.metadata?.shipping ?? 0);
+        const taxAmount = Number(paymentIntent.metadata?.tax ?? 0);
+        const submittedOfferCode = paymentIntent.metadata?.offerCode ? String(paymentIntent.metadata.offerCode).trim() : '';
+        const resolvedOffer = submittedOfferCode
+          ? await resolveOfferByCode(submittedOfferCode, subtotalAmount)
+          : null;
+        const discountAmount = resolvedOffer?.discountAmount ?? 0;
+        const offerId = resolvedOffer?.id ?? null;
+        const offerCode = resolvedOffer?.code ?? (submittedOfferCode ? submittedOfferCode.toUpperCase() : null);
+        
+        let customerEmail = String(paymentIntent.metadata?.email || paymentIntent.receipt_email || '');
+        let customerName = String(paymentIntent.metadata?.name || '');
+
+        if (!userId || userId <= 0) {
+          console.error('[Stripe Webhook] Invalid user_id in metadata:', paymentIntent.metadata?.user_id);
+          return res.status(400).json({ error: 'Invalid user_id in payment intent metadata' });
+        }
+
+        if (!customerEmail && userId) {
+          try {
+            const dbUser = await getUserById(userId);
+            customerEmail = String(dbUser?.email || '');
+            if (!customerName) {
+              customerName = String(dbUser?.name || '');
+            }
+          } catch (lookupErr) {
+            console.warn('[Stripe Webhook] Failed to resolve user email:', lookupErr);
+          }
+        }
+
+        const orderLineItems = Array.isArray(paymentIntent.metadata?.items)
+          ? JSON.parse(paymentIntent.metadata.items).map((item: any) => ({
+              productId: Number(item.productId),
+              variantId: item.variantId ? Number(item.variantId) : undefined,
+              quantity: Number(item.quantity || 1),
+              price: item.price,
+            })).filter((item: any) => Number.isFinite(item.productId) && item.productId > 0)
+          : [];
+
+        // Create the order first so the payment record can reference its real id
+        let orderId: number | null = null;
+        try {
+          if (orderLineItems.length === 0) {
+            console.warn('[Stripe Webhook] No order line items found in payment metadata');
+          }
+
+          const orderNumber = `STR-${Date.now()}-${randomUUID().slice(0, 8)}`;
+          const createdOrder = await createOrder(
+            userId,
+            {
+              orderNumber,
+              subtotal: subtotalAmount.toString(),
+              shippingCost: shippingCost.toString(),
+              tax: taxAmount.toString(),
+              total: totalAmount,
+              discountAmount: discountAmount.toString(),
+              offerId,
+              offerCode: offerCode || undefined,
+              shippingAddress: paymentIntent.metadata?.shippingAddress
+                ? JSON.parse(paymentIntent.metadata.shippingAddress)
+                : {},
+              billingAddress: paymentIntent.metadata?.billingAddress
+                ? JSON.parse(paymentIntent.metadata.billingAddress)
+                : {},
+              paymentMethod: 'stripe',
+              stripePaymentIntentId,
+              language: paymentIntent.metadata?.language,
+            } as any,
+            customerEmail,
+            customerName,
+            orderLineItems
+          );
+
+          orderId = createdOrder?.id ?? null;
+          console.log('[Stripe Webhook] Order created successfully:', orderId);
+        } catch (orderErr: any) {
+          console.error('[Stripe Webhook] Failed to create order:', orderErr?.message);
+          // Log but don't fail the webhook - payment was successful
+        }
+
+        try {
+          const paymentRecord = await createPayment(orderId ?? 0, userId, {
+            provider: 'stripe',
+            reference: stripePaymentIntentId,
+            amount: Number(totalAmount) as any,
+            currency: paymentIntent.currency?.toUpperCase() || 'USD',
+            status: paymentIntent.status,
+            channel: paymentIntent.payment_method_types?.[0] || 'card',
+            gatewayResponse: 'Stripe API - Payment Succeeded',
+            authorizationCode: (paymentIntent.charges?.data?.[0] as any)?.id || null,
+            cardBin: (paymentIntent.payment_method_details?.card as any)?.first6 || null,
+            cardLast4: (paymentIntent.payment_method_details?.card as any)?.last4 || null,
+            cardBrand: (paymentIntent.payment_method_details?.card as any)?.brand || null,
+            bank: null,
+            ipAddress: null,
+            metadata: JSON.stringify(paymentIntent.metadata || {}),
+            fees: 0 as any,
+            paidAt: new Date(paymentIntent.created * 1000),
+          });
+
+          console.log('[Stripe Webhook] Payment recorded:', paymentRecord);
+        } catch (paymentErr: any) {
+          console.error('[Stripe Webhook] Failed to record payment:', paymentErr?.message);
+          // Continue even if payment record fails - order was already created
+        }
+
+        res.status(200).json({ received: true });
+      } catch (err: any) {
+        console.error('[Stripe Webhook] Error processing payment_intent.succeeded:', err?.message);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    } else if (event.type === 'payment_intent.payment_failed') {
+      const paymentIntent = event.data.object;
+      console.warn('[Stripe Webhook] Payment failed:', paymentIntent.id, paymentIntent.last_payment_error?.message);
+
+      try {
+        const userId = Number(paymentIntent.metadata?.user_id ?? NaN);
+        
+        if (userId > 0) {
+          const paymentRecord = await createPayment(0, userId, {
+            provider: 'stripe',
+            reference: paymentIntent.id,
+            amount: (paymentIntent.amount / 100).toFixed(2) as any,
+            currency: paymentIntent.currency?.toUpperCase() || 'USD',
+            status: 'failed',
+            channel: paymentIntent.payment_method_types?.[0] || 'card',
+            gatewayResponse: paymentIntent.last_payment_error?.message || 'Payment failed',
+            authorizationCode: null,
+            cardBin: null,
+            cardLast4: (paymentIntent.payment_method_details?.card as any)?.last4 || null,
+            cardBrand: (paymentIntent.payment_method_details?.card as any)?.brand || null,
+            bank: null,
+            ipAddress: null,
+            metadata: JSON.stringify(paymentIntent.metadata || {}),
+            fees: 0 as any,
+            paidAt: null,
+          });
+          
+          console.log('[Stripe Webhook] Failed payment recorded');
+        }
+      } catch (err: any) {
+        console.error('[Stripe Webhook] Error recording failed payment:', err?.message);
+      }
+
+      res.status(200).json({ received: true });
+    } else {
+      // Ignore other event types
+      res.status(200).json({ received: true });
     }
   });
 

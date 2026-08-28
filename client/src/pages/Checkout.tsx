@@ -23,6 +23,7 @@ import { InlineCheckoutAuth } from '@/components/InlineCheckoutAuth';
 import { trackInitiateCheckout, trackPurchase } from '@/hooks/useMetaPixel';
 import { TrustSignals } from '@/components/TrustSignals';
 import { getSiteLanguage, translateText } from '@/lib/language';
+import { redirectToStripeCheckout } from '@/lib/stripeCheckout';
 
 const CHECKOUT_CART_SNAPSHOT_KEY = 'checkout-cart-snapshot-v1';
 const META_PURCHASE_TRACKED_PREFIX = 'meta-purchase-tracked-v1:';
@@ -49,7 +50,7 @@ type CheckoutFormData = {
 };
 
 type PaymentMethod = {
-  id: 'visa' | 'mastercard' | 'applePay';
+  id: 'visa' | 'mastercard' | 'applePay' | 'stripe';
   name: string;
   icon: ReactNode;
   description: string;
@@ -381,7 +382,7 @@ export default function Checkout() {
     }
   });
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<'visa' | 'mastercard' | 'applePay'>('visa');
+  const [selectedPayment, setSelectedPayment] = useState<'visa' | 'mastercard' | 'applePay' | 'stripe'>('stripe');
   // Coupon code UI state
   const [couponCodeInput, setCouponCodeInput] = useState<string>('');
   const [appliedOfferData, setAppliedOfferData] = useState<any | null>(null);
@@ -631,10 +632,59 @@ export default function Checkout() {
     const params = new URLSearchParams(window.location.search);
     const paymentState = params.get('payment');
     const reference = params.get('reference');
+    const sessionId = params.get('session_id');
     const rawStatus = params.get('status');
+
+    const clearPaymentParams = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('payment');
+      url.searchParams.delete('reference');
+      url.searchParams.delete('session_id');
+      url.searchParams.delete('status');
+      window.history.replaceState({}, '', url.toString());
+    };
+
+    // Handle Stripe success callback
+    if (paymentState === 'success' && sessionId) {
+      paymentCallbackHandledRef.current = true;
+      clearPaymentParams();
+      (async () => {
+        try {
+          // The webhook should have already created the order
+          // Just clear cart and redirect to orders
+          if (isAuthenticated) {
+            try {
+              await clearSupabaseCart();
+            } catch (err) {
+              console.warn('[Checkout] Failed to clear Supabase cart after Stripe success:', err);
+            }
+          }
+          localStorage.removeItem('cart');
+          localStorage.removeItem(CHECKOUT_CART_SNAPSHOT_KEY);
+          window.dispatchEvent(new Event('cartUpdated'));
+          toast.success('Payment completed successfully');
+          navigate('/orders');
+        } catch (err) {
+          console.error('[Checkout] Error handling Stripe success:', err);
+          toast.error('Payment was successful but we had trouble loading your order. Please go to Orders page.');
+          navigate('/orders');
+        }
+      })();
+      return;
+    }
+
+    // Handle Stripe cancel
+    if (paymentState === 'cancelled') {
+      paymentCallbackHandledRef.current = true;
+      clearPaymentParams();
+      setStep('payment');
+      toast.info('Payment was cancelled. Please try again.');
+      return;
+    }
 
     if (paymentState === 'failed') {
       paymentCallbackHandledRef.current = true;
+      clearPaymentParams();
       toast.error(reference ? `Payment failed for reference ${reference}` : 'Payment failed');
       setStep('review');
       return;
@@ -642,6 +692,7 @@ export default function Checkout() {
 
     if (paymentState === 'pending') {
       paymentCallbackHandledRef.current = true;
+      clearPaymentParams();
       const statusLabel = rawStatus ? ` (${rawStatus})` : '';
       toast.error(`Payment is not completed yet${statusLabel}. Please complete payment and try again.`);
       setStep('review');
@@ -650,6 +701,7 @@ export default function Checkout() {
 
     if (paymentState === 'needs_auth') {
       paymentCallbackHandledRef.current = true;
+      clearPaymentParams();
       toast.error('Please sign in to complete your order for this verified payment.');
       setStep('shipping');
       return;
@@ -657,6 +709,7 @@ export default function Checkout() {
 
     if (paymentState === 'success') {
       paymentCallbackHandledRef.current = true;
+      clearPaymentParams();
       (async () => {
         try {
           const verification = reference
@@ -902,61 +955,85 @@ export default function Checkout() {
   }, [formData.state, formData.country, formData.city, manualLocationFields]);
 
   // Normalize checkout prices and calculate totals (all amounts in USD, rounded to 2 decimal places)
-  const parseCheckoutPrice = (price: string) => {
+  const parseCheckoutPrice = (price: string | number | undefined) => {
+    if (typeof price === 'number') {
+      return Number.isFinite(price) ? price : 0;
+    }
     const normalized = String(price || '').replace(/[^0-9.-]+/g, '').trim();
     const parsed = Number(normalized);
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
-  const subtotal = Math.round(
-    cartItems.reduce((sum, item) => {
+  const cartSubtotalAmount = useMemo(() => {
+    return cartItems.reduce((sum, item) => {
       const price = parseCheckoutPrice(item.price);
       return sum + price * item.quantity;
-    }, 0) * 100
-  ) / 100;
-
-  const shipping = calculateShipping(subtotal);
-  const vatSummary = calculateVariableVat(
-    cartItems.map((item) => ({
-      productId: item.product_id,
-      title: item.title,
-      unitPrice: parseCheckoutPrice(item.price),
-      quantity: item.quantity,
-    }))
-  );
-  const vat = vatSummary.totalVat;
+    }, 0);
+  }, [cartItems]);
 
   const resolvedOffer = trpc.offers.resolve.useQuery(
-    { code: metaCoupon || '', subtotal },
+    { code: metaCoupon || '', subtotal: Math.round(cartSubtotalAmount * 100) / 100 },
     {
-      enabled: isMetaCheckout && Boolean(metaCoupon) && subtotal > 0,
+      enabled: isMetaCheckout && Boolean(metaCoupon) && cartSubtotalAmount > 0,
     }
   );
 
-  // If user applies a coupon via the UI, resolvedOffer is only used for meta coupon flows.
-  const finalAppliedOffer = appliedOfferData || resolvedOffer.data || null;
+  const finalAppliedOffer = useMemo(
+    () => appliedOfferData || resolvedOffer.data || null,
+    [appliedOfferData, resolvedOffer.data]
+  );
+  const legacyCouponPercent = useMemo(
+    () => (isMetaCheckout && !resolvedOffer.data ? parseMetaCouponPercent(metaCoupon) : 0),
+    [isMetaCheckout, resolvedOffer.data, metaCoupon]
+  );
 
-  const legacyCouponPercent = isMetaCheckout && !resolvedOffer.data ? parseMetaCouponPercent(metaCoupon) : 0;
-  const derivedOfferDiscountAmount = finalAppliedOffer
-    ? Number(finalAppliedOffer.discountAmount || 0)
-    : Math.round((subtotal * (legacyCouponPercent / 100)) * 100) / 100;
-  const offerDiscountAmount = appliedOfferDiscount ?? appliedOfferData?.discountAmount ?? derivedOfferDiscountAmount;
-  const derivedCouponLabel = finalAppliedOffer
-    ? `${finalAppliedOffer.name} (${finalAppliedOffer.code})`
-    : legacyCouponPercent > 0 && metaCoupon
-      ? `Coupon (${metaCoupon})`
-      : null;
-  const couponLabel = appliedCouponLabel ?? derivedCouponLabel;
-  const total = Math.max(0, Math.round((subtotal + shipping + vat - offerDiscountAmount) * 100) / 100); // Ensure final total is precise
-  const cartGrandTotal = Number.isFinite(total) ? total : 0;
+  const orderSummary = useMemo(() => {
+    const roundedSubtotal = Math.round(cartSubtotalAmount * 100) / 100;
+    const shippingValue = calculateShipping(roundedSubtotal);
+    const vatValue = calculateVariableVat(
+      cartItems.map((item) => ({
+        productId: item.product_id,
+        title: item.title,
+        unitPrice: parseCheckoutPrice(item.price),
+        quantity: item.quantity,
+      }))
+    ).totalVat;
+
+    const derivedOfferDiscountAmount = finalAppliedOffer
+      ? Number(finalAppliedOffer.discountAmount || 0)
+      : Math.round((roundedSubtotal * (legacyCouponPercent / 100)) * 100) / 100;
+    const discountAmountValue = appliedOfferDiscount ?? appliedOfferData?.discountAmount ?? derivedOfferDiscountAmount;
+
+    const couponLabelValue = appliedCouponLabel ?? (
+      finalAppliedOffer ? `${finalAppliedOffer.name} (${finalAppliedOffer.code})` : legacyCouponPercent > 0 && metaCoupon ? `Coupon (${metaCoupon})` : null
+    );
+
+    const totalValue = Math.max(0, Math.round((roundedSubtotal + shippingValue + vatValue - discountAmountValue) * 100) / 100);
+
+    return {
+      subtotal: roundedSubtotal,
+      shipping: shippingValue,
+      vat: vatValue,
+      discountAmount: discountAmountValue,
+      total: Number.isFinite(totalValue) ? totalValue : 0,
+      couponLabel: couponLabelValue,
+    };
+  }, [cartItems, cartSubtotalAmount, appliedOfferData, appliedOfferDiscount, appliedCouponLabel, finalAppliedOffer, legacyCouponPercent, metaCoupon]);
+
+  const subtotal = orderSummary.subtotal;
+  const shipping = orderSummary.shipping;
+  const vat = orderSummary.vat;
+  const offerDiscountAmount = orderSummary.discountAmount;
+  const cartGrandTotal = orderSummary.total;
+  const couponLabel = orderSummary.couponLabel;
 
   useEffect(() => {
-    if (cartItems.length === 0 || total <= 0) return;
+    if (cartItems.length === 0 || cartGrandTotal <= 0) return;
     const signature = cartItems
       .map((item) => `${item.product_id}:${item.quantity}`)
       .sort()
       .join('|');
-    const key = `motorvault_initiate_checkout:${signature}:${total.toFixed(2)}`;
+    const key = `motorvault_initiate_checkout:${signature}:${cartGrandTotal.toFixed(2)}`;
     try {
       if (sessionStorage.getItem(key) === '1') return;
       sessionStorage.setItem(key, '1');
@@ -967,11 +1044,11 @@ export default function Checkout() {
     trackInitiateCheckout(
       cartItems.map((item) => item.product_id),
       cartItems.map((item) => item.title),
-      total,
+      cartGrandTotal,
       cartItems.reduce((sum, item) => sum + item.quantity, 0),
       'USD'
     );
-  }, [cartItems, total]);
+  }, [cartItems, cartGrandTotal]);
 
   const trackConfirmedPurchase = (
     reference: string | null | undefined,
@@ -1016,6 +1093,12 @@ export default function Checkout() {
   };
 
   const paymentMethods: PaymentMethod[] = [
+    {
+      id: 'stripe',
+      name: 'Stripe',
+      icon: <img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%23635BFF width=%2248%22 height=%2248%22/%3E%3Ctext x=%2724%22 y=%2726%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2216%22 font-weight=%22bold%22%3ES%3C/text%3E%3C/svg%3E" alt="Stripe logo" className="w-8 h-8 object-contain" />,
+      description: 'Pay securely with Visa, Mastercard, or other cards via Stripe'
+    },
     {
       id: 'visa',
       name: 'Visa',
@@ -1298,7 +1381,7 @@ export default function Checkout() {
 
       const paystackInitPayload = {
         email: sanitizeEmail(formData.email, 255),
-        amount: Math.round(total * 100), // Convert USD total to cents (Paystack expects cents for USD)
+        amount: Math.round(cartGrandTotal * 100), // Convert USD total to cents (Paystack expects cents for USD)
         reference: paymentReference,
         currency: 'USD', // Always USD
         channels: ['card'],
@@ -1323,7 +1406,7 @@ export default function Checkout() {
           shipping,
           tax: vat,
           discountAmount: offerDiscountAmount,
-          total,
+          total: cartGrandTotal,
           name: `${sanitizeName(formData.firstName, 60)} ${sanitizeName(formData.lastName, 60)}`.trim(),
           phone: sanitizePhone(fullPhoneNumber, 24),
           phoneCountry: formData.phoneCountry,
@@ -1372,6 +1455,64 @@ export default function Checkout() {
     }
   };
 
+  const handleStripePayment = async () => {
+    setIsProcessing(true);
+    try {
+      writeCheckoutSnapshot(cartItems);
+
+      // Validate cart items before sending to Stripe
+      const validItems = cartItems
+        .map((item) => {
+          const productId = parseInt(String(item.product_id), 10);
+          if (!Number.isFinite(productId) || productId <= 0) {
+            console.warn(`[Checkout] Skipping invalid product ID: ${item.product_id}`);
+            return null;
+          }
+          return {
+            productId,
+            quantity: item.quantity,
+            price: parseCheckoutPrice(item.price).toString(),
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null);
+
+      if (validItems.length === 0) {
+        throw new Error('No valid items in cart. Please refresh and try again.');
+      }
+
+      await redirectToStripeCheckout({
+        userId: typeof user?.id === 'number' ? user.id : undefined,
+        email: sanitizeEmail(formData.email, 255),
+        userName: sanitizeName(formData.firstName, 60) + ' ' + sanitizeName(formData.lastName, 60),
+        items: validItems,
+        subtotal: subtotal.toString(),
+        shipping: shipping.toString(),
+        tax: vat.toString(),
+        total: cartGrandTotal.toString(),
+        discountAmount: offerDiscountAmount.toString(),
+        offerCode: finalAppliedOffer?.code || metaCoupon || undefined,
+        shippingAddress: {
+          firstName: sanitizeName(formData.firstName, 60),
+          lastName: sanitizeName(formData.lastName, 60),
+          email: sanitizeEmail(formData.email, 255),
+          phone: formData.phone,
+          address: sanitizeText(formData.address, 255),
+          city: sanitizeText(formData.city, 80),
+          state: sanitizeText(formData.state, 80),
+          zip: sanitizePostalCode(formData.zip, 16),
+          country: sanitizeText(formData.country, 8),
+        },
+        language: activeLanguage,
+      });
+      // User will be redirected to Stripe Checkout
+    } catch (error) {
+      setIsProcessing(false);
+      const errorMessage = error instanceof Error ? error.message : 'Payment failed. Please try again.';
+      toast.error(errorMessage);
+      console.error('[Checkout] Stripe error:', error);
+    }
+  };
+
   const handleCardPayment = async () => {
     setIsProcessing(true);
     try {
@@ -1404,7 +1545,7 @@ export default function Checkout() {
   };
 
   const handlePayment = async () => {
-    if (cartItems.length === 0 || total <= 0) {
+    if (cartItems.length === 0 || cartGrandTotal <= 0) {
       toast.error('Your cart is empty. Please add items before checkout.');
       return;
     }
@@ -1418,6 +1559,9 @@ export default function Checkout() {
     }
 
     switch (selectedPayment) {
+      case 'stripe':
+        await handleStripePayment();
+        break;
       case 'visa':
       case 'mastercard':
         await handleCardPayment();
@@ -1845,6 +1989,19 @@ export default function Checkout() {
                       <p className="text-xs text-green-700">{t('checkout.paymentSecure', 'Your payment information is encrypted and secure')}</p>
                     </div>
                   </div>
+
+                  {/* Stripe Payment Info */}
+                  {selectedPayment === 'stripe' && (
+                    <div className="mt-8 pt-8 border-t border-gray-200">
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded flex gap-3">
+                        <CreditCard className="text-blue-700 flex-shrink-0" size={20} />
+                        <div>
+                          <p className="text-sm font-semibold text-blue-900">Secure Stripe Checkout</p>
+                          <p className="text-xs text-blue-700 mt-1">You will be redirected to Stripe's secure payment page to enter your card details. Your payment information is never stored on our servers.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Action Buttons */}
@@ -1855,17 +2012,28 @@ export default function Checkout() {
                   >
                     {t('common.back', 'Back')}
                   </button>
-                  <button
-                    onClick={() => {
-                      if (validatePayment()) {
-                        setStep('review');
-                      }
-                    }}
-                    className="flex-1 bg-black hover:bg-gray-900 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
-                  >
-                    {t('checkout.reviewOrder', 'Review Order')}
-                    <ChevronRight size={20} />
-                  </button>
+                  {selectedPayment === 'stripe' ? (
+                    <button
+                      onClick={handlePayment}
+                      disabled={isProcessing}
+                      className="flex-1 bg-black hover:bg-gray-900 disabled:bg-gray-400 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+                    >
+                      {isProcessing ? 'Redirecting...' : 'Continue to Stripe'}
+                      <ChevronRight size={20} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (validatePayment()) {
+                          setStep('review');
+                        }
+                      }}
+                      className="flex-1 bg-black hover:bg-gray-900 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+                    >
+                      {t('checkout.reviewOrder', 'Review Order')}
+                      <ChevronRight size={20} />
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -1937,7 +2105,7 @@ export default function Checkout() {
                     disabled={isProcessing}
                     className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 text-sm sm:text-base"
                   >
-                    {isProcessing ? t('checkout.processing', 'Processing...') : `${t('checkout.payNow', 'Pay Now')} ${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(total).toFixed(2)}`}
+                    {isProcessing ? t('checkout.processing', 'Processing...') : `${selectedPayment === 'stripe' ? 'Continue to Stripe' : t('checkout.payNow', 'Pay Now')} ${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(cartGrandTotal).toFixed(2)}`}
                   </button>
                 </div>
               </div>

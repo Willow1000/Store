@@ -3,8 +3,10 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { getProducts, getProductById, getFeaturedProducts, getNewArrivals, getDeals, getTrendingProducts, getUserCart, addToCart, getUserOrders, createOrder, getCategories, createNotification, getUserNotifications, getUserWishlist, addToWishlist, removeFromWishlist, upsertUser, resolveOfferByCode } from "./db";
+import { getProducts, getProductById, getFeaturedProducts, getNewArrivals, getDeals, getTrendingProducts, getUserCart, addToCart, getUserOrders, createOrder, getCategories, createNotification, getUserNotifications, getUserWishlist, addToWishlist, removeFromWishlist, upsertUser, recordProductSearchTrackingEvent, resolveOfferByCode } from "./db";
 import { initializeTransaction, verifyTransaction, buildPaystackCallbackUrl } from "./paystack";
+import { createPaymentIntent, getPaymentIntent, confirmPaymentIntent, createCheckoutSession } from "./stripe";
+import { decodeVin } from "./vinDecoder";
 import { TRPCError } from "@trpc/server";
 
 function getRequestOrigin(req: { header: (name: string) => string | undefined; protocol?: string }): string | null {
@@ -58,23 +60,23 @@ export const appRouter = router({
     list: publicProcedure
       .input(z.object({ limit: z.number().default(20), offset: z.number().default(0) }))
       .query(({ input }) => getProducts(input.limit, input.offset)),
-    
+
     getById: publicProcedure
       .input(z.number())
       .query(({ input }) => getProductById(input)),
-    
+
     featured: publicProcedure
       .input(z.object({ limit: z.number().default(8) }))
       .query(({ input }) => getFeaturedProducts(input.limit)),
-    
+
     newArrivals: publicProcedure
       .input(z.object({ limit: z.number().default(30) }))
       .query(({ input }) => getNewArrivals(input.limit)),
-    
+
     deals: publicProcedure
       .input(z.object({ limit: z.number().default(20) }))
       .query(({ input }) => getDeals(input.limit)),
-    
+
     trending: publicProcedure
       .input(z.object({ limit: z.number().default(20) }))
       .query(({ input }) => getTrendingProducts(input.limit)),
@@ -98,7 +100,7 @@ export const appRouter = router({
   // Cart procedures
   cart: router({
     getCart: protectedProcedure.query(({ ctx }) => getUserCart(ctx.user.id)),
-    
+
     addItem: protectedProcedure
       .input(z.object({ productId: z.number(), variantId: z.number().optional(), quantity: z.number().default(1) }))
       .mutation(({ ctx, input }) => addToCart(ctx.user.id, input.productId, input.variantId, input.quantity)),
@@ -107,11 +109,11 @@ export const appRouter = router({
   // Wishlist procedures
   wishlist: router({
     getWishlist: protectedProcedure.query(({ ctx }) => getUserWishlist(ctx.user.id)),
-    
+
     addItem: protectedProcedure
       .input(z.object({ productId: z.number() }))
       .mutation(({ ctx, input }) => addToWishlist(ctx.user.id, input.productId)),
-    
+
     removeItem: protectedProcedure
       .input(z.object({ productId: z.number() }))
       .mutation(({ ctx, input }) => removeFromWishlist(ctx.user.id, input.productId)),
@@ -175,6 +177,72 @@ export const appRouter = router({
     }),
   }),
 
+  // Stripe procedures
+  stripe: router({
+    payments: router({
+      createCheckoutSession: publicProcedure
+        .input(z.object({
+          userId: z.number().optional(),
+          email: z.string().email(),
+          userName: z.string().optional(),
+          items: z.array(z.object({
+            productId: z.number(),
+            quantity: z.number().int().positive(),
+            price: z.string(),
+          })),
+          subtotal: z.string(),
+          shipping: z.string().optional(),
+          tax: z.string().optional(),
+          total: z.string(),
+          discountAmount: z.string().optional(),
+          offerCode: z.string().optional(),
+          shippingAddress: z.record(z.string(), z.unknown()).optional(),
+          billingAddress: z.record(z.string(), z.unknown()).optional(),
+          language: z.string().optional(),
+          metadata: z.record(z.string(), z.string()).optional(),
+          origin: z.string().url(),
+        }))
+        .mutation(async ({ input, ctx }) => {
+          try {
+            // Build metadata for webhook processing
+            const sessionMetadata = {
+              subtotal: input.subtotal,
+              shipping: input.shipping || '0',
+              tax: input.tax || '0',
+              total: input.total,
+              discountAmount: input.discountAmount || '0',
+              offerCode: input.offerCode || '',
+              shippingAddress: JSON.stringify(input.shippingAddress || {}),
+              billingAddress: JSON.stringify(input.billingAddress || {}),
+              language: input.language || 'en',
+              ...input.metadata,
+            };
+
+            const session = await createCheckoutSession(
+              input.userId || 0,
+              input.email,
+              input.userName || null,
+              input.items,
+              input.origin,
+              sessionMetadata
+            );
+
+            return {
+              success: true,
+              sessionId: session.id,
+              url: session.url,
+            };
+          } catch (err: any) {
+            console.error("[Stripe Checkout] Error:", err?.message || String(err));
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: err instanceof Error ? err.message : "Failed to create checkout session",
+            });
+          }
+        }),
+    }),
+  }),
+
   // Notification procedures
   notifications: router({
     create: protectedProcedure
@@ -187,6 +255,173 @@ export const appRouter = router({
       .mutation(({ ctx, input }) => createNotification(ctx.user.id, input as any)),
     
     list: protectedProcedure.query(({ ctx }) => getUserNotifications(ctx.user.id)),
+  }),
+
+  // VIN Decoder procedures
+  vinDecoder: router({
+    decode: publicProcedure
+      .input(z.object({
+        vin: z.string().min(1, 'VIN is required'),
+      }))
+      .query(({ input }) => decodeVin(input.vin)),
+
+    filterProducts: publicProcedure
+      .input(z.object({
+        vin: z.string().min(1, 'VIN is required'),
+        limit: z.number().default(20),
+        offset: z.number().default(0),
+      }))
+      .query(async ({ input, ctx }) => {
+        try {
+          const decoded = await decodeVin(input.vin);
+          const decodeObj = decoded?.decode || decoded || {};
+          const normalize = (value: unknown) =>
+            String(value ?? '')
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, ' ')
+              .trim();
+          const compact = (value: string) => value.replace(/\s+/g, '');
+
+          const make = normalize(decodeObj.make);
+          const manufacturer = normalize(decodeObj.manufacturer);
+          const model = normalize(decodeObj.model);
+          const year = normalize(decodeObj.year);
+          const trim = normalize(decodeObj.trim);
+          const bodyClass = normalize(decodeObj.bodyClass);
+          const vehicleType = normalize(decodeObj.vehicleType);
+
+          const brandAliases = new Set<string>();
+          const addBrand = (value: string) => {
+            if (!value) return;
+            brandAliases.add(value);
+            value.split(' ').forEach((word) => {
+              if (word) brandAliases.add(word);
+            });
+          };
+
+          addBrand(make);
+          addBrand(manufacturer);
+
+          if (make.includes('mercedes')) {
+            brandAliases.add('mercedes');
+            brandAliases.add('mercedes benz');
+            brandAliases.add('benz');
+            brandAliases.add('merc');
+          }
+          if (make.includes('volkswagen') || make === 'vw') {
+            brandAliases.add('volkswagen');
+            brandAliases.add('vw');
+          }
+          if (make.includes('chevrolet')) {
+            brandAliases.add('chevrolet');
+            brandAliases.add('chevy');
+          }
+          if (make.includes('land rover')) {
+            brandAliases.add('land rover');
+            brandAliases.add('landrover');
+          }
+          if (make.includes('mini')) {
+            brandAliases.add('mini');
+          }
+          if (make.includes('bmw')) {
+            brandAliases.add('bmw');
+          }
+          if (make.includes('audi')) {
+            brandAliases.add('audi');
+          }
+
+          const explicitValues = [make, manufacturer, model, year, trim, bodyClass, vehicleType];
+          const extraValues = Object.entries(decodeObj)
+            .map(([key, value]) => normalize(value))
+            .filter((value) => value && !explicitValues.includes(value));
+
+          const tokenCandidates = [
+            ...explicitValues,
+            ...extraValues,
+            ...explicitValues.filter(Boolean).map((value) => compact(value)),
+          ]
+            .filter(Boolean)
+            .map((value) => normalize(value));
+
+          const tokens = Array.from(new Set(tokenCandidates));
+          const aliasTokens = Array.from(new Set(
+            Array.from(brandAliases)
+              .filter(Boolean)
+              .flatMap((alias) => [alias, compact(alias)])
+          ));
+
+          const allProducts = await getProducts(2000, 0);
+          const scored = allProducts.map((p: any) => {
+            const name = normalize(p.name);
+            const description = normalize(p.description);
+            const brandText = normalize(p.brand);
+            const modelText = normalize(p.model);
+            const partNumber = normalize(p.partNumber);
+            const corpus = `${name} ${description} ${brandText} ${modelText} ${partNumber}`;
+            let score = 0;
+
+            tokens.forEach((token) => {
+              const re = new RegExp(`\\b${token.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\b`, 'i');
+              if (corpus.includes(token)) score += 8;
+              if (re.test(corpus)) score += 4;
+            });
+
+            aliasTokens.forEach((alias) => {
+              const re = new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\b`, 'i');
+              if (corpus.includes(alias)) score += 14;
+              if (re.test(corpus)) score += 6;
+            });
+
+            if (brandText && make && brandText.includes(make)) score += 20;
+            if (brandText && manufacturer && brandText.includes(manufacturer)) score += 20;
+            if (modelText && model && modelText.includes(model)) score += 15;
+            if (partNumber && year && partNumber.includes(year)) score += 4;
+            if (model && name.includes(model)) score += 12;
+            if (year && corpus.includes(year)) score += 4;
+
+            return { product: p, score };
+          });
+
+          scored.sort((a, b) => b.score - a.score);
+          const matched = scored.filter((item) => item.score > 0).map((item) => item.product);
+
+          let results = matched;
+          if (results.length === 0) {
+            const fallbackTerms = [...tokens, ...aliasTokens];
+            results = allProducts.filter((p: any) => {
+              const text = `${normalize(p.name)} ${normalize(p.description)} ${normalize(p.brand)} ${normalize(p.model)} ${normalize(p.partNumber)}`;
+              return fallbackTerms.some((term) => term && text.includes(term));
+            });
+          }
+
+          if (results.length === 0) {
+            results = await getTrendingProducts(input.limit);
+          }
+
+          const totalMatches = results.length;
+          const paged = results.slice(input.offset, input.offset + input.limit);
+
+          try {
+            const sessionId = (ctx.req.header && ctx.req.header('x-session-id')) || (ctx.req.cookies && ctx.req.cookies['sessionid']) || 'unknown';
+            await recordProductSearchTrackingEvent({
+              sessionId,
+              eventType: 'vin_filter',
+              searchTerm: input.vin,
+              resultsCount: totalMatches,
+              matchedProductIds: results.map((r:any) => r.id),
+              pageUrl: getRequestOrigin(ctx.req) || null,
+              userAgent: ctx.req.header ? ctx.req.header('user-agent') || null : null,
+            });
+          } catch (trackErr) {
+            console.warn('[VIN Filter] tracking error', trackErr);
+          }
+
+          return { products: paged, totalMatches };
+        } catch (err) {
+          console.error('[VIN Filter] error', err);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to filter products by VIN' });
+        }
+      }),
   }),
 });
 
