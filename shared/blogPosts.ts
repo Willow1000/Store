@@ -356,11 +356,11 @@ export const BLOG_POSTS: BlogPost[] = [
     internalLinks: [
       {
         label: "Seat and interior category overview",
-        href: "/products?category=seats",
+        href: "/products?category=Seats",
       },
       {
         label: "Body and trim category overview",
-        href: "/products?category=body",
+        href: "/products?category=Body",
       },
       { label: "Returns and condition guidance", href: "/returns" },
     ],
@@ -1341,6 +1341,374 @@ export const BLOG_POSTS: BlogPost[] = [
         label: "Stellantis owner communities",
         href: "https://www.stellantis.com/en/brands",
       },
+    ],
+  },
+  {
+    slug: "vin-decoder-guide-find-right-parts",
+    title:
+      "How to Use a VIN Decoder to Find the Right Parts (and Avoid Costly Returns)",
+    description:
+      "Year/make/model search alone gets fitment wrong more often than most buyers realize. Here's how VIN-based lookup closes that gap and how to use MotorVault's VIN decoder to shop by exact build spec.",
+    excerpt:
+      "Two cars with the same year, make, and model can still need different parts. A VIN decoder resolves the build-level differences that generic fitment search misses.",
+    coverImage: "/images/Mechanic_holding_VIN_plate_engine_202607190821.avif",
+    coverImageAlt:
+      "Mechanic holding a VIN plate next to an engine bay to confirm exact vehicle build specification",
+    category: "Fitment",
+    publishedDate: "2026-08-28",
+    updatedDate: "2026-08-28",
+    readingTime: "8 min read",
+    keywords: [
+      "VIN decoder",
+      "how to decode a VIN",
+      "VIN fitment lookup",
+      "find parts by VIN number",
+      "year make model vs VIN search",
+    ],
+    sections: [
+      {
+        heading: "Why year, make, and model aren't enough",
+        summary:
+          "Two vehicles with an identical year/make/model listing can leave the factory with different engines, drivetrains, and option-dependent parts.",
+        paragraphs: [
+          "A generic year/make/model filter treats every 2019 example of a given model as identical. In reality, the same model year can ship with multiple engine displacements, transmission types, drivetrain layouts (front, rear, all-wheel), and regional emissions equipment - any one of which can change what actually bolts on. Brake calipers, sensors, engine mounts, and exhaust components in particular are frequently split across trims and engine codes that share a single model-year listing.",
+          "Industry fitment data backs this up directly: VIN-based lookup has been shown to cut incorrect-part orders by roughly 40% compared to year/make/model search alone, because the VIN encodes the build-level detail that a model-year filter simply doesn't carry. For a buyer, that gap shows up as a part that looks right on the listing photo but doesn't match the mounting points, connector, or spec on the actual car.",
+        ],
+        points: [
+          "Model year alone doesn't capture engine code, transmission, or drivetrain variants.",
+          "Emissions and regional spec differences can affect exhaust, sensor, and filter part numbers.",
+          "Wrong-part returns cost more in time than the price difference the search saved.",
+        ],
+      },
+      {
+        heading: "What a VIN actually encodes",
+        summary:
+          "The 17-character VIN is a structured code, not a random serial number - several positions map directly to build specification.",
+        paragraphs: [
+          "A VIN is split into three blocks: the World Manufacturer Identifier (positions 1-3, identifying the manufacturer and region), the Vehicle Descriptor Section (positions 4-8, which typically encodes body style, engine type, and restraint system), and the Vehicle Identifier Section (positions 9-17, which includes a check digit, model year, plant code, and the sequential production number). Position 10 specifically maps to model year, and position 8 is commonly the engine code on many manufacturers' schemes.",
+          "A decoder reads these positions against the manufacturer's published or reverse-engineered schema and returns structured fields - make, model, year, trim, engine, drivetrain, and body class - instead of leaving you to interpret the raw string yourself. That structured output is what makes VIN-based fitment matching possible: it gives a parts catalog something concrete to filter against beyond a model name.",
+        ],
+        points: [
+          "The VIN is on the driver's side dashboard (visible through the windshield) and on the door jamb sticker.",
+          "It's also printed on the vehicle registration and insurance documents.",
+          "A decoder turns the 17-character string into make/model/year/engine/trim fields automatically.",
+        ],
+      },
+      {
+        heading: "Using MotorVault's VIN decoder to shop by build spec",
+        summary:
+          "Decode once, then filter the catalog against your exact vehicle instead of a generic model listing.",
+        paragraphs: [
+          "MotorVault's VIN decoder (available at /vin-decoder) takes your 17-character VIN, decodes it to your vehicle's year, make, model, trim, engine, and body class, and then matches that build spec against the product catalog directly - surfacing parts filtered to your actual car rather than everything listed under the model name. That closes most of the gap a plain year/make/model search leaves open, particularly for engine-dependent components like sensors, exhaust sections, and mounts.",
+          "It's still worth a final visual check against the failed part before ordering, especially for connector types and bracket orientation on parts that have been running production changes mid-model-year - a VIN narrows the field dramatically, but on a handful of components the manufacturer itself has made a running change within a single build spec. Photos of the original part solve that last gap when a listing offers a build-spec match but doesn't explicitly list every superseded part number.",
+        ],
+        points: [
+          "Find your VIN on the driver's-side dash or door jamb sticker.",
+          "Enter it once at /vin-decoder to get your build spec and matching parts.",
+          "Cross-check bracket/connector shape against your old part for components with known mid-year running changes.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: "Where do I find my VIN?",
+        answer:
+          "Look through the windshield at the driver's side of the dashboard, or check the sticker on the driver's door jamb. It's also printed on your registration and insurance card.",
+      },
+      {
+        question: "Does a VIN decoder guarantee the part will fit?",
+        answer:
+          "It gets you to the correct build spec (engine, trim, drivetrain), which resolves most fitment errors from generic model search. For components with known mid-year running changes, a quick photo comparison against the original part is still worth doing.",
+      },
+      {
+        question: "Is VIN-based search better than searching by license plate?",
+        answer:
+          "Yes for cross-border or resale shopping - the VIN is a fixed, standardized code tied to the vehicle itself, while plate-based lookups depend on a regional registration database that may not be accessible or accurate outside its home market.",
+      },
+    ],
+    internalLinks: [
+      {
+        label: "Decode your VIN and find matching parts",
+        href: "/vin-decoder",
+      },
+      { label: "Full product catalog", href: "/products" },
+      { label: "Fitment and returns guidance", href: "/returns" },
+    ],
+    outboundReferences: [
+      {
+        label: "NHTSA VIN decoder (vPIC) API",
+        href: "https://vpic.nhtsa.dot.gov/api/",
+      },
+      {
+        label: "Google people-first content guidance",
+        href: "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
+      },
+    ],
+    backlinkOutreach: [
+      {
+        label: "r/MechanicAdvice",
+        href: "https://www.reddit.com/r/MechanicAdvice/",
+      },
+      {
+        label: "r/whatcarshouldIbuy",
+        href: "https://www.reddit.com/r/whatcarshouldIbuy/",
+      },
+      { label: "AlfaOwner forum", href: "https://www.alfaowner.com/" },
+    ],
+  },
+  {
+    slug: "oem-vs-aftermarket-brake-pads-rotors",
+    title: "OEM vs Aftermarket Brake Pads and Rotors: What Actually Matters",
+    description:
+      "Ceramic vs semi-metallic, OEM vs aftermarket, and when each choice actually changes stopping performance, noise, and rotor wear.",
+    excerpt:
+      "Braking hardware is one category where reputable aftermarket routinely matches or beats OEM - but only once you know which compound and grade you're actually buying.",
+    coverImage: "/images/Car_parts_comparison_workbench_2K_202607190823.avif",
+    coverImageAlt:
+      "Brake pads and rotors from different suppliers laid out on a workbench for a quality comparison",
+    category: "Quality",
+    publishedDate: "2026-08-28",
+    updatedDate: "2026-08-28",
+    readingTime: "8 min read",
+    keywords: [
+      "OEM vs aftermarket brake pads",
+      "ceramic vs semi-metallic brake pads",
+      "best aftermarket brake rotors",
+      "ate vs brembo vs oem brakes",
+      "brake pad buying guide",
+    ],
+    sections: [
+      {
+        heading:
+          "Ceramic vs semi-metallic: the compound decides more than the badge",
+        summary:
+          "Pad compound affects noise, dust, cold-brake bite, and rotor wear more directly than whether the box says OEM or aftermarket.",
+        paragraphs: [
+          "Ceramic pads use a dense ceramic compound with embedded copper fibers. They run quieter, produce less visible brake dust, and are gentler on rotors, but have a lower coefficient of friction than semi-metallic pads and can feel less immediate in cold weather or before the brakes reach operating temperature. Semi-metallic pads - steel, iron, and copper fibers with friction modifiers - dissipate heat well and hold stopping power across a wider temperature range, which is why they're the standard choice for track use or heavier, faster driving, at the cost of more noise and faster rotor wear.",
+          "Most manufacturers spec ceramic-leaning compounds for daily-driver OEM pads because they prioritize a quiet, predictable, linear pedal feel - a gentle initial bite that builds progressively. That's a deliberate engineering choice, not proof that ceramic is the objectively better compound; it's the better compound for that use case. A reputable aftermarket semi-metallic pad for the same car isn't an inferior part, it's a different compound aimed at different priorities.",
+        ],
+        points: [
+          "Ceramic: quieter, less dust, easier on rotors, softer cold bite.",
+          "Semi-metallic: stronger high-temperature performance, more noise, faster rotor wear.",
+          "Match the compound to how the car is actually driven, not just to what shipped from the factory.",
+        ],
+      },
+      {
+        heading: "Where OEM pedal feel actually matters",
+        summary:
+          "OEM engineering advantage shows up most in pedal-feel tuning, not in raw stopping distance.",
+        paragraphs: [
+          "OEM brake systems are tuned as a set - pad compound, rotor mass, and caliper design are matched together during vehicle development so the pedal behaves predictably across everyday conditions. That tuning is real, and it's the strongest argument for staying with OEM-spec pads on cars where a soft, linear pedal is part of the intended driving experience, such as luxury or comfort-oriented models.",
+          "It's a narrower advantage than it sounds, though. Reputable aftermarket brands invest heavily in matching or improving on OEM pedal feel specifically because pedal complaints are the most common reason drivers reject an aftermarket brake job. The practical takeaway: OEM-spec is the safer default when you have no other information about a brand, but a well-reviewed aftermarket pad from an established brake manufacturer is not a downgrade - it's a different set of trade-offs, and on stopping distance under hard braking, many aftermarket pads test at parity with or ahead of OEM.",
+        ],
+        points: [
+          "OEM pad/rotor/caliper tuning is matched as a system, which shows up mainly in pedal feel.",
+          "Reputable aftermarket brake brands are engineered to match or beat OEM pedal complaints, not just price.",
+          "Stopping distance under hard braking is not reliably an OEM advantage - it depends on the specific pad tested.",
+        ],
+      },
+      {
+        heading: "What to check before buying either way",
+        summary:
+          "The label (OEM or aftermarket) matters less than verifying compound, rotor spec, and pairing.",
+        paragraphs: [
+          "Whichever route you take, three things determine whether the job goes well: the pad compound matches your driving style (daily commuting vs spirited or towing use), the rotor is rated for the pad you're pairing it with (mismatched pad/rotor hardness accelerates wear on both), and the part is confirmed against your exact vehicle build - caliper and rotor diameter can vary by trim and engine option even within one model year, which is exactly the kind of variation a VIN-based fitment check resolves that a generic listing won't.",
+          "Bedding-in procedure matters as much as the parts themselves: new pads and rotors need a proper bed-in cycle (a series of moderate-to-firm stops without dragging to a complete stop each time) to transfer an even friction layer onto the rotor surface. Skipping this step is a common cause of new-brake noise and uneven wear that then gets blamed on the parts rather than the installation.",
+        ],
+        points: [
+          "Confirm caliper/rotor diameter against your exact build spec, not just the model name.",
+          "Pair pad hardness to rotor spec - don't mix a track-oriented pad with a stock rotor rated for daily use.",
+          "Always bed in new pads and rotors before normal driving; most new-brake noise complaints trace back to a skipped bed-in.",
+        ],
+      },
+    ],
+    comparisonTable: {
+      caption: "Ceramic vs semi-metallic at a glance",
+      columns: ["Factor", "Ceramic", "Semi-metallic"],
+      rows: [
+        ["Noise", "Quiet", "Noticeably louder over time"],
+        ["Dust", "Low, lighter colored", "Higher, darker residue"],
+        [
+          "Cold bite",
+          "Softer until warm",
+          "More consistent across temperature",
+        ],
+        ["Rotor wear", "Lower", "Higher"],
+        [
+          "Best for",
+          "Daily driving, comfort-focused cars",
+          "Track use, towing, spirited driving",
+        ],
+      ],
+    },
+    faq: [
+      {
+        question: "Are aftermarket brake pads as safe as OEM?",
+        answer:
+          "From a reputable brand with published friction and testing data, yes - the compound and manufacturing quality determine safety, not whether the box says OEM. Avoid unbranded, untraceable listings regardless of price.",
+      },
+      {
+        question: "Can I mix ceramic pads with my factory rotors?",
+        answer:
+          "Generally yes, as long as the rotor is rated for the pad's temperature range and the diameter/thickness matches your exact build spec. Mismatched pairings are the more common problem than compound alone.",
+      },
+      {
+        question: "Why do my new brakes squeal?",
+        answer:
+          "Most new-brake noise comes from an incomplete bed-in cycle or hardware (shims, clips) that wasn't replaced alongside the pads. Confirm bed-in procedure and full hardware kit before assuming the pads are defective.",
+      },
+    ],
+    internalLinks: [
+      {
+        label: "Shop brake pads and rotors",
+        href: "/products?category=Brakes",
+      },
+      {
+        label: "Decode your VIN to confirm exact caliper/rotor spec",
+        href: "/vin-decoder",
+      },
+      { label: "Fitment and returns guidance", href: "/returns" },
+    ],
+    outboundReferences: [
+      {
+        label: "Schema.org Product reference",
+        href: "https://schema.org/Product",
+      },
+      {
+        label: "Google people-first content guidance",
+        href: "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
+      },
+    ],
+    backlinkOutreach: [
+      {
+        label: "r/MechanicAdvice",
+        href: "https://www.reddit.com/r/MechanicAdvice/",
+      },
+      {
+        label: "r/AskMechanics",
+        href: "https://www.reddit.com/r/AskMechanics/",
+      },
+      { label: "r/BMW_E36", href: "https://www.reddit.com/r/BMW_E36/" },
+    ],
+  },
+  {
+    slug: "check-engine-light-diagnostic-guide",
+    title:
+      "Check Engine Light On? A Step-by-Step Diagnostic Guide Before You Buy Parts",
+    description:
+      "How to read an OBD-II trouble code correctly, tell a real failure from a sensor fluke, and avoid replacing the wrong part first.",
+    excerpt:
+      "A trouble code names a symptom, not always the failed part. Here's how to read it correctly before you order a replacement.",
+    coverImage:
+      "/images/Mechanic_examining_engine_contro…_2K_202607190825.avif",
+    coverImageAlt:
+      "Mechanic examining an engine control unit and wiring while diagnosing a check engine light",
+    category: "Troubleshooting",
+    publishedDate: "2026-08-28",
+    updatedDate: "2026-08-28",
+    readingTime: "7 min read",
+    keywords: [
+      "check engine light diagnostic",
+      "OBD2 code meaning",
+      "common OBD2 trouble codes",
+      "P0300 misfire code",
+      "check engine light won't turn off",
+    ],
+    sections: [
+      {
+        heading: "Read the code before you touch a wrench",
+        summary:
+          "An OBD-II code is a five-character clue, not a part number - the plug-in port is under the dash near the pedals on every car built since the mid-1990s.",
+        paragraphs: [
+          "Every vehicle sold since the OBD-II mandate has a female 16-pin trapezoidal port, almost always under the driver's side of the dash near the pedals. Plugging in a code reader returns one or more codes in a letter-plus-four-digit format: a P prefix means powertrain (engine/transmission), B means body, C means chassis, and U means network/communication. The first digit after the letter tells you whether it's a generic SAE code (0) or manufacturer-specific (1); the remaining digits identify the system and specific fault.",
+          "If a scan returns multiple codes, work from the top of the list down rather than chasing whichever one sounds scariest - later codes on the list are frequently downstream symptoms of the first one, not separate failures. Clearing codes and seeing which ones return after a drive cycle is a legitimate way to separate a live fault from a one-off sensor glitch, but only after you've noted what was originally stored.",
+        ],
+        points: [
+          "OBD-II port: female 16-pin trapezoidal connector, typically under the dash near the pedals.",
+          "P-codes = powertrain, B = body, C = chassis, U = network/communication.",
+          "Address the first code on the list first - lower codes are often downstream symptoms.",
+        ],
+      },
+      {
+        heading: "The most common codes, and what they actually mean",
+        summary:
+          "A handful of P0300-series and sensor codes account for a large share of check-engine-light visits.",
+        paragraphs: [
+          "P0300 signals a random or multiple-cylinder misfire; P0301 through P0308 pinpoint a specific cylinder (P0301 is cylinder 1, and so on). A misfire code doesn't by itself tell you whether the cause is a spark plug, ignition coil, fuel injector, or a vacuum leak feeding that cylinder - it tells you where to start looking, in that rough order of likelihood and cost. Oxygen sensor and catalytic converter efficiency codes (the P0130-P0169 and P0420-P0430 ranges) are also extremely common, and both can be triggered by a genuinely failed sensor or by an unrelated upstream problem, such as an exhaust leak, feeding the sensor bad data.",
+          "This is the single most common mistake in DIY diagnosis: replacing the part named by the code before checking whether something upstream is actually causing it to read incorrectly. A catalytic converter code, for example, is frequently caused by a failing oxygen sensor or an exhaust leak rather than a genuinely dead catalytic converter - and a catalytic converter is a far more expensive part to replace on a guess.",
+        ],
+        points: [
+          "P0300-P0308: misfire codes, ranked by cylinder - check plugs/coils/injectors for that cylinder first.",
+          "P0130-P0169: oxygen sensor circuit codes.",
+          "P0420-P0430: catalytic converter efficiency - verify sensors and exhaust integrity before replacing the converter itself.",
+        ],
+      },
+      {
+        heading: "When to buy a part vs when to keep diagnosing",
+        summary:
+          "Confirm the code with a second data point before ordering the named part.",
+        paragraphs: [
+          "A code reader that also shows live sensor data (freeze-frame data captured at the moment the code triggered) is worth the small extra cost over a basic reader, because it lets you check whether the reported values make physical sense - a wildly out-of-range oxygen sensor reading is a stronger signal than the code alone. Where possible, a visual inspection of accessible components (vacuum lines, connector corrosion, obviously worn ignition coils) before ordering anything can save a wrong-part purchase entirely.",
+          "Once you've narrowed the cause to a specific part, confirming exact fitment matters more on electronically coded components (sensors, ECUs, ignition modules) than on purely mechanical ones, since some of these parts carry software or calibration dependencies tied to your specific engine code and model year - not just the model name. A VIN-based lookup resolves that build-level detail directly rather than leaving it to a generic year/make/model filter.",
+        ],
+        points: [
+          "A reader with live/freeze-frame data helps confirm a code rather than just naming it.",
+          "Visually inspect accessible components before ordering a replacement part on a guess.",
+          "For sensors and electronic modules, confirm fitment against your VIN - coding/calibration dependencies are common.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: "Can I drive with the check engine light on?",
+        answer:
+          "A steady light usually means it's safe to drive to get it checked soon, but a flashing check engine light indicates an active misfire that can damage the catalytic converter and should be addressed immediately, not driven on.",
+      },
+      {
+        question: "Will disconnecting the battery clear the code?",
+        answer:
+          "It can clear the stored code temporarily, but it doesn't fix the underlying fault - if the condition is still present, the code (and the light) will return, usually within one to a few drive cycles.",
+      },
+      {
+        question: "Do auto parts stores read codes for free?",
+        answer:
+          "Many do offer free code scans, which is a reasonable first step - just treat the code as a starting point for diagnosis, not an automatic instruction to buy the named part.",
+      },
+    ],
+    internalLinks: [
+      {
+        label: "Shop sensors and ignition components",
+        href: "/products?category=Engines",
+      },
+      {
+        label: "Decode your VIN to confirm sensor/ECU fitment",
+        href: "/vin-decoder",
+      },
+      {
+        label: "ECU and sensor failure patterns (Opel/Vauxhall)",
+        href: "/blog/opel-zafira-astra-ecu-and-sensor-failures",
+      },
+    ],
+    outboundReferences: [
+      {
+        label: "NHTSA VIN decoder (vPIC) API",
+        href: "https://vpic.nhtsa.dot.gov/api/",
+      },
+      {
+        label: "Google people-first content guidance",
+        href: "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
+      },
+    ],
+    backlinkOutreach: [
+      {
+        label: "r/MechanicAdvice",
+        href: "https://www.reddit.com/r/MechanicAdvice/",
+      },
+      {
+        label: "r/AskMechanics",
+        href: "https://www.reddit.com/r/AskMechanics/",
+      },
+      { label: "r/CarTalkUK", href: "https://www.reddit.com/r/CarTalkUK/" },
     ],
   },
 ];
