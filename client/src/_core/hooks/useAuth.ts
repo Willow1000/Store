@@ -96,10 +96,25 @@ export function useAuth(options?: UseAuthOptions) {
 
     const getSession = async () => {
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
+        let { data: { session } = { session: null }, error } =
+          await supabase.auth.getSession();
+
+        // A session-less first result right after a fresh page load (e.g.
+        // landing back on /checkout from a Stripe redirect, which is a real
+        // browser navigation, not a SPA route change - the whole app
+        // re-initializes from scratch) can mean Supabase's own internal
+        // refresh-token exchange just hasn't completed yet, not that the
+        // user is actually signed out. One short retry avoids treating that
+        // transient gap as a real logout and bouncing the user to a
+        // sign-in prompt they don't need.
+        if (!session && !error && isMounted) {
+          await new Promise(resolve => setTimeout(resolve, 400));
+          if (!isMounted) return;
+          const retry = await supabase.auth.getSession();
+          session = retry.data.session;
+          error = retry.error;
+        }
+
         if (error) {
         }
         if (isMounted) {
