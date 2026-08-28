@@ -1,4 +1,5 @@
 # 🚗 Complete SEO Keyword Strategy Report for European Car Parts Website
+
 ## **Universal Implementation Guide for All European Vehicle Brands**
 
 ---
@@ -7,21 +8,24 @@
 **Date:** June 30, 2026  
 **Target:** All European Car Brands (18 brands)  
 **Focus:** Rare, Hard-to-Find, OEM & Aftermarket Parts  
-**SEO Strategy:** Long-tail Keywords, YMM Specificity, Buyer Intent, Schema Optimization  
+**SEO Strategy:** Long-tail Keywords, YMM Specificity, Buyer Intent, Schema Optimization
 
 ---
 
 ## **📋 EXECUTIVE SUMMARY**
 
 ### **Business Objective**
+
 Create a high-ranking website for **rare and hard-to-find car parts** for **ALL European vehicle brands** including BMW, Mercedes-Benz, Volkswagen, Audi, Porsche, Opel, Fiat, Peugeot, Renault, Volvo, Alfa Romeo, Citroën, Škoda, SEAT, Dacia, Land Rover, Jaguar, Mini, Smart, and Tesla.
 
 ### **Target Market**
+
 - **Primary Countries:** Germany, UK, Italy, France, Spain, Netherlands, Sweden, Norway, Ireland
 - **Secondary Countries:** Belgium, Austria, Switzerland, Poland, Denmark, Finland
 - **Total Coverage:** 18+ European countries
 
 ### **Key Products (Top 8 Rare Parts)**
+
 1. DPF (Diesel Particulate Filter)
 2. Catalytic Converter
 3. ECU (Engine Control Unit)
@@ -32,6 +36,7 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 8. Suspension Components (Shock Absorbers, Control Arms)
 
 ### **Expected SEO Performance**
+
 - **1 Month:** 15-25% traffic increase
 - **3 Months:** 40-60% traffic increase
 - **6 Months:** 60-120% traffic increase
@@ -59,6 +64,7 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 **Purpose:** Foundation keywords for homepage, targeting all European brands with high intent, low competition.
 
 **SEO Best Practices:**
+
 - Use in homepage title tag (<60 chars)
 - Use in meta description (<160 chars)
 - Include in H1 heading
@@ -85,6 +91,7 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 **Purpose:** Target searches for the 10 most popular European premium brands.
 
 **Brand Market Share:**
+
 - **BMW:** 8.2% EU market share
 - **Mercedes-Benz:** 6.8% EU market share
 - **Volkswagen:** 10.5% EU market share (Largest)
@@ -97,6 +104,7 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 - **Volvo:** 3.1% EU market share
 
 **Implementation:**
+
 - Create 10 dedicated brand pages (e.g., `/bmw-rare-parts`)
 - Each page title: `BMW rare parts | Hard-to-Find BMW Auto Parts Europe`
 - Meta: `Specialist in rare BMW parts. Order DPF, ECU, turbocharger, gearbox for all BMW models.`
@@ -122,6 +130,7 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 **Purpose:** Comprehensive coverage of all remaining European brands for universal reach.
 
 **Brand Characteristics:**
+
 - **Alfa Romeo:** Italian luxury brand, high-performance parts
 - **Citroën:** French budget brand, common in Europe
 - **Škoda:** VW Group brand, Czech manufacturer
@@ -134,6 +143,7 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 - **Tesla:** Electric vehicle brand (growing in Europe)
 
 **Implementation:**
+
 - Create 10 dedicated brand pages (e.g., `/alfa-romeo-parts`)
 - Each page title: `Alfa Romeo parts | Rare Alfa Romeo Auto Parts Europe`
 - Meta: `Rare Alfa Romeo parts specialist. Order DPF, ECU, turbo for all Alfa Romeo models.`
@@ -157,77 +167,87 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 **Purpose:** Target the 8 most-requested rare parts across all European brands.
 
 **Part Market Analysis:**
+
 ```markdown
 31. DPF diesel particulate filter
-   - Market Size: €2.1B (2025)
-   - Growth Rate: 12.4% CAGR
-   - Brands Affected: All diesel European cars (BMW, Mercedes, VW, Audi, Opel, Fiat, Peugeot, Renault)
-   - Part Numbers: 55574410 (Opel), 855627 (Opel), 46341162 (Fiat)
-   - Price Range: €700-€3,200
-   - Search Volume: Very High
-   - Difficulty to Find: Extremely Rare
+
+- Market Size: €2.1B (2025)
+- Growth Rate: 12.4% CAGR
+- Brands Affected: All diesel European cars (BMW, Mercedes, VW, Audi, Opel, Fiat, Peugeot, Renault)
+- Part Numbers: 55574410 (Opel), 855627 (Opel), 46341162 (Fiat)
+- Price Range: €700-€3,200
+- Search Volume: Very High
+- Difficulty to Find: Extremely Rare
 
 32. catalytic converter
-   - Market Size: €3.8B (2025)
-   - Growth Rate: 9.8% CAGR
-   - Brands Affected: All petrol European cars
-   - Part Numbers: Variable by model
-   - Price Range: €800-€3,500
-   - Search Volume: High
-   - Difficulty to Find: Extremely Rare
+
+- Market Size: €3.8B (2025)
+- Growth Rate: 9.8% CAGR
+- Brands Affected: All petrol European cars
+- Part Numbers: Variable by model
+- Price Range: €800-€3,500
+- Search Volume: High
+- Difficulty to Find: Extremely Rare
 
 33. ECU engine control unit
-   - Market Size: €1.9B (2025)
-   - Growth Rate: 14.2% CAGR
-   - Brands Affected: All modern European cars (2005+)
-   - Part Numbers: 12652573 (Opel), 12655500 (Opel)
-   - Price Range: €500-€2,500
-   - Search Volume: High
-   - Difficulty to Find: Non-existent for legacy models
+
+- Market Size: €1.9B (2025)
+- Growth Rate: 14.2% CAGR
+- Brands Affected: All modern European cars (2005+)
+- Part Numbers: 12652573 (Opel), 12655500 (Opel)
+- Price Range: €500-€2,500
+- Search Volume: High
+- Difficulty to Find: Non-existent for legacy models
 
 34. turbocharger replacement
-   - Market Size: €2.4B (2025)
-   - Growth Rate: 16.8% CAGR (Fastest)
-   - Brands Affected: All turbo European cars
-   - Part Numbers: 4918003200 (Fiat), 130668 (BE TURBO)
-   - Price Range: €550-€2,000
-   - Search Volume: High
-   - Difficulty to Find: Very Rare
+
+- Market Size: €2.4B (2025)
+- Growth Rate: 16.8% CAGR (Fastest)
+- Brands Affected: All turbo European cars
+- Part Numbers: 4918003200 (Fiat), 130668 (BE TURBO)
+- Price Range: €550-€2,000
+- Search Volume: High
+- Difficulty to Find: Very Rare
 
 35. gearbox manual transmission
-   - Market Size: €3.2B (2025)
-   - Growth Rate: 7.3% CAGR
-   - Brands Affected: Manual transmission European cars
-   - Price Range: €850-€4,500
-   - Search Volume: Medium-High
-   - Difficulty to Find: Limited supply
+
+- Market Size: €3.2B (2025)
+- Growth Rate: 7.3% CAGR
+- Brands Affected: Manual transmission European cars
+- Price Range: €850-€4,500
+- Search Volume: Medium-High
+- Difficulty to Find: Limited supply
 
 36. automatic transmission
-   - Market Size: €4.1B (2025)
-   - Growth Rate: 11.2% CAGR
-   - Brands Affected: Automatic European cars (luxury segment)
-   - Price Range: €1,200-€6,000
-   - Search Volume: Medium
-   - Difficulty to Find: Very Rare
+
+- Market Size: €4.1B (2025)
+- Growth Rate: 11.2% CAGR
+- Brands Affected: Automatic European cars (luxury segment)
+- Price Range: €1,200-€6,000
+- Search Volume: Medium
+- Difficulty to Find: Very Rare
 
 37. brake pads discs
-   - Market Size: €5.8B (2025)
-   - Growth Rate: 5.4% CAGR
-   - Brands Affected: All European cars
-   - Price Range: €80-€400
-   - Search Volume: Very High
-   - Difficulty to Find: Available but OEM rare
+
+- Market Size: €5.8B (2025)
+- Growth Rate: 5.4% CAGR
+- Brands Affected: All European cars
+- Price Range: €80-€400
+- Search Volume: Very High
+- Difficulty to Find: Available but OEM rare
 
 38. suspension shock absorbers
-   - Market Size: €3.7B (2025)
-   - Growth Rate: 8.9% CAGR
-   - Brands Affected: All European cars
-   - Price Range: €110-€600
-   - Search Volume: High
-   - Difficulty to Find: OEM rare
+
+- Market Size: €3.7B (2025)
+- Growth Rate: 8.9% CAGR
+- Brands Affected: All European cars
+- Price Range: €110-€600
+- Search Volume: High
+- Difficulty to Find: OEM rare
 ```
 
 **Implementation:**
+
 - Create 8 dedicated category pages (e.g., `/dpf-diesel-particulate-filter`)
 - Each page title: `DPF diesel particulate filter | European DPF for BMW Mercedes VW Audi`
 - Meta: `Rare DPF for all European cars. Order DPF replacement for BMW, Mercedes, VW, Audi, Opel, Fiat.`
@@ -253,6 +273,7 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 **Purpose:** Capture ready-to-purchase customers using action words.
 
 **Intent Analysis:**
+
 - **Buy/Order (39-40):** High conversion (ready to purchase)
 - **Cheapest/Best Price (41-42):** Price-sensitive shoppers
 - **Discount (43):** Deal hunters
@@ -260,6 +281,7 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 - **Genuine/Original (47-48):** OEM-focused buyers
 
 **Implementation:**
+
 - Use in all product page H1 headings
 - Use in meta descriptions
 - Use in call-to-action buttons
@@ -277,10 +299,12 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 **Purpose:** Geographic targeting for European markets.
 
 **Market Data:**
+
 - **Germany:** Largest EU car market (22.1%), €73.5B auto parts market
 - **Europe Shipping:** 18+ countries, international delivery
 
 **Implementation:**
+
 - Use in footer
 - Use in shipping information page
 - Use in meta tags for location-specific landing pages
@@ -294,72 +318,100 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 ```html
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <!-- PRIMARY KEYWORDS: Title Tag (<60 chars) -->
     <title>Rare European Car Parts | Hard-to-Find Auto Parts Europe</title>
-    
+
     <!-- PRIMARY KEYWORDS: Meta Description (<160 chars) -->
-    <meta name="description" content="Specialist in rare BMW, Mercedes, VW, Audi parts. Order DPF, ECU, turbocharger, gearbox for all European cars. Used car parts Europe, OEM, aftermarket. International shipping.">
-    
+    <meta
+      name="description"
+      content="Specialist in rare BMW, Mercedes, VW, Audi parts. Order DPF, ECU, turbocharger, gearbox for all European cars. Used car parts Europe, OEM, aftermarket. International shipping."
+    />
+
     <!-- BRAND KEYWORDS: Meta Keywords -->
-    <meta name="keywords" content="European car parts, rare car parts Europe, BMW rare parts, Mercedes-Benz rare parts, Volkswagen rare parts, Audi rare parts, DPF diesel particulate filter, catalytic converter, ECU engine control unit">
-    
+    <meta
+      name="keywords"
+      content="European car parts, rare car parts Europe, BMW rare parts, Mercedes-Benz rare parts, Volkswagen rare parts, Audi rare parts, DPF diesel particulate filter, catalytic converter, ECU engine control unit"
+    />
+
     <!-- BRAND KEYWORDS: Robots -->
-    <meta name="robots" content="index, follow">
-    
+    <meta name="robots" content="index, follow" />
+
     <!-- GEOGRAPHIC KEYWORDS: Open Graph -->
-    <meta property="og:title" content="Rare European Car Parts | All Brands BMW Mercedes VW Audi">
-    <meta property="og:description" content="Order rare car parts for BMW, Mercedes, VW, Audi, Porsche, Opel, Fiat. DPF, ECU, turbo, gearbox. International shipping Europe.">
-    <meta property="og:type" content="website">
-    <meta property="og:locale" content="en_EU">
-</head>
-<body>
+    <meta
+      property="og:title"
+      content="Rare European Car Parts | All Brands BMW Mercedes VW Audi"
+    />
+    <meta
+      property="og:description"
+      content="Order rare car parts for BMW, Mercedes, VW, Audi, Porsche, Opel, Fiat. DPF, ECU, turbo, gearbox. International shipping Europe."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_EU" />
+  </head>
+  <body>
     <!-- PRIMARY KEYWORDS: H1 Heading -->
     <h1>Rare European Car Parts Specialist | Hard-to-Find Auto Parts Europe</h1>
-    
+
     <!-- BRAND KEYWORDS: First 100 Words -->
     <p>
-        We are the leading specialist in rare European car parts, offering hard-to-find auto parts for all European brands including BMW, Mercedes-Benz, Volkswagen, Audi, Porsche, Opel, Fiat, Peugeot, Renault, Volvo, Alfa Romeo, Citroën, Škoda, SEAT, Dacia, Land Rover, Jaguar, Mini, Smart, and Tesla.
+      We are the leading specialist in rare European car parts, offering
+      hard-to-find auto parts for all European brands including BMW,
+      Mercedes-Benz, Volkswagen, Audi, Porsche, Opel, Fiat, Peugeot, Renault,
+      Volvo, Alfa Romeo, Citroën, Škoda, SEAT, Dacia, Land Rover, Jaguar, Mini,
+      Smart, and Tesla.
     </p>
-    
+
     <!-- PART KEYWORDS: Product Categories -->
     <section id="products">
-        <h2>Top European Car Parts</h2>
-        <ul>
-            <li><a href="/dpf-diesel-particulate-filter">DPF diesel particulate filter</a></li>
-            <li><a href="/catalytic-converter">Catalytic converter</a></li>
-            <li><a href="/ecu-engine-control-unit">ECU engine control unit</a></li>
-            <li><a href="/turbocharger-replacement">Turbocharger replacement</a></li>
-            <li><a href="/gearbox-manual-transmission">Gearbox manual transmission</a></li>
-            <li><a href="/automatic-transmission">Automatic transmission</a></li>
-            <li><a href="/brake-pads-discs">Brake pads discs</a></li>
-            <li><a href="/suspension-shock-absorbers">Suspension shock absorbers</a></li>
-        </ul>
+      <h2>Top European Car Parts</h2>
+      <ul>
+        <li>
+          <a href="/dpf-diesel-particulate-filter"
+            >DPF diesel particulate filter</a
+          >
+        </li>
+        <li><a href="/catalytic-converter">Catalytic converter</a></li>
+        <li><a href="/ecu-engine-control-unit">ECU engine control unit</a></li>
+        <li>
+          <a href="/turbocharger-replacement">Turbocharger replacement</a>
+        </li>
+        <li>
+          <a href="/gearbox-manual-transmission">Gearbox manual transmission</a>
+        </li>
+        <li><a href="/automatic-transmission">Automatic transmission</a></li>
+        <li><a href="/brake-pads-discs">Brake pads discs</a></li>
+        <li>
+          <a href="/suspension-shock-absorbers">Suspension shock absorbers</a>
+        </li>
+      </ul>
     </section>
-    
+
     <!-- BRAND KEYWORDS: Brand Pages -->
     <section id="brands">
-        <h2>All European Brands</h2>
-        <ul>
-            <li><a href="/bmw-rare-parts">BMW rare parts</a></li>
-            <li><a href="/mercedes-benz-rare-parts">Mercedes-Benz rare parts</a></li>
-            <li><a href="/volkswagen-rare-parts">Volkswagen rare parts</a></li>
-            <li><a href="/audi-rare-parts">Audi rare parts</a></li>
-            <li><a href="/opel-rare-parts">Opel rare parts</a></li>
-            <li><a href="/fiat-rare-parts">Fiat rare parts</a></li>
-        </ul>
+      <h2>All European Brands</h2>
+      <ul>
+        <li><a href="/bmw-rare-parts">BMW rare parts</a></li>
+        <li>
+          <a href="/mercedes-benz-rare-parts">Mercedes-Benz rare parts</a>
+        </li>
+        <li><a href="/volkswagen-rare-parts">Volkswagen rare parts</a></li>
+        <li><a href="/audi-rare-parts">Audi rare parts</a></li>
+        <li><a href="/opel-rare-parts">Opel rare parts</a></li>
+        <li><a href="/fiat-rare-parts">Fiat rare parts</a></li>
+      </ul>
     </section>
-    
+
     <!-- BUYER INTENT KEYWORDS: Call-to-Action -->
     <section id="cta">
-        <h2>Start Your Order</h2>
-        <a href="/shop" class="btn-primary">Buy rare car parts Europe</a>
-        <a href="/contact" class="btn-secondary">Order European car parts</a>
+      <h2>Start Your Order</h2>
+      <a href="/shop" class="btn-primary">Buy rare car parts Europe</a>
+      <a href="/contact" class="btn-secondary">Order European car parts</a>
     </section>
-</body>
+  </body>
 </html>
 ```
 
@@ -371,39 +423,63 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 <!-- Example: /bmw-rare-parts -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <title>BMW rare parts | Hard-to-Find BMW Auto Parts Europe</title>
-    <meta name="description" content="Specialist in rare BMW parts. Order DPF, ECU, turbocharger, gearbox for BMW 3 Series, 5 Series, X3, X5. Used car parts Europe, OEM, aftermarket.">
-    <meta name="key keywords" content="BMW rare parts, BMW DPF, BMW ECU, BMW turbocharger, BMW gearbox, rare car parts Europe, European car parts">
-</head>
-<body>
+    <meta
+      name="description"
+      content="Specialist in rare BMW parts. Order DPF, ECU, turbocharger, gearbox for BMW 3 Series, 5 Series, X3, X5. Used car parts Europe, OEM, aftermarket."
+    />
+    <meta
+      name="key keywords"
+      content="BMW rare parts, BMW DPF, BMW ECU, BMW turbocharger, BMW gearbox, rare car parts Europe, European car parts"
+    />
+  </head>
+  <body>
     <!-- BRAND KEYWORDS: H1 -->
     <h1>BMW Rare Parts Specialist | Hard-to-Find BMW Auto Parts Europe</h1>
-    
+
     <!-- BRAND + PART KEYWORDS: Content -->
     <p>
-        Looking for rare BMW parts? We stock hard-to-find BMW DPF diesel particulate filter, BMW ECU engine control unit, BMW turbocharger replacement, BMW gearbox manual transmission for all BMW models including 3 Series, 5 Series, X3, X5, Z4, M3, M5.
+      Looking for rare BMW parts? We stock hard-to-find BMW DPF diesel
+      particulate filter, BMW ECU engine control unit, BMW turbocharger
+      replacement, BMW gearbox manual transmission for all BMW models including
+      3 Series, 5 Series, X3, X5, Z4, M3, M5.
     </p>
-    
+
     <!-- BRAND + PART KEYWORDS: Product List -->
     <section>
-        <h2>BMW Rare Parts We Stock</h2>
-        <ul>
-            <li><a href="/bmw-dpf-diesel-particulate-filter">BMW DPF diesel particulate filter</a></li>
-            <li><a href="/bmw-catalytic-converter">BMW catalytic converter</a></li>
-            <li><a href="/bmw-ecu-engine-control-unit">BMW ECU engine control unit</a></li>
-            <li><a href="/bmw-turbocharger-replacement">BMW turbocharger replacement</a></li>
-            <li><a href="/bmw-gearbox-manual-transmission">BMW gearbox manual transmission</a></li>
-        </ul>
+      <h2>BMW Rare Parts We Stock</h2>
+      <ul>
+        <li>
+          <a href="/bmw-dpf-diesel-particulate-filter"
+            >BMW DPF diesel particulate filter</a
+          >
+        </li>
+        <li><a href="/bmw-catalytic-converter">BMW catalytic converter</a></li>
+        <li>
+          <a href="/bmw-ecu-engine-control-unit">BMW ECU engine control unit</a>
+        </li>
+        <li>
+          <a href="/bmw-turbocharger-replacement"
+            >BMW turbocharger replacement</a
+          >
+        </li>
+        <li>
+          <a href="/bmw-gearbox-manual-transmission"
+            >BMW gearbox manual transmission</a
+          >
+        </li>
+      </ul>
     </section>
-    
+
     <!-- BUYER INTENT KEYWORDS: CTA -->
     <a href="/bmw-shop" class="btn-primary">Buy BMW rare parts Europe</a>
-</body>
+  </body>
 </html>
 ```
 
 **Repeat for all 18 brands:**
+
 1. `/bmw-rare-parts`
 2. `/mercedes-benz-rare-parts`
 3. `/volkswagen-rare-parts`
@@ -431,77 +507,103 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 <!-- Example: /dpf-diesel-particulate-filter -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <title>DPF diesel particulate filter | European DPF for BMW Mercedes VW Audi</title>
-    <meta name="description" content="Rare DPF for all European cars. Order DPF replacement for BMW, Mercedes, VW, Audi, Opel, Fiat, Peugeot, Renault. New OEM, used, reconditioned DPF. International shipping.">
-    <meta name="keywords" content="DPF diesel particulate filter, BMW DPF, Mercedes DPF, VW DPF, Audi DPF, rare DPF Europe, European car parts">
-</head>
-<body>
+  <head>
+    <title>
+      DPF diesel particulate filter | European DPF for BMW Mercedes VW Audi
+    </title>
+    <meta
+      name="description"
+      content="Rare DPF for all European cars. Order DPF replacement for BMW, Mercedes, VW, Audi, Opel, Fiat, Peugeot, Renault. New OEM, used, reconditioned DPF. International shipping."
+    />
+    <meta
+      name="keywords"
+      content="DPF diesel particulate filter, BMW DPF, Mercedes DPF, VW DPF, Audi DPF, rare DPF Europe, European car parts"
+    />
+  </head>
+  <body>
     <!-- PART KEYWORDS: H1 -->
     <h1>DPF Diesel Particulate Filter for All European Cars</h1>
-    
+
     <!-- BRAND + PART KEYWORDS: Content (1,500+ words) -->
     <article>
-        <h2>What is DPF Diesel Particulate Filter?</h2>
-        <p>
-            DPF (Diesel Particulate Filter) is an essential emissions control component for all diesel European cars. We stock rare DPF for BMW, Mercedes-Benz, Volkswagen, Audi, Porsche, Opel, Fiat, Peugeot, Renault, Volvo.
-        </p>
-        
-        <h2>European Brands We Cover</h2>
-        <ul>
-            <li><a href="/bmw-dpf-diesel-particulate-filter">BMW DPF</a></li>
-            <li><a href="/mercedes-benz-dpf-diesel-particulate-filter">Mercedes-Benz DPF</a></li>
-            <li><a href="/volkswagen-dpf-diesel-particulate-filter">Volkswagen DPF</a></li>
-            <li><a href="/audi-dpf-diesel-particulate-filter">Audi DPF</a></li>
-            <li><a href="/opel-dpf-diesel-particulate-filter">Opel DPF</a></li>
-            <li><a href="/fiat-dpf-diesel-particulate-filter">Fiat DPF</a></li>
-        </ul>
-        
-        <h2>Common DPF Part Numbers</h2>
-        <table>
-            <tr>
-                <th>Brand</th>
-                <th>Model</th>
-                <th>Part Number</th>
-                <th>Price</th>
-            </tr>
-            <tr>
-                <td>Opel</td>
-                <td>Corsa D 1.3 CDTI</td>
-                <td>55574410</td>
-                <td>€899</td>
-            </tr>
-            <tr>
-                <td>Opel</td>
-                <td>Corsa E x15</td>
-                <td>855627</td>
-                <td>€949</td>
-            </tr>
-            <tr>
-                <td>Fiat</td>
-                <td>Panda 312 1.0</td>
-                <td>46341162</td>
-                <td>€849</td>
-            </tr>
-        </table>
-        
-        <h2>DPF Symptoms & Problems</h2>
-        <ul>
-            <li><a href="/blog/dpf-failure-bmw">DPF failure BMW</a></li>
-            <li><a href="/blog/dpf-error-code-opel">DPF error code Opel</a></li>
-            <li><a href="/blog/check-engine-light-fiat">Check engine light Fiat</a></li>
-            <li><a href="/blog/catalyst-fault-peugeot">Catalyst fault Peugeot</a></li>
-        </ul>
+      <h2>What is DPF Diesel Particulate Filter?</h2>
+      <p>
+        DPF (Diesel Particulate Filter) is an essential emissions control
+        component for all diesel European cars. We stock rare DPF for BMW,
+        Mercedes-Benz, Volkswagen, Audi, Porsche, Opel, Fiat, Peugeot, Renault,
+        Volvo.
+      </p>
+
+      <h2>European Brands We Cover</h2>
+      <ul>
+        <li><a href="/bmw-dpf-diesel-particulate-filter">BMW DPF</a></li>
+        <li>
+          <a href="/mercedes-benz-dpf-diesel-particulate-filter"
+            >Mercedes-Benz DPF</a
+          >
+        </li>
+        <li>
+          <a href="/volkswagen-dpf-diesel-particulate-filter">Volkswagen DPF</a>
+        </li>
+        <li><a href="/audi-dpf-diesel-particulate-filter">Audi DPF</a></li>
+        <li><a href="/opel-dpf-diesel-particulate-filter">Opel DPF</a></li>
+        <li><a href="/fiat-dpf-diesel-particulate-filter">Fiat DPF</a></li>
+      </ul>
+
+      <h2>Common DPF Part Numbers</h2>
+      <table>
+        <tr>
+          <th>Brand</th>
+          <th>Model</th>
+          <th>Part Number</th>
+          <th>Price</th>
+        </tr>
+        <tr>
+          <td>Opel</td>
+          <td>Corsa D 1.3 CDTI</td>
+          <td>55574410</td>
+          <td>€899</td>
+        </tr>
+        <tr>
+          <td>Opel</td>
+          <td>Corsa E x15</td>
+          <td>855627</td>
+          <td>€949</td>
+        </tr>
+        <tr>
+          <td>Fiat</td>
+          <td>Panda 312 1.0</td>
+          <td>46341162</td>
+          <td>€849</td>
+        </tr>
+      </table>
+
+      <h2>DPF Symptoms & Problems</h2>
+      <ul>
+        <li><a href="/blog/dpf-failure-bmw">DPF failure BMW</a></li>
+        <li><a href="/blog/dpf-error-code-opel">DPF error code Opel</a></li>
+        <li>
+          <a href="/blog/check-engine-light-fiat">Check engine light Fiat</a>
+        </li>
+        <li>
+          <a href="/blog/catalyst-fault-peugeot">Catalyst fault Peugeot</a>
+        </li>
+      </ul>
     </article>
-    
+
     <!-- BUYER INTENT KEYWORDS: CTA -->
-    <a href="/shop/dpf" class="btn-primary">Buy DPF diesel particulate filter</a>
-    <a href="/shop/dpf-cheapest" class="btn-secondary">Cheapest European car parts DPF</a>
-</body>
+    <a href="/shop/dpf" class="btn-primary"
+      >Buy DPF diesel particulate filter</a
+    >
+    <a href="/shop/dpf-cheapest" class="btn-secondary"
+      >Cheapest European car parts DPF</a
+    >
+  </body>
 </html>
 ```
 
 **Repeat for all 8 parts:**
+
 1. `/dpf-diesel-particulate-filter`
 2. `/catalytic-converter`
 3. `/ecu-engine-control-unit`
@@ -519,90 +621,107 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 <!-- Example: /shop/2018-opel-corsa-dpf -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <title>2018 Opel Corsa DPF | Opel Corsa diesel particulate filter rare OE</title>
-    <meta name="description" content="Rare DPF for Opel Corsa 2018-2022. Order DPF replacement, diesel particulate filter. Part number 55574410. New OEM, used, reconditioned. International shipping Europe.">
-    <meta name="keywords" content="2018 Opel Corsa DPF, Opel Corsa diesel particulate filter, Opel DPF, DPF Opel Corsa, rare DPF Europe, 55574410">
-</head>
-<body>
+  <head>
+    <title>
+      2018 Opel Corsa DPF | Opel Corsa diesel particulate filter rare OE
+    </title>
+    <meta
+      name="description"
+      content="Rare DPF for Opel Corsa 2018-2022. Order DPF replacement, diesel particulate filter. Part number 55574410. New OEM, used, reconditioned. International shipping Europe."
+    />
+    <meta
+      name="keywords"
+      content="2018 Opel Corsa DPF, Opel Corsa diesel particulate filter, Opel DPF, DPF Opel Corsa, rare DPF Europe, 55574410"
+    />
+  </head>
+  <body>
     <!-- YMM KEYWORDS: H1 -->
     <h1>2018 Opel Corsa DPF Diesel Particulate Filter</h1>
-    
+
     <!-- YMM + PART KEYWORDS: Product Info -->
     <article>
-        <div class="product-info">
-            <h2>Product Details</h2>
-            <table>
-                <tr>
-                    <th>Brand</th>
-                    <td><a href="/opel-rare-parts">Opel</a></td>
-                </tr>
-                <tr>
-                    <th>Model</th>
-                    <td>Corsa D</td>
-                </tr>
-                <tr>
-                    <th>Year</th>
-                    <td>2018-2022</td>
-                </tr>
-                <tr>
-                    <th>Engine</th>
-                    <td>1.3 CDTI Diesel</td>
-                </tr>
-                <tr>
-                    <th>Part Number</th>
-                    <td>55574410</td>
-                </tr>
-                <tr>
-                    <th>Type</th>
-                    <td>Diesel Particulate Filter (DPF)</td>
-                </tr>
-                <tr>
-                    <th>Condition</th>
-                    <td>New OEM, Used, Reconditioned</td>
-                </tr>
-                <tr>
-                    <th>Price</th>
-                    <td>€899.00</td>
-                </tr>
-                <tr>
-                    <th>Availability</th>
-                    <td>In Stock</td>
-                </tr>
-            </table>
-        </div>
-        
-        <!-- BRAND + PART + INTENT KEYWORDS: Description -->
-        <h2>Rare Opel Corsa DPF Replacement</h2>
-        <p>
-            Looking for rare 2018 Opel Corsa DPF? We stock hard-to-find Opel Corsa diesel particulate filter for Opel Corsa D 2018-2022. This OEM-standard DPF resolves check engine light, DPF failure, and catalyst fault. Buy DPF Opel Corsa, order German car parts.
-        </p>
-        
-        <!-- SYMPTOM KEYWORDS: Problem-Solving -->
-        <h2>Common DPF Symptoms</h2>
-        <ul>
-            <li>Check engine light on dashboard</li>
-            <li>DPF failure warning message</li>
-            <li>DPF error code P2452</li>
-            <li>Catalyst fault indicator</li>
-            <li>Reduced engine performance</li>
-            <li>Black smoke from exhaust</li>
-        </ul>
-        
-        <!-- BRAND + PART KEYWORDS: Compatibility -->
-        <h2>Compatible Opel Models</h2>
-        <ul>
-            <li>Opel Corsa D 1.3 CDTI (2018-2022)</li>
-            <li>Opel Corsa E x15 1.4 CDTI (2019-2023)</li>
-            <li>Opel Astra K 1.6 CDTI (2018-2022)</li>
-        </ul>
+      <div class="product-info">
+        <h2>Product Details</h2>
+        <table>
+          <tr>
+            <th>Brand</th>
+            <td><a href="/opel-rare-parts">Opel</a></td>
+          </tr>
+          <tr>
+            <th>Model</th>
+            <td>Corsa D</td>
+          </tr>
+          <tr>
+            <th>Year</th>
+            <td>2018-2022</td>
+          </tr>
+          <tr>
+            <th>Engine</th>
+            <td>1.3 CDTI Diesel</td>
+          </tr>
+          <tr>
+            <th>Part Number</th>
+            <td>55574410</td>
+          </tr>
+          <tr>
+            <th>Type</th>
+            <td>Diesel Particulate Filter (DPF)</td>
+          </tr>
+          <tr>
+            <th>Condition</th>
+            <td>New OEM, Used, Reconditioned</td>
+          </tr>
+          <tr>
+            <th>Price</th>
+            <td>€899.00</td>
+          </tr>
+          <tr>
+            <th>Availability</th>
+            <td>In Stock</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- BRAND + PART + INTENT KEYWORDS: Description -->
+      <h2>Rare Opel Corsa DPF Replacement</h2>
+      <p>
+        Looking for rare 2018 Opel Corsa DPF? We stock hard-to-find Opel Corsa
+        diesel particulate filter for Opel Corsa D 2018-2022. This OEM-standard
+        DPF resolves check engine light, DPF failure, and catalyst fault. Buy
+        DPF Opel Corsa, order German car parts.
+      </p>
+
+      <!-- SYMPTOM KEYWORDS: Problem-Solving -->
+      <h2>Common DPF Symptoms</h2>
+      <ul>
+        <li>Check engine light on dashboard</li>
+        <li>DPF failure warning message</li>
+        <li>DPF error code P2452</li>
+        <li>Catalyst fault indicator</li>
+        <li>Reduced engine performance</li>
+        <li>Black smoke from exhaust</li>
+      </ul>
+
+      <!-- BRAND + PART KEYWORDS: Compatibility -->
+      <h2>Compatible Opel Models</h2>
+      <ul>
+        <li>Opel Corsa D 1.3 CDTI (2018-2022)</li>
+        <li>Opel Corsa E x15 1.4 CDTI (2019-2023)</li>
+        <li>Opel Astra K 1.6 CDTI (2018-2022)</li>
+      </ul>
     </article>
-    
+
     <!-- BUYER INTENT KEYWORDS: CTA -->
-    <a href="/shop/2018-opel-corsa-dpf/buy" class="btn-primary">Buy 2018 Opel Corsa DPF</a>
-    <a href="/shop/2018-opel-corsa-dpf/order" class="btn-secondary">Order Opel Corsa diesel particulate filter</a>
-    <a href="/shop/2018-opel-corsa-dpf/cheapest" class="btn-secondary">Cheapest Opel Corsa DPF</a>
-</body>
+    <a href="/shop/2018-opel-corsa-dpf/buy" class="btn-primary"
+      >Buy 2018 Opel Corsa DPF</a
+    >
+    <a href="/shop/2018-opel-corsa-dpf/order" class="btn-secondary"
+      >Order Opel Corsa diesel particulate filter</a
+    >
+    <a href="/shop/2018-opel-corsa-dpf/cheapest" class="btn-secondary"
+      >Cheapest Opel Corsa DPF</a
+    >
+  </body>
 </html>
 ```
 
@@ -651,20 +770,28 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 
 ```html
 <!-- DPF Image -->
-<img src="/images/2018-opel-corsa-dpf.jpg" 
-     alt="2018 Opel Corsa DPF diesel particulate filter rare OE replacement 55574410">
+<img
+  src="/images/2018-opel-corsa-dpf.jpg"
+  alt="2018 Opel Corsa DPF diesel particulate filter rare OE replacement 55574410"
+/>
 
 <!-- ECU Image -->
-<img src="/images/bmw-ecu-engine-control-unit.jpg" 
-     alt="BMW ECU engine control unit rare BMW 3 Series 5 Series part 12652573">
+<img
+  src="/images/bmw-ecu-engine-control-unit.jpg"
+  alt="BMW ECU engine control unit rare BMW 3 Series 5 Series part 12652573"
+/>
 
 <!-- Turbocharger Image -->
-<img src="/images/fiat-panda-turbocharger.jpg" 
-     alt="Fiat Panda turbocharger replacement rare Fiat Panda 312 1.0 turbo 46341162">
+<img
+  src="/images/fiat-panda-turbocharger.jpg"
+  alt="Fiat Panda turbocharger replacement rare Fiat Panda 312 1.0 turbo 46341162"
+/>
 
 <!-- Catalytic Converter Image -->
-<img src="/images/mercedes-catalytic-converter.jpg" 
-     alt="Mercedes-Benz catalytic converter rare Mercedes C-Class E-Class Euro 6">
+<img
+  src="/images/mercedes-catalytic-converter.jpg"
+  alt="Mercedes-Benz catalytic converter rare Mercedes C-Class E-Class Euro 6"
+/>
 ```
 
 ---
@@ -673,6 +800,7 @@ Create a high-ranking website for **rare and hard-to-find car parts** for **ALL 
 
 ```markdown
 <!-- Blog 1: /blog/how-to-find-rare-bmw-dpf -->
+
 Title: "How to Find Rare BMW DPF When Dealers Can't Locate It"
 
 Keywords: rare BMW parts, BMW DPF, rare car parts Europe, hard-to-find auto parts, BMW rare parts, DPF diesel particulate filter, buy rare car parts Europe
@@ -686,18 +814,21 @@ What is DPF?
 DPF (Diesel Particulate Filter) is essential for all diesel BMW cars. Common BMW DPF part numbers: 11658635, 11658636, 11658637.
 
 Why BMW DPF is Rare
+
 - Euro 6 emissions standards
 - Limited manufacturers
 - Only 2-day custom production available
 - Dealers sell out quickly
 
 Where to Find Rare BMW DPF
+
 1. Online rare parts specialists (like us)
 2. Breaker yards (BMW dismantlers)
 3. European DPF manufacturers
 4. NOS (New Old Stock) suppliers
 
 BMW DPF Symptoms
+
 - Check engine light BMW
 - DPF failure BMW
 - DPF error code BMW

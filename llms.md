@@ -71,7 +71,7 @@ Here’s an example of llms.txt, in this case a cut down version of the file use
 
 Important notes:
 
-- Although parts of its API are inspired by FastAPI, it is *not* compatible with FastAPI syntax and is not targeted at creating API services
+- Although parts of its API are inspired by FastAPI, it is _not_ compatible with FastAPI syntax and is not targeted at creating API services
 - FastHTML is compatible with JS-native web components and any vanilla JS library, but not with React, Vue, or Svelte.
 
 ## Docs
@@ -85,7 +85,7 @@ Important notes:
 
 ## Optional
 
-- [Starlette full documentation](https://gist.githubusercontent.com/jph00/809e4a4808d4510be0e3dc9565e9cbd3/raw/9b717589ca44cedc8aaf00b2b8cacef922964c0f/starlette-sml.md): A subset of the Starlette documentation useful for FastHTML development. 
+- [Starlette full documentation](https://gist.githubusercontent.com/jph00/809e4a4808d4510be0e3dc9565e9cbd3/raw/9b717589ca44cedc8aaf00b2b8cacef922964c0f/starlette-sml.md): A subset of the Starlette documentation useful for FastHTML development.
 
 To create effective llms.txt files, consider these guidelines:
 

@@ -3,6 +3,7 @@
 ## ✅ Completed Tasks
 
 ### Core Search Logic
+
 - [x] Created `productSearch.ts` with relevance scoring algorithm
 - [x] `calculateRelevanceScore()` - Scores products (title: 100pts, brand: 80pts, model: 70pts, etc.)
 - [x] `searchProducts()` - Main search function with fallback to similarity matching
@@ -13,6 +14,7 @@
 - [x] `sortProducts()` - Flexible sorting options
 
 ### Search Hook Integration
+
 - [x] Updated `useSearchProducts()` to use comprehensive search
 - [x] Search across: title, brand, model, category_name, condition, part_number
 - [x] Fallback to similarity scoring when no exact matches
@@ -21,6 +23,7 @@
 - [x] Console logging for debugging
 
 ### Product Filtering UI
+
 - [x] Added Brand filter (checkbox multi-select)
 - [x] Added Model filter (checkbox multi-select)
 - [x] Added Condition filter (checkbox, with availability check)
@@ -30,6 +33,7 @@
 - [x] Filter state management (useState for each filter)
 
 ### Database Schema
+
 - [x] Created Brand table (migration 0005)
   - id (bigint PK, auto-increment)
   - name (text, unique)
@@ -54,12 +58,14 @@
   - Indexes: brand, model, part_number
 
 ### TypeScript Types & Exports
+
 - [x] Updated `Product` type - added discount, part_number
 - [x] Created `Brand` type definition
 - [x] Created `Model` type definition
 - [x] Exported all types from supabase.ts
 
 ### Drizzle ORM Schema
+
 - [x] Created `schema-postgres.ts` with Drizzle definitions
 - [x] `brands` table schema
 - [x] `models` table schema
@@ -68,11 +74,13 @@
 - [x] Relations for Model → Products
 
 ### Documentation
+
 - [x] `ADVANCED_SEARCH_GUIDE.md` - Complete search system documentation
 - [x] `SCHEMA_POSTGRES.md` - Database schema documentation
 - [x] `SEARCH_IMPLEMENTATION_SUMMARY.md` - Quick reference guide
 
 ### Testing & Validation
+
 - [x] No TypeScript errors in modified files
 - [x] No runtime errors on page load
 - [x] Search imports verified
@@ -82,6 +90,7 @@
 ## 📊 Search Behavior Summary
 
 ### Single Search Term: "Honda"
+
 ```
 Results scored by relevance:
 1. Honda motorcycle (title match) - 100 pts
@@ -91,6 +100,7 @@ Results scored by relevance:
 ```
 
 ### Multi-term Search: "Toyota Camry engine"
+
 ```
 Supabase fetches products with any term, then scores:
 1. Toyota Camry engine OEM (150+ pts) - Title match
@@ -101,6 +111,7 @@ Supabase fetches products with any term, then scores:
 ```
 
 ### Filtering: Brand=Honda + Condition=New + Price=$1k-$5k
+
 ```
 1. Load all products
 2. Filter to: Honda AND new AND price in range
@@ -110,15 +121,15 @@ Supabase fetches products with any term, then scores:
 
 ## 🔍 Search Fields Covered
 
-| Field | Included | Priority |
-|-------|----------|----------|
-| title | ✓ | Highest (100 pts) |
-| brand | ✓ | High (80 pts) |
-| model | ✓ | High (70 pts) |
-| condition | ✓ | Medium (25 pts) |
-| category_name | ✓ | Medium (20 pts) |
-| part_number | ✓ | Medium (50 pts) |
-| item_specifics (JSONB) | ✓ | Low (15 pts) |
+| Field                  | Included | Priority          |
+| ---------------------- | -------- | ----------------- |
+| title                  | ✓        | Highest (100 pts) |
+| brand                  | ✓        | High (80 pts)     |
+| model                  | ✓        | High (70 pts)     |
+| condition              | ✓        | Medium (25 pts)   |
+| category_name          | ✓        | Medium (20 pts)   |
+| part_number            | ✓        | Medium (50 pts)   |
+| item_specifics (JSONB) | ✓        | Low (15 pts)      |
 
 ## 🎯 Key Features Implemented
 
@@ -136,6 +147,7 @@ Supabase fetches products with any term, then scores:
 ## 🚀 Deployment Checklist
 
 Before going live:
+
 - [ ] Run migrations: `npm run drizzle-kit push:pg`
 - [ ] Test search with various terms
 - [ ] Test filtering combinations

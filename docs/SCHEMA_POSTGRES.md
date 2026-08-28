@@ -5,6 +5,7 @@ This document outlines the PostgreSQL database schema for the modern e-commerce 
 ## Tables Overview
 
 ### 1. Brand Table
+
 Stores brand/manufacturer information for products.
 
 ```sql
@@ -19,17 +20,20 @@ CREATE TABLE public."Brand" (
 ```
 
 **Columns:**
+
 - `id` - Primary key (auto-generated bigint)
 - `created_at` - Timestamp when brand was created (default: now)
 - `name` - Brand name (unique, required)
 - `image_url` - URL to brand logo/image (optional)
 
 **Indexes:**
+
 - `idx_brand_name` - On `name` column for faster lookups
 
 ---
 
 ### 2. Model Table
+
 Stores product model information with specifications.
 
 ```sql
@@ -45,6 +49,7 @@ CREATE TABLE public.model (
 ```
 
 **Columns:**
+
 - `id` - Primary key (auto-generated bigint)
 - `created_at` - Timestamp when model was created (default: now)
 - `year` - Model year (optional)
@@ -52,11 +57,13 @@ CREATE TABLE public.model (
 - `specs` - Model specifications (optional)
 
 **Indexes:**
+
 - `idx_model_name` - On `name` column for faster lookups
 
 ---
 
 ### 3. Products Table (Updated)
+
 Represents products with enhanced attributes and relationships.
 
 ```sql
@@ -86,6 +93,7 @@ CREATE TABLE public.products (
 ```
 
 **Columns:**
+
 - `id` - Primary key (UUID, auto-generated)
 - `title` - Product title (required)
 - `url` - Product URL slug (unique, required)
@@ -103,6 +111,7 @@ CREATE TABLE public.products (
 - `part_number` - Product part/SKU number (optional)
 
 **Indexes:**
+
 - `idx_products_category_name` - On `category_name`
 - `idx_products_owner_id` - On `owner_id`
 - `idx_products_price` - On `price`
@@ -111,6 +120,7 @@ CREATE TABLE public.products (
 - `idx_products_part_number` - On `part_number`
 
 **Foreign Keys:**
+
 - `products_brand_fkey` → Brand(name) - ON UPDATE CASCADE, ON DELETE SET NULL
 - `products_category_name_fkey` → categories(name) - ON UPDATE CASCADE, ON DELETE RESTRICT
 - `products_model_fkey` → model(name) - ON UPDATE CASCADE, ON DELETE SET NULL
@@ -181,6 +191,7 @@ Apply the following migrations in order:
 2. **0006_update_products_brand_model.sql** - Adds new columns to products and foreign keys
 
 To apply:
+
 ```bash
 drizzle-kit push:pg
 # or run migrations manually in Supabase SQL Editor
@@ -191,6 +202,7 @@ drizzle-kit push:pg
 ## Usage Examples
 
 ### Find products by brand:
+
 ```sql
 SELECT p.* FROM products p
 WHERE p.brand = 'Toyota'
@@ -198,6 +210,7 @@ ORDER BY p.created_at DESC;
 ```
 
 ### Find products by model with specifications:
+
 ```sql
 SELECT p.*, m.specs FROM products p
 LEFT JOIN model m ON p.model = m.name
@@ -205,6 +218,7 @@ WHERE p.brand = 'Honda' AND m.year = 2023;
 ```
 
 ### Get item specifics:
+
 ```sql
 SELECT p.title, p.item_specifics
 FROM products p
@@ -212,6 +226,7 @@ WHERE p.item_specifics IS NOT NULL;
 ```
 
 ### Count products by brand:
+
 ```sql
 SELECT p.brand, COUNT(*) as count
 FROM products p
@@ -226,14 +241,14 @@ ORDER BY count DESC;
 Export from TypeScript:
 
 ```typescript
-import { 
-  Brand, 
+import {
+  Brand,
   InsertBrand,
   Model,
   InsertModel,
   ProductExtended,
-  InsertProductExtended
-} from '@/drizzle/schema-postgres';
+  InsertProductExtended,
+} from "@/drizzle/schema-postgres";
 ```
 
 ---

@@ -1,14 +1,17 @@
 # Supabase Frontend Integration Guide
 
 ## Overview
+
 Your Supabase database is now integrated with your React frontend through custom hooks. Here's how to use them.
 
 ## Files Created
 
 ### Types
+
 - `client/src/types/supabase.ts` - TypeScript types for all database tables
 
 ### Hooks
+
 - `client/src/hooks/useSupabaseProducts.ts` - Product queries (fetch, search by category, search)
 - `client/src/hooks/useSupabaseCart.ts` - Cart and wishlist management
 - `client/src/hooks/useSupabaseOrders.ts` - Orders and payments
@@ -18,12 +21,13 @@ Your Supabase database is now integrated with your React frontend through custom
 ## Usage Examples
 
 ### Fetch Products
+
 ```tsx
-import { useProducts } from '@/hooks/useSupabaseProducts';
+import { useProducts } from "@/hooks/useSupabaseProducts";
 
 function ProductList() {
   const { products, isLoading, error } = useProducts();
-  
+
   return (
     <div>
       {isLoading && <p>Loading...</p>}
@@ -37,12 +41,13 @@ function ProductList() {
 ```
 
 ### Fetch Single Product
+
 ```tsx
-import { useProductById } from '@/hooks/useSupabaseProducts';
+import { useProductById } from "@/hooks/useSupabaseProducts";
 
 function ProductDetail({ productId }) {
   const { product, images, isLoading } = useProductById(productId);
-  
+
   return (
     <div>
       {product && (
@@ -62,18 +67,19 @@ function ProductDetail({ productId }) {
 ```
 
 ### Search Products
+
 ```tsx
-import { useSearchProducts } from '@/hooks/useSupabaseProducts';
+import { useSearchProducts } from "@/hooks/useSupabaseProducts";
 
 function SearchBar() {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const { results, isLoading } = useSearchProducts(query);
-  
+
   return (
     <div>
-      <input 
-        value={query} 
-        onChange={e => setQuery(e.target.value)} 
+      <input
+        value={query}
+        onChange={e => setQuery(e.target.value)}
         placeholder="Search..."
       />
       {results.map(product => (
@@ -85,20 +91,23 @@ function SearchBar() {
 ```
 
 ### Cart Management
+
 ```tsx
-import { useSupabaseCart } from '@/hooks/useSupabaseCart';
-import { useAuth } from '@/_core/hooks/useAuth';
+import { useSupabaseCart } from "@/hooks/useSupabaseCart";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 function CartPage() {
   const { user } = useAuth();
-  const { items, addToCart, removeFromCart, updateQuantity } = useSupabaseCart(user?.id || null);
-  
+  const { items, addToCart, removeFromCart, updateQuantity } = useSupabaseCart(
+    user?.id || null
+  );
+
   return (
     <div>
       {items.map(item => (
         <div key={item.id}>
           <h3>{item.product?.title}</h3>
-          <input 
+          <input
             type="number"
             value={item.quantity}
             onChange={e => updateQuantity(item.id, parseInt(e.target.value))}
@@ -112,33 +121,37 @@ function CartPage() {
 ```
 
 ### Wishlist
+
 ```tsx
-import { useSupabaseWishlist } from '@/hooks/useSupabaseCart';
-import { useAuth } from '@/_core/hooks/useAuth';
+import { useSupabaseWishlist } from "@/hooks/useSupabaseCart";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 function WishlistButton({ productId }) {
   const { user } = useAuth();
-  const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(user?.id || null);
-  
+  const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(
+    user?.id || null
+  );
+
   const isWished = wishedProductIds.has(productId);
-  
+
   return (
     <button onClick={() => toggleWishlist(productId)}>
-      {isWished ? '❤️ Saved' : '🤍 Save'}
+      {isWished ? "❤️ Saved" : "🤍 Save"}
     </button>
   );
 }
 ```
 
 ### Orders
+
 ```tsx
-import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
-import { useAuth } from '@/_core/hooks/useAuth';
+import { useSupabaseOrders } from "@/hooks/useSupabaseOrders";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 function OrderHistory() {
   const { user } = useAuth();
   const { orders, createOrder } = useSupabaseOrders(user?.id || null);
-  
+
   return (
     <div>
       {orders.map(order => (
@@ -154,29 +167,36 @@ function OrderHistory() {
 ```
 
 ### Payments
+
 ```tsx
-import { useSupabasePayments } from '@/hooks/useSupabaseOrders';
-import { openPaystackModal } from '@/lib/paystack';
+import { useSupabasePayments } from "@/hooks/useSupabaseOrders";
+import { openPaystackModal } from "@/lib/paystack";
 
 function CheckoutPayment({ orderId, amount, email }) {
   const { recordPayment } = useSupabasePayments();
-  
+
   const handlePayment = async () => {
     try {
       await openPaystackModal({
         publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
         email,
         amount,
-        onSuccess: async (reference) => {
+        onSuccess: async reference => {
           // Record payment in Supabase
-          await recordPayment(orderId, 'paystack', reference, amount, 'success');
+          await recordPayment(
+            orderId,
+            "paystack",
+            reference,
+            amount,
+            "success"
+          );
         },
       });
     } catch (error) {
-      await recordPayment(orderId, 'paystack', '', amount, 'failed');
+      await recordPayment(orderId, "paystack", "", amount, "failed");
     }
   };
-  
+
   return <button onClick={handlePayment}>Pay with Paystack</button>;
 }
 ```
@@ -186,29 +206,35 @@ function CheckoutPayment({ orderId, amount, email }) {
 ## Pages to Update
 
 ### 1. ProductDetail.tsx
+
 - Replace JSON file fetch with `useProductById(productId)`
 - Use `useSupabaseWishlist` for wishlist button
 - Add/remove with `useSupabaseCart`
 
 ### 2. Products.tsx
+
 - Replace JSON fetch with `useProducts()`
 - Add search with `useSearchProducts(searchTerm)`
 - Filter by category with `useProductsByCategory(categoryName)`
 
 ### 3. Home.tsx
+
 - Replace JSON with `useProducts()` for featured products
 - Use `useCategories()` for category list
 
 ### 4. Cart.tsx
+
 - Use `useSupabaseCart(userId)` to load items
 - Update quantities and remove items
 
 ### 5. Checkout.tsx
+
 - Use `useSupabaseCart` to get cart items
 - Use `useSupabaseOrders` to create order
 - Use `useSupabasePayments` to record payment
 
 ### 6. Orders.tsx
+
 - Use `useSupabaseOrders(userId)` to fetch user orders
 
 ---
@@ -216,7 +242,7 @@ function CheckoutPayment({ orderId, amount, email }) {
 ## Migration Checklist
 
 - [ ] Update ProductDetail.tsx
-- [ ] Update Products.tsx  
+- [ ] Update Products.tsx
 - [ ] Update Home.tsx
 - [ ] Update Cart.tsx
 - [ ] Update Checkout.tsx
@@ -232,24 +258,28 @@ function CheckoutPayment({ orderId, amount, email }) {
 For production, add these policies to Supabase:
 
 ### Products (Public Read)
+
 ```sql
 CREATE POLICY "Enable read access for all users" ON products
 FOR SELECT USING (true);
 ```
 
 ### Cart (User Access)
+
 ```sql
 CREATE POLICY "Users can manage their own cart" ON cart_items
 FOR ALL USING (auth.uid() = user_id);
 ```
 
 ### Wishlist (User Access)
+
 ```sql
 CREATE POLICY "Users can manage their own wishlist" ON wishlists
 FOR ALL USING (auth.uid() = user_id);
 ```
 
 ### Orders (User Access)
+
 ```sql
 CREATE POLICY "Users can view their own orders" ON orders
 FOR SELECT USING (auth.uid() = user_id);

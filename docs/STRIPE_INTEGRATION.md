@@ -38,7 +38,6 @@ Core functions for Stripe API integration:
 - **`createPaymentIntent(input)`**: Creates a payment intent for immediate payment
   - Amount in cents (e.g., 9999 for $99.99)
   - Email, description, and metadata
-  
 - **`confirPaymentIntent(paymentIntentId, paymentMethod, returnUrl)`**: Confirms payment with payment method
 
 - **`getPaymentIntent(paymentIntentId)`**: Retrieves payment intent status
@@ -118,7 +117,7 @@ React component that:
 const intent = await createPaymentIntent(
   amountInCents,
   customerEmail,
-  'MotorVault Purchase',
+  "MotorVault Purchase",
   { items: JSON.stringify(cartItems) }
 );
 // Returns: { clientSecret, paymentIntentId, amount, status }
@@ -137,10 +136,10 @@ const intent = await createPaymentIntent(
 // Frontend confirms payment with Stripe
 const { paymentIntent, error } = await confirmCardPayment(clientSecret);
 
-if (paymentIntent.status === 'succeeded') {
+if (paymentIntent.status === "succeeded") {
   // Payment successful - webhook will create order
-  navigate('/orders');
-} else if (paymentIntent.status === 'requires_action') {
+  navigate("/orders");
+} else if (paymentIntent.status === "requires_action") {
   // 3D Secure or SCA authentication required
   // Redirect to redirect_to_url
 }
@@ -188,13 +187,13 @@ import StripePaymentForm from '@/components/StripePaymentForm';
 
 ### Common Errors
 
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `Invalid API Key` | Missing/wrong STRIPE_SECRET_KEY | Check environment variables |
-| `Signature verification failed` | Wrong webhook secret | Update STRIPE_WEBHOOK_SECRET |
-| `card_declined` | Card rejected by issuer | Ask user to try different card |
-| `insufficient_funds` | Insufficient card balance | Ask user to try different card |
-| `processing_error` | Stripe service issue | Retry payment |
+| Error                           | Cause                           | Solution                       |
+| ------------------------------- | ------------------------------- | ------------------------------ |
+| `Invalid API Key`               | Missing/wrong STRIPE_SECRET_KEY | Check environment variables    |
+| `Signature verification failed` | Wrong webhook secret            | Update STRIPE_WEBHOOK_SECRET   |
+| `card_declined`                 | Card rejected by issuer         | Ask user to try different card |
+| `insufficient_funds`            | Insufficient card balance       | Ask user to try different card |
+| `processing_error`              | Stripe service issue            | Retry payment                  |
 
 ### Webhook Debugging
 
@@ -202,22 +201,23 @@ Enable debug logging:
 
 ```typescript
 // In server/stripe.ts or webhook handler
-console.log('[Stripe Webhook] Event:', event.type, event.id);
+console.log("[Stripe Webhook] Event:", event.type, event.id);
 ```
 
 Check webhook deliveries:
+
 - Dashboard → Developers → Webhooks → Event Details
 
 ## Testing
 
 ### Test Card Numbers
 
-| Card | Number | Outcome |
-|------|--------|---------|
-| Visa | 4242 4242 4242 4242 | Succeeds |
-| Visa | 4000 0000 0000 0002 | Declined |
-| Visa | 4000 0025 0000 3155 | 3D Secure required |
-| Mastercard | 5555 5555 5555 4444 | Succeeds |
+| Card       | Number              | Outcome            |
+| ---------- | ------------------- | ------------------ |
+| Visa       | 4242 4242 4242 4242 | Succeeds           |
+| Visa       | 4000 0000 0000 0002 | Declined           |
+| Visa       | 4000 0025 0000 3155 | 3D Secure required |
+| Mastercard | 5555 5555 5555 4444 | Succeeds           |
 
 ### Test Webhook Locally
 

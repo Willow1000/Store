@@ -28,7 +28,7 @@ pnpm test                             # vitest
   revert independently if something breaks.
 - Prefer a short, imperative commit subject (`fix: ...`, `feat: ...`,
   `refactor: ...`, `test: ...`, `docs: ...`, `chore: ...`) with a body
-  explaining *why*, not just what changed - the diff already shows what.
+  explaining _why_, not just what changed - the diff already shows what.
 - Run the checks above before pushing; a red CI run on `main` blocks
   everyone.
 

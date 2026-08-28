@@ -20,8 +20,7 @@ Discovery → Crawling → Rendering → Indexing
 
 Every stage must be supported explicitly by the site architecture.
 
-the %off and amount off needs to be correct regardless of the currency being used. if it's 20% off in USD and 50.00 USD off then for euro it should be 20% off and the equivalent euro amount off. the same goes for other currencies. the %off and amount off should be correct for the currency being used.
----
+## the %off and amount off needs to be correct regardless of the currency being used. if it's 20% off in USD and 50.00 USD off then for euro it should be 20% off and the equivalent euro amount off. the same goes for other currencies. the %off and amount off should be correct for the currency being used.
 
 ## 3. Discovery Layer (How bots find your site)
 
@@ -30,6 +29,7 @@ the %off and amount off needs to be correct regardless of the currency being use
 The sitemap is the primary discovery mechanism.
 
 Requirements:
+
 - Must include all indexable URLs
 - Must auto-update when content changes
 - Must be submitted to Google Search Console
@@ -37,12 +37,12 @@ Requirements:
 Example:
 
 /
-/products/*
-/categories/*
-/blog/*
-
+/products/_
+/categories/_
+/blog/\*
 
 Must NOT include:
+
 - /admin
 - /dashboard
 - /login
@@ -54,14 +54,13 @@ Must NOT include:
 
 ### 3.2 robots.txt (Critical)
 
-
-User-agent: *
+User-agent: \*
 Allow: /
 
 Sitemap: https://yourdomain.com/sitemap.xml
 
-
 Rules:
+
 - Do NOT block CSS or JS files (can break rendering)
 - Do NOT block public pages
 - Ensure staging environments are blocked if exposed
@@ -82,8 +81,8 @@ Home
 ├── Articles
 └── Related Articles
 
-
 Rules:
+
 - Every important page must be internally linked
 - No orphan pages allowed
 - Important pages must be reachable within 2–3 clicks from homepage
@@ -97,12 +96,14 @@ Rules:
 Content must be available in initial HTML response.
 
 Allowed:
+
 - Django templates
 - Next.js SSR / SSG
 - Astro static rendering
 - Nuxt SSR
 
 Not recommended:
+
 - JS-only rendering of core content
 - API-fetched content that loads after page render
 
@@ -119,6 +120,7 @@ Avoid:
 div-only layouts for entire pages
 non-semantic wrappers for main content
 4.3 Heading Hierarchy
+
 <h1>Main Title</h1>
 <h2>Section</h2>
 <h3>Subsection</h3>
@@ -138,8 +140,7 @@ Correct responses are required:
 
 Forbidden:
 
-Returning 200 for missing pages (soft 404s)
-5. Indexing Layer (What gets indexed)
+Returning 200 for missing pages (soft 404s) 5. Indexing Layer (What gets indexed)
 5.1 Meta Tags (Required)
 
 Every page must include:
@@ -154,6 +155,7 @@ No duplicate titles
 No empty metadata
 Each page must have unique intent
 5.2 Robots Meta Tags
+
 <meta name="robots" content="index,follow">
 
 Use noindex for:
@@ -181,18 +183,17 @@ Required for rich understanding:
 Example:
 
 {
-  "@context": "https://schema.org",
-  "@type": "Product",
-  "name": "Product Name",
-  "description": "Product description",
-  "offers": {
-    "@type": "Offer",
-    "price": "99.99",
-    "priceCurrency": "USD",
-    "availability": "https://schema.org/InStock"
-  }
+"@context": "https://schema.org",
+"@type": "Product",
+"name": "Product Name",
+"description": "Product description",
+"offers": {
+"@type": "Offer",
+"price": "99.99",
+"priceCurrency": "USD",
+"availability": "https://schema.org/InStock"
 }
-6. Rendering Layer (Google visibility)
+} 6. Rendering Layer (Google visibility)
 6.1 Content in Initial HTML
 
 Required:
@@ -220,6 +221,7 @@ SEO text
 Page titles
 Structured content
 6.3 Preloading Critical Assets
+
 <link rel="preload" as="style" href="/styles.css">
 7. URL Structure
 7.1 Clean URLs
@@ -237,15 +239,13 @@ Bad:
 7.2 URL Rules
 lowercase only
 hyphens only
-avoid unnecessary query parameters for core pages
-8. Mobile-First Indexing
+avoid unnecessary query parameters for core pages 8. Mobile-First Indexing
 
 Requirements:
 
 Fully responsive design
 Same content on mobile and desktop
-No hidden content differences between devices
-9. Performance (Crawl Budget Optimization)
+No hidden content differences between devices 9. Performance (Crawl Budget Optimization)
 
 Slow sites are crawled less frequently.
 
@@ -261,8 +261,7 @@ CDN usage
 caching headers
 compressed images (WebP/AVIF)
 minified JS/CSS
-server response optimization
-10. Pagination & Infinite Scroll
+server response optimization 10. Pagination & Infinite Scroll
 
 Required:
 
@@ -272,8 +271,7 @@ Required:
 If infinite scroll is used:
 
 Must still expose paginated URLs
-Must remain crawlable without JS execution
-11. Orphan Pages
+Must remain crawlable without JS execution 11. Orphan Pages
 
 Every page must have at least one internal link.
 
@@ -303,8 +301,7 @@ Home > Category > Subcategory > Product
 Benefits:
 
 improves crawl understanding
-strengthens site hierarchy
-14. Duplicate Content Prevention
+strengthens site hierarchy 14. Duplicate Content Prevention
 
 Avoid multiple URLs serving the same content.
 
@@ -318,20 +315,17 @@ Example problem:
 
 /product
 /product/
-/product?ref=123
-15. Security & Trust Signals
+/product?ref=123 15. Security & Trust Signals
 
 Required:
 
 HTTPS everywhere
 no mixed content
 no redirect loops
-consistent domain version (www vs non-www)
-16. Internal Linking Rules
+consistent domain version (www vs non-www) 16. Internal Linking Rules
 Related content must be linked
 Category pages must link to children
-Blog content should link contextually to relevant pages
-17. Crawl Monitoring
+Blog content should link contextually to relevant pages 17. Crawl Monitoring
 
 Use:
 
@@ -344,8 +338,7 @@ Monitor:
 indexed vs submitted pages
 crawl errors
 blocked resources
-soft 404s
-18. Non-Negotiable Rules
+soft 404s 18. Non-Negotiable Rules
 Site must be SSR or pre-rendered
 Sitemap must always be accurate
 No orphan pages allowed
@@ -355,7 +348,7 @@ No duplicate URL structures without canonicalization
 Every page must be reachable via internal links
 
 1. Crawlable structure and navigation
-Logical silo architecture
+   Logical silo architecture
 
 Create a clear hierarchy:
 
@@ -381,8 +374,7 @@ To control this:
 Limit pagination depth where possible
 Canonicalize filtered/sorted pages
 Use noindex, follow for low-value generated pages
-Block unnecessary URL parameters via robots.txt when appropriate
-2. Clean URLs and canonicalization
+Block unnecessary URL parameters via robots.txt when appropriate 2. Clean URLs and canonicalization
 Human-readable URLs
 
 Use stable, descriptive URLs:
@@ -415,13 +407,12 @@ http vs https
 Consistent redirects
 Use 301 redirects
 Maintain a single canonical version per page
-Avoid redirect chains (A → B → C)
-3. robots.txt and meta directives
+Avoid redirect chains (A → B → C) 3. robots.txt and meta directives
 Clean robots.txt
 
 Allow crawling by default:
 
-User-agent: *
+User-agent: \*
 Allow: /
 
 Sitemap: https://example.com/sitemap.xml
@@ -453,11 +444,11 @@ images required for rendering
 Blocking them prevents proper page rendering in Google.
 
 4. XML sitemaps and submission
-Sitemap requirements
-Always up to date
-Includes only indexable URLs
-Excludes duplicates, filtered pages, and noindex pages
-Structure for large sites
+   Sitemap requirements
+   Always up to date
+   Includes only indexable URLs
+   Excludes duplicates, filtered pages, and noindex pages
+   Structure for large sites
 
 Use multiple sitemaps:
 
@@ -472,8 +463,7 @@ Submit sitemap in Google Search Console
 Monitor:
 indexing errors
 crawl anomalies
-excluded pages
-5. Technical rendering requirements
+excluded pages 5. Technical rendering requirements
 Server-side rendering (SSR preferred)
 
 Ensure main content is available in HTML before JS executes.
@@ -518,8 +508,7 @@ fast server response times
 Core Web Vitals targets
 LCP: < 2.5s
 INP: < 200ms
-CLS: < 0.1
-7. Duplicate content control
+CLS: < 0.1 7. Duplicate content control
 Must ensure:
 one version per content page
 no duplication across filters, tags, or query params
@@ -532,8 +521,7 @@ Example:
 Recommended handling:
 
 canonical → base category page OR
-noindex, follow
-8. Crawl budget optimization
+noindex, follow 8. Crawl budget optimization
 
 Google allocates limited crawl resources.
 
@@ -542,8 +530,7 @@ To optimize:
 remove low-value pages from indexing
 block infinite parameter spaces
 reduce duplicate listings
-ensure important pages are prioritized in sitemap and internal links
-9. International SEO (if applicable)
+ensure important pages are prioritized in sitemap and internal links 9. International SEO (if applicable)
 hreflang implementation
 
 For multilingual sites:
@@ -562,8 +549,7 @@ Keep ONE canonical product URL
 Change currency via:
 geolocation
 user selector
-Do NOT create separate URLs per currency
-10. Monitoring and maintenance
+Do NOT create separate URLs per currency 10. Monitoring and maintenance
 
 Regularly audit:
 
@@ -579,20 +565,19 @@ Tools:
 Google Search Console
 Screaming Frog
 Sitebulb
-server logs (Googlebot analysis)
-11. Quick implementation checklist
- Logical site architecture (silos)
- No orphan pages
- Clean URL structure
- Canonical tags implemented
- robots.txt correctly configured
- XML sitemap submitted and updated
- SSR or pre-rendered content
- Semantic HTML used
- Proper status codes (200/301/404)
- Pagination handled safely
- Filters controlled (no crawl explosion)
- Core Web Vitals optimized
- Internal linking structure complete
- Duplicate content eliminated
- hreflang configured (if multilingual)
+server logs (Googlebot analysis) 11. Quick implementation checklist
+Logical site architecture (silos)
+No orphan pages
+Clean URL structure
+Canonical tags implemented
+robots.txt correctly configured
+XML sitemap submitted and updated
+SSR or pre-rendered content
+Semantic HTML used
+Proper status codes (200/301/404)
+Pagination handled safely
+Filters controlled (no crawl explosion)
+Core Web Vitals optimized
+Internal linking structure complete
+Duplicate content eliminated
+hreflang configured (if multilingual)

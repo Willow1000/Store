@@ -12,6 +12,7 @@
 Three hero images in `client/src/components/HeroSlideshow.tsx` are JPEGs served at 2752×1235px but displayed at 1335×745px. Each is 3–3.5 MB. Convert to WebP and serve at the correct dimensions.
 
 Files:
+
 - `/images/hero/professionals_inspecting_the_motor_parts_202605050024.jpeg`
 - `/images/hero/high_quality_motor_parts_2K_202605050023.jpeg`
 - `/images/hero/professional_installation_of_motor_parts_202605050032.jpeg`
@@ -21,6 +22,7 @@ Files:
 Three banners in `client/src/components/BannerCarousel.tsx` are served at 1086×768px but displayed at 788×440px.
 
 Files:
+
 - `/images/banners/seats_banner_homepage.jpeg`
 - `/images/banners/Motor-parts_banner_for_Tire_Homepage.jpeg`
 - `/images/banners/Motor-parts_banner_for_Bumpers_HOmepage.jpeg`
@@ -75,6 +77,7 @@ These origins serve critical resources but have no preconnect. Add to `<head>`:
 `fonts.googleapis.com/css2?family=Inter…` is a render-blocking request adding 200ms. The `woff2` file it loads (`UcC73FwrK….woff2`) is at the end of a 1,722ms critical chain.
 
 Options in order of impact:
+
 1. Self-host Inter using `@fontsource/inter` — eliminates the external round-trip entirely
 2. Preload the woff2 directly in `<head>` to shortcut the chain
 3. Verify `display=swap` is actually being applied (it's in the URL but confirm it renders)
@@ -135,10 +138,10 @@ An `unload` listener at line 213:65214 of the main bundle is deprecated and prev
 
 ```js
 // Before
-window.addEventListener('unload', handler)
+window.addEventListener("unload", handler);
 
 // After
-window.addEventListener('pagehide', handler)
+window.addEventListener("pagehide", handler);
 ```
 
 ---
@@ -151,10 +154,13 @@ window.addEventListener('pagehide', handler)
 
 ```html
 <!-- Before -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1"
+/>
 
 <!-- After -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 ```
 
 File: `index.html` (or wherever the viewport meta is set)
@@ -183,10 +189,10 @@ Motorvault is an online marketplace for motor parts.
 
 These are configured at the server or CDN level (Nginx, Cloudflare, Vercel `headers` config), not in the React app. All five are currently missing:
 
-| Header | Purpose |
-|--------|---------|
-| `Content-Security-Policy` | XSS protection |
-| `Strict-Transport-Security` | HTTPS enforcement |
-| `Cross-Origin-Opener-Policy` | Process isolation |
+| Header                                     | Purpose                 |
+| ------------------------------------------ | ----------------------- |
+| `Content-Security-Policy`                  | XSS protection          |
+| `Strict-Transport-Security`                | HTTPS enforcement       |
+| `Cross-Origin-Opener-Policy`               | Process isolation       |
 | `X-Frame-Options` or CSP `frame-ancestors` | Clickjacking prevention |
-| `Require-Trusted-Types-For` | DOM XSS mitigation |
+| `Require-Trusted-Types-For`                | DOM XSS mitigation      |

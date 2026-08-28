@@ -48,11 +48,13 @@ Your code sends the following parameters to `PaystackPop.setup()`:
 **Formula**: `USD Amount × 100 = Kobo (Minor Units)`
 
 **Examples**:
+
 - $99.99 → 9999 kobo
 - $50.00 → 5000 kobo
 - $1.00 → 100 kobo
 
 **Your Code** (`client/src/lib/paystack.ts:63`):
+
 ```typescript
 const amountInMinorUnit = Math.round(Number(config.amount) * 100);
 ```
@@ -145,22 +147,27 @@ When payment completes successfully:
 Location: `server/paystack.ts:95-115`
 
 ```typescript
-export async function verifyTransaction(reference: string): Promise<PaystackVerifyResponse> {
+export async function verifyTransaction(
+  reference: string
+): Promise<PaystackVerifyResponse> {
   if (!SECRET_KEY) {
-    throw new Error('Paystack secret key not configured');
+    throw new Error("Paystack secret key not configured");
   }
 
-  const response = await fetch(`${PAYSTACK_API_BASE}/transaction/verify/${reference}`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${SECRET_KEY}`,
-    },
-  });
+  const response = await fetch(
+    `${PAYSTACK_API_BASE}/transaction/verify/${reference}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${SECRET_KEY}`,
+      },
+    }
+  );
 
   const data = await response.json();
-  
+
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to verify transaction');
+    throw new Error(data.message || "Failed to verify transaction");
   }
 
   return data;
@@ -174,22 +181,25 @@ export async function verifyTransaction(reference: string): Promise<PaystackVeri
 ### Client-Side
 
 ✅ **Amount Validation** (`paystack.ts:64-65`):
+
 ```typescript
 if (!Number.isFinite(amountInMinorUnit) || amountInMinorUnit <= 0) {
-  throw new Error('Attribute amount must be a valid integer');
+  throw new Error("Attribute amount must be a valid integer");
 }
 ```
 
 ✅ **Public Key Validation** (`paystack.ts:57-59`):
+
 ```typescript
-if (!publicKey.startsWith('pk_')) {
-  throw new Error('Invalid Paystack public key format');
+if (!publicKey.startsWith("pk_")) {
+  throw new Error("Invalid Paystack public key format");
 }
 ```
 
 ### Server-Side
 
 ✅ **Response Validation**:
+
 - HTTP status must be 2xx
 - Response must have `status` and `data` fields
 - Error response includes descriptive message
@@ -200,14 +210,14 @@ if (!publicKey.startsWith('pk_')) {
 
 Your implementation matches Paystack's requirements:
 
-| Requirement | Your Implementation | Status |
-|-------------|-------------------|--------|
-| Public key format: `pk_*` | ✅ Validated | ✅ PASS |
-| Amount in minor units (×100) | ✅ `USD * 100` | ✅ PASS |
-| Required fields: key, email, amount, onSuccess | ✅ All present | ✅ PASS |
-| Authorization header format | ✅ `Bearer {secret}` | ✅ PASS |
-| Verification endpoint | ✅ `/transaction/verify/{ref}` | ✅ PASS |
-| Response structure | ✅ Has `status` and `data` | ✅ PASS |
+| Requirement                                    | Your Implementation            | Status  |
+| ---------------------------------------------- | ------------------------------ | ------- |
+| Public key format: `pk_*`                      | ✅ Validated                   | ✅ PASS |
+| Amount in minor units (×100)                   | ✅ `USD * 100`                 | ✅ PASS |
+| Required fields: key, email, amount, onSuccess | ✅ All present                 | ✅ PASS |
+| Authorization header format                    | ✅ `Bearer {secret}`           | ✅ PASS |
+| Verification endpoint                          | ✅ `/transaction/verify/{ref}` | ✅ PASS |
+| Response structure                             | ✅ Has `status` and `data`     | ✅ PASS |
 
 ---
 
@@ -216,6 +226,7 @@ Your implementation matches Paystack's requirements:
 ### Test Credentials
 
 **Get from Paystack Dashboard**:
+
 1. Go to Settings → API Keys & Webhooks
 2. Copy **Public Key (Test)** → `VITE_PAYSTACK_PUBLIC_KEY`
 3. Copy **Secret Key (Test)** → `PAYSTACK_SECRET_KEY`
@@ -236,13 +247,13 @@ Use any valid amount in USD, e.g., $99.99
 
 ## Error Handling
 
-| Error | Cause | Solution |
-|-------|-------|----------|
-| "Paystack public key is not configured" | `VITE_PAYSTACK_PUBLIC_KEY` missing | Set in `.env.local` |
-| "Invalid Paystack public key format" | Key doesn't start with `pk_` | Copy correct key from Paystack dashboard |
-| "Paystack script failed to load" | Network issue | Check internet connection |
-| "Payment cancelled" | User closed modal | User initiated cancel |
-| "Payment verification failed" | Invalid reference or wrong secret key | Check `PAYSTACK_SECRET_KEY` in `.env` |
+| Error                                   | Cause                                 | Solution                                 |
+| --------------------------------------- | ------------------------------------- | ---------------------------------------- |
+| "Paystack public key is not configured" | `VITE_PAYSTACK_PUBLIC_KEY` missing    | Set in `.env.local`                      |
+| "Invalid Paystack public key format"    | Key doesn't start with `pk_`          | Copy correct key from Paystack dashboard |
+| "Paystack script failed to load"        | Network issue                         | Check internet connection                |
+| "Payment cancelled"                     | User closed modal                     | User initiated cancel                    |
+| "Payment verification failed"           | Invalid reference or wrong secret key | Check `PAYSTACK_SECRET_KEY` in `.env`    |
 
 ---
 
@@ -251,6 +262,7 @@ Use any valid amount in USD, e.g., $99.99
 ### Orders Table
 
 Stores order information:
+
 - `user_id` - Customer
 - `total_amount` - USD amount
 - `items` - Array of product items with quantity and price
@@ -260,6 +272,7 @@ Stores order information:
 ### Payments Table
 
 Stores payment details:
+
 - `order_id` - Related order
 - `method` - "paystack"
 - `reference` - Paystack transaction reference

@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+
 - Hosted Stripe Checkout as a payment option alongside Paystack, including a
   webhook (`/api/webhooks/stripe`) that creates the order on
   `payment_intent.succeeded`.
@@ -20,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Structured logging (`pino`) in the email service.
 
 ### Fixed
+
 - `.gitignore` had blanket rules (`*.test.ts`, `.env*`) that hid real vitest
   spec files and `.env.example` from every commit.
 - Stripe webhook signature verification was silently broken (a missing
@@ -35,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   variants.
 
 ### Changed
+
 - Extracted SEO helpers (`server/_core/seo.ts`) and checkout snapshot
   helpers (`client/src/lib/checkoutSnapshot.ts`) out of `app.ts` and
   `Checkout.tsx`.

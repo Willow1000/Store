@@ -53,6 +53,7 @@ Same issues as desktop, with slightly larger savings on mobile due to even more 
 Files in `client/src/components/HeroSlideshow.tsx` — served at 2752×1235px, displayed at mobile-appropriate dimensions. All three are 3–3.5 MB JPEGs.
 
 Files:
+
 - `/images/hero/professionals_inspecting_the_motor_parts_202605050024.jpeg`
 - `/images/hero/high_quality_motor_parts_2K_202605050023.jpeg`
 - `/images/hero/professional_installation_of_motor_parts_202605050032.jpeg`
@@ -62,6 +63,7 @@ Files:
 Four banners in `client/src/components/BannerCarousel.tsx` — served at 1116×768px, displayed at 815×455px. Includes a new banner not seen in the desktop report:
 
 Files:
+
 - `/images/banners/Motor-parts_banner_for_Transmision_Homepage.jpeg` (514 KiB)
 - `/images/banners/seats_banner_homepage.jpeg` (488 KiB)
 - `/images/banners/Motor-parts_banner_for_Tire_Homepage.jpeg` (444 KiB)
@@ -88,12 +90,12 @@ Same issue as desktop — 15+ product images in `ProductRecommendationSection.ts
 
 ### LCP breakdown
 
-| Subpart | Duration |
-|---------|----------|
-| Time to first byte | 20ms |
-| Resource load delay | 2,730ms |
-| Resource load duration | 170ms |
-| Element render delay | **9,000ms** |
+| Subpart                | Duration    |
+| ---------------------- | ----------- |
+| Time to first byte     | 20ms        |
+| Resource load delay    | 2,730ms     |
+| Resource load duration | 170ms       |
+| Element render delay   | **9,000ms** |
 
 The 9 second element render delay is the translation waterfall blocking paint. Fixing the i18n issue (P0 above) should collapse this dramatically.
 
@@ -148,13 +150,13 @@ The CSS file blocks for 450ms on slow 4G. Extract above-the-fold styles and inli
 
 ### Main thread breakdown
 
-| Category | Time |
-|----------|------|
-| Other | 1,493ms |
-| Script evaluation | 1,233ms |
-| Script parsing & compilation | 569ms |
-| Style & layout | 349ms |
-| Garbage collection | 179ms |
+| Category                     | Time    |
+| ---------------------------- | ------- |
+| Other                        | 1,493ms |
+| Script evaluation            | 1,233ms |
+| Script parsing & compilation | 569ms   |
+| Style & layout               | 349ms   |
+| Garbage collection           | 179ms   |
 
 On mobile, JS execution takes 1.8s total (766ms eval + 495ms parse for first-party alone). 11 long tasks were found vs 6 on desktop.
 
@@ -165,6 +167,7 @@ On mobile, JS execution takes 1.8s total (766ms eval + 495ms parse for first-par
 ### Fix forced reflows — same locations as desktop, slightly different profile
 
 Reflow locations in `index-BO7Y3kGG.js`:
+
 - Line 18:1360 — 54ms
 - Line 79:22242 — 45ms
 - Line 79:50900 — 7ms
@@ -180,10 +183,14 @@ Lighthouse flagged 11 animated elements using non-composited properties (likely 
 
 ```css
 /* Avoid — triggers layout */
-transition: width 0.3s, top 0.3s;
+transition:
+  width 0.3s,
+  top 0.3s;
 
 /* Prefer — compositor only */
-transition: transform 0.3s, opacity 0.3s;
+transition:
+  transform 0.3s,
+  opacity 0.3s;
 ```
 
 The slideshow dot buttons in `HeroSlideshow.tsx:148` are likely among these — they use `w-3 h-3` with transitions.
@@ -268,10 +275,13 @@ Or use a wrapper approach: keep the visual dot small but wrap in a larger invisi
 
 ```html
 <!-- Before -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, maximum-scale=1"
+/>
 
 <!-- After -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 ```
 
 ### Fix heading order in `Footer.tsx:21` — same as desktop
@@ -306,28 +316,28 @@ The cart link and menu button fixes above will also resolve the agentic accessib
 
 Configure at server/CDN level (Nginx, Cloudflare, Vercel headers config):
 
-| Header | Purpose |
-|--------|---------|
-| `Content-Security-Policy` | XSS protection |
-| `Strict-Transport-Security` | HTTPS enforcement |
-| `Cross-Origin-Opener-Policy` | Process isolation |
+| Header                                     | Purpose                 |
+| ------------------------------------------ | ----------------------- |
+| `Content-Security-Policy`                  | XSS protection          |
+| `Strict-Transport-Security`                | HTTPS enforcement       |
+| `Cross-Origin-Opener-Policy`               | Process isolation       |
 | `X-Frame-Options` or CSP `frame-ancestors` | Clickjacking prevention |
-| `Require-Trusted-Types-For` | DOM XSS mitigation |
+| `Require-Trusted-Types-For`                | DOM XSS mitigation      |
 
 ---
 
 ## Summary: what's new vs the desktop report
 
-| Issue | Desktop | Mobile |
-|-------|---------|--------|
-| LCP | 9.5s | 77.2s |
-| FCP | 2.8s | 16.2s |
-| Translation waterfall | Not present | **200+ API calls, 11.7s chain** |
-| eBay image oversizing | Not flagged | Flagged (~720 KiB) |
-| Non-composited animations | Not flagged | 11 elements |
-| Long main-thread tasks | 6 | 11 |
-| Accessibility score | 93 | 80 |
-| Missing button/link labels | Not flagged | 2 elements |
-| Touch target size | Not flagged | Slideshow dots |
-| Agentic Browsing score | 2/3 | 1/3 |
-| Render blocking savings | 90ms | 630ms |
+| Issue                      | Desktop     | Mobile                          |
+| -------------------------- | ----------- | ------------------------------- |
+| LCP                        | 9.5s        | 77.2s                           |
+| FCP                        | 2.8s        | 16.2s                           |
+| Translation waterfall      | Not present | **200+ API calls, 11.7s chain** |
+| eBay image oversizing      | Not flagged | Flagged (~720 KiB)              |
+| Non-composited animations  | Not flagged | 11 elements                     |
+| Long main-thread tasks     | 6           | 11                              |
+| Accessibility score        | 93          | 80                              |
+| Missing button/link labels | Not flagged | 2 elements                      |
+| Touch target size          | Not flagged | Slideshow dots                  |
+| Agentic Browsing score     | 2/3         | 1/3                             |
+| Render blocking savings    | 90ms        | 630ms                           |

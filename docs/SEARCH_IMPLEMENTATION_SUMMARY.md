@@ -1,6 +1,7 @@
 # Search & Filtering Implementation Summary
 
 ## Problem Solved
+
 ✅ Searches now leverage **all product fields** (Brand, Model, Part Number, Item Specifics, Condition)
 ✅ **Never yields empty results** - Similar products shown as fallback
 ✅ **Most relevant products first** - Relevance scoring ranks results
@@ -9,6 +10,7 @@
 ## Files Modified/Created
 
 ### New Files
+
 1. **`client/src/lib/productSearch.ts`** - Core search utilities
    - `calculateRelevanceScore()` - Ranks products by relevance
    - `searchProducts()` - Main search with fallback similarity matching
@@ -21,6 +23,7 @@
 3. **`SCHEMA_POSTGRES.md`** - PostgreSQL schema for Brand/Model tables
 
 ### Updated Files
+
 1. **`client/src/hooks/useSupabaseProducts.ts`**
    - Imports productSearch utilities
    - Enhanced `useSearchProducts()` - Now searches all fields, fallbacks to similarity
@@ -54,6 +57,7 @@
 ## How It Works
 
 ### Search Example: "Honda Civic Parts"
+
 ```
 1. Server Query (Supabase)
    ↓ Fetches products where:
@@ -75,6 +79,7 @@
 ```
 
 ### Filtering Example: "Toyota + New Condition + In Stock"
+
 ```
 1. Load all products
 2. Apply filters (AND logic):
@@ -87,27 +92,28 @@
 
 ## Search Relevance Scoring
 
-| Field | Match Type | Points |
-|-------|------------|--------|
-| **Title** | Exact | 100 |
-| **Title** | Starts with | 80 |
-| **Title** | Contains | 60 |
-| **Title** | Word match (each) | 15 |
-| **Brand** | Exact | 80 |
-| **Brand** | Contains | 50 |
-| **Brand** | Word match | 10 |
-| **Model** | Exact | 70 |
-| **Model** | Contains | 45 |
-| **Model** | Word match | 8 |
-| **Condition** | Contains | 25 |
-| **Category** | Contains | 20 |
-| **Part Number** | Exact | 50 |
-| **Part Number** | Contains | 30 |
-| **Item Specifics** | Contains | 15 |
+| Field              | Match Type        | Points |
+| ------------------ | ----------------- | ------ |
+| **Title**          | Exact             | 100    |
+| **Title**          | Starts with       | 80     |
+| **Title**          | Contains          | 60     |
+| **Title**          | Word match (each) | 15     |
+| **Brand**          | Exact             | 80     |
+| **Brand**          | Contains          | 50     |
+| **Brand**          | Word match        | 10     |
+| **Model**          | Exact             | 70     |
+| **Model**          | Contains          | 45     |
+| **Model**          | Word match        | 8      |
+| **Condition**      | Contains          | 25     |
+| **Category**       | Contains          | 20     |
+| **Part Number**    | Exact             | 50     |
+| **Part Number**    | Contains          | 30     |
+| **Item Specifics** | Contains          | 15     |
 
 ## New Filters in Products Page
 
 ### Filter UI Layout
+
 ```
 Sidebar Filters:
 ├── Category [Radio]
@@ -121,6 +127,7 @@ Sidebar Filters:
 ```
 
 ### Filter Logic
+
 - **Between filter groups**: AND (all must match)
 - **Within filter groups**: OR (any can match)
 - **With search**: Filters applied to search results
@@ -138,6 +145,7 @@ Sidebar Filters:
 ## Database Optimization
 
 Added indexes for fast filtering:
+
 ```sql
 CREATE INDEX idx_products_brand ON products (brand);
 CREATE INDEX idx_products_model ON products (model);
@@ -145,6 +153,7 @@ CREATE INDEX idx_products_part_number ON products (part_number);
 ```
 
 Existing indexes:
+
 ```sql
 CREATE INDEX idx_products_category_name ON products (category_name);
 CREATE INDEX idx_products_owner_id ON products (owner_id);
@@ -176,22 +185,24 @@ searchProducts(products, "extremely rare part"); // Shows similar parts
 
 // Test filtering
 filterProducts(products, {
-  brands: ['Toyota'],
-  conditions: ['new'],
+  brands: ["Toyota"],
+  conditions: ["new"],
   priceRange: [1000, 50000],
-  inStock: true
+  inStock: true,
 });
 
 // Test suggestions
-getBrandSuggestions(products, 'Toy'); // ['Toyota', 'Toys R Us']
+getBrandSuggestions(products, "Toy"); // ['Toyota', 'Toys R Us']
 ```
 
 ## Migration Steps
 
 1. Run Drizzle migrations:
+
    ```bash
    npm run drizzle-kit push:pg
    ```
+
    OR manually in Supabase SQL Editor:
    - `0005_create_brand_model_tables.sql`
    - `0006_update_products_brand_model.sql`

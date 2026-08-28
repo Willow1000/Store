@@ -14,14 +14,14 @@ Resolve authentication-related bugs, improve platform performance, address acces
 
 The following systems must remain architecturally unchanged:
 
-* Login
-* Registration
-* Password Reset
-* Session Management
-* JWT Handling
-* OAuth Integrations
-* Existing Authentication Middleware
-* Existing Protected Route Logic
+- Login
+- Registration
+- Password Reset
+- Session Management
+- JWT Handling
+- OAuth Integrations
+- Existing Authentication Middleware
+- Existing Protected Route Logic
 
 Only fix reported bugs.
 
@@ -39,18 +39,18 @@ No auth provider migrations.
 
 Protected systems:
 
-* Checkout Flow
-* Payment Initialization
-* Payment Verification
-* Payment Webhooks
-* Order Completion
-* Order Status Updates
+- Checkout Flow
+- Payment Initialization
+- Payment Verification
+- Payment Webhooks
+- Order Completion
+- Order Status Updates
 
 No changes may impact:
 
-* Successful payments
-* Payment verification
-* Order processing
+- Successful payments
+- Payment verification
+- Order processing
 
 ---
 
@@ -68,39 +68,40 @@ Sign in to access your tickets
 
 even after successfully logging in.
 For all images that are stored in this codebase, use the .avif format if available if not use the .webp format. The images need to be optimized for faster loading times. delete the .png, .jpg, and .jpeg formats. The images need to be optimized for faster loading times.Also, rename the images to be use seo keywords, same to the alt text of the images and meta description of the images. The images need to be optimized for faster loading times. and metadata optimize everything for seo and performance while maintaining the quality of the images and content on the website, use the webp format as fallback if the .avif format is not available
+
 ### Required Outcome
 
 Authenticated users must:
 
-* Access tickets immediately
-* Retain session after refresh
-* Access protected routes correctly
-* Never receive false login prompts
+- Access tickets immediately
+- Retain session after refresh
+- Access protected routes correctly
+- Never receive false login prompts
 
 ### Tasks
 
 #### Frontend
 
-* Audit auth state hydration
-* Audit auth context initialization
-* Verify token refresh handling
-* Verify protected route handling
-* Verify session restoration on reload
+- Audit auth state hydration
+- Audit auth context initialization
+- Verify token refresh handling
+- Verify protected route handling
+- Verify session restoration on reload
 
 #### Backend
 
-* Verify session validation endpoint
-* Verify JWT validation logic
-* Verify cookie/session handling
-* Verify authorization middleware
+- Verify session validation endpoint
+- Verify JWT validation logic
+- Verify cookie/session handling
+- Verify authorization middleware
 
 ### Acceptance Criteria
 
-* User logs in
-* User accesses tickets
-* Tickets load successfully
-* No sign-in prompt appears
-* Refreshing page retains access
+- User logs in
+- User accesses tickets
+- Tickets load successfully
+- No sign-in prompt appears
+- Refreshing page retains access
 
 ---
 
@@ -121,9 +122,9 @@ Contact form must be publicly accessible.
 
 Supported users:
 
-* Anonymous visitors
-* Registered users
-* Logged-in users
+- Anonymous visitors
+- Registered users
+- Logged-in users
 
 ### Backend Requirements
 
@@ -135,9 +136,9 @@ POST /api/contact-us
 
 Remove:
 
-* JWT validation
-* Session validation
-* Auth middleware
+- JWT validation
+- Session validation
+- Auth middleware
 
 ### Validation
 
@@ -156,10 +157,10 @@ Required fields:
 
 Implement at least one:
 
-* Honeypot
-* Rate Limiting
-* Turnstile
-* reCAPTCHA
+- Honeypot
+- Rate Limiting
+- Turnstile
+- reCAPTCHA
 
 ### Response Format
 
@@ -182,10 +183,10 @@ Failure:
 
 ### Acceptance Criteria
 
-* Anonymous users can submit
-* Authenticated users can submit
-* No auth errors occur
-* Submission persists successfully
+- Anonymous users can submit
+- Authenticated users can submit
+- No auth errors occur
+- Submission persists successfully
 
 ---
 
@@ -234,14 +235,14 @@ Suggested pricing model:
 
 Implementation requirements:
 
-* Centralized shipping calculator
-* No duplicated logic
-* Easily configurable
+- Centralized shipping calculator
+- No duplicated logic
+- Easily configurable
 
 Example:
 
 ```ts
-calculateShipping(productPrice)
+calculateShipping(productPrice);
 ```
 
 ---
@@ -266,11 +267,11 @@ Examples:
 
 Supported languages:
 
-* ENG
-* ESP
-* FRA
-* GER
-* ITA
+- ENG
+- ESP
+- FRA
+- GER
+- ITA
 
 Default:
 
@@ -283,6 +284,7 @@ when missing.
 ---
 
 When sending automated emails, I want the emails to be in the User's language
+
 ## Currency Support
 
 Examples:
@@ -295,10 +297,10 @@ Examples:
 
 Supported currencies:
 
-* USD
-* EUR
-* GBP
-* KES
+- USD
+- EUR
+- GBP
+- KES
 
 Default:
 
@@ -320,8 +322,8 @@ Example:
 
 Returns:
 
-* Spanish content
-* EUR pricing
+- Spanish content
+- EUR pricing
 
 ---
 
@@ -340,10 +342,10 @@ Returns:
 
 Generated feed must remain compatible with:
 
-* Google Merchant Center
-* Facebook Catalog
-* TikTok Catalog
-* Pinterest Catalog
+- Google Merchant Center
+- Facebook Catalog
+- TikTok Catalog
+- Pinterest Catalog
 
 Feed validation required before deployment.
 
@@ -364,10 +366,10 @@ sessionStorage.clear();
 
 After logout:
 
-* No auth state remains
-* No stale cache remains
-* No stale user data remains
-* No stale preferences remain
+- No auth state remains
+- No stale cache remains
+- No stale user data remains
+- No stale preferences remain
 
 ---
 
@@ -393,11 +395,11 @@ Do NOT rewrite authentication.
 
 Investigate:
 
-* React Query cache
-* SWR cache
-* Session revalidation
-* Visibility state handling
-* Focus state handling
+- React Query cache
+- SWR cache
+- Session revalidation
+- Visibility state handling
+- Focus state handling
 
 ---
 
@@ -420,7 +422,7 @@ pageshow
 Enable:
 
 ```ts
-refetchOnWindowFocus: true
+refetchOnWindowFocus: true;
 ```
 
 where appropriate.
@@ -432,7 +434,7 @@ where appropriate.
 Enable:
 
 ```ts
-revalidateOnFocus: true
+revalidateOnFocus: true;
 ```
 
 where appropriate.
@@ -454,12 +456,12 @@ document.addEventListener("visibilitychange", () => {
 
 ## Acceptance Criteria
 
-* User leaves tab
-* User returns
-* Session revalidated automatically
-* Data reloads automatically
-* Skeleton disappears automatically
-* No manual refresh required
+- User leaves tab
+- User returns
+- Session revalidated automatically
+- Data reloads automatically
+- Skeleton disappears automatically
+- No manual refresh required
 
 ---
 
@@ -491,29 +493,29 @@ document.addEventListener("visibilitychange", () => {
 
 Convert:
 
-* JPG
-* JPEG
-* PNG
+- JPG
+- JPEG
+- PNG
 
 to:
 
-* AVIF
-* WebP fallback
+- AVIF
+- WebP fallback
 
 Implement:
 
 ```html
 <picture>
-  <source type="image/avif">
-  <source type="image/webp">
-  <img>
+  <source type="image/avif" />
+  <source type="image/webp" />
+  <img />
 </picture>
 ```
 
 Use:
 
-* srcset
-* sizes
+- srcset
+- sizes
 
 ### Compression Targets
 
@@ -550,14 +552,13 @@ LCP < 2.5s
 Hero image:
 
 ```html
-fetchpriority="high"
-loading="eager"
+fetchpriority="high" loading="eager"
 ```
 
 Preload hero asset:
 
 ```html
-<link rel="preload">
+<link rel="preload" />
 ```
 
 Remove oversized assets.
@@ -573,32 +574,32 @@ Current bundle is oversized.
 Implement:
 
 ```tsx
-React.lazy()
-Suspense
+React.lazy();
+Suspense;
 ```
 
 for:
 
-* Dashboard
-* Admin
-* Product pages
-* Account pages
+- Dashboard
+- Admin
+- Product pages
+- Account pages
 
 ### Dynamic Imports
 
 Load only when needed:
 
-* Analytics
-* Recommendations
-* Currency services
+- Analytics
+- Recommendations
+- Currency services
 
 ### Tree Shaking
 
 Remove:
 
-* Dead code
-* Unused utilities
-* Unused libraries
+- Dead code
+- Unused utilities
+- Unused libraries
 
 ---
 
@@ -679,7 +680,7 @@ maximum-scale=1
 with:
 
 ```html
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 ```
 
 ---
@@ -712,10 +713,10 @@ Minimum:
 
 Investigate:
 
-* Project URL
-* DNS
-* Environment Variables
-* Realtime Configuration
+- Project URL
+- DNS
+- Environment Variables
+- Realtime Configuration
 
 Disable realtime if unused.
 
@@ -726,14 +727,14 @@ Disable realtime if unused.
 Replace:
 
 ```js
-window.unload
+window.unload;
 ```
 
 with:
 
 ```js
-pagehide
-visibilitychange
+pagehide;
+visibilitychange;
 ```
 
 ---
@@ -744,9 +745,9 @@ Generate production source maps.
 
 Benefits:
 
-* Better debugging
-* Better monitoring
-* Better Lighthouse diagnostics
+- Better debugging
+- Better monitoring
+- Better Lighthouse diagnostics
 
 ---
 
@@ -826,17 +827,17 @@ Disallowed:
 
 ## Functional
 
-* Ticket access works
-* Contact form works publicly
-* Protected pages recover after tab switching
-* Logout clears all browser storage
+- Ticket access works
+- Contact form works publicly
+- Protected pages recover after tab switching
+- Logout clears all browser storage
 
 ## Feed
 
-* Shipping included
-* Localization supported
-* Currency conversion supported
-* Feed validates successfully
+- Shipping included
+- Localization supported
+- Currency conversion supported
+- Feed validates successfully
 
 ## Performance
 
@@ -874,25 +875,26 @@ No accessibility violations remain.
 
 ## Reliability
 
-* No console errors
-* No stale protected-page loading states
-* No Supabase realtime failures
+- No console errors
+- No stale protected-page loading states
+- No Supabase realtime failures
 
 ## Security
 
-* CSP configured
-* HSTS configured
-* Trusted Types configured
-* Secure cookies configured
+- CSP configured
+- HSTS configured
+- Trusted Types configured
+- Secure cookies configured
 
 ## AI Readiness
 
-* Valid llms.txt
-* AI crawler compatibility passes
-* Merchant feed validation passes
-* Localization support operational
+- Valid llms.txt
+- AI crawler compatibility passes
+- Merchant feed validation passes
+- Localization support operational
 
 ```
+
 ```
 
 # Phase 2 — Performance Optimization (Critical)
@@ -985,17 +987,16 @@ Implement:
 
 ```html
 <picture>
-  <source type="image/avif">
-  <source type="image/webp">
-  <img>
+  <source type="image/avif" />
+  <source type="image/webp" />
+  <img />
 </picture>
 ```
 
 Use:
 
 ```html
-srcset
-sizes
+srcset sizes
 ```
 
 ---
@@ -1070,7 +1071,7 @@ loading="eager"
 #### Preload Hero Asset
 
 ```html
-<link rel="preload">
+<link rel="preload" />
 ```
 
 for the initial hero image.
@@ -1102,16 +1103,16 @@ Estimated unused JS:
 Implement:
 
 ```tsx
-React.lazy()
-Suspense
+React.lazy();
+Suspense;
 ```
 
 for:
 
-* Product pages
-* Account pages
-* Dashboard pages
-* Admin pages
+- Product pages
+- Account pages
+- Dashboard pages
+- Admin pages
 
 ---
 
@@ -1119,10 +1120,10 @@ for:
 
 Load only when needed:
 
-* Analytics
-* Tracking
-* Recommendation engine
-* Currency conversion
+- Analytics
+- Tracking
+- Recommendation engine
+- Currency conversion
 
 ---
 
@@ -1130,9 +1131,9 @@ Load only when needed:
 
 Remove:
 
-* Dead code
-* Unused utilities
-* Unused libraries
+- Dead code
+- Unused utilities
+- Unused libraries
 
 ---
 
@@ -1172,10 +1173,10 @@ for all web fonts.
 
 Heavy dependency chain exists involving:
 
-* FreeCurrencyAPI
-* Supabase
-* External image hosts
-* Facebook Pixel
+- FreeCurrencyAPI
+- Supabase
+- External image hosts
+- Facebook Pixel
 
 ### Tasks
 
@@ -1256,10 +1257,7 @@ Prevents zooming.
 Replace with:
 
 ```html
-<meta
- name="viewport"
- content="width=device-width, initial-scale=1"
-/>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 ```
 
 ---
@@ -1275,10 +1273,7 @@ Footer headings skip semantic order.
 Maintain:
 
 ```html
-h1
-h2
-h3
-h4
+h1 h2 h3 h4
 ```
 
 without skipping levels.
@@ -1317,10 +1312,10 @@ from Supabase realtime endpoints.
 
 Verify:
 
-* Project URL
-* DNS resolution
-* Environment variables
-* Realtime configuration
+- Project URL
+- DNS resolution
+- Environment variables
+- Realtime configuration
 
 Disable realtime if unused.
 
@@ -1337,14 +1332,14 @@ Deprecated unload event listeners detected.
 Replace:
 
 ```javascript
-window.unload
+window.unload;
 ```
 
 with:
 
 ```javascript
-pagehide
-visibilitychange
+pagehide;
+visibilitychange;
 ```
 
 ---
@@ -1355,9 +1350,9 @@ Generate production source maps.
 
 Benefits:
 
-* Easier debugging
-* Better Lighthouse diagnostics
-* Improved error tracking
+- Easier debugging
+- Better Lighthouse diagnostics
+- Improved error tracking
 
 ---
 
@@ -1430,10 +1425,12 @@ MotorVault is a marketplace for automotive parts.
 ## AI Crawling Policy
 
 Allowed:
+
 - Product pages
 - Categories
 
 Disallowed:
+
 - User dashboards
 - Checkout
 - Admin routes
@@ -1445,9 +1442,9 @@ Disallowed:
 
 ## Functional
 
-* Tickets page works for authenticated users.
-* Contact form works anonymously.
-* No authentication-related errors.
+- Tickets page works for authenticated users.
+- Contact form works anonymously.
+- No authentication-related errors.
 
 ## Performance
 
@@ -1483,30 +1480,31 @@ FCP:
 
 No missing:
 
-* aria-labels
-* heading hierarchy
-* touch targets
+- aria-labels
+- heading hierarchy
+- touch targets
 
 ## Reliability
 
-* No console errors.
-* No Supabase websocket failures.
-* No deprecated API warnings.
+- No console errors.
+- No Supabase websocket failures.
+- No deprecated API warnings.
 
 ## Security
 
-* CSP configured.
-* HSTS configured.
-* Trusted Types configured.
-* Secure cookies configured.
+- CSP configured.
+- HSTS configured.
+- Trusted Types configured.
+- Secure cookies configured.
 
 ## AI Readiness
 
-* Valid llms.txt
-* Agent accessibility passes
-* AI browsing score passes
+- Valid llms.txt
+- Agent accessibility passes
+- AI browsing score passes
 
 ```
+
 ```
 
 also the website loads too slowly especially on initial load,fix that the page needs to load faster and the images need to be optimized for faster loading times. Most especially when a language is selected (automatically or manually) the pages take too much time to load, this needs to be fixed.

@@ -13,6 +13,7 @@ pnpm add @stripe/js @stripe/react-stripe-js
 ### 2. Environment Variables Already Set
 
 ✅ Your `.env.local` now has:
+
 ```env
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key
 STRIPE_SECRET_KEY=sk_live_your_live_key
@@ -50,6 +51,7 @@ pnpm dev
 You'll see four payment options. **Stripe is now the default** 🎉
 
 Options:
+
 - **Stripe** (default) - Use this for testing
 - **Visa** - Paystack integration
 - **Mastercard** - Paystack integration
@@ -59,14 +61,15 @@ Options:
 
 Use these test card numbers in the Stripe card form:
 
-| Card Type | Number | Expiry | CVC | Result |
-|-----------|--------|--------|-----|--------|
-| Visa | 4242 4242 4242 4242 | Any future date | Any 3 digits | ✅ Succeeds |
-| Visa | 4000 0000 0000 0002 | Any future date | Any 3 digits | ❌ Declined |
-| Visa | 4000 0025 0000 3155 | Any future date | Any 3 digits | 🔐 3D Secure |
-| Mastercard | 5555 5555 5555 4444 | Any future date | Any 3 digits | ✅ Succeeds |
+| Card Type  | Number              | Expiry          | CVC          | Result       |
+| ---------- | ------------------- | --------------- | ------------ | ------------ |
+| Visa       | 4242 4242 4242 4242 | Any future date | Any 3 digits | ✅ Succeeds  |
+| Visa       | 4000 0000 0000 0002 | Any future date | Any 3 digits | ❌ Declined  |
+| Visa       | 4000 0025 0000 3155 | Any future date | Any 3 digits | 🔐 3D Secure |
+| Mastercard | 5555 5555 5555 4444 | Any future date | Any 3 digits | ✅ Succeeds  |
 
 **Example:**
+
 - Card Number: `4242 4242 4242 4242`
 - Expiry: `12/25`
 - CVC: `123`
@@ -141,10 +144,12 @@ ngrok http 3000
 After successful payment, check your database:
 
 ### Orders Table
+
 - New order created with payment intent ID
 - Status: `pending` (awaiting fulfillment)
 
 ### Payments Table
+
 - New payment record with:
   - `provider`: 'stripe'
   - `reference`: Payment Intent ID
@@ -156,14 +161,17 @@ After successful payment, check your database:
 ## Switching Between Test & Live Keys
 
 ### For Development (Currently Set)
+
 ```env
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_51TQ97Y...
 STRIPE_SECRET_KEY=sk_live_51TQ97Y...  # This should be sk_test_... for testing only
 ```
 
 ### For Production
+
 1. Get LIVE keys from Stripe Dashboard
 2. Update `.env.local`:
+
 ```env
 VITE_STRIPE_PUBLISHABLE_KEY=pk_live_your_live_key
 STRIPE_SECRET_KEY=sk_live_your_live_key
@@ -173,24 +181,28 @@ STRIPE_WEBHOOK_SECRET=whsec_live_your_live_secret
 ## Troubleshooting
 
 ### Card Element Not Appearing
+
 - ✅ Check browser console for errors
 - ✅ Verify VITE_STRIPE_PUBLISHABLE_KEY is in .env.local
 - ✅ Ensure Stripe dependencies are installed: `pnpm add @stripe/js @stripe/react-stripe-js`
 - ✅ Clear browser cache and restart dev server
 
 ### Payment Fails With Declined Error
+
 - ✅ Use test card that succeeds: `4242 4242 4242 4242`
 - ✅ Check console for error message
 - ✅ Verify email in checkout form is valid
 
 ### Order Not Created After Payment
+
 - ✅ Check server logs for webhook errors
 - ✅ Verify STRIPE_WEBHOOK_SECRET is set correctly
 - ✅ Ensure backend is running and accessible
 - ✅ Check database payments table for the payment record
 
 ### Console Says "Stripe failed to load"
-- ✅ Check that VITE_STRIPE_PUBLISHABLE_KEY starts with `pk_test_` or `pk_live_`
+
+- ✅ Check that VITE*STRIPE_PUBLISHABLE_KEY starts with `pk_test*`or`pk*live*`
 - ✅ Verify the key is in `.env.local` (not `.env`)
 - ✅ Restart dev server: `pnpm dev`
 

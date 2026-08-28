@@ -13,6 +13,7 @@ This document outlines the comprehensive SEO and LLM (Large Language Model) opti
 **Location:** `client/index.html`
 
 Implemented:
+
 - Primary meta tags (title, description, keywords, author)
 - Canonical URLs for duplicate prevention
 - Open Graph (OG) tags for social sharing
@@ -23,12 +24,14 @@ Implemented:
 
 ### 1.2 Structured Data (Schema.org JSON-LD)
 
-**Locations:** 
+**Locations:**
+
 - `client/index.html` - Organization, Website, LocalBusiness schemas
 - `client/src/components/SEOHead.tsx` - Dynamic per-page schemas
 - Product detail pages - Product schema with pricing, ratings, availability
 
 **Implemented Schemas:**
+
 ```json
 - Organization (with contact points, social profiles)
 - WebSite (with SearchAction for site search)
@@ -40,6 +43,7 @@ Implemented:
 ```
 
 Benefits:
+
 - Rich snippets in search results
 - Knowledge panels for brand
 - Product results with ratings and pricing
@@ -48,6 +52,7 @@ Benefits:
 ### 1.3 Sitemap Strategy
 
 **Generated Sitemaps:**
+
 - `/sitemap.xml` - Main sitemap index
 - Includes: Homepage, all products, categories, special pages
 - Image sitemaps with product images
@@ -56,6 +61,7 @@ Benefits:
 - Priority scores by page type
 
 **Priority Levels:**
+
 ```
 1.0 - Homepage
 0.95 - All Products
@@ -71,6 +77,7 @@ Benefits:
 **Location:** `client/public/robots.txt`
 
 Features:
+
 - Allow sections for all major crawlers with optimized crawl delays
 - Specific LLM crawler rules (GPTBot, Claude, Cohere)
 - Block low-quality bots
@@ -81,6 +88,7 @@ Features:
 ### 1.5 URL Structure
 
 **SEO-Friendly Patterns:**
+
 ```
 Home: /
 Products: /products
@@ -93,6 +101,7 @@ Search: /search?q={query}
 ```
 
 **Best Practices Applied:**
+
 - Short, descriptive URLs
 - Hyphens for word separation (not underscores)
 - Lowercase URLs
@@ -102,6 +111,7 @@ Search: /search?q={query}
 ### 1.6 Performance Optimization
 
 **Core Web Vitals:**
+
 - Preload critical fonts
 - Optimize images with proper sizing
 - Lazy loading for below-fold content
@@ -109,6 +119,7 @@ Search: /search?q={query}
 - CSS/JS minification with Vite
 
 **Caching Strategy:**
+
 - Browser caching headers
 - CDN optimization ready
 - Service worker for PWA capabilities
@@ -120,6 +131,7 @@ Search: /search?q={query}
 ### 2.1 LLM-Friendly Content Structure
 
 **LLM Crawlers Allowed:**
+
 - GPTBot (OpenAI)
 - CCBot (Cohere)
 - anthropic-ai (Anthropic Claude)
@@ -127,6 +139,7 @@ Search: /search?q={query}
 - Other common AI crawlers
 
 **Configuration in `robots.txt`:**
+
 ```
 User-agent: GPTBot
 Allow: /
@@ -144,12 +157,14 @@ Crawl-delay: 0
 ### 2.2 Content Accessibility for LLMs
 
 **Semantic HTML:**
+
 - Proper heading hierarchy (H1 > H2 > H3)
 - Semantic tags (`<article>`, `<section>`, `<aside>`, `<nav>`)
 - Proper link anchor text (not "click here")
 - Descriptive image alt text
 
 **Content Guidelines:**
+
 - Clear product descriptions
 - Complete pricing and availability information
 - Category organization and tagging
@@ -161,6 +176,7 @@ Crawl-delay: 0
 LLMs can better index and understand content through:
 
 **Product Information:**
+
 ```json
 {
   "@type": "Product",
@@ -179,6 +195,7 @@ LLMs can better index and understand content through:
 ```
 
 **Organization Information:**
+
 ```json
 {
   "@type": "Organization",
@@ -200,12 +217,13 @@ LLMs can better index and understand content through:
 ### 3.1 Using SEOHead Component
 
 **For Product Pages:**
+
 ```tsx
-import { SEOHead } from '@/components/SEOHead';
+import { SEOHead } from "@/components/SEOHead";
 
 export default function ProductDetail() {
   const product = useProductById(id);
-  
+
   return (
     <>
       <SEOHead
@@ -218,14 +236,17 @@ export default function ProductDetail() {
           originalPrice: product.originalPrice,
           rating: product.rating,
           reviews: product.totalReviews,
-          availability: product.stock > 0 ? 'InStock' : 'OutOfStock',
+          availability: product.stock > 0 ? "InStock" : "OutOfStock",
           image: product.images?.[0],
           category: product.category?.name,
           description: product.description,
         }}
         breadcrumbs={[
-          { name: 'Products', url: '/products' },
-          { name: product.category?.name, url: `/products?category=${product.category?.slug}` },
+          { name: "Products", url: "/products" },
+          {
+            name: product.category?.name,
+            url: `/products?category=${product.category?.slug}`,
+          },
           { name: product.name, url: `/product/${product.id}` },
         ]}
       />
@@ -236,13 +257,14 @@ export default function ProductDetail() {
 ```
 
 **For Category Pages:**
+
 ```tsx
 <SEOHead
   title={`${category.name} | ModernMart`}
   description={`Browse our ${category.name} collection...`}
-  keywords={[category.name, 'buy', 'shop', 'online']}
+  keywords={[category.name, "buy", "shop", "online"]}
   breadcrumbs={[
-    { name: 'Products', url: '/products' },
+    { name: "Products", url: "/products" },
     { name: category.name, url: `/products?category=${category.slug}` },
   ]}
 />
@@ -251,15 +273,15 @@ export default function ProductDetail() {
 ### 3.2 Using Breadcrumb Component
 
 ```tsx
-import { Breadcrumb } from '@/components/Breadcrumb';
+import { Breadcrumb } from "@/components/Breadcrumb";
 
 export default function ProductDetail() {
   return (
     <>
       <Breadcrumb
         items={[
-          { label: 'Products', href: '/products' },
-          { label: 'Electronics', href: '/products?category=electronics' },
+          { label: "Products", href: "/products" },
+          { label: "Electronics", href: "/products?category=electronics" },
           { label: product.name, href: `/product/${product.id}` },
         ]}
         className="mb-4"
@@ -272,9 +294,10 @@ export default function ProductDetail() {
 ### 3.3 Image Optimization
 
 **Best Practices:**
+
 ```html
 <!-- Always include alt text for accessibility and SEO -->
-<img 
+<img
   src="product-image.jpg"
   alt="ProductName - Color, Size, Style details"
   loading="lazy"
@@ -284,7 +307,7 @@ export default function ProductDetail() {
 
 <!-- For multiple images, use responsive images -->
 <picture>
-  <source 
+  <source
     srcset="product-mobile.jpg 480w, product-desktop.jpg 1200w"
     sizes="(max-width: 640px) 480px, 1200px"
   />
@@ -307,6 +330,7 @@ export default function ProductDetail() {
 ### 4.1 Google Search Console
 
 **Actions:**
+
 1. Add property: https://modernmart.manus.space
 2. Submit sitemap
 3. Monitor coverage and errors
@@ -316,6 +340,7 @@ export default function ProductDetail() {
 ### 4.2 Monitoring Tools
 
 **Recommended:**
+
 - Google Search Console (free)
 - Google PageSpeed Insights
 - Lighthouse audits
@@ -325,6 +350,7 @@ export default function ProductDetail() {
 ### 4.3 Key Metrics
 
 **Track:**
+
 - Organic search traffic
 - Keywords ranking
 - Click-through rate (CTR)
@@ -336,16 +362,19 @@ export default function ProductDetail() {
 ### 4.4 Regular Maintenance
 
 **Weekly:**
+
 - Check for crawl errors in Search Console
 - Monitor site speed
 - Review recent ranking changes
 
 **Monthly:**
+
 - Audit new content for SEO compliance
 - Check competitor keyword strategies
 - Review backlink profile
 
 **Quarterly:**
+
 - Full site SEO audit
 - Update meta descriptions if needed
 - Refresh high-ranking content
@@ -357,6 +386,7 @@ export default function ProductDetail() {
 ### 5.1 Product Descriptions
 
 **Write for humans AND machines:**
+
 - Clear, benefit-focused opening
 - Specifications in structured format
 - Customer-facing FAQs
@@ -364,6 +394,7 @@ export default function ProductDetail() {
 - Include keywords naturally (not keyword stuffing)
 
 **Example:**
+
 ```
 Product Name: High-Performance Wireless Headphones
 Short Description: Premium noise-canceling headphones with 40-hour battery life
@@ -376,11 +407,13 @@ FAQ: [Q&A format]
 ### 5.2 URL Parameters to Avoid
 
 **Bad (duplicate content):**
+
 - `/products?sort=price`
 - `/products?filter=category:electronics`
 - `/products?utm_source=google&utm_medium=cpc`
 
 **Good (use robots.txt to block):**
+
 - Disallow parameters in robots.txt
 - Use faceted navigation carefully
 - Consider `rel="canonical"` for variations
@@ -388,12 +421,14 @@ FAQ: [Q&A format]
 ### 5.3 Internal Linking Strategy
 
 **Link Structure:**
+
 - Homepage links to main categories
 - Categories link to products
 - Products link to related products
 - Use anchor text with keywords
 
 **Example:**
+
 ```
 Good: "Check out our latest electronics"
 Bad: "Click here for more"
@@ -406,6 +441,7 @@ Bad: "Click here for more"
 ### 6.1 Knowledge Graph Optimization
 
 Provide complete organization information:
+
 - Company name, description, logo
 - Headquarters location
 - Contact information
@@ -415,6 +451,7 @@ Provide complete organization information:
 ### 6.2 Content Attributes
 
 LLMs benefit from:
+
 - Clear author attribution
 - Publication dates
 - Update dates
@@ -447,19 +484,23 @@ LLMs benefit from:
 ### 7.1 Validation Tools
 
 **HTML Validation:**
+
 ```bash
 # Check meta tags structure
 curl -s https://modernmart.manus.space | grep -E '<title>|<meta name'
 ```
 
 **Schema Validation:**
+
 - https://validator.schema.org/
 - https://www.google.com/webmasters/markup-helper/
 
 **Mobile Friendliness:**
+
 - https://search.google.com/test/mobile-friendly
 
 **robots.txt:**
+
 - https://www.google.com/webmasters/tools/robots-testing-tool
 
 ### 7.2 Lighthouse Audits
@@ -472,6 +513,7 @@ lighthouse https://modernmart.manus.space --view
 ```
 
 **Target Scores:**
+
 - Performance: > 90
 - Accessibility: > 90
 - Best Practices: > 90
@@ -501,6 +543,7 @@ lighthouse https://modernmart.manus.space --view
 ## 9. Quick Start Checklist
 
 **For New Pages:**
+
 1. Add meaningful title (50-60 chars)
 2. Write compelling meta description (120-160 chars)
 3. Add breadcrumb navigation
@@ -511,6 +554,7 @@ lighthouse https://modernmart.manus.space --view
 8. Test with Lighthouse
 
 **For New Products:**
+
 1. Complete product information
 2. High-quality images (5+ angles)
 3. Detailed description (200+ words)

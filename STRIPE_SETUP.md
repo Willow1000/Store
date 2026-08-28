@@ -157,12 +157,12 @@ American Exp    3782 822463 10005       Succeeds
 
 ### Test with Different Scenarios
 
-| Goal | Card Number | Expiry | CVC |
-|------|-------------|--------|-----|
-| Successful payment | 4242 4242 4242 4242 | Any future | Any 3 digits |
-| Declined payment | 4000 0000 0000 0002 | Any future | Any 3 digits |
+| Goal                | Card Number         | Expiry     | CVC          |
+| ------------------- | ------------------- | ---------- | ------------ |
+| Successful payment  | 4242 4242 4242 4242 | Any future | Any 3 digits |
+| Declined payment    | 4000 0000 0000 0002 | Any future | Any 3 digits |
 | Auth required (3DS) | 4000 0025 0000 3155 | Any future | Any 3 digits |
-| Insufficient funds | 4000 0000 0000 9995 | Any future | Any 3 digits |
+| Insufficient funds  | 4000 0000 0000 9995 | Any future | Any 3 digits |
 
 ## API Endpoints
 
@@ -185,6 +185,7 @@ American Exp    3782 822463 10005       Succeeds
 ```
 
 **Response:**
+
 ```json
 {
   "result": {
@@ -229,6 +230,7 @@ American Exp    3782 822463 10005       Succeeds
 **POST** `/api/webhooks/stripe`
 
 Handles events:
+
 - `payment_intent.succeeded` - Creates order, records payment
 - `payment_intent.payment_failed` - Records failed attempt
 
@@ -247,16 +249,16 @@ Orders are automatically created when:
 {
   orderId: number;
   userId: number;
-  provider: 'stripe';
-  reference: string;           // Payment Intent ID
-  amount: number;              // in cents
-  currency: string;            // 'USD'
-  status: 'succeeded' | 'failed';
-  channel: 'card' | 'bank_transfer';
+  provider: "stripe";
+  reference: string; // Payment Intent ID
+  amount: number; // in cents
+  currency: string; // 'USD'
+  status: "succeeded" | "failed";
+  channel: "card" | "bank_transfer";
   gatewayResponse: string;
   authorizationCode: string;
   cardLast4: string;
-  cardBrand: string;           // 'visa', 'mastercard', etc.
+  cardBrand: string; // 'visa', 'mastercard', etc.
   metadata: JSON;
   paidAt: Date;
 }
@@ -269,6 +271,7 @@ Orders are automatically created when:
 **Cause:** `VITE_STRIPE_PUBLISHABLE_KEY` not set
 
 **Solution:**
+
 ```env
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_key
 ```
@@ -277,9 +280,11 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_key
 
 **Cause:** Wrong `STRIPE_WEBHOOK_SECRET`
 
-**Solution:** 
+**Solution:**
+
 1. Get correct webhook secret from Dashboard → Webhooks
 2. Update `.env`:
+
 ```env
 STRIPE_WEBHOOK_SECRET=whsec_test_your_secret
 ```
@@ -289,6 +294,7 @@ STRIPE_WEBHOOK_SECRET=whsec_test_your_secret
 **Cause:** Backend not running or Stripe key is wrong
 
 **Solution:**
+
 1. Verify backend is running: `pnpm dev`
 2. Check `STRIPE_SECRET_KEY` in `.env`
 3. Check console logs for errors
@@ -298,6 +304,7 @@ STRIPE_WEBHOOK_SECRET=whsec_test_your_secret
 **Cause:** Missing CSS or element not mounted
 
 **Solution:**
+
 1. Ensure TailwindCSS is loaded
 2. Check browser console for errors
 3. Verify `stripe-card-element` div exists
@@ -307,6 +314,7 @@ STRIPE_WEBHOOK_SECRET=whsec_test_your_secret
 **Cause:** Client secret or return URL incorrect
 
 **Solution:**
+
 1. Ensure `returnUrl` is set to valid domain
 2. Use Stripe test card: `4000 0025 0000 3155`
 3. Complete the 3DS flow in popup

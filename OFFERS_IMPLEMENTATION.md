@@ -30,7 +30,7 @@
   - [x] Response type: `ResolvedOffer | null`
   - [x] Public access (no authentication required)
 
-- [x] **Payment Processing** (server/_core/app.ts)
+- [x] **Payment Processing** (server/\_core/app.ts)
   - [x] Discount metadata passed to Paystack
   - [x] Order creation includes offer details
   - [x] Discount amount stored in orders table
@@ -124,25 +124,29 @@
 ## 🎯 Example Offers Ready to Create
 
 ### Percentage Discount
+
 ```sql
 INSERT INTO offers (code, name, type, value, active)
 VALUES ('SAVE15', 'Save 15%', 'percentage', '15', true);
 ```
 
 ### Fixed Amount Discount
+
 ```sql
 INSERT INTO offers (code, name, type, value, minimumSubtotal, active)
 VALUES ('MINUS50', '$50 Off', 'fixed', '50', '100', true);
 ```
 
 ### Time-Limited Offer
+
 ```sql
 INSERT INTO offers (code, name, type, value, startsAt, endsAt, active)
-VALUES ('SUMMER20', 'Summer 20% Off', 'percentage', '20', 
+VALUES ('SUMMER20', 'Summer 20% Off', 'percentage', '20',
         '2024-06-01'::timestamp, '2024-08-31'::timestamp, true);
 ```
 
 ### Limited Usage Offer
+
 ```sql
 INSERT INTO offers (code, name, type, value, maxUses, active)
 VALUES ('FLASH100', 'Flash Sale', 'fixed', '100', '50', true);
@@ -150,15 +154,15 @@ VALUES ('FLASH100', 'Flash Sale', 'fixed', '100', '50', true);
 
 ## 📊 Overall Status
 
-| Component | Status | Tests |
-|-----------|--------|-------|
-| Schema | ✅ Complete | - |
-| Migrations | ✅ Complete | - |
-| Database Functions | ✅ Complete | 11/11 |
-| API Endpoints | ✅ Complete | 7/7 |
-| Frontend Integration | ✅ Complete | 6/6 |
-| Business Logic | ✅ Complete | All |
-| Documentation | ✅ Complete | - |
+| Component            | Status      | Tests |
+| -------------------- | ----------- | ----- |
+| Schema               | ✅ Complete | -     |
+| Migrations           | ✅ Complete | -     |
+| Database Functions   | ✅ Complete | 11/11 |
+| API Endpoints        | ✅ Complete | 7/7   |
+| Frontend Integration | ✅ Complete | 6/6   |
+| Business Logic       | ✅ Complete | All   |
+| Documentation        | ✅ Complete | -     |
 
 **Total Tests: 24/24 PASSED ✅**
 

@@ -5,6 +5,7 @@ This document explains the comprehensive product search and filtering system tha
 ## Overview
 
 The enhanced search system includes:
+
 - **Multi-field searching** across title, brand, model, condition, category, part number, and item specifics
 - **Relevance scoring** to rank results by relevance
 - **Fallback to similar products** when exact matches aren't found
@@ -16,6 +17,7 @@ The enhanced search system includes:
 ### 1. Server-Side Search (Supabase)
 
 First pass: Fetch products matching the search term across multiple fields:
+
 ```sql
 SELECT * FROM products
 WHERE title ILIKE '%search%'
@@ -30,27 +32,28 @@ WHERE title ILIKE '%search%'
 
 Each product is scored based on where the match occurs:
 
-| Match Location | Score |
-|---|---|
-| Exact title match | 100 |
-| Title starts with | 80 |
-| Title contains | 60 |
-| Each word in title | 15 |
-| Exact brand match | 80 |
-| Brand contains | 50 |
-| Each word in brand | 10 |
-| Model exact match | 70 |
-| Model contains | 45 |
-| Each word in model | 8 |
-| Condition match | 25 |
-| Category match | 20 |
-| Part number exact | 50 |
-| Part number contains | 30 |
-| Item specifics | 15 |
+| Match Location       | Score |
+| -------------------- | ----- |
+| Exact title match    | 100   |
+| Title starts with    | 80    |
+| Title contains       | 60    |
+| Each word in title   | 15    |
+| Exact brand match    | 80    |
+| Brand contains       | 50    |
+| Each word in brand   | 10    |
+| Model exact match    | 70    |
+| Model contains       | 45    |
+| Each word in model   | 8     |
+| Condition match      | 25    |
+| Category match       | 20    |
+| Part number exact    | 50    |
+| Part number contains | 30    |
+| Item specifics       | 15    |
 
 ### 3. Fallback to Similar Products
 
 If no exact matches found, the system uses word-by-word matching to find similar products:
+
 - Multi-word searches are broken down into individual words
 - Products matching any word receive partial credit
 - Word matches weighted by field importance
@@ -61,18 +64,22 @@ If no exact matches found, the system uses word-by-word matching to find similar
 ### `productSearch.ts` - Core Utilities
 
 #### `calculateRelevanceScore(product, searchTerm): number`
+
 Calculates how relevant a product is to the search term. Returns a score where higher = more relevant.
 
 **Example:**
+
 ```typescript
-const score = calculateRelevanceScore(toyotaProduct, 'Toyota Camry');
+const score = calculateRelevanceScore(toyotaProduct, "Toyota Camry");
 // Returns 150+ (title + brand matches)
 ```
 
 #### `searchProducts(products, searchTerm, options): Product[]`
+
 Main search function that returns products sorted by relevance.
 
 **Parameters:**
+
 - `products`: Array of products to search
 - `searchTerm`: Search query
 - `options.includePartNumbers`: Include part number matches (default: true)
@@ -80,17 +87,20 @@ Main search function that returns products sorted by relevance.
 - `options.maxResults`: Limit results (default: unlimited)
 
 **Example:**
+
 ```typescript
-const results = searchProducts(allProducts, 'Honda motorcycle', {
+const results = searchProducts(allProducts, "Honda motorcycle", {
   includeSimilar: true,
-  maxResults: 100
+  maxResults: 100,
 });
 ```
 
 #### `filterProducts(products, filters): Product[]`
+
 Filter products by multiple criteria simultaneously.
 
 **Parameters:**
+
 ```typescript
 filters: {
   priceRange?: [minPrice, maxPrice];     // e.g., [100, 5000]
@@ -104,39 +114,46 @@ filters: {
 ```
 
 **Example:**
+
 ```typescript
 const filtered = filterProducts(allProducts, {
   priceRange: [1000, 50000],
-  brands: ['Honda', 'Yamaha'],
-  conditions: ['new', 'like-new'],
-  inStock: true
+  brands: ["Honda", "Yamaha"],
+  conditions: ["new", "like-new"],
+  inStock: true,
 });
 ```
 
 #### `getSimilarProducts(products, targetProduct, limit): Product[]`
+
 Get products similar to a given product (same category, brand, model, price range).
 
 **Example:**
+
 ```typescript
 const similar = getSimilarProducts(allProducts, selectedProduct, 6);
 // Returns up to 6 similar products
 ```
 
 #### `getBrandSuggestions(products, partial): string[]`
+
 Get brand names matching a partial string - useful for autocomplete.
 
 **Example:**
+
 ```typescript
-const suggestions = getBrandSuggestions(allProducts, 'Toy');
+const suggestions = getBrandSuggestions(allProducts, "Toy");
 // Returns ['Toyota', 'Toys R Us', ...]
 ```
 
 #### `getModelSuggestions(products, partial): string[]`
+
 Get model names matching a partial string - useful for autocomplete.
 
 **Example:**
+
 ```typescript
-const suggestions = getModelSuggestions(allProducts, 'Cam');
+const suggestions = getModelSuggestions(allProducts, "Cam");
 // Returns ['Camry', 'Camaro', ...]
 ```
 
@@ -152,6 +169,7 @@ Enhanced hook that uses the new search system:
 4. **Timeout handling** - 15-second timeout with error message
 
 **Example:**
+
 ```typescript
 const { results, isLoading, error } = useSearchProducts('Honda Civic');
 
@@ -185,6 +203,7 @@ return results.map(product => <ProductCard key={product.id} product={product} />
 ## Examples
 
 ### Search: "Toyota Camry Parts"
+
 1. Server fetches products with 'Toyota', 'Camry', or 'Parts' in title/brand/model
 2. Products scored by relevance:
    - Toyota Camry OEM doors (score: 150+) ← Top result
@@ -193,15 +212,19 @@ return results.map(product => <ProductCard key={product.id} product={product} />
 3. Returns 100 highest-scored results
 
 ### Combined Search + Filter
+
 - Search: "engine"
 - Filter by: Brand = Toyota, Condition = Like-New
+
 1. Server fetches engine-related products
 2. Client filters to Toyota brand + like-new condition
 3. Relevance scored and sorted
 4. If 0 results: Similar engines from other brands shown (with less relevance)
 
 ### Filter-Only (No Search)
+
 - Filters: Brand = Honda, Condition = New, Price = $1000-$5000
+
 1. Loads all products
 2. Filters to matching criteria
 3. Sorts by selected sort option (newest, price, etc.)

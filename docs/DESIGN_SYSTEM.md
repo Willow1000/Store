@@ -1,11 +1,13 @@
 # Design System - Modern E-Commerce Marketplace
 
 ## Overview
+
 This document outlines the design system for the modern e-commerce marketplace, inspired by eBay, StockX, and the provided Figma design. The core aesthetic is **clean, minimal, and modern** with a **black and white primary color palette**.
 
 ## Color Palette
 
 ### Primary Colors
+
 - **Black**: `#000000` - Primary text, headers, strong CTAs, borders
 - **White**: `#FFFFFF` - Background, cards, clean spaces
 - **Dark Gray**: `#1A1A1A` - Secondary backgrounds, hover states
@@ -13,11 +15,13 @@ This document outlines the design system for the modern e-commerce marketplace, 
 - **Medium Gray**: `#808080` - Secondary text, disabled states
 
 ### Accent Colors
+
 - **Red/Coral**: `#E63946` - Primary CTA buttons, alerts, "Buy Now" actions (inspired by eBay/StockX)
 - **Green**: `#06A77D` - Success states, verified badges
 - **Amber/Orange**: `#F77F00` - Warnings, deals/discounts
 
 ### Semantic Colors
+
 - **Success**: `#06A77D`
 - **Error**: `#E63946`
 - **Warning**: `#F77F00`
@@ -26,10 +30,12 @@ This document outlines the design system for the modern e-commerce marketplace, 
 ## Typography
 
 ### Font Family
+
 - **Primary Font**: Inter (modern, clean, highly legible)
 - **Fallback**: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
 
 ### Font Sizes & Weights
+
 - **Display/Hero**: 48px, Weight 700 (Bold)
 - **Heading 1**: 36px, Weight 700 (Bold)
 - **Heading 2**: 28px, Weight 600 (SemiBold)
@@ -41,6 +47,7 @@ This document outlines the design system for the modern e-commerce marketplace, 
 - **Button**: 16px, Weight 600 (SemiBold)
 
 ### Line Heights
+
 - Display: 1.2
 - Heading: 1.3
 - Body: 1.5
@@ -49,6 +56,7 @@ This document outlines the design system for the modern e-commerce marketplace, 
 ## Spacing System
 
 Using an 8px base unit for consistent spacing:
+
 - `xs`: 4px
 - `sm`: 8px
 - `md`: 16px
@@ -60,16 +68,19 @@ Using an 8px base unit for consistent spacing:
 ## Components
 
 ### Buttons
+
 - **Primary Button**: Black background, white text, 16px font, 12px vertical padding, 24px horizontal padding
 - **Secondary Button**: White background, black border, black text
 - **Tertiary Button**: Transparent, black text, underline on hover
 - **Disabled State**: Gray background, light gray text, no cursor
 
 ### Cards
+
 - **Product Card**: White background, subtle shadow (0 2px 8px rgba(0,0,0,0.1)), rounded corners (8px)
 - **Order Card**: Similar to product card, with border on left (4px accent color)
 
 ### Input Fields
+
 - **Border**: 1px solid #CCCCCC
 - **Focus**: 2px solid #000000
 - **Padding**: 12px 16px
@@ -77,12 +88,14 @@ Using an 8px base unit for consistent spacing:
 - **Font**: 16px, Regular
 
 ### Navigation
+
 - **Top Nav Height**: 64px (desktop), 56px (mobile)
 - **Background**: White with subtle shadow
 - **Text**: Black, 16px Regular
 - **Active State**: Black text with bottom border (2px)
 
 ### Modals & Dialogs
+
 - **Overlay**: Semi-transparent black (rgba(0,0,0,0.5))
 - **Modal Background**: White
 - **Border Radius**: 8px
@@ -92,11 +105,13 @@ Using an 8px base unit for consistent spacing:
 ## Imagery & Icons
 
 ### Icons
+
 - **Style**: Minimal, line-based (lucide-react)
 - **Size**: 24px (default), 16px (small), 32px (large)
 - **Color**: Black (primary), Gray (secondary)
 
 ### Product Images
+
 - **Aspect Ratio**: 1:1 (square) for grid layouts
 - **Background**: Light gray (#F5F5F5) for product placeholders
 - **Border Radius**: 4px

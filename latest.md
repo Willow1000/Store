@@ -173,23 +173,23 @@ Future support:
 
 # 8. Field Mapping Table
 
-| Website Data Source | Schema Property | Required or Optional | Notes | Validation Rule |
-|---|---|---|---|---|
-| products.title or products.name | Product.name | Required | Must match visible product title | Non-empty, trimmed, equals H1 or primary product title |
-| products.description or normalized specifics | Product.description | Required | Keep plain text and user-visible facts only | Min length > 20 chars, no hidden claims |
-| products.cover_image_url or gallery[0] | Product.image | Required | Prefer absolute HTTPS URL | Returns 200, crawlable, valid image MIME |
-| products.sku | Product.sku | Recommended | Unique merchant SKU when available | Alphanumeric format, stable per item |
-| products.brand | Product.brand.name | Required | Must be visible brand | Non-empty; fallback to merchant brand only when true |
-| products.price | Offer.price | Required | Exact price shown on page | Numeric string with decimal normalization |
-| currency context | Offer.priceCurrency | Required | ISO 4217 code | Must be one of supported site currencies |
-| products.stock | Offer.availability | Required | InStock or OutOfStock mapping | Reflects real stock state |
-| canonical product URL | Product.url / Offer.url | Required | Must be canonical | Absolute URL; matches rel=canonical |
-| products.gtin | Product.gtin | Optional | Only when validated | Length and checksum validity where possible |
-| products.mpn | Product.mpn | Recommended | Manufacturer part number | Do not duplicate fake identifiers |
-| calculated shipping policy | Offer.shippingDetails | Optional | Include only if visible policy exists | Values must match visible shipping text |
-| visible return policy | Offer.hasMerchantReturnPolicy | Optional | Include only if policy visible and applicable | Values must match policy page |
-| visible ratings summary | Product.aggregateRating | Optional | Only with genuine reviews | ratingValue and reviewCount must match UI |
-| visible review entries | Product.review | Optional | Only real reviews shown on page | Reviewer/date/body visible to users |
+| Website Data Source                          | Schema Property               | Required or Optional | Notes                                         | Validation Rule                                        |
+| -------------------------------------------- | ----------------------------- | -------------------- | --------------------------------------------- | ------------------------------------------------------ |
+| products.title or products.name              | Product.name                  | Required             | Must match visible product title              | Non-empty, trimmed, equals H1 or primary product title |
+| products.description or normalized specifics | Product.description           | Required             | Keep plain text and user-visible facts only   | Min length > 20 chars, no hidden claims                |
+| products.cover_image_url or gallery[0]       | Product.image                 | Required             | Prefer absolute HTTPS URL                     | Returns 200, crawlable, valid image MIME               |
+| products.sku                                 | Product.sku                   | Recommended          | Unique merchant SKU when available            | Alphanumeric format, stable per item                   |
+| products.brand                               | Product.brand.name            | Required             | Must be visible brand                         | Non-empty; fallback to merchant brand only when true   |
+| products.price                               | Offer.price                   | Required             | Exact price shown on page                     | Numeric string with decimal normalization              |
+| currency context                             | Offer.priceCurrency           | Required             | ISO 4217 code                                 | Must be one of supported site currencies               |
+| products.stock                               | Offer.availability            | Required             | InStock or OutOfStock mapping                 | Reflects real stock state                              |
+| canonical product URL                        | Product.url / Offer.url       | Required             | Must be canonical                             | Absolute URL; matches rel=canonical                    |
+| products.gtin                                | Product.gtin                  | Optional             | Only when validated                           | Length and checksum validity where possible            |
+| products.mpn                                 | Product.mpn                   | Recommended          | Manufacturer part number                      | Do not duplicate fake identifiers                      |
+| calculated shipping policy                   | Offer.shippingDetails         | Optional             | Include only if visible policy exists         | Values must match visible shipping text                |
+| visible return policy                        | Offer.hasMerchantReturnPolicy | Optional             | Include only if policy visible and applicable | Values must match policy page                          |
+| visible ratings summary                      | Product.aggregateRating       | Optional             | Only with genuine reviews                     | ratingValue and reviewCount must match UI              |
+| visible review entries                       | Product.review                | Optional             | Only real reviews shown on page               | Reviewer/date/body visible to users                    |
 
 # 9. JSON-LD Examples
 
@@ -197,16 +197,16 @@ Future support:
 
 ```json
 {
-	"@context": "https://schema.org",
-	"@type": "Organization",
-	"@id": "https://motorvault.shop/#organization",
-	"name": "MotorVault",
-	"url": "https://motorvault.shop",
-	"logo": "https://motorvault.shop/images/logo.png",
-	"sameAs": [
-		"https://www.facebook.com/motorvault",
-		"https://www.instagram.com/motorvault"
-	]
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": "https://motorvault.shop/#organization",
+  "name": "MotorVault",
+  "url": "https://motorvault.shop",
+  "logo": "https://motorvault.shop/images/logo.png",
+  "sameAs": [
+    "https://www.facebook.com/motorvault",
+    "https://www.instagram.com/motorvault"
+  ]
 }
 ```
 
@@ -214,16 +214,16 @@ Future support:
 
 ```json
 {
-	"@context": "https://schema.org",
-	"@type": "WebSite",
-	"@id": "https://motorvault.shop/#website",
-	"url": "https://motorvault.shop",
-	"name": "MotorVault",
-	"potentialAction": {
-		"@type": "SearchAction",
-		"target": "https://motorvault.shop/products?query={search_term_string}",
-		"query-input": "required name=search_term_string"
-	}
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://motorvault.shop/#website",
+  "url": "https://motorvault.shop",
+  "name": "MotorVault",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "https://motorvault.shop/products?query={search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
 }
 ```
 
@@ -231,28 +231,28 @@ Future support:
 
 ```json
 {
-	"@context": "https://schema.org",
-	"@type": "BreadcrumbList",
-	"itemListElement": [
-		{
-			"@type": "ListItem",
-			"position": 1,
-			"name": "Home",
-			"item": "https://motorvault.shop/"
-		},
-		{
-			"@type": "ListItem",
-			"position": 2,
-			"name": "BMW Parts",
-			"item": "https://motorvault.shop/products?brand=bmw"
-		},
-		{
-			"@type": "ListItem",
-			"position": 3,
-			"name": "BMW E90 DPF Filter",
-			"item": "https://motorvault.shop/product/bmw-e90-dpf-18307806473"
-		}
-	]
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://motorvault.shop/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "BMW Parts",
+      "item": "https://motorvault.shop/products?brand=bmw"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "BMW E90 DPF Filter",
+      "item": "https://motorvault.shop/product/bmw-e90-dpf-18307806473"
+    }
+  ]
 }
 ```
 
@@ -260,49 +260,49 @@ Future support:
 
 ```json
 {
-	"@context": "https://schema.org",
-	"@type": "Product",
-	"@id": "https://motorvault.shop/product/bmw-e90-dpf-18307806473#product",
-	"name": "BMW E90 320d Diesel Particulate Filter (DPF)",
-	"description": "OEM-fit diesel particulate filter for BMW E90 320d. Compatible with listed engine codes and model years shown on page.",
-	"image": [
-		"https://motorvault.shop/images/products/bmw-e90-dpf-front.jpg",
-		"https://motorvault.shop/images/products/bmw-e90-dpf-side.jpg"
-	],
-	"sku": "BMW-E90-DPF-18307806473",
-	"mpn": "18307806473",
-	"brand": {
-		"@type": "Brand",
-		"name": "BMW"
-	},
-	"url": "https://motorvault.shop/product/bmw-e90-dpf-18307806473",
-	"offers": {
-		"@type": "Offer",
-		"priceCurrency": "USD",
-		"price": "649.00",
-		"availability": "https://schema.org/InStock",
-		"itemCondition": "https://schema.org/UsedCondition",
-		"url": "https://motorvault.shop/product/bmw-e90-dpf-18307806473",
-		"shippingDetails": {
-			"@type": "OfferShippingDetails",
-			"shippingDestination": {
-				"@type": "DefinedRegion",
-				"addressCountry": "US"
-			},
-			"shippingRate": {
-				"@type": "MonetaryAmount",
-				"value": "25.00",
-				"currency": "USD"
-			}
-		},
-		"hasMerchantReturnPolicy": {
-			"@type": "MerchantReturnPolicy",
-			"applicableCountry": "US",
-			"returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
-			"merchantReturnDays": 30,
-			"returnMethod": "https://schema.org/ReturnByMail"
-		}
-	}
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "@id": "https://motorvault.shop/product/bmw-e90-dpf-18307806473#product",
+  "name": "BMW E90 320d Diesel Particulate Filter (DPF)",
+  "description": "OEM-fit diesel particulate filter for BMW E90 320d. Compatible with listed engine codes and model years shown on page.",
+  "image": [
+    "https://motorvault.shop/images/products/bmw-e90-dpf-front.jpg",
+    "https://motorvault.shop/images/products/bmw-e90-dpf-side.jpg"
+  ],
+  "sku": "BMW-E90-DPF-18307806473",
+  "mpn": "18307806473",
+  "brand": {
+    "@type": "Brand",
+    "name": "BMW"
+  },
+  "url": "https://motorvault.shop/product/bmw-e90-dpf-18307806473",
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "USD",
+    "price": "649.00",
+    "availability": "https://schema.org/InStock",
+    "itemCondition": "https://schema.org/UsedCondition",
+    "url": "https://motorvault.shop/product/bmw-e90-dpf-18307806473",
+    "shippingDetails": {
+      "@type": "OfferShippingDetails",
+      "shippingDestination": {
+        "@type": "DefinedRegion",
+        "addressCountry": "US"
+      },
+      "shippingRate": {
+        "@type": "MonetaryAmount",
+        "value": "25.00",
+        "currency": "USD"
+      }
+    },
+    "hasMerchantReturnPolicy": {
+      "@type": "MerchantReturnPolicy",
+      "applicableCountry": "US",
+      "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+      "merchantReturnDays": 30,
+      "returnMethod": "https://schema.org/ReturnByMail"
+    }
+  }
 }
 ```
 
@@ -310,23 +310,23 @@ Future support:
 
 ```json
 {
-	"@context": "https://schema.org",
-	"@type": "BlogPosting",
-	"@id": "https://motorvault.shop/blog/how-to-identify-oem-part-numbers#article",
-	"headline": "How To Identify OEM Part Numbers For European Vehicles",
-	"description": "Step-by-step guide to identifying OEM part numbers for BMW, Mercedes, Audi, and VW models.",
-	"image": "https://motorvault.shop/images/blog/oem-part-number-guide.jpg",
-	"datePublished": "2026-06-12T09:00:00+00:00",
-	"dateModified": "2026-06-12T09:00:00+00:00",
-	"author": {
-		"@type": "Person",
-		"name": "MotorVault Technical Team"
-	},
-	"publisher": {
-		"@type": "Organization",
-		"@id": "https://motorvault.shop/#organization"
-	},
-	"mainEntityOfPage": "https://motorvault.shop/blog/how-to-identify-oem-part-numbers"
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "@id": "https://motorvault.shop/blog/how-to-identify-oem-part-numbers#article",
+  "headline": "How To Identify OEM Part Numbers For European Vehicles",
+  "description": "Step-by-step guide to identifying OEM part numbers for BMW, Mercedes, Audi, and VW models.",
+  "image": "https://motorvault.shop/images/blog/oem-part-number-guide.jpg",
+  "datePublished": "2026-06-12T09:00:00+00:00",
+  "dateModified": "2026-06-12T09:00:00+00:00",
+  "author": {
+    "@type": "Person",
+    "name": "MotorVault Technical Team"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "@id": "https://motorvault.shop/#organization"
+  },
+  "mainEntityOfPage": "https://motorvault.shop/blog/how-to-identify-oem-part-numbers"
 }
 ```
 

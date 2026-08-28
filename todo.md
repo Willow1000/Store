@@ -1,12 +1,14 @@
 # Modern E-Commerce Marketplace - TODO
 
 ## Phase 1: Design System & Setup
+
 - [x] Analyze Figma design and extract design tokens (colors, typography, spacing)
 - [x] Set up Tailwind CSS with black and white color palette
 - [x] Create global styles and design tokens in index.css
 - [x] Set up Google Fonts for modern typography (Inter, Poppins, or similar)
 
 ## Phase 2: Database Schema
+
 - [x] Create products table (id, name, description, price, images, category, condition, seller_id, created_at)
 - [x] Create product_variants table (id, product_id, size, color, stock, sku)
 - [x] Create categories table (id, name, slug, icon)
@@ -18,6 +20,7 @@
 - [x] Run database migrations
 
 ## Phase 3: Core Navigation & Layout
+
 - [x] Build top navigation bar with logo, search bar, category filter, cart icon, user menu
 - [x] Create responsive header component (mobile hamburger menu)
 - [x] Build footer component with links and info
@@ -25,6 +28,7 @@
 - [x] Create responsive grid system and spacing utilities
 
 ## Phase 4: Homepage
+
 - [x] Build hero banner/carousel component with featured products
 - [x] Create featured categories section
 - [x] Build trending products grid section
@@ -33,6 +37,7 @@
 - [x] Add call-to-action buttons throughout
 
 ## Phase 5: Product Listing Page
+
 - [x] Create product grid layout with cards
 - [x] Build filter sidebar (category, price range, condition, seller rating)
 - [x] Implement sorting options (price, newest, popular, rating)
@@ -42,6 +47,7 @@
 - [x] Add responsive design for mobile
 
 ## Phase 6: Product Detail Page
+
 - [x] Build image gallery with zoom and thumbnail navigation
 - [x] Display product title, price, seller info
 - [x] Create size/variant selector component
@@ -52,6 +58,7 @@
 - [x] Implement responsive layout
 
 ## Phase 7: Shopping Cart
+
 - [x] Create cart sidebar/drawer component
 - [x] Build cart item list with quantity controls
 - [x] Implement add/remove/update quantity functionality
@@ -61,6 +68,7 @@
 - [x] Implement cart persistence (localStorage + database)
 
 ## Phase 8: Immediate Checkout Flow
+
 - [x] Create streamlined checkout modal/page
 - [x] Build shipping address form
 - [x] Create payment method selector
@@ -70,6 +78,7 @@
 - [x] Create order confirmation page
 
 ## Phase 9: Stripe Integration
+
 - [x] Set up Stripe API keys and environment variables (framework ready)
 - [x] Create Stripe payment procedure in tRPC
 - [x] Build card input form component (Stripe Elements)
@@ -79,6 +88,7 @@
 - [x] Add payment error handling and retry logic
 
 ## Phase 10: User Authentication
+
 - [x] Build sign up form with validation (OAuth integrated)
 - [x] Build login form with validation (OAuth integrated)
 - [x] Create account page with profile info
@@ -88,6 +98,7 @@
 - [x] Implement protected routes for authenticated users
 
 ## Phase 11: Search & Discovery
+
 - [x] Implement real-time search with debouncing
 - [x] Create search results page
 - [x] Build keyword-based product filtering
@@ -95,6 +106,7 @@
 - [x] Implement search analytics tracking
 
 ## Phase 12: Notifications
+
 - [x] Create in-app notification system
 - [x] Build notification center/bell icon
 - [x] Implement email notification service
@@ -103,6 +115,7 @@
 - [x] Implement notification persistence in database
 
 ## Phase 13: Testing & Polish
+
 - [x] Write vitest tests for key components
 - [x] Test responsive design on mobile and desktop
 - [x] Test checkout flow end-to-end
@@ -113,12 +126,13 @@
 - [x] Accessibility audit
 
 ## Phase 14: Delivery
+
 - [x] Create checkpoint
 - [x] Prepare project for user review
 - [x] Document key features and usage
 
-
 ## Design Improvements (Current Sprint)
+
 - [x] Redesign hero section with professional layout (not AI-generated)
 - [x] Improve featured products card design and spacing
 - [x] Optimize responsive design for mobile (320px+)
@@ -130,8 +144,8 @@
 - [x] Add subtle animations and transitions
 - [x] Ensure touch-friendly buttons and interactions on mobile
 
-
 ## Animation & Enhancement (Current)
+
 - [x] Create animated hero section with items being added to cart
 - [x] Add smooth floating/sliding animations for product items
 - [x] Implement cart counter animation
@@ -140,30 +154,30 @@
 - [x] Display actual product images in animated cards
 - [x] Show real product names and prices in animation
 
-
 ## Product & Hero Expansion (Current)
+
 - [x] Add 50+ products to database with diverse categories
 - [x] Ensure all product images render correctly
 - [x] Update hero section to display 3 shuffling card positions
 - [x] Implement continuous product rotation in hero cards
 - [x] Test hero animation on desktop view
 
-
 ## UX Improvements (Current)
+
 - [x] Remove search bar from hero section
 - [x] Improve card shuffling animation in hero
 - [x] Implement navbar search navigation to products page
 - [x] Ensure search query persists when navigating from navbar
 
-
 ## Category Improvements (Current)
+
 - [x] Add proper category images from Unsplash
 - [x] Implement category click navigation to products page
 - [x] Filter products by selected category
 - [x] Display category name in products page header
 
-
 ## SEO & AI Discoverability (Current)
+
 - [x] Add JSON-LD structured data for products (framework ready)
 - [x] Add JSON-LD structured data for organization
 - [x] Add JSON-LD structured data for breadcrumbs (framework ready)
@@ -180,8 +194,8 @@
 - [x] Create XML sitemap for products (framework ready)
 - [x] Add hreflang tags for internationalization (if needed)
 
-
 ## Bug Fixes & Cleanup (Current)
+
 - [x] Fix loading skeleton color from red to gray
 - [x] Remove tax details from checkout page
 - [x] Fix order details display formatting (JSON display issue)
@@ -192,8 +206,8 @@
 - [x] Update product cards to remove seller name/link
 - [x] Clean up database queries to exclude seller data
 
-
 ## Figma Design Implementation (Current)
+
 - [x] Add left sidebar navigation with category menu
 - [x] Redesign hero banner to match Figma (black background, product image, voucher text)
 - [x] Create flash sales section with countdown timer
@@ -202,8 +216,8 @@
 - [x] Implement carousel navigation arrows
 - [x] Match color scheme and typography to Figma design
 
-
 ## Final Implementation Tasks
+
 - [x] Remove emojis from sidebar categories
 - [x] Wire sidebar category links to actual category filtering
 - [x] Make heart/eye icons functional with toast notifications

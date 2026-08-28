@@ -3,11 +3,13 @@
 A small modern e‑commerce starter built with React (Vite), Supabase for auth/data, a Node/TypeScript backend (tRPC + Express), Drizzle ORM, and Paystack/Stripe payment integrations.
 
 ## Quick overview
+
 - Frontend: `client/` — Vite + React + TypeScript, Tailwind CSS UI, Supabase client hooks.
 - Backend: `server/` — Express + tRPC + TypeScript, Drizzle for DB access, internal SDK for session cookie auth.
 - Shared types & constants: `shared/`.
 
 Key features
+
 - User authentication (Supabase) and optional SDK session cookie for server-side auth.
 - Cart & Orders stored in Supabase (`cart_items`, `orders`).
 - Paystack integration implemented server-side (`server/paystack.ts`) and a small client helper (`client/src/lib/paystack.ts`).
@@ -29,21 +31,25 @@ pnpm dev                      # runs the Vite frontend and the Express/tRPC back
 ```
 
 Typecheck:
+
 ```bash
 pnpm run check
 ```
 
 Build:
+
 ```bash
 pnpm build
 ```
 
 Tests (vitest):
+
 ```bash
 pnpm test
 ```
 
 ## Important files & flow
+
 - `client/src/_core/hooks/useAuth.ts` — frontend Supabase session handling.
 - `shared/const.ts` — contains `SESSION_DURATION_MS` (72 hours) used by server-side session creation for SDK auth.
 - `server/_core/sdk.ts` — signs/verifies SDK session cookies; uses `SESSION_DURATION_MS` by default.
@@ -52,6 +58,7 @@ pnpm test
 - `server/paystack.ts` — Paystack helpers and webhook verification.
 
 ## Environment variables
+
 Copy `.env.example` to `.env.local` (`cp .env.example .env.local`) and fill in
 the values you need - it documents every variable the app reads, with
 placeholder values and comments on which are client-exposed (`VITE_`
@@ -68,14 +75,17 @@ prefixed) versus server-only. The canonical names used by the code are:
 `COOKIE_SECRET` and `PAYSTACK_PUBLIC_KEY` are accepted as backward-compatible aliases, but `JWT_SECRET` and `VITE_PAYSTACK_PUBLIC_KEY` are the preferred names.
 
 ## Sessions & expiry
+
 - The custom SDK session cookie and token creation use `SESSION_DURATION_MS` (72 hours) defined in `shared/const.ts`.
 - Supabase client sessions are respected; the app uses a 72‑hour window for SDK sessions while preserving Supabase behavior.
 
 ## Payments
+
 - Server endpoints and helpers are in `server/paystack.ts` (initialization, verification, timeline, export).
 - Frontend uses `client/src/lib/paystack.ts` to open Paystack popup with the public key and metadata.
 
 ## Notes for contributors
+
 - Keep API surface stable — `server/routers.ts` defines tRPC endpoints.
 - When editing auth/session code, ensure `SESSION_DURATION_MS` and SDK signing remain consistent.
 - Run `pnpm -s tsc --noEmit` before opening PRs.
