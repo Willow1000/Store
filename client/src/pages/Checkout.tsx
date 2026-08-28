@@ -33,6 +33,11 @@ import {
 } from "@shared/shipping";
 import currencyClient from "@/lib/currencyClient";
 import {
+  getStateLabel,
+  getPostalCodeLabel,
+} from "@/lib/checkoutLocationLabels";
+import { CheckoutAddressFields } from "@/components/checkout/CheckoutAddressFields";
+import {
   isMetaCheckoutRequest,
   parseMetaCouponPercent,
   parseMetaCheckoutParams,
@@ -62,7 +67,7 @@ import {
   type CartItem,
 } from "@/lib/checkoutSnapshot";
 
-type CheckoutFormData = {
+export type CheckoutFormData = {
   firstName: string;
   lastName: string;
   email: string;
@@ -83,14 +88,21 @@ type PaymentMethod = {
   disabled?: boolean;
 };
 
-const t = (_key: string, fallback: string) => fallback;
+// NOTE: this always returns `fallback` regardless of `key` or locale - it
+// does not call into the real translateText/checkoutText translation
+// system used elsewhere in this file. Pre-existing behavior, preserved
+// as-is here (including in CheckoutAddressFields, which imports this same
+// function) rather than silently "fixed" as a side effect of extracting
+// components - changing it would change what's actually displayed to
+// non-English users, a separate, deliberate decision from this refactor.
+export const t = (_key: string, fallback: string) => fallback;
 
-type StateOption = {
+export type StateOption = {
   value: string;
   label: string;
 };
 
-type CountryOption = {
+export type CountryOption = {
   value: string;
   label: string;
   flag: string;
@@ -155,28 +167,6 @@ function getCountryOptions(): CountryOption[] {
     .sort((a, b) => a.label.localeCompare(b.label));
 
   return countryOptionsCache;
-}
-
-const POSTAL_LABEL_BY_COUNTRY: Record<string, string> = {
-  US: "ZIP Code",
-  GB: "Postcode",
-  IE: "Eircode",
-};
-
-function getStateLabel(country: string | undefined | null): string {
-  if (!country) return "State/Province/Region";
-  const c = String(country).toUpperCase();
-  if (c === "US") return "State";
-  if (c === "CA") return "Province";
-  if (c === "GB") return "Region";
-  if (c === "IE") return "County";
-  return "State/Province/Region";
-}
-
-function getPostalCodeLabel(country: string | undefined | null): string {
-  if (!country) return "Postal code";
-  const c = String(country).toUpperCase();
-  return POSTAL_LABEL_BY_COUNTRY[c] || "Postal code";
 }
 
 function getCountryStates(country: string): CountryState[] {
@@ -1905,323 +1895,21 @@ export default function Checkout() {
 
             {/* Shipping Step */}
             {step === "shipping" && (
-              <div className="bg-white border border-gray-200 rounded p-4 sm:p-6 md:p-8 mb-6 w-full">
-                <h2 className="text-xl sm:text-2xl font-bold mb-6 sm:mb-8 text-black">
-                  {t("checkout.shippingAddress", "Shipping Address")}
-                </h2>
-
-                <form className="space-y-5 sm:space-y-6">
-                  <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
-                    <div>
-                      <label className="block text-sm font-semibold text-black mb-3">
-                        First Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="firstName"
-                        value={formData.firstName}
-                        onChange={handleShippingChange}
-                        placeholder="John"
-                        className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
-                          formErrors.firstName
-                            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                            : "border-gray-300 focus:border-black focus:ring-black"
-                        }`}
-                        required
-                      />
-                      {formErrors.firstName && (
-                        <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
-                          <AlertCircle size={14} /> {formErrors.firstName}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-black mb-3">
-                        Last Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="lastName"
-                        value={formData.lastName}
-                        onChange={handleShippingChange}
-                        placeholder="Doe"
-                        className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
-                          formErrors.lastName
-                            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                            : "border-gray-300 focus:border-black focus:ring-black"
-                        }`}
-                        required
-                      />
-                      {formErrors.lastName && (
-                        <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
-                          <AlertCircle size={14} /> {formErrors.lastName}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-black mb-3">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleShippingChange}
-                      placeholder="john@example.com"
-                      className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
-                        formErrors.email
-                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                          : "border-gray-300 focus:border-black focus:ring-black"
-                      }`}
-                      required
-                    />
-                    {formErrors.email && (
-                      <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
-                        <AlertCircle size={14} /> {formErrors.email}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-black mb-3">
-                      Phone Number *
-                    </label>
-                    <div className="grid gap-3 sm:grid-cols-[220px_minmax(0,1fr)]">
-                      <div>
-                        <label className="sr-only" htmlFor="phoneCountry">
-                          Phone country code
-                        </label>
-                        <select
-                          id="phoneCountry"
-                          name="phoneCountry"
-                          value={formData.phoneCountry}
-                          onChange={handleShippingChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-colors text-base bg-white"
-                          aria-label="Select phone country code"
-                        >
-                          {COUNTRY_PHONE_OPTIONS.map(countryOption => (
-                            <option
-                              key={countryOption.value}
-                              value={countryOption.value}
-                            >
-                              {getCountryPhoneLabel(countryOption.value)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handlePhoneChange}
-                        onBlur={handlePhoneBlur}
-                        placeholder="(555)-123-4567"
-                        className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
-                          formErrors.phone
-                            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                            : "border-gray-300 focus:border-black focus:ring-black"
-                        }`}
-                        required
-                      />
-                    </div>
-                    {formErrors.phone && (
-                      <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
-                        <AlertCircle size={14} /> {formErrors.phone}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-black mb-3">
-                      Street Address *
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleShippingChange}
-                      placeholder="123 Main St"
-                      className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
-                        formErrors.address
-                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                          : "border-gray-300 focus:border-black focus:ring-black"
-                      }`}
-                      required
-                    />
-                    {formErrors.address && (
-                      <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
-                        <AlertCircle size={14} /> {formErrors.address}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-black mb-3">
-                      {t("checkout.country", "Country")} *
-                    </label>
-                    <select
-                      name="country"
-                      value={formData.country}
-                      onChange={handleShippingChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-colors text-base bg-white"
-                      required
-                    >
-                      <option value="">Select country</option>
-                      {countryOptions.map(countryOption => (
-                        <option
-                          key={countryOption.value}
-                          value={countryOption.value}
-                        >
-                          {countryOption.flag ? `${countryOption.flag} ` : ""}
-                          {countryOption.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
-                    <div>
-                      <label className="block text-sm font-semibold text-black mb-3">
-                        {getStateLabel(formData.country)} *
-                      </label>
-                      {manualLocationFields ? (
-                        <input
-                          type="text"
-                          name="state"
-                          value={formData.state}
-                          onChange={handleShippingChange}
-                          placeholder={getStateLabel(formData.country)}
-                          className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
-                            formErrors.state
-                              ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                              : "border-gray-300 focus:border-black focus:ring-black"
-                          }`}
-                          required
-                        />
-                      ) : (
-                        <select
-                          name="state"
-                          value={formData.state}
-                          onChange={handleShippingChange}
-                          className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white ${
-                            formErrors.state
-                              ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                              : "border-gray-300 focus:border-black focus:ring-black"
-                          }`}
-                          required
-                        >
-                          <option value="">
-                            {t("checkout.selectState", "Select")}{" "}
-                            {getStateLabel(formData.country).toLowerCase()}
-                          </option>
-                          {structuredStateOptions.map(state => (
-                            <option key={state.value} value={state.value}>
-                              {state.label}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      {formErrors.state && (
-                        <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
-                          <AlertCircle size={14} /> {formErrors.state}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-black mb-3">
-                        {t("checkout.city", "City")} *
-                      </label>
-                      {manualCityField ? (
-                        <input
-                          type="text"
-                          name="city"
-                          value={formData.city}
-                          onChange={handleShippingChange}
-                          placeholder={t("checkout.city", "City")}
-                          className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
-                            formErrors.city
-                              ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                              : "border-gray-300 focus:border-black focus:ring-black"
-                          }`}
-                          required
-                        />
-                      ) : (
-                        <select
-                          name="city"
-                          value={formData.city}
-                          onChange={handleShippingChange}
-                          disabled={!formData.state}
-                          className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white disabled:bg-gray-100 disabled:text-gray-500 ${
-                            formErrors.city
-                              ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                              : "border-gray-300 focus:border-black focus:ring-black"
-                          }`}
-                          required
-                        >
-                          <option value="">
-                            {t("checkout.selectCity", "Select city")}
-                          </option>
-                          {cityOptions.map(city => (
-                            <option key={city} value={city}>
-                              {city}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      {formErrors.city && (
-                        <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
-                          <AlertCircle size={14} /> {formErrors.city}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-black mb-3">
-                        {getPostalCodeLabel(formData.country)} *
-                      </label>
-                      <input
-                        type="text"
-                        name="zip"
-                        value={formData.zip}
-                        onChange={handleShippingChange}
-                        placeholder={t("checkout.zipPlaceholder", "10001")}
-                        className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
-                          formErrors.zip
-                            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                            : "border-gray-300 focus:border-black focus:ring-black"
-                        }`}
-                        required
-                      />
-                      {formErrors.zip && (
-                        <p className="flex items-center gap-1 text-red-600 text-xs sm:text-sm mt-1">
-                          <AlertCircle size={14} /> {formErrors.zip}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {isAuthenticated && (
-                    <div className="p-4 rounded border border-gray-200 bg-gray-50 text-sm text-gray-700">
-                      Shipping addresses are saved automatically for future
-                      checkout. If you use a different address, you will be
-                      asked whether to update your saved address.
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handleContinueToPayment}
-                    disabled={isSavingAddress}
-                    className="w-full bg-black hover:bg-gray-900 disabled:bg-gray-400 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
-                  >
-                    {isSavingAddress
-                      ? "Saving Address..."
-                      : "Continue to Payment"}
-                    <ChevronRight size={20} />
-                  </button>
-                </form>
-              </div>
+              <CheckoutAddressFields
+                formData={formData}
+                formErrors={formErrors}
+                handleShippingChange={handleShippingChange}
+                handlePhoneChange={handlePhoneChange}
+                handlePhoneBlur={handlePhoneBlur}
+                countryOptions={countryOptions}
+                manualLocationFields={manualLocationFields}
+                structuredStateOptions={structuredStateOptions}
+                manualCityField={manualCityField}
+                cityOptions={cityOptions}
+                isAuthenticated={isAuthenticated}
+                handleContinueToPayment={handleContinueToPayment}
+                isSavingAddress={isSavingAddress}
+              />
             )}
 
             {/* Payment Step */}
