@@ -71,7 +71,7 @@ export function useProducts(
 
         // Race between the actual fetch and the timeout
         const fetchPromise = (async () => {
-          let query = supabase
+          const query = supabase
             .from("products")
             .select("*")
             .order("created_at", { ascending: false });
@@ -475,7 +475,7 @@ export function useSearchProducts(searchTerm: string) {
           return productsToSearch;
         })();
 
-        let allProducts = (await Promise.race([
+        const allProducts = (await Promise.race([
           fetchPromise,
           timeoutPromise,
         ])) as Product[];

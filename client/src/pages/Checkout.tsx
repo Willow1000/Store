@@ -520,7 +520,6 @@ export default function Checkout() {
     } catch {
       // Ignore parse errors
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [isSavingAddress, setIsSavingAddress] = useState(false);

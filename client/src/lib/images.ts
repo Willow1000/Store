@@ -40,8 +40,8 @@ export function getHighResImageUrl(url: string | null | undefined): string {
       const looksLikeBucketPath = /^[^:\/]+\/.+/i.test(candidate);
       if (looksLikeBucketPath) {
         const parts = candidate.split("/");
-        let bucket = parts[0];
-        let path = parts.slice(1).join("/");
+        const bucket = parts[0];
+        const path = parts.slice(1).join("/");
 
         // If the bucket looks like a common static folder (images or data), avoid converting
         const staticFolders = ["images", "data"];

@@ -7,7 +7,6 @@ async function run() {
   const server = createServer(app);
 
   await new Promise<void>(resolve => server.listen(0, resolve));
-  // @ts-ignore
   const addr = server.address();
   const port = typeof addr === "object" && addr ? addr.port : 3000;
 

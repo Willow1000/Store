@@ -1459,9 +1459,6 @@ export function createApp() {
               )
           : [];
 
-        let paymentId: string | null = null;
-        let orderId: number | null = null;
-
         // STEP 1: Record payment details FIRST
         try {
           const paymentRecord = await createPayment(0, userId, {

@@ -55,6 +55,14 @@ jobs:
       - name: Lint with Prettier
         run: pnpm exec prettier --check .
 
+      # Blocks on real errors (correctness issues: prefer-const, hook rule
+      # violations, stray @ts-ignore, etc.) - this repo's ~150 pre-existing
+      # no-unused-vars warnings are left as visible-but-non-blocking rather
+      # than force-fixed across every file just to turn lint on; see
+      # eslint.config.js for the reasoning.
+      - name: Lint with ESLint
+        run: pnpm run lint
+
       # The postgres service above starts with no tables - without this,
       # any test that queries a real table (not just a connectivity check
       # like `select 1`) would fail here despite passing locally against

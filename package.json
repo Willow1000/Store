@@ -9,6 +9,7 @@
     "build:prerender": "FAST_BUILD=1 pnpm exec tsx scripts/prerender-ssr.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc --noEmit",
+    "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit push"
@@ -109,6 +110,8 @@
     "autoprefixer": "^10.5.0",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.0",
+    "eslint": "^10.9.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^30.0.1",
     "pnpm": "^10.15.1",
     "postcss": "^8.5.15",
@@ -117,6 +120,7 @@
     "tsx": "^4.19.1",
     "tw-animate-css": "^1.4.0",
     "typescript": "5.9.3",
+    "typescript-eslint": "^8.68.0",
     "vite": "^7.1.7",
     "vite-plugin-manus-runtime": "^0.0.57",
     "vitest": "^2.1.4"
