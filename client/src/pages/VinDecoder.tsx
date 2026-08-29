@@ -73,6 +73,37 @@ export default function VinDecoder() {
     { enabled: false }
   );
 
+  const handleFindProducts = async (options?: { silent?: boolean }) => {
+    if (!vin.trim()) {
+      if (!options?.silent) {
+        toast.error("Please enter a VIN to search for products");
+      }
+      return;
+    }
+
+    setProducts([]);
+    setProductsLoading(true);
+    try {
+      const res = await filterProductsQuery.refetch();
+      if (res.data) {
+        setProducts(res.data.products || []);
+        setProductsTotal(res.data.totalMatches || 0);
+
+        if (!options?.silent) {
+          setTimeout(() => {
+            resultsRef.current?.focus();
+          }, 50);
+        }
+      }
+    } catch (err) {
+      if (!options?.silent) {
+        toast.error("Failed to search products for this VIN");
+      }
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
   const handleDecodeVin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -106,6 +137,10 @@ export default function VinDecoder() {
         } catch {}
 
         toast.success("VIN decoded successfully!");
+
+        // Suggest parts for this vehicle automatically - no need for the
+        // shopper to ask for suggestions in a second step.
+        handleFindProducts({ silent: true });
       }
     } catch (error: any) {
       const message =
@@ -115,36 +150,6 @@ export default function VinDecoder() {
       setDecodedVehicle(null);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleFindProducts = async () => {
-    if (!vin.trim()) {
-      toast.error("Please enter a VIN to search for products");
-      return;
-    }
-
-    setProducts([]);
-    setProductsLoading(true);
-    try {
-      const res = await filterProductsQuery.refetch();
-      if (res.data) {
-        setProducts(res.data.products || []);
-        setProductsTotal(res.data.totalMatches || 0);
-
-        // Move focus to results for keyboard users
-        setTimeout(() => {
-          resultsRef.current?.focus();
-        }, 50);
-
-        toast.success(
-          `Found ${res.data.totalMatches || 0} products matching the VIN`
-        );
-      }
-    } catch (err) {
-      toast.error("Failed to search products for this VIN");
-    } finally {
-      setProductsLoading(false);
     }
   };
 
@@ -497,78 +502,87 @@ export default function VinDecoder() {
             </div>
           )}
 
-          {/* Find compatible products */}
-          <div className="vin-product-search">
-            <button
-              type="button"
-              className="find-products-button"
-              onClick={handleFindProducts}
-              disabled={productsLoading || !vin.trim()}
-              aria-controls="vin-product-results"
-              aria-expanded={products.length > 0}
-            >
-              {productsLoading
-                ? "Searching products..."
-                : "Find Compatible Products"}
-            </button>
-          </div>
-
           {/* Decoded Vehicle Information */}
           {renderVehicleInfo()}
 
-          {/* Product Results (ARIA live and keyboard accessible) */}
-          <div
-            id="vin-product-results"
-            ref={resultsRef}
-            tabIndex={-1}
-            aria-live="polite"
-            className="vin-product-results"
-          >
-            <div className="results-header">
-              <h3>Product Matches</h3>
-              <p className="sr-only" aria-hidden={false}>
-                {productsTotal} products found
-              </p>
+          {/* Suggested Parts (auto-populated right after a successful
+              decode; this button just re-runs the same lookup) */}
+          {decodedVehicle && (
+            <div className="vin-product-search">
+              <button
+                type="button"
+                className="find-products-button"
+                onClick={() => handleFindProducts()}
+                disabled={productsLoading || !vin.trim()}
+                aria-controls="vin-product-results"
+                aria-expanded={products.length > 0}
+              >
+                {productsLoading
+                  ? "Searching for parts..."
+                  : "Refresh Suggested Parts"}
+              </button>
             </div>
+          )}
 
-            {productsLoading && <p>Searching for compatible products…</p>}
+          {/* Product Results (ARIA live and keyboard accessible) */}
+          {decodedVehicle && (
+            <div
+              id="vin-product-results"
+              ref={resultsRef}
+              tabIndex={-1}
+              aria-live="polite"
+              className="vin-product-results"
+            >
+              <div className="results-header">
+                <h3>Suggested Parts for Your Vehicle</h3>
+                <p className="sr-only" aria-hidden={false}>
+                  {productsTotal} products found
+                </p>
+              </div>
 
-            {!productsLoading && products.length === 0 && (
-              <p className="no-results">
-                No matching products found for this VIN.
-              </p>
-            )}
+              {productsLoading && <p>Finding parts for this vehicle…</p>}
 
-            {!productsLoading && products.length > 0 && (
-              <ul className="product-list" role="list">
-                {products.map((p: any) => (
-                  <li key={p.id} className="product-item" role="listitem">
-                    <a href={`/product/${p.id}`} className="product-link">
-                      <div className="product-thumb">
-                        {p.images && p.images[0] ? (
-                          <img
-                            src={p.images[0]}
-                            alt={p.name || "Product image"}
-                          />
-                        ) : (
-                          <div className="product-placeholder" aria-hidden>
-                            Image
-                          </div>
-                        )}
-                      </div>
-                      <div className="product-meta">
-                        <div className="product-name">{p.name}</div>
-                        <div className="product-price">${p.price}</div>
-                        <div className="product-snippet">
-                          {(p.description || "").slice(0, 120)}
+              {!productsLoading && products.length === 0 && (
+                <p className="no-results">
+                  No matching parts found for this vehicle yet.
+                </p>
+              )}
+
+              {!productsLoading && products.length > 0 && (
+                <ul className="product-list" role="list">
+                  {products.map((p: any) => (
+                    <li key={p.id} className="product-item" role="listitem">
+                      <a href={`/product/${p.id}`} className="product-link">
+                        <div className="product-thumb">
+                          {p.cover_image_url ? (
+                            <img
+                              src={p.cover_image_url}
+                              alt={p.title || "Product image"}
+                            />
+                          ) : (
+                            <div className="product-placeholder" aria-hidden>
+                              Image
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+                        <div className="product-meta">
+                          <div className="product-name">{p.title}</div>
+                          <div className="product-price">
+                            ${Number(p.price || 0).toFixed(2)}
+                          </div>
+                          <div className="product-snippet">
+                            {(p.item_specifics || "")
+                              .split("\n")[0]
+                              .slice(0, 120)}
+                          </div>
+                        </div>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {/* Info Box */}
           <div className="info-box">

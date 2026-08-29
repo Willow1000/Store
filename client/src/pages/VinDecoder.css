@@ -20,17 +20,13 @@
 .vin-decoder-wrapper h1 {
   font-size: 2.5rem;
   margin: 0 0 1rem;
-  color: #0f172a;
+  color: #000000;
   font-weight: 800;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .description {
-  color: #64748b;
+  color: #000000;
   margin: 0 0 3rem;
   line-height: 1.8;
   font-size: 1.05rem;
@@ -53,7 +49,7 @@
   display: block;
   margin-bottom: 0.75rem;
   font-weight: 700;
-  color: #1e293b;
+  color: #000000;
   font-size: 1rem;
   letter-spacing: -0.01em;
 }
@@ -87,7 +83,7 @@
 .form-group small {
   display: block;
   margin-top: 0.5rem;
-  color: #94a3b8;
+  color: #000000;
   font-size: 0.875rem;
   font-weight: 500;
 }
@@ -142,7 +138,7 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #1e293b;
+  color: #000000;
   letter-spacing: -0.01em;
 }
 
@@ -152,7 +148,7 @@
   border: 1.5px solid #dbeafe;
   border-radius: 8px;
   font-size: 0.875rem;
-  color: #0284c7;
+  color: #000000;
   cursor: pointer;
   transition: all 0.2s;
   font-weight: 600;
@@ -179,7 +175,7 @@
   font-family: "Courier New", monospace;
   cursor: pointer;
   transition: all 0.2s;
-  color: #2563eb;
+  color: #000000;
   font-weight: 600;
 }
 
@@ -230,7 +226,7 @@
 }
 
 .no-results {
-  color: #64748b;
+  color: #000000;
 }
 
 .product-list {
@@ -272,16 +268,16 @@
 
 .product-name {
   font-weight: 700;
-  color: #0f172a;
+  color: #000000;
 }
 
 .product-price {
-  color: #2563eb;
+  color: #000000;
   font-weight: 800;
 }
 
 .product-snippet {
-  color: #64748b;
+  color: #000000;
   font-size: 0.95rem;
 }
 
@@ -292,7 +288,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
+  color: #000000;
   border-radius: 6px;
 }
 
@@ -328,7 +324,7 @@
 .result-header h2 {
   margin: 0;
   font-size: 1.75rem;
-  color: #0f172a;
+  color: #000000;
   font-weight: 700;
   letter-spacing: -0.02em;
   display: flex;
@@ -346,7 +342,7 @@
 .vin-display {
   margin: 0;
   font-size: 0.95rem;
-  color: #64748b;
+  color: #000000;
 }
 
 .vin-display code {
@@ -354,7 +350,7 @@
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   font-family: "Courier New", monospace;
-  color: #2563eb;
+  color: #000000;
   font-weight: 600;
   letter-spacing: 0.05em;
 }
@@ -392,7 +388,7 @@
 .section-title h3 {
   margin: 0;
   font-size: 1.25rem;
-  color: #1e293b;
+  color: #000000;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -484,14 +480,14 @@
 .card-label {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #64748b;
+  color: #000000;
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
 
 .card-value {
   font-size: 1.1rem;
-  color: #0f172a;
+  color: #000000;
   font-weight: 600;
   word-break: break-word;
   line-height: 1.4;
@@ -510,7 +506,7 @@
   margin: 0 0 1.25rem;
   font-size: 1.15rem;
   font-weight: 700;
-  color: #1e40af;
+  color: #000000;
   letter-spacing: -0.01em;
 }
 
@@ -522,7 +518,7 @@
 
 .info-box li {
   margin-bottom: 0.75rem;
-  color: #1e40af;
+  color: #000000;
   line-height: 1.8;
   font-weight: 500;
 }

@@ -36,6 +36,7 @@ import {
   createCheckoutSession,
 } from "./stripe";
 import { decodeVin } from "./vinDecoder";
+import { getAllSupabaseProducts } from "./supabaseProducts";
 import { TRPCError } from "@trpc/server";
 
 import { logger } from "./_core/logger";
@@ -470,14 +471,15 @@ export const appRouter = router({
             )
           );
 
-          const allProducts = await getProducts(2000, 0);
-          const scored = allProducts.map((p: any) => {
-            const name = normalize(p.name);
-            const description = normalize(p.description);
+          const allProducts = await getAllSupabaseProducts(2000);
+          const scored = allProducts.map(p => {
+            const title = normalize(p.title);
+            const specifics = normalize(p.item_specifics);
             const brandText = normalize(p.brand);
             const modelText = normalize(p.model);
-            const partNumber = normalize(p.partNumber);
-            const corpus = `${name} ${description} ${brandText} ${modelText} ${partNumber}`;
+            const partNumber = normalize(p.part_number);
+            const categoryText = normalize(p.category_name);
+            const corpus = `${title} ${specifics} ${brandText} ${modelText} ${partNumber} ${categoryText}`;
             let score = 0;
 
             tokens.forEach(token => {
@@ -503,7 +505,7 @@ export const appRouter = router({
               score += 20;
             if (modelText && model && modelText.includes(model)) score += 15;
             if (partNumber && year && partNumber.includes(year)) score += 4;
-            if (model && name.includes(model)) score += 12;
+            if (model && title.includes(model)) score += 12;
             if (year && corpus.includes(year)) score += 4;
 
             return { product: p, score };
@@ -517,14 +519,15 @@ export const appRouter = router({
           let results = matched;
           if (results.length === 0) {
             const fallbackTerms = [...tokens, ...aliasTokens];
-            results = allProducts.filter((p: any) => {
-              const text = `${normalize(p.name)} ${normalize(p.description)} ${normalize(p.brand)} ${normalize(p.model)} ${normalize(p.partNumber)}`;
+            results = allProducts.filter(p => {
+              const text = `${normalize(p.title)} ${normalize(p.item_specifics)} ${normalize(p.brand)} ${normalize(p.model)} ${normalize(p.part_number)}`;
               return fallbackTerms.some(term => term && text.includes(term));
             });
           }
 
           if (results.length === 0) {
-            results = await getTrendingProducts(input.limit);
+            // allProducts is already ordered newest-first.
+            results = allProducts.slice(0, input.limit);
           }
 
           const totalMatches = results.length;
