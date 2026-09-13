@@ -12,12 +12,38 @@ export function getRequestOrigin(req: express.Request): string | null {
   return `${protocol}://${host}`;
 }
 
+/**
+ * The site canonicalises to the www host (the apex 308-redirects to it), so
+ * every machine-readable surface - robots.txt, llms.txt, both sitemaps - must
+ * advertise www URLs. Emitting apex URLs made crawlers follow a redirect for
+ * every discovery document and split signals across two hosts. Preview
+ * deployments and localhost are left untouched.
+ */
+const CANONICAL_APEX_HOST = "motorvault.shop";
+const CANONICAL_SITE_ORIGIN = `https://www.${CANONICAL_APEX_HOST}`;
+
+function normalizeToCanonicalHost(origin: string): string {
+  try {
+    const url = new URL(origin);
+    if (
+      url.hostname === CANONICAL_APEX_HOST ||
+      url.hostname === `www.${CANONICAL_APEX_HOST}`
+    ) {
+      return CANONICAL_SITE_ORIGIN;
+    }
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return CANONICAL_SITE_ORIGIN;
+  }
+}
+
 export function getSiteOrigin(req: express.Request): string {
-  return (
+  const resolved = (
     getRequestOrigin(req) ||
     ENV.siteUrl ||
     `${req.protocol}://${req.get("host")}`
   ).replace(/\/$/, "");
+  return normalizeToCanonicalHost(resolved);
 }
 
 export async function verifyRecaptchaToken(

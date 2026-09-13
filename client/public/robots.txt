@@ -19,5 +19,169 @@ Disallow: /*?*utm_campaign=
 Disallow: /*?*fbclid=
 Disallow: /*?*gclid=
 
-Sitemap: https://motorvault.shop/sitemap.xml
-Sitemap: https://motorvault.shop/sitemap-products.xml
+# Answer-engine / AI crawlers.
+# These already match 'User-agent: *', but a named group does NOT inherit the
+# wildcard group's rules, so each one restates the private-area Disallows.
+# Listing them explicitly keeps AI citation traffic working if the wildcard
+# group is ever tightened.
+
+User-agent: GPTBot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+User-agent: Claude-User
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+User-agent: Perplexity-User
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+User-agent: CCBot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+User-agent: Bytespider
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+User-agent: meta-externalagent
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /cart
+Disallow: /tickets
+Disallow: /payment/
+Disallow: /auth/
+
+# Curated entrypoint for LLMs and agents.
+LLM-Content: https://www.motorvault.shop/llms.txt
+Sitemap: https://www.motorvault.shop/sitemap.xml
+Sitemap: https://www.motorvault.shop/sitemap-products.xml

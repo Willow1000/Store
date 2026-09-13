@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useHeadCollector } from "@/lib/headManager";
 import {
   buildStructuredDataGraph,
@@ -42,6 +42,12 @@ interface SEOHeadProps {
     name: string;
     url: string;
   }>;
+  /**
+   * Map of language code -> fully localized url for this page (optionally an
+   * "x-default" key). Only supply it when each language really has its own
+   * url; omit it and no hreflang tags are emitted.
+   */
+  localizedUrls?: Partial<Record<string, string>>;
 }
 
 const SITE_NAME = "MotorVault";
@@ -56,11 +62,39 @@ const LANGUAGE_TO_LOCALE: Record<string, string> = {
   es: "es_ES",
   nl: "nl_NL",
 };
-const DEFAULT_SITE_ORIGIN = (
-  import.meta.env.VITE_APP_URL ||
-  import.meta.env.VITE_SITE_URL ||
-  "https://motorvault.shop"
-).replace(/\/$/, "");
+const CANONICAL_SITE_ORIGIN = "https://www.motorvault.shop";
+
+/**
+ * Placeholder values that must never reach canonical/og/hreflang tags.
+ * A misconfigured VITE_APP_URL leaks a domain we do not own into every
+ * canonical, which tells search engines the page is a duplicate of another
+ * site. Treat any such value as unset and fall back to the real origin.
+ */
+function resolveConfiguredOrigin(value?: string): string | undefined {
+  const trimmed = value?.trim().replace(/\/$/, "");
+  if (!trimmed) return undefined;
+  if (
+    /your-production-domain\.com|replace-with-your|example\.com|localhost/i.test(
+      trimmed
+    )
+  ) {
+    return undefined;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return undefined;
+    }
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return undefined;
+  }
+}
+
+const DEFAULT_SITE_ORIGIN =
+  resolveConfiguredOrigin(import.meta.env.VITE_APP_URL) ||
+  resolveConfiguredOrigin(import.meta.env.VITE_SITE_URL) ||
+  CANONICAL_SITE_ORIGIN;
 
 function getRuntimeSiteOrigin(): string {
   if (typeof window === "undefined") return DEFAULT_SITE_ORIGIN;
@@ -113,6 +147,31 @@ function getOgLocaleForLanguage(language: string): string {
   return LANGUAGE_TO_LOCALE[language] || LANGUAGE_TO_LOCALE.en;
 }
 
+/**
+ * Build a valid hreflang cluster. Returns [] unless the page declares at least
+ * two genuinely distinct localized urls, because an hreflang set whose entries
+ * all resolve to the same href carries no information and is ignored.
+ */
+function getHreflangAlternates(
+  localizedUrls: Partial<Record<string, string>> | undefined,
+  pageUrl: string
+): Array<{ hreflang: string; href: string }> {
+  if (!localizedUrls) return [];
+
+  const entries = SUPPORTED_SEO_LANGUAGES.map(langCode => {
+    const href = toAbsoluteUrl(localizedUrls[langCode]);
+    return href ? { hreflang: langCode as string, href } : undefined;
+  }).filter((entry): entry is { hreflang: string; href: string } =>
+    Boolean(entry)
+  );
+
+  const distinctHrefs = new Set(entries.map(entry => entry.href));
+  if (entries.length < 2 || distinctHrefs.size < 2) return [];
+
+  const xDefault = toAbsoluteUrl(localizedUrls["x-default"]) || pageUrl;
+  return [...entries, { hreflang: "x-default", href: xDefault }];
+}
+
 function toAbsoluteUrl(value?: string, baseUrl?: string): string | undefined {
   if (!value) return undefined;
   const trimmed = value.trim();
@@ -163,6 +222,7 @@ function buildHeadMarkup(props: {
   ogLocaleAlternates: string[];
   robotsContent: string;
   structuredDataJson: string;
+  localizedUrls?: Partial<Record<string, string>>;
 }) {
   const {
     title,
@@ -175,6 +235,7 @@ function buildHeadMarkup(props: {
     ogLocaleAlternates,
     robotsContent,
     structuredDataJson,
+    localizedUrls,
   } = props;
 
   const headTags: string[] = [];
@@ -223,14 +284,16 @@ function buildHeadMarkup(props: {
   if (pageUrl) {
     headTags.push(`<link rel="canonical" href="${escapeHtml(pageUrl)}" />`);
 
-    const supportedLanguages = ["en", "de", "it", "fr", "es", "nl"];
-    supportedLanguages.forEach(langCode => {
-      headTags.push(
-        `<link rel="alternate" hreflang="${escapeHtml(langCode)}" href="${escapeHtml(pageUrl)}" />`
-      );
-    });
-    headTags.push(
-      `<link rel="alternate" hreflang="x-default" href="${escapeHtml(pageUrl)}" />`
+    // hreflang is only valid when each language has its OWN url. Language is
+    // switched by runtime translation on a single url, so emitting one
+    // alternate per language pointing at the same href is self-contradictory
+    // and gets discarded. Only emit a cluster a page actually declares.
+    getHreflangAlternates(localizedUrls, pageUrl).forEach(
+      ({ hreflang, href }) => {
+        headTags.push(
+          `<link rel="alternate" hreflang="${escapeHtml(hreflang)}" href="${escapeHtml(href)}" />`
+        );
+      }
     );
   }
 
@@ -274,12 +337,20 @@ export function SEOHead({
   articleData,
   faqData,
   breadcrumbs,
+  localizedUrls,
   fallback = false,
 }: SEOHeadProps) {
   const effectiveCanonical = normalizeCanonicalUrl(canonical);
   const currentUrl = getCurrentUrl();
   const pageUrl = effectiveCanonical || currentUrl;
   const siteOrigin = getRuntimeSiteOrigin();
+  // Callers typically pass an inline object literal, which would be a new
+  // identity every render and re-run the head effect each time. Key the memo on
+  // the serialized value so the effect only re-runs when the urls really change.
+  const localizedUrlsKey = JSON.stringify(localizedUrls ?? null);
+  const stableLocalizedUrls = useMemo<
+    Partial<Record<string, string>> | undefined
+  >(() => JSON.parse(localizedUrlsKey) ?? undefined, [localizedUrlsKey]);
   const currentLanguage = getDocumentLanguage();
   const ogLocale = getOgLocaleForLanguage(currentLanguage);
   const ogLocaleAlternates = Object.entries(LANGUAGE_TO_LOCALE)
@@ -327,6 +398,7 @@ export function SEOHead({
     ogLocaleAlternates,
     robotsContent,
     structuredDataJson,
+    localizedUrls: stableLocalizedUrls,
   });
 
   if (typeof window === "undefined" && headCollector) {
@@ -400,18 +472,15 @@ export function SEOHead({
       document
         .querySelectorAll('link[rel="alternate"][hreflang]')
         .forEach(el => el.remove());
-      SUPPORTED_SEO_LANGUAGES.forEach(langCode => {
-        const alt = document.createElement("link");
-        alt.rel = "alternate";
-        alt.hreflang = langCode;
-        alt.href = pageUrl;
-        document.head.appendChild(alt);
-      });
-      const defaultAlt = document.createElement("link");
-      defaultAlt.rel = "alternate";
-      defaultAlt.hreflang = "x-default";
-      defaultAlt.href = pageUrl;
-      document.head.appendChild(defaultAlt);
+      getHreflangAlternates(stableLocalizedUrls, pageUrl).forEach(
+        ({ hreflang, href }) => {
+          const alt = document.createElement("link");
+          alt.rel = "alternate";
+          alt.hreflang = hreflang;
+          alt.href = href;
+          document.head.appendChild(alt);
+        }
+      );
     }
 
     let scriptTag = document.querySelector(
@@ -442,6 +511,7 @@ export function SEOHead({
     pageUrl,
     robotsContent,
     structuredDataJson,
+    stableLocalizedUrls,
     title,
   ]);
 
