@@ -1710,6 +1710,299 @@ export const BLOG_POSTS: BlogPost[] = [
       { label: "r/CarTalkUK", href: "https://www.reddit.com/r/CarTalkUK/" },
     ],
   },
+  {
+    slug: "car-seat-replacement-airbags-sensors-fitment",
+    title: "Replacing Car Seats: Airbags, Sensors, and Fitment Explained",
+    description:
+      "A practical guide to replacing seats in European cars and vans, covering side airbags, occupancy sensors, belt pretensioners, rails, trim codes, and what to inspect before buying used.",
+    excerpt:
+      "Swapping a seat looks like four bolts and a connector. In any car built after the late 1990s it is a safety-system job: side airbags, pyrotechnic pretensioners, and occupancy detection all live inside the seat. This guide covers what carries over between cars, what must never be reused, and how to inspect a used seat before you pay for it.",
+    coverImage: "/images/blog/recaro-seats-guide-cover.avif",
+    coverImageAlt:
+      "Used OEM car seats with rails, brackets, and wiring looms laid out for a fitment and airbag safety check",
+    category: "Fitment",
+    publishedDate: "2026-09-13",
+    updatedDate: "2026-09-13",
+    readingTime: "12 min read",
+    keywords: [
+      "car seat replacement",
+      "used oem car seats europe",
+      "seat side airbag replacement",
+      "seat occupancy sensor airbag light",
+      "seat belt pretensioner reuse",
+      "seat rails brackets fitment",
+      "van seat replacement",
+    ],
+    sections: [
+      {
+        heading: "A seat swap is a safety-system job, not a bolt-in",
+        summary:
+          "Modern seats carry side airbags, pyrotechnic belt pretensioners, and occupancy detection, so the parts under the upholstery matter more than the upholstery itself.",
+        paragraphs: [
+          "On almost any European car built since the late 1990s, the seat is part of the restraint system. The outer bolster of the backrest often houses a side airbag. The belt buckle or reel may contain a pyrotechnic pretensioner. The passenger seat usually carries an occupancy mat that tells the airbag module whether anybody is sitting there and roughly how heavy they are. None of that is visible when you look at a seat in a photograph.",
+          "This is why seat buying goes wrong more often than, say, buying a door card. Two seats can look identical, share a shape, and still be electrically incompatible because one came from a car with side airbags and the other did not, or because the airbag squib has a different resistance and the control module refuses it. The upholstery is the part you can see and the least likely thing to cause a problem.",
+          "The practical consequence is that the first question is never what the seat looks like. It is what generation, trim, and safety specification the donor car had, and whether that matches yours.",
+        ],
+        points: [
+          "Side airbags are commonly built into the outer backrest bolster, not the door",
+          "Pyrotechnic pretensioners are single-use and are not serviceable items",
+          "The passenger occupancy mat feeds the airbag module, not just a warning light",
+          "Heated, ventilated, memory, and lumbar functions each add their own wiring",
+          "On premium platforms the seat has its own control module that may need coding",
+        ],
+      },
+      {
+        heading: "What you must never reuse without checking",
+        summary:
+          "Anything pyrotechnic is single use, and a seat out of a car that has been hit on that side needs treating as suspect until proven otherwise.",
+        paragraphs: [
+          "If a side airbag has deployed, the seat is not repairable by refitting a cover. The inflator, the bag, the tear seam in the upholstery, and usually the foam and frame around it all need proper replacement. A seat that has been made to look right again without those parts being replaced will pass a visual inspection and fail the only test that matters.",
+          "The same applies to belt pretensioners. They fire once. A pretensioner that has already gone off cannot be reset, and a reel that has locked after deployment should be replaced rather than cycled. Sellers do not always know this, which is why a donor car history matters more than seller assurances.",
+          "Be especially careful with seats advertised as coming from a written-off vehicle. That can be perfectly fine when the car was written off for economic reasons like hail damage or a failed engine. It is not fine when the write-off was a side impact and the seller is vague about which side.",
+        ],
+        points: [
+          "Ask which side of the donor car was damaged and why it was scrapped",
+          "A deployed side airbag means frame, foam, bag, and cover, not just a cover",
+          "Pretensioners do not reset and should not be reused after deployment",
+          "Check the tear seam on the outer bolster for restitching or glue",
+          "If the seller cannot say whether airbags deployed, price it as airbag-less",
+        ],
+      },
+      {
+        heading: "Occupancy detection and the airbag warning light",
+        summary:
+          "Most passenger-side airbag faults after a seat swap come from occupancy sensing, and the common workarounds defeat the system they are meant to satisfy.",
+        paragraphs: [
+          "The passenger seat usually contains a mat or sensor that reports whether the seat is occupied. The airbag module uses that to decide whether to arm the passenger airbag, and on some cars to stage deployment force. Fit a seat without that sensor, or with one the module does not recognise, and you get a permanent airbag warning light along with unpredictable behaviour from the passenger airbag.",
+          "There is a well-known workaround involving a fixed resistor in place of the sensor. It will usually extinguish the light. It also tells the module a constant, fictional occupancy state, which means the passenger airbag no longer adapts to whether anyone is in the seat. That is a poor trade on a road car and it is worth being blunt about it rather than pretending it is a neutral fix.",
+          "The clean approach is to match specification. If your car has occupancy detection, source a seat that has it, and keep the original sensor with the original loom where possible.",
+        ],
+        points: [
+          "A persistent airbag light after a swap usually points at occupancy sensing",
+          "Resistor bypasses silence the warning without restoring the function",
+          "Some platforms require the sensor to be recalibrated after fitting",
+          "Keep the original passenger loom if you are changing only the seat frame",
+          "Expect a diagnostic session on any car with a seat control module",
+        ],
+      },
+      {
+        heading: "Rails, brackets, and what actually carries over",
+        summary:
+          "Platform sharing helps, but floor mounting points and rail geometry change across facelifts far more often than buyers expect.",
+        paragraphs: [
+          "Shared platforms are genuinely useful. Seats move between related models more readily than most people assume, which is why a seat from one model can end up in a different badge on the same floorpan. What tends not to carry over cleanly is the rail: mounting pitch, height, and the position of the tilt and slide mechanisms can all change between a pre-facelift and facelift car even when the seat itself looks identical.",
+          "The safest approach is to check the mounting pitch on your own floor before ordering, and to buy the seat with its rails attached wherever possible. Rails are cheap next to the labour of discovering they do not line up, and a seat that arrives complete removes most of the guesswork.",
+          "Where a seat is genuinely from a different platform, treat any bracket fabrication as a structural job. Seat mounts carry crash loads. This is not a place for improvised adapters.",
+        ],
+        points: [
+          "Measure the mounting pitch on your own floorpan before ordering",
+          "Buy with rails attached where the seller offers it",
+          "Facelift changes affect rails more often than they affect the seat shell",
+          "Manual and electric seats rarely share the same rail assembly",
+          "Treat bracket fabrication as structural work, not as trim work",
+        ],
+      },
+      {
+        heading: "Matching trim, colour, and material",
+        summary:
+          "Interior colour codes are recorded in the vehicle build data, and matching them is the difference between a repair and an obvious patch.",
+        paragraphs: [
+          "Interior trim is coded. The build sticker or the manufacturer build data will list an interior code that identifies colour and material. Matching that code is far more reliable than matching a photograph, because black is never just black once you put two different blacks side by side in daylight.",
+          "Material matters as much as colour. A cloth seat next to a part-leather seat reads as mismatched even when the colour is right, because the sheen and the wear pattern differ. On a car where only one seat is being replaced, it is usually worth buying the pair so the front of the cabin is consistent.",
+          "Where an exact match is not available, a retrim of your existing frame is often the better answer, particularly on older cars where the original material has been out of production for years.",
+        ],
+        points: [
+          "Find the interior code in the build sticker or build data, not from photos",
+          "Match material and sheen, not just colour name",
+          "Buying in pairs avoids a visibly mismatched cabin",
+          "Sun-faded panels will not match a fresh seat even at the same code",
+          "A retrim can beat a mismatched original on older vehicles",
+        ],
+      },
+      {
+        heading: "Vans and commercial seating are a different problem",
+        summary:
+          "Crew cab benches, rotating bases, and conversion seating bring load ratings and belt anchorage into scope in a way passenger cars usually do not.",
+        paragraphs: [
+          "Commercial seating is its own category. A three-plus-three crew arrangement, a rotating base in a camper conversion, or a bench with integrated belts changes where the crash loads are carried. In an integrated-belt bench, the belt anchorage is in the seat frame rather than the B-pillar, which means the floor mounting is doing considerably more work.",
+          "That has two consequences for buyers. First, the mounting hardware is part of the safety system and should come with the seat rather than being substituted. Second, a conversion that changes seating capacity or belt anchorage is likely to have inspection and documentation implications depending on where the vehicle is registered.",
+          "This is worth saying plainly because van seating is often sold in the same listings as car seating, and the two are not equivalent purchases.",
+        ],
+        points: [
+          "Integrated-belt benches carry belt loads through the seat frame and floor",
+          "Buy mounting hardware with the seat rather than substituting fasteners",
+          "Rotating and swivel bases change both geometry and load path",
+          "Changing seat count or belt anchorage can have inspection implications",
+          "Crew cab and conversion seats are rarely interchangeable between generations",
+        ],
+      },
+      {
+        heading: "Inspecting a used seat before you pay",
+        summary:
+          "A short, repeatable checklist catches most of the expensive surprises, and nearly all of it can be done from photographs and questions.",
+        paragraphs: [
+          "Most problems are visible if you know where to look. Ask for photographs of the underside, the rails, the connectors, and the outer bolster seam. Ask for the donor vehicle VIN so you can confirm generation and specification rather than relying on the listing title, which is often written from memory.",
+          "Look at wear in the places that reveal real mileage: the outer bolster of the driver seat, the leading edge of the base cushion, and the side the driver uses to get in and out. A seat with a pristine face and a collapsed outer bolster has had a hard life regardless of what the odometer said.",
+          "Finally, check that the loom is complete and unmodified. Cut connectors, added splices, and heat-shrink in the middle of a run are all signs that somebody has already been solving a compatibility problem, and you will be inheriting it.",
+        ],
+        points: [
+          "Request underside, rail, connector, and bolster seam photographs",
+          "Ask for the donor VIN and confirm specification from it",
+          "Check the driver outer bolster and base leading edge for real wear",
+          "Look for cut connectors, splices, and heat-shrink in the loom",
+          "Confirm whether rails, brackets, and fasteners are included",
+        ],
+      },
+      {
+        heading: "What it costs and when each route makes sense",
+        summary:
+          "Used OEM wins on originality and price, new OEM wins on certainty, and a retrim wins when the frame is good and the material is obsolete.",
+        paragraphs: [
+          "Used OEM is usually the cheapest route to an original-looking interior, and on older or lower-volume cars it is often the only route. The trade is that condition varies and you are relying on inspection. New OEM removes that uncertainty and is the sensible choice where a restraint component is involved, but availability falls away quickly once a model is out of production.",
+          "A retrim sits between the two. You keep your own frame, airbag, sensors, and rails, which removes the entire compatibility problem, and you pay for labour and material instead. On a car where the original material is discontinued, this is frequently the best outcome even though the headline cost looks higher than a used seat.",
+          "The right answer depends on which problem you actually have. A torn cover on a sound frame is a retrim. A collapsed frame or a deployed airbag is a replacement.",
+        ],
+        points: [
+          "Torn or worn cover on a sound frame points to a retrim",
+          "Collapsed frame or deployed airbag points to replacement",
+          "Restraint components are the strongest argument for new OEM",
+          "Used OEM is often the only route on out-of-production models",
+          "Factor diagnostics and coding into the total on premium platforms",
+        ],
+      },
+    ],
+    comparisonTable: {
+      caption:
+        "Choosing between used OEM, new OEM, and retrimming your existing seat",
+      columns: ["Factor", "Used OEM seat", "New OEM seat", "Retrim your frame"],
+      rows: [
+        ["Typical cost", "Lowest", "Highest", "Middle"],
+        [
+          "Originality",
+          "Original parts and finish",
+          "Original",
+          "Original frame, new material",
+        ],
+        [
+          "Availability on older cars",
+          "Good",
+          "Often discontinued",
+          "Always available",
+        ],
+        [
+          "Compatibility risk",
+          "Highest, depends on specification match",
+          "Low",
+          "None, you keep your own frame",
+        ],
+        [
+          "Airbag and sensor risk",
+          "Must be verified",
+          "Low",
+          "None if the frame is untouched",
+        ],
+        [
+          "Colour and trim match",
+          "Depends on donor",
+          "Exact",
+          "Exact or improved",
+        ],
+        [
+          "Best when",
+          "Model is out of production",
+          "A restraint part is involved",
+          "Frame is sound, material is obsolete",
+        ],
+      ],
+    },
+    faq: [
+      {
+        question: "Can I fit a seat from a different model?",
+        answer:
+          "Often yes within a shared platform, but the rails and the electrical specification decide it rather than the shape. Check the mounting pitch on your own floor, confirm whether the donor car had side airbags and occupancy detection, and buy the seat with its rails wherever possible.",
+      },
+      {
+        question: "Why is my airbag light on after changing a seat?",
+        answer:
+          "The most common cause is passenger occupancy detection, either missing or not recognised by the airbag module. Side airbag squib resistance and a disturbed connector under the seat are the next two candidates. A scan tool will name the circuit rather than leaving you guessing.",
+      },
+      {
+        question:
+          "Is it safe to use a resistor to clear the occupancy sensor fault?",
+        answer:
+          "It will usually clear the warning light, but it reports a fixed occupancy state to the airbag module, so the passenger airbag no longer responds to whether the seat is occupied. Matching specification is the better route on a road car.",
+      },
+      {
+        question: "Can a seat with a deployed side airbag be repaired?",
+        answer:
+          "Only by replacing the inflator, bag, and the foam and cover around the tear seam, which usually means the seat is rebuilt rather than repaired. A reupholstered cover over a fired airbag looks correct and is not.",
+      },
+      {
+        question: "Should I buy one seat or a pair?",
+        answer:
+          "Buy the pair if the cabin is visible as a whole, which it usually is. Two seats from different donor cars at the same colour code can still differ in sheen and wear, and a single fresh seat next to a faded one reads as a repair.",
+      },
+      {
+        question: "Are van and crew cab seats interchangeable with car seats?",
+        answer:
+          "No. Integrated-belt benches carry belt loads through the seat frame and floor mounting, so the hardware is part of the restraint system. Treat commercial seating as a separate category with its own mounting and documentation requirements.",
+      },
+    ],
+    internalLinks: [
+      {
+        label: "Brand New 3+3 Mercedes-Benz Vito Seats",
+        href: "/product/7fe0740b-5b0e-4957-8a4e-17a98a936718",
+      },
+      {
+        label: "VW T5-T6 driver and passenger seats reupholstered",
+        href: "/product/65dec357-f593-48dd-9b9d-22f1560cfa2d",
+      },
+      {
+        label: "Fiat Ducato, Jumper, Boxer, Ram driver and passenger seat set",
+        href: "/product/17f8e095-6c56-4a08-a0a3-8aff0cb84873",
+      },
+      {
+        label: "BMW E36 cabrio M Vader interior",
+        href: "/product/4eb306a6-7368-4e53-981a-9f476814c87f",
+      },
+      {
+        label: "Recaro seats buying and fitment guide",
+        href: "/blog/recaro-seats-buying-and-fitment-guide-europe",
+      },
+      {
+        label: "Will this part fit? A practical VIN fitment guide",
+        href: "/blog/vin-fitment-guide-european-auto-parts",
+      },
+      {
+        label: "Used vs refurbished vs OEM auto parts",
+        href: "/blog/used-vs-refurbished-vs-oem-auto-parts",
+      },
+    ],
+    outboundReferences: [
+      {
+        label: "Euro NCAP vehicle safety assessment programme",
+        href: "https://www.euroncap.com/",
+      },
+      {
+        label: "How to find the right part using VIN (Europarts360)",
+        href: "https://europarts360.com/blogs/guide/how-to-find-the-right-part-using-your-vin",
+      },
+    ],
+    backlinkOutreach: [
+      {
+        label: "r/MechanicAdvice seat and airbag fault threads",
+        href: "https://www.reddit.com/r/MechanicAdvice/",
+      },
+      {
+        label: "r/CarTalkUK buyer fitment discussions",
+        href: "https://www.reddit.com/r/CarTalkUK/",
+      },
+      {
+        label: "r/vandwellers seating and conversion threads",
+        href: "https://www.reddit.com/r/vandwellers/",
+      },
+    ],
+  },
 ];
 
 export function getBlogPostBySlug(slug: string): BlogPost | undefined {
