@@ -6,6 +6,7 @@
  */
 
 import { trpcClient } from "./trpc";
+import currencyClient from "./currencyClient";
 
 export interface StripeCheckoutInput {
   userId?: number;
@@ -50,6 +51,10 @@ export async function redirectToStripeCheckout(
         shippingAddress: input.shippingAddress,
         billingAddress: input.billingAddress,
         language: input.language,
+        // Send only the CODE. The server resolves the rate and converts the
+        // USD catalogue prices itself, so the charge is created in the currency
+        // the storefront quoted rather than always in dollars.
+        currency: currencyClient.getCurrencyCode(),
         origin: window.location.origin,
       });
 

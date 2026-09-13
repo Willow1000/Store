@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { toStripeMinorUnits, type ChargeConversion } from "./currency";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2026-03-25.dahlia" as any,
@@ -84,8 +85,20 @@ export async function createCheckoutSession(
   items: Array<{ productId: number; quantity: number; price: string }>,
   origin: string,
   metadata?: Record<string, string>,
-  charges: StripeCheckoutCharges = {}
+  charges: StripeCheckoutCharges = {},
+  conversion: ChargeConversion = {
+    currency: "USD",
+    rate: 1,
+    convert: (usd: number) => usd,
+  }
 ) {
+  // Catalogue prices are USD. The session is created in the visitor's regional
+  // currency using a rate resolved once on the server, so the customer is
+  // charged in the currency the storefront quoted rather than being shown a
+  // dollar figure at the last step.
+  const chargeCurrency = conversion.currency.toLowerCase();
+  const toMinor = (usdAmount: number) =>
+    toStripeMinorUnits(conversion.convert(usdAmount), conversion.currency);
   type LineItem = {
     price_data: {
       currency: string;
@@ -97,37 +110,37 @@ export async function createCheckoutSession(
 
   const lineItems: LineItem[] = items.map(item => ({
     price_data: {
-      currency: "usd",
+      currency: chargeCurrency,
       product_data: {
         name: `Product #${item.productId}`,
         metadata: {
           productId: item.productId.toString(),
         },
       },
-      unit_amount: Math.round(parseFloat(item.price) * 100),
+      unit_amount: toMinor(parseFloat(item.price)),
     },
     quantity: item.quantity,
   }));
 
-  const shippingCents = Math.round((charges.shipping || 0) * 100);
-  if (shippingCents > 0) {
+  const shippingMinor = toMinor(charges.shipping || 0);
+  if (shippingMinor > 0) {
     lineItems.push({
       price_data: {
-        currency: "usd",
+        currency: chargeCurrency,
         product_data: { name: "Shipping", metadata: {} },
-        unit_amount: shippingCents,
+        unit_amount: shippingMinor,
       },
       quantity: 1,
     });
   }
 
-  const taxCents = Math.round((charges.tax || 0) * 100);
-  if (taxCents > 0) {
+  const taxMinor = toMinor(charges.tax || 0);
+  if (taxMinor > 0) {
     lineItems.push({
       price_data: {
-        currency: "usd",
+        currency: chargeCurrency,
         product_data: { name: "Tax", metadata: {} },
-        unit_amount: taxCents,
+        unit_amount: taxMinor,
       },
       quantity: 1,
     });
@@ -146,12 +159,13 @@ export async function createCheckoutSession(
   // explicit `discounts` array, and our discounts come from our own `offers`
   // table (not Stripe's promotion codes), so a discount coupon replaces
   // allow_promotion_codes rather than sitting alongside it.
-  const discountCents = Math.round((charges.discountAmount || 0) * 100);
+  // The coupon's currency must match the session's, or Stripe rejects it.
+  const discountMinor = toMinor(charges.discountAmount || 0);
   let discounts: Array<{ coupon: string }> | undefined;
-  if (discountCents > 0) {
+  if (discountMinor > 0) {
     const coupon = await stripe.coupons.create({
-      amount_off: discountCents,
-      currency: "usd",
+      amount_off: discountMinor,
+      currency: chargeCurrency,
       duration: "once",
       name: charges.offerCode ? `Discount (${charges.offerCode})` : "Discount",
     });
@@ -166,11 +180,11 @@ export async function createCheckoutSession(
     client_reference_id: userId.toString(),
     metadata: sessionMetadata,
     // Adaptive Pricing (on by default per the Stripe dashboard setting,
-    // independent of anything in this code) converts the displayed/charged
-    // amount to the customer's local currency based on their location. Our
-    // line items are already computed in USD from the product catalog's
-    // real prices, so this must stay off - otherwise the amount Stripe
-    // actually shows/charges silently differs by the FX rate applied.
+    // independent of anything in this code) converts the charged amount to the
+    // customer's local currency using Stripe's own rate. The line items above
+    // are ALREADY in the visitor's regional currency, converted with the rate
+    // the storefront quoted, so leaving this on would convert a second time
+    // and charge something neither the customer nor this server quoted.
     adaptive_pricing: { enabled: false },
     // Checkout Session metadata is NOT copied to the underlying PaymentIntent
     // automatically — the webhook handles `payment_intent.succeeded` and reads
