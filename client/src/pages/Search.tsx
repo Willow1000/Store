@@ -1,5 +1,4 @@
 import { useLocation } from "wouter";
-import { useMemo } from "react";
 import { Link } from "wouter";
 import { SEOHead } from "@/components/SEOHead";
 import currencyClient from "@/lib/currencyClient";
@@ -12,23 +11,16 @@ export default function Search() {
   const searchParams = new URLSearchParams(location.split("?")[1] || "");
   const query = searchParams.get("q") || "";
 
-  const { data: allProducts, isLoading } = trpc.products.list.useQuery({
-    limit: 100,
-    offset: 0,
-  });
+  // Search runs in Postgres over the whole catalogue. This used to pull the
+  // first 100 products and filter them in the browser, so anything outside that
+  // window was simply invisible to search.
+  const { data, isLoading } = trpc.products.search.useQuery(
+    { query, limit: 48, offset: 0 },
+    { enabled: query.length > 0 }
+  );
 
-  const results = useMemo(() => {
-    if (!allProducts || !query) return [];
-    const lowerQuery = query.toLowerCase();
-    // Match the fields the live catalog actually carries. Searching only the
-    // title would miss the part number and fitment details that buyers
-    // typically paste in.
-    return allProducts.filter(p =>
-      [p.title, p.item_specifics, p.brand, p.model, p.part_number].some(field =>
-        field?.toLowerCase().includes(lowerQuery)
-      )
-    );
-  }, [allProducts, query]);
+  const results = data?.items ?? [];
+  const total = data?.total ?? 0;
 
   return (
     <>
@@ -82,7 +74,8 @@ export default function Search() {
           ) : (
             <>
               <p className="mb-6 text-sm text-gray-600">
-                {results.length} products found
+                {total} {total === 1 ? "product" : "products"} found
+                {total > results.length && ` (showing first ${results.length})`}
               </p>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {results.map(product => (

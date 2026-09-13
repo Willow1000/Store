@@ -35,7 +35,10 @@ import {
   createCheckoutSession,
 } from "./stripe";
 import { decodeVin } from "./vinDecoder";
-import { getAllSupabaseProducts } from "./supabaseProducts";
+import {
+  getAllSupabaseProducts,
+  searchSupabaseProducts,
+} from "./supabaseProducts";
 import { TRPCError } from "@trpc/server";
 
 import { logger } from "./_core/logger";
@@ -113,6 +116,22 @@ export const appRouter = router({
         );
         return products.slice(input.offset, input.offset + input.limit);
       }),
+
+    // Full-catalog search. The match runs in Postgres, so results are not
+    // limited to whatever page of products the caller fetched first - site
+    // search previously filtered a client-side window of 100 rows and could
+    // not see the rest of the catalogue at all.
+    search: publicProcedure
+      .input(
+        z.object({
+          query: z.string().default(""),
+          limit: z.number().min(1).max(100).default(24),
+          offset: z.number().min(0).default(0),
+        })
+      )
+      .query(({ input }) =>
+        searchSupabaseProducts(input.query, input.limit, input.offset)
+      ),
 
     getById: publicProcedure
       .input(z.number())
