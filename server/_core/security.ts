@@ -173,7 +173,13 @@ export function applySecurityHeaders(
     "media-src 'self' https: data: blob:",
     "object-src 'none'",
     "require-trusted-types-for 'script'",
-    "trusted-types default",
+    // Named policies must be allow-listed individually. "blootrue-loader" is
+    // created by client/src/components/TrustindexWidget.tsx purely to pass the
+    // review-widget script URL through as a TrustedScriptURL; without it here
+    // createPolicy() throws 'Policy "blootrue-loader" disallowed' and the
+    // widget never mounts. A narrow named policy is preferable to widening the
+    // default one, and the URL itself is still constrained by script-src-elem.
+    "trusted-types default blootrue-loader",
     "upgrade-insecure-requests",
   ].join("; ");
 
