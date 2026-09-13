@@ -4,7 +4,6 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import {
-  getProducts,
   getProductById,
   getFeaturedProducts,
   getNewArrivals,
@@ -95,6 +94,12 @@ export const appRouter = router({
 
   // Product procedures
   products: router({
+    // Reads the live Supabase table rather than db.ts's getProducts().
+    // db.ts's Drizzle `products` schema targets different column names than
+    // the real table (integer ids + `name` vs uuid ids + `title`), so
+    // getProducts() always returned an empty list in production - which made
+    // site search silently find nothing for every query. Same mismatch
+    // documented in server/supabaseProducts.ts and server/sitemap.ts.
     list: publicProcedure
       .input(
         z.object({
@@ -102,7 +107,12 @@ export const appRouter = router({
           offset: z.number().default(0),
         })
       )
-      .query(({ input }) => getProducts(input.limit, input.offset)),
+      .query(async ({ input }) => {
+        const products = await getAllSupabaseProducts(
+          input.limit + input.offset
+        );
+        return products.slice(input.offset, input.offset + input.limit);
+      }),
 
     getById: publicProcedure
       .input(z.number())

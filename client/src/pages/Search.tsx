@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { SEOHead } from "@/components/SEOHead";
 import currencyClient from "@/lib/currencyClient";
 import { trpc } from "@/lib/trpc";
+import { getHighResImageUrl } from "@/lib/images";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Search() {
@@ -19,10 +20,13 @@ export default function Search() {
   const results = useMemo(() => {
     if (!allProducts || !query) return [];
     const lowerQuery = query.toLowerCase();
-    return allProducts.filter(
-      p =>
-        p.name.toLowerCase().includes(lowerQuery) ||
-        p.description?.toLowerCase().includes(lowerQuery)
+    // Match the fields the live catalog actually carries. Searching only the
+    // title would miss the part number and fitment details that buyers
+    // typically paste in.
+    return allProducts.filter(p =>
+      [p.title, p.item_specifics, p.brand, p.model, p.part_number].some(field =>
+        field?.toLowerCase().includes(lowerQuery)
+      )
     );
   }, [allProducts, query]);
 
@@ -85,12 +89,11 @@ export default function Search() {
                   <Link key={product.id} href={`/product/${product.id}`}>
                     <a className="group rounded-lg border border-border bg-white p-4 transition-all hover:shadow-lg">
                       <div className="mb-4 aspect-square overflow-hidden rounded-lg bg-secondary">
-                        {product.images &&
-                        Array.isArray(product.images) &&
-                        product.images[0] ? (
+                        {product.cover_image_url ? (
                           <img
-                            src={product.images[0] as string}
-                            alt={product.name}
+                            src={getHighResImageUrl(product.cover_image_url)}
+                            alt={product.title ?? "MotorVault product"}
+                            loading="lazy"
                             className="h-full w-full object-cover group-hover:scale-105 transition-transform"
                           />
                         ) : (
@@ -100,19 +103,20 @@ export default function Search() {
                         )}
                       </div>
                       <h3 className="mb-2 line-clamp-2 font-semibold">
-                        {product.name}
+                        {product.title}
                       </h3>
                       <div className="mb-4 flex items-center justify-between">
                         <span className="text-lg font-bold">
                           {currencyClient.formatUSD(Number(product.price || 0))}
                         </span>
-                        {product.originalPrice && (
-                          <span className="text-sm text-gray-500 line-through">
-                            {currencyClient.formatUSD(
-                              Number(product.originalPrice || 0)
-                            )}
-                          </span>
-                        )}
+                        {product.discount &&
+                          Number(product.discount) > Number(product.price) && (
+                            <span className="text-sm text-gray-500 line-through">
+                              {currencyClient.formatUSD(
+                                Number(product.discount)
+                              )}
+                            </span>
+                          )}
                       </div>
                       <button className="w-full rounded-md bg-black py-2 text-sm font-semibold text-white hover:bg-gray-900">
                         View Product
