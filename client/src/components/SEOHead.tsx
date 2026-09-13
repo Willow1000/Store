@@ -62,7 +62,29 @@ const LANGUAGE_TO_LOCALE: Record<string, string> = {
   es: "es_ES",
   nl: "nl_NL",
 };
-const CANONICAL_SITE_ORIGIN = "https://www.motorvault.shop";
+const CANONICAL_APEX_HOST = "motorvault.shop";
+const CANONICAL_SITE_ORIGIN = `https://www.${CANONICAL_APEX_HOST}`;
+
+/**
+ * The apex 308-redirects to www, so www is the canonical host. VITE_APP_URL is
+ * configured as the apex, which made every canonical, og:url and schema @id
+ * point at a url that immediately redirects - a wasted signal, and inconsistent
+ * with robots.txt/llms.txt/sitemaps. Collapse both spellings onto www.
+ */
+function normalizeToCanonicalHost(origin: string): string {
+  try {
+    const url = new URL(origin);
+    if (
+      url.hostname === CANONICAL_APEX_HOST ||
+      url.hostname === `www.${CANONICAL_APEX_HOST}`
+    ) {
+      return CANONICAL_SITE_ORIGIN;
+    }
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return CANONICAL_SITE_ORIGIN;
+  }
+}
 
 /**
  * Placeholder values that must never reach canonical/og/hreflang tags.
@@ -85,7 +107,7 @@ function resolveConfiguredOrigin(value?: string): string | undefined {
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
       return undefined;
     }
-    return `${parsed.protocol}//${parsed.host}`;
+    return normalizeToCanonicalHost(`${parsed.protocol}//${parsed.host}`);
   } catch {
     return undefined;
   }
