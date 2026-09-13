@@ -341,7 +341,7 @@ export function SEOHead({
   noIndex = false,
   noFollow = false,
   robots,
-  ogImage = "https://motorvault.shop/images/hero/premium-european-auto-parts-hero.webp",
+  ogImage = `${CANONICAL_SITE_ORIGIN}/images/hero/premium-european-auto-parts-hero.webp`,
   ogType = "website",
   keywords = [
     "European car parts",

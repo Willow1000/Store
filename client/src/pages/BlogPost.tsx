@@ -1,4 +1,5 @@
 import { SEOHead } from "@/components/SEOHead";
+import { getSocialImageUrl } from "@shared/socialImage";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { BLOG_AUTHOR, BLOG_POSTS, getBlogPostBySlug } from "@shared/blogPosts";
 import { useState } from "react";
@@ -100,13 +101,13 @@ export default function BlogPost() {
         description={post.description}
         canonical={`/blog/${post.slug}`}
         ogType="article"
-        ogImage={post.coverImage}
+        ogImage={getSocialImageUrl(post.coverImage)}
         keywords={post.keywords}
         articleData={{
           author: BLOG_AUTHOR,
           publishedDate: post.publishedDate,
           modifiedDate: post.updatedDate,
-          image: post.coverImage,
+          image: getSocialImageUrl(post.coverImage),
         }}
         faqData={post.faq}
         breadcrumbs={[

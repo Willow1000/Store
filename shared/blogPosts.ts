@@ -1351,7 +1351,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Year/make/model search alone gets fitment wrong more often than most buyers realize. Here's how VIN-based lookup closes that gap and how to use MotorVault's VIN decoder to shop by exact build spec.",
     excerpt:
       "Two cars with the same year, make, and model can still need different parts. A VIN decoder resolves the build-level differences that generic fitment search misses.",
-    coverImage: "/images/Mechanic_holding_VIN_plate_engine_202607190821.avif",
+    coverImage: "/images/blog/vin-decoder-guide-cover.avif",
     coverImageAlt:
       "Mechanic holding a VIN plate next to an engine bay to confirm exact vehicle build specification",
     category: "Fitment",
@@ -1463,7 +1463,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Ceramic vs semi-metallic, OEM vs aftermarket, and when each choice actually changes stopping performance, noise, and rotor wear.",
     excerpt:
       "Braking hardware is one category where reputable aftermarket routinely matches or beats OEM - but only once you know which compound and grade you're actually buying.",
-    coverImage: "/images/Car_parts_comparison_workbench_2K_202607190823.avif",
+    coverImage: "/images/blog/oem-vs-aftermarket-brake-pads-cover.avif",
     coverImageAlt:
       "Brake pads and rotors from different suppliers laid out on a workbench for a quality comparison",
     category: "Quality",
@@ -1599,8 +1599,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "How to read an OBD-II trouble code correctly, tell a real failure from a sensor fluke, and avoid replacing the wrong part first.",
     excerpt:
       "A trouble code names a symptom, not always the failed part. Here's how to read it correctly before you order a replacement.",
-    coverImage:
-      "/images/Mechanic_examining_engine_contro…_2K_202607190825.avif",
+    coverImage: "/images/blog/check-engine-light-guide-cover.avif",
     coverImageAlt:
       "Mechanic examining an engine control unit and wiring while diagnosing a check engine light",
     category: "Troubleshooting",
