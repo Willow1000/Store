@@ -737,7 +737,30 @@ export function createApp() {
         try {
           const userId = Number(paymentIntent.metadata?.user_id ?? NaN);
           const stripePaymentIntentId = paymentIntent.id;
-          const totalAmount = (paymentIntent.amount / 100).toFixed(2);
+          // paymentIntent.amount is in the currency the customer was CHARGED,
+          // which is their regional currency, not USD. The orders table has no
+          // currency column and every total in it is USD, so reading the Stripe
+          // amount here would write a euro or yen figure into a USD column.
+          // Prefer the USD total recorded in metadata at session creation and
+          // only fall back to the Stripe amount when the charge really was USD.
+          const metadataUsdTotal = Number(
+            paymentIntent.metadata?.usd_total ?? paymentIntent.metadata?.total
+          );
+          const chargedInUsd =
+            String(paymentIntent.currency || "usd").toLowerCase() === "usd";
+          const totalAmount =
+            Number.isFinite(metadataUsdTotal) && metadataUsdTotal > 0
+              ? metadataUsdTotal.toFixed(2)
+              : chargedInUsd
+                ? (paymentIntent.amount / 100).toFixed(2)
+                : "0.00";
+
+          if (!Number.isFinite(metadataUsdTotal) && !chargedInUsd) {
+            logger.error(
+              { data: [paymentIntent.id, paymentIntent.currency] },
+              "[Stripe] Non-USD charge with no usd_total metadata; order total cannot be trusted:"
+            );
+          }
           const subtotalAmount = Number(
             paymentIntent.metadata?.subtotal ?? totalAmount
           );

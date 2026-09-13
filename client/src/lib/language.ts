@@ -562,6 +562,31 @@ export function setSiteLanguage(
   }
 }
 
+/**
+ * Drop a manual language choice and return to region detection.
+ *
+ * setSiteLanguage() defaults to source "manual", and initializeSiteLanguage()
+ * skips detection entirely while that flag is set. Without a way to clear it,
+ * a visitor who ever touched the language selector had auto-detection disabled
+ * permanently on that browser with no route back - which reads as region
+ * detection being broken.
+ *
+ * Returns the language detected for the supplied geo so the caller can apply it
+ * immediately rather than waiting for the next page load.
+ */
+export function clearSiteLanguageOverride(
+  geo: GeoLike | null | undefined
+): SiteLanguageCode {
+  try {
+    localStorage.removeItem(SITE_LANGUAGE_SOURCE_KEY);
+  } catch {
+    // Ignore storage issues.
+  }
+  const detected = detectLanguageFromGeo(geo);
+  setSiteLanguage(detected, "auto");
+  return detected;
+}
+
 export function initializeSiteLanguage(
   geo: GeoLike | null | undefined
 ): SiteLanguageCode {

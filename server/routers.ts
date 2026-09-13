@@ -35,6 +35,7 @@ import {
   createCheckoutSession,
 } from "./stripe";
 import { decodeVin } from "./vinDecoder";
+import { resolveChargeConversion } from "./currency";
 import {
   getAllSupabaseProducts,
   searchSupabaseProducts,
@@ -309,18 +310,36 @@ export const appRouter = router({
             shippingAddress: z.record(z.string(), z.unknown()).optional(),
             billingAddress: z.record(z.string(), z.unknown()).optional(),
             language: z.string().optional(),
+            // Regional currency the storefront quoted in, read from the
+            // visitor's cached geo/currency state. Only the CODE is accepted -
+            // the rate is resolved server-side, because the client already
+            // supplies prices and letting it supply a rate too would let a
+            // tampered client pick its own exchange rate.
+            currency: z.string().length(3).optional(),
             metadata: z.record(z.string(), z.string()).optional(),
             origin: z.string().url(),
           })
         )
         .mutation(async ({ input, ctx }) => {
           try {
-            // Build metadata for webhook processing
+            const conversion = await resolveChargeConversion(input.currency);
+
+            // Build metadata for webhook processing. Every figure here stays in
+            // USD: the orders table has no currency column and all of its
+            // totals are USD, so the webhook must record USD regardless of what
+            // the customer was charged in. The charge currency, charged total
+            // and rate are recorded alongside for reconciliation.
             const sessionMetadata = {
               subtotal: input.subtotal,
               shipping: input.shipping || "0",
               tax: input.tax || "0",
               total: input.total,
+              usd_total: input.total,
+              charge_currency: conversion.currency,
+              charge_total: conversion
+                .convert(Number(input.total) || 0)
+                .toFixed(2),
+              charge_rate: String(conversion.rate),
               discountAmount: input.discountAmount || "0",
               offerCode: input.offerCode || "",
               shippingAddress: JSON.stringify(input.shippingAddress || {}),
@@ -341,7 +360,8 @@ export const appRouter = router({
                 tax: Number(input.tax || 0),
                 discountAmount: Number(input.discountAmount || 0),
                 offerCode: input.offerCode,
-              }
+              },
+              conversion
             );
 
             return {
