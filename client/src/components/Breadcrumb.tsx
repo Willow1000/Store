@@ -55,7 +55,15 @@ export function Breadcrumb({
       scriptTag.setAttribute("data-breadcrumb", "true");
       document.head.appendChild(scriptTag);
     }
-    scriptTag.textContent = JSON.stringify(structuredData);
+    // Same Trusted Types constraint as SEOHead: assigning a string to a
+    // <script> element's textContent is a guarded sink under the CSP's
+    // `require-trusted-types-for 'script'`. Insert a text node instead.
+    while (scriptTag.firstChild) {
+      scriptTag.removeChild(scriptTag.firstChild);
+    }
+    scriptTag.appendChild(
+      document.createTextNode(JSON.stringify(structuredData))
+    );
   }, [includeStructuredData, structuredData]);
 
   return (

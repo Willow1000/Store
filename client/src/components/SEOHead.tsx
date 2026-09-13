@@ -522,7 +522,17 @@ export function SEOHead({
       scriptTag.setAttribute("data-schema-purpose", "seo-llm");
       document.head.appendChild(scriptTag);
     }
-    scriptTag.textContent = structuredDataJson;
+    // Assigning a string to a <script> element's textContent is a Trusted
+    // Types script sink, and the CSP sends `require-trusted-types-for
+    // 'script'` (see server/_core/security.ts), so the assignment threw
+    // "This document requires 'TrustedScript' assignment" and the structured
+    // data was never written client-side. Inserting a text node is a DOM
+    // operation rather than a string sink, so it is not guarded - and needs no
+    // Trusted Types policy of its own.
+    while (scriptTag.firstChild) {
+      scriptTag.removeChild(scriptTag.firstChild);
+    }
+    scriptTag.appendChild(document.createTextNode(structuredDataJson));
   }, [
     description,
     keywordsContent,
