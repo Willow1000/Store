@@ -62,7 +62,7 @@ export function CheckoutAddressFields({
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
           <div>
             <label className="block text-sm font-semibold text-black mb-3">
-              First Name *
+              {t("checkout.firstName", "First Name")} *
             </label>
             <input
               type="text"
@@ -85,7 +85,7 @@ export function CheckoutAddressFields({
           </div>
           <div>
             <label className="block text-sm font-semibold text-black mb-3">
-              Last Name *
+              {t("checkout.lastName", "Last Name")} *
             </label>
             <input
               type="text"
@@ -110,7 +110,7 @@ export function CheckoutAddressFields({
 
         <div>
           <label className="block text-sm font-semibold text-black mb-3">
-            Email *
+            {t("checkout.email", "Email")} *
           </label>
           <input
             type="email"
@@ -134,12 +134,12 @@ export function CheckoutAddressFields({
 
         <div>
           <label className="block text-sm font-semibold text-black mb-3">
-            Phone Number *
+            {t("checkout.phoneNumber", "Phone Number")} *
           </label>
           <div className="grid gap-3 sm:grid-cols-[220px_minmax(0,1fr)]">
             <div>
               <label className="sr-only" htmlFor="phoneCountry">
-                Phone country code
+                {t("checkout.phoneCountryCode", "Phone country code")}
               </label>
               <select
                 id="phoneCountry"
@@ -147,7 +147,10 @@ export function CheckoutAddressFields({
                 value={formData.phoneCountry}
                 onChange={handleShippingChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-colors text-base bg-white"
-                aria-label="Select phone country code"
+                aria-label={t(
+                  "checkout.selectPhoneCountryCode",
+                  "Select phone country code"
+                )}
               >
                 {COUNTRY_PHONE_OPTIONS.map(countryOption => (
                   <option key={countryOption.value} value={countryOption.value}>
@@ -180,7 +183,7 @@ export function CheckoutAddressFields({
 
         <div>
           <label className="block text-sm font-semibold text-black mb-3">
-            Street Address *
+            {t("checkout.streetAddress", "Street Address")} *
           </label>
           <input
             type="text"
@@ -213,7 +216,9 @@ export function CheckoutAddressFields({
             className="w-full px-4 py-3 border border-gray-300 rounded focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-colors text-base bg-white"
             required
           >
-            <option value="">Select country</option>
+            <option value="">
+              {t("checkout.selectCountry", "Select country")}
+            </option>
             {countryOptions.map(countryOption => (
               <option key={countryOption.value} value={countryOption.value}>
                 {countryOption.flag ? `${countryOption.flag} ` : ""}
