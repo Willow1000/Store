@@ -57,6 +57,7 @@ import { InlineCheckoutAuth } from "@/components/InlineCheckoutAuth";
 import { trackInitiateCheckout, trackPurchase } from "@/hooks/useMetaPixel";
 import { TrustSignals } from "@/components/TrustSignals";
 import { getSiteLanguage, translateText } from "@/lib/language";
+import { useSiteLanguage } from "@/hooks/useSiteLanguage";
 import { redirectToStripeCheckout } from "@/lib/stripeCheckout";
 import {
   readCheckoutSnapshot,
@@ -88,14 +89,22 @@ type PaymentMethod = {
   disabled?: boolean;
 };
 
-// NOTE: this always returns `fallback` regardless of `key` or locale - it
-// does not call into the real translateText/checkoutText translation
-// system used elsewhere in this file. Pre-existing behavior, preserved
-// as-is here (including in CheckoutAddressFields, which imports this same
-// function) rather than silently "fixed" as a side effect of extracting
-// components - changing it would change what's actually displayed to
-// non-English users, a separate, deliberate decision from this refactor.
-export const t = (_key: string, fallback: string) => fallback;
+/**
+ * Checkout translation helper.
+ *
+ * This used to ignore `key` and return `fallback` unconditionally, which left
+ * the whole checkout flow in English for every visitor no matter what language
+ * the rest of the site had switched to. A previous refactor deliberately left
+ * it alone so that changing it would be its own decision rather than a side
+ * effect; this is that change.
+ *
+ * The language is read per call rather than captured, because this is a module
+ * level function shared with CheckoutAddressFields and has no component state
+ * to close over. Keys with no entry still fall back to the English string, so
+ * anything not yet in the dictionary is unchanged rather than blank.
+ */
+export const t = (key: string, fallback: string) =>
+  translateText(getSiteLanguage(), key, fallback);
 
 export type StateOption = {
   value: string;
@@ -374,7 +383,10 @@ const usesManualCityField = (country: string, state: string): boolean => {
 };
 
 export default function Checkout() {
-  const activeLanguage = getSiteLanguage();
+  // Subscribed rather than read once, so switching language (or region
+  // detection resolving after mount) re-renders the checkout instead of
+  // leaving it in the language it first painted in.
+  const activeLanguage = useSiteLanguage();
   const checkoutText = (key: string, fallback: string) =>
     translateText(activeLanguage, key, fallback);
   // Get geo data from currencyClient
