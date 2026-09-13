@@ -7,11 +7,14 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import { BrandLogo } from "@/components/BrandLogo";
 import { readCartFromStorage } from "@/lib/cart";
+import currencyClient from "@/lib/currencyClient";
 import {
   SITE_LANGUAGE_CHANGED_EVENT,
   SUPPORTED_SITE_LANGUAGES,
   getSiteLanguage,
   setSiteLanguage,
+  clearSiteLanguageOverride,
+  getSiteLanguageSource,
   translateText,
   type SiteLanguageCode,
 } from "@/lib/language";
@@ -22,6 +25,9 @@ export default function Header() {
   const [cartCount, setCartCount] = useState(0);
   const [language, setLanguage] = useState<SiteLanguageCode>(() =>
     getSiteLanguage()
+  );
+  const [isAutoLanguage, setIsAutoLanguage] = useState(
+    () => getSiteLanguageSource() !== "manual"
   );
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const { user, isAuthenticated, logout } = useAuth();
@@ -158,15 +164,29 @@ export default function Header() {
           <label className="hidden sm:flex items-center gap-2 text-xs text-gray-700">
             <span>{t("header.language", "Language")}</span>
             <select
-              value={language}
+              value={isAutoLanguage ? "auto" : language}
               onChange={e => {
-                const next = e.target.value as SiteLanguageCode;
+                const value = e.target.value;
+                // "auto" clears the manual override so region detection runs
+                // again; picking a language pins it as before.
+                if (value === "auto") {
+                  setLanguage(
+                    clearSiteLanguageOverride(currencyClient.getGeoData())
+                  );
+                  setIsAutoLanguage(true);
+                  return;
+                }
+                const next = value as SiteLanguageCode;
                 setSiteLanguage(next);
                 setLanguage(next);
+                setIsAutoLanguage(false);
               }}
               className="rounded border border-gray-300 bg-white px-2 py-1 text-xs"
               aria-label={t("header.selectLanguage", "Select language")}
             >
+              <option value="auto">
+                {t("language.option.auto", "Auto (by region)")}
+              </option>
               {SUPPORTED_SITE_LANGUAGES.map(lang => (
                 <option key={lang.code} value={lang.code}>
                   {t(`language.option.${lang.code}`, lang.nativeName)}
