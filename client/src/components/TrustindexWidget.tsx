@@ -15,9 +15,17 @@ function getTrustedScriptURL(url: string): string | unknown {
       : null;
 
   if (!policy && typeof maybeTrustedTypes.createPolicy === "function") {
-    policy = maybeTrustedTypes.createPolicy("blootrue-loader", {
-      createScriptURL: (input: string) => input,
-    });
+    try {
+      policy = maybeTrustedTypes.createPolicy("blootrue-loader", {
+        createScriptURL: (input: string) => input,
+      });
+    } catch {
+      // createPolicy throws if the CSP's trusted-types allow-list does not name
+      // this policy. Returning the plain url lets the browser reject the script
+      // on its own terms instead of this throw escaping the effect and taking
+      // the rest of the mount down with it.
+      return url;
+    }
   }
 
   if (policy && typeof policy.createScriptURL === "function") {

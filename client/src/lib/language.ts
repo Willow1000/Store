@@ -583,3 +583,35 @@ export function translateText(
 ): string {
   return KEY_TRANSLATIONS[language]?.[key] || fallback;
 }
+
+/**
+ * Every string this dictionary can already put on screen for `language`.
+ * The runtime DOM translator uses it to recognise text that components have
+ * ALREADY localised via translateText(), so it does not ship those strings to
+ * the translation endpoint just to get them back unchanged.
+ */
+export function getStaticallyTranslatedValues(
+  language: SiteLanguageCode
+): string[] {
+  return Object.values(KEY_TRANSLATIONS[language] || {});
+}
+
+/**
+ * English source text -> localised text, for the keys where both exist.
+ * Used to seed the runtime translation cache so chrome that is NOT rendered
+ * through translateText() still resolves without a network round trip.
+ */
+export function getStaticSourcePairs(
+  language: SiteLanguageCode
+): Array<[string, string]> {
+  const english = KEY_TRANSLATIONS.en || {};
+  const target = KEY_TRANSLATIONS[language] || {};
+  const pairs: Array<[string, string]> = [];
+  Object.entries(english).forEach(([key, sourceText]) => {
+    const translated = target[key];
+    if (translated && sourceText && translated !== sourceText) {
+      pairs.push([sourceText, translated]);
+    }
+  });
+  return pairs;
+}

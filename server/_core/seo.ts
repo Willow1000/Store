@@ -59,6 +59,34 @@ export const FEED_SHIPPING_COUNTRIES: string[] = [
   "VA",
 ];
 
+const PRIVATE_AREAS = [
+  "/api/",
+  "/admin/",
+  "/account",
+  "/orders",
+  "/checkout",
+  "/cart",
+  "/tickets",
+  "/payment/",
+  "/auth/",
+];
+
+const AI_CRAWLER_AGENTS = [
+  "GPTBot",
+  "OAI-SearchBot",
+  "ChatGPT-User",
+  "ClaudeBot",
+  "Claude-User",
+  "Claude-SearchBot",
+  "PerplexityBot",
+  "Perplexity-User",
+  "Google-Extended",
+  "Applebot-Extended",
+  "CCBot",
+  "Bytespider",
+  "meta-externalagent",
+];
+
 export function buildRobotsTxt(origin: string): string {
   const normalizedOrigin = origin.replace(/\/$/, "");
   return [
@@ -82,6 +110,19 @@ export function buildRobotsTxt(origin: string): string {
     "Disallow: /*?*utm_campaign=",
     "Disallow: /*?*fbclid=",
     "Disallow: /*?*gclid=",
+    "",
+    // Assistant/answer-engine crawlers are listed explicitly. They already
+    // fall under "User-agent: *", but naming them documents the intent and
+    // keeps a future tightening of the wildcard group from silently cutting
+    // off AI citation traffic. Each group must restate its own Disallow rules:
+    // a named group does NOT inherit anything from the wildcard group.
+    ...AI_CRAWLER_AGENTS.flatMap(agent => [
+      `User-agent: ${agent}`,
+      "Allow: /",
+      ...PRIVATE_AREAS.map(area => `Disallow: ${area}`),
+      "",
+    ]),
+    `LLM-Content: ${normalizedOrigin}/llms.txt`,
     "Sitemap: " + `${normalizedOrigin}/sitemap.xml`,
     "Sitemap: " + `${normalizedOrigin}/sitemap-products.xml`,
     "",

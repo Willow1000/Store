@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type Response } from "express";
 import { createServer } from "http";
 import net from "net";
 import fs from "fs";
@@ -43,13 +43,37 @@ function serveStatic(app: Express) {
   // extensions and are served normally.
   app.use(express.static(distPath, { index: false }));
 
-  const indexHtmlPath = path.resolve(distPath, "index.html");
+  // The shell is relocated out of the public dir at build time (see
+  // scripts/finalize-client-build.mjs). The dist/public path stays as a
+  // fallback for build output produced before that step existed.
+  const templateCandidates = [
+    path.resolve(distPath, "..", "index.template.html"),
+    path.resolve(distPath, "index.html"),
+  ];
   let template = "";
-  try {
-    template = fs.readFileSync(indexHtmlPath, "utf-8");
-  } catch {
-    template = "";
+  let templatePath = templateCandidates[templateCandidates.length - 1];
+  for (const candidate of templateCandidates) {
+    try {
+      template = fs.readFileSync(candidate, "utf-8");
+      if (template) {
+        templatePath = candidate;
+        break;
+      }
+    } catch {
+      template = "";
+    }
   }
+
+  const sendShell = (res: Response) => {
+    if (template) {
+      res
+        .status(200)
+        .setHeader("Content-Type", "text/html; charset=utf-8")
+        .send(template);
+      return;
+    }
+    res.sendFile(templatePath);
+  };
 
   const ssrEntryPath = path.resolve(__dirname, "server", "entry-server.js");
   let render:
@@ -74,7 +98,7 @@ function serveStatic(app: Express) {
     const req = _req;
     const acceptsHtml = (req.headers.accept || "").includes("text/html");
     if (!acceptsHtml || !template) {
-      return res.sendFile(indexHtmlPath);
+      return sendShell(res);
     }
 
     getRender()
@@ -100,7 +124,7 @@ function serveStatic(app: Express) {
           { data: [err?.stack || err] },
           "[SSR] Render failed, falling back to unrendered template"
         );
-        res.sendFile(indexHtmlPath);
+        sendShell(res);
       });
   });
 }

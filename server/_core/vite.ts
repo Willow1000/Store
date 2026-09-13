@@ -100,6 +100,15 @@ export function serveStatic(app: Express) {
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const candidates = [
+      path.resolve(distPath, "..", "index.template.html"),
+      path.resolve(distPath, "index.html"),
+    ];
+    const shell = candidates.find(candidate => fs.existsSync(candidate));
+    if (!shell) {
+      res.status(500).type("text/plain").send("Client build not found");
+      return;
+    }
+    res.sendFile(shell);
   });
 }

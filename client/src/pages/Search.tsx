@@ -1,9 +1,9 @@
 import { useLocation } from "wouter";
-import { useMemo } from "react";
 import { Link } from "wouter";
 import { SEOHead } from "@/components/SEOHead";
 import currencyClient from "@/lib/currencyClient";
 import { trpc } from "@/lib/trpc";
+import { getHighResImageUrl } from "@/lib/images";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Search() {
@@ -11,20 +11,16 @@ export default function Search() {
   const searchParams = new URLSearchParams(location.split("?")[1] || "");
   const query = searchParams.get("q") || "";
 
-  const { data: allProducts, isLoading } = trpc.products.list.useQuery({
-    limit: 100,
-    offset: 0,
-  });
+  // Search runs in Postgres over the whole catalogue. This used to pull the
+  // first 100 products and filter them in the browser, so anything outside that
+  // window was simply invisible to search.
+  const { data, isLoading } = trpc.products.search.useQuery(
+    { query, limit: 48, offset: 0 },
+    { enabled: query.length > 0 }
+  );
 
-  const results = useMemo(() => {
-    if (!allProducts || !query) return [];
-    const lowerQuery = query.toLowerCase();
-    return allProducts.filter(
-      p =>
-        p.name.toLowerCase().includes(lowerQuery) ||
-        p.description?.toLowerCase().includes(lowerQuery)
-    );
-  }, [allProducts, query]);
+  const results = data?.items ?? [];
+  const total = data?.total ?? 0;
 
   return (
     <>
@@ -78,19 +74,19 @@ export default function Search() {
           ) : (
             <>
               <p className="mb-6 text-sm text-gray-600">
-                {results.length} products found
+                {total} {total === 1 ? "product" : "products"} found
+                {total > results.length && ` (showing first ${results.length})`}
               </p>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {results.map(product => (
                   <Link key={product.id} href={`/product/${product.id}`}>
                     <a className="group rounded-lg border border-border bg-white p-4 transition-all hover:shadow-lg">
                       <div className="mb-4 aspect-square overflow-hidden rounded-lg bg-secondary">
-                        {product.images &&
-                        Array.isArray(product.images) &&
-                        product.images[0] ? (
+                        {product.cover_image_url ? (
                           <img
-                            src={product.images[0] as string}
-                            alt={product.name}
+                            src={getHighResImageUrl(product.cover_image_url)}
+                            alt={product.title ?? "MotorVault product"}
+                            loading="lazy"
                             className="h-full w-full object-cover group-hover:scale-105 transition-transform"
                           />
                         ) : (
@@ -100,19 +96,20 @@ export default function Search() {
                         )}
                       </div>
                       <h3 className="mb-2 line-clamp-2 font-semibold">
-                        {product.name}
+                        {product.title}
                       </h3>
                       <div className="mb-4 flex items-center justify-between">
                         <span className="text-lg font-bold">
                           {currencyClient.formatUSD(Number(product.price || 0))}
                         </span>
-                        {product.originalPrice && (
-                          <span className="text-sm text-gray-500 line-through">
-                            {currencyClient.formatUSD(
-                              Number(product.originalPrice || 0)
-                            )}
-                          </span>
-                        )}
+                        {product.discount &&
+                          Number(product.discount) > Number(product.price) && (
+                            <span className="text-sm text-gray-500 line-through">
+                              {currencyClient.formatUSD(
+                                Number(product.discount)
+                              )}
+                            </span>
+                          )}
                       </div>
                       <button className="w-full rounded-md bg-black py-2 text-sm font-semibold text-white hover:bg-gray-900">
                         View Product

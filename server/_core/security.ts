@@ -12,12 +12,38 @@ export function getRequestOrigin(req: express.Request): string | null {
   return `${protocol}://${host}`;
 }
 
+/**
+ * The site canonicalises to the www host (the apex 308-redirects to it), so
+ * every machine-readable surface - robots.txt, llms.txt, both sitemaps - must
+ * advertise www URLs. Emitting apex URLs made crawlers follow a redirect for
+ * every discovery document and split signals across two hosts. Preview
+ * deployments and localhost are left untouched.
+ */
+const CANONICAL_APEX_HOST = "motorvault.shop";
+const CANONICAL_SITE_ORIGIN = `https://www.${CANONICAL_APEX_HOST}`;
+
+function normalizeToCanonicalHost(origin: string): string {
+  try {
+    const url = new URL(origin);
+    if (
+      url.hostname === CANONICAL_APEX_HOST ||
+      url.hostname === `www.${CANONICAL_APEX_HOST}`
+    ) {
+      return CANONICAL_SITE_ORIGIN;
+    }
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return CANONICAL_SITE_ORIGIN;
+  }
+}
+
 export function getSiteOrigin(req: express.Request): string {
-  return (
+  const resolved = (
     getRequestOrigin(req) ||
     ENV.siteUrl ||
     `${req.protocol}://${req.get("host")}`
   ).replace(/\/$/, "");
+  return normalizeToCanonicalHost(resolved);
 }
 
 export async function verifyRecaptchaToken(
@@ -147,7 +173,13 @@ export function applySecurityHeaders(
     "media-src 'self' https: data: blob:",
     "object-src 'none'",
     "require-trusted-types-for 'script'",
-    "trusted-types default",
+    // Named policies must be allow-listed individually. "blootrue-loader" is
+    // created by client/src/components/TrustindexWidget.tsx purely to pass the
+    // review-widget script URL through as a TrustedScriptURL; without it here
+    // createPolicy() throws 'Policy "blootrue-loader" disallowed' and the
+    // widget never mounts. A narrow named policy is preferable to widening the
+    // default one, and the URL itself is still constrained by script-src-elem.
+    "trusted-types default blootrue-loader",
     "upgrade-insecure-requests",
   ].join("; ");
 

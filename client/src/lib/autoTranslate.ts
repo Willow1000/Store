@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
 import type { SiteLanguageCode } from "./language";
+import {
+  getStaticSourcePairs,
+  getStaticallyTranslatedValues,
+} from "./language";
+import {
+  getUiStringPairs,
+  getUiStringValues,
+  type TranslatableLanguage,
+} from "@/i18n/uiStrings";
 
 type AttrName = "placeholder" | "title" | "aria-label" | "alt";
 
@@ -30,13 +39,63 @@ const LEGACY_SECTION_STYLE_ID = "mv-translate-section-style";
 
 const translationCache = new Map<string, string>();
 const TRANSLATE_CONCURRENCY = 6;
+const TRANSLATE_BATCH_SIZE = 24;
 const APPLY_DEBOUNCE_MS = 0;
 const TRANSLATION_CACHE_KEY = "site-translation-cache-v1";
 const MAX_PERSISTED_TRANSLATIONS = 4000;
+const PERSIST_DEBOUNCE_MS = 500;
 const ENABLE_RUNTIME_TRANSLATION =
   import.meta.env.VITE_ENABLE_RUNTIME_TRANSLATION !== "false";
 
 let persistedCacheLoaded = false;
+
+const seededLanguages = new Set<SiteLanguageCode>();
+const alreadyTranslatedByLanguage = new Map<SiteLanguageCode, Set<string>>();
+
+/**
+ * Prime the cache from the build-time dictionaries so site chrome resolves with
+ * no network at all, and remember which strings are already a finished
+ * translation for this language.
+ *
+ * Two separate wins:
+ *  - Chrome not rendered through translateText() (filter panel, buttons) now
+ *    hits the cache instead of the network.
+ *  - Chrome that IS rendered through translateText() is already localised in
+ *    the DOM, and used to be sent to the endpoint anyway with sl=auto just to
+ *    come back unchanged. Recognising those strings skips the request.
+ */
+function seedStaticTranslations(language: SiteLanguageCode): void {
+  if (language === "en" || seededLanguages.has(language)) return;
+  seededLanguages.add(language);
+
+  const finished = new Set<string>();
+
+  getStaticSourcePairs(language).forEach(([source, translated]) => {
+    translationCache.set(`${language}:${source}`, translated);
+    finished.add(translated);
+  });
+
+  getUiStringPairs(language as TranslatableLanguage).forEach(
+    ([source, translated]) => {
+      translationCache.set(`${language}:${source}`, translated);
+      finished.add(translated);
+    }
+  );
+
+  getStaticallyTranslatedValues(language).forEach(value => finished.add(value));
+  getUiStringValues(language as TranslatableLanguage).forEach(value =>
+    finished.add(value)
+  );
+
+  alreadyTranslatedByLanguage.set(language, finished);
+}
+
+function isAlreadyTranslated(
+  language: SiteLanguageCode,
+  text: string
+): boolean {
+  return alreadyTranslatedByLanguage.get(language)?.has(text.trim()) ?? false;
+}
 
 function ensurePersistedCacheLoaded(): void {
   if (persistedCacheLoaded) return;
@@ -57,7 +116,9 @@ function ensurePersistedCacheLoaded(): void {
   }
 }
 
-function persistTranslationCache(): void {
+let persistTimer: number | null = null;
+
+function writeTranslationCache(): void {
   try {
     const entries = Array.from(translationCache.entries());
     const trimmed = entries.slice(
@@ -70,6 +131,39 @@ function persistTranslationCache(): void {
   } catch {
     // Ignore storage issues.
   }
+}
+
+/**
+ * Serializing the whole cache after every single translated string made a page
+ * with N strings do N JSON.stringify passes over a map that grows to 4000
+ * entries - quadratic main-thread work that showed up as jank while switching
+ * language. Coalesce writes instead; the cache is a nice-to-have, so losing the
+ * last few entries on an abrupt unload is acceptable.
+ */
+function persistTranslationCache(): void {
+  if (typeof window === "undefined") return;
+  if (persistTimer !== null) return;
+
+  const flush = () => {
+    persistTimer = null;
+    writeTranslationCache();
+  };
+
+  persistTimer = window.setTimeout(() => {
+    const idle = (
+      window as unknown as {
+        requestIdleCallback?: (
+          cb: () => void,
+          opts?: { timeout: number }
+        ) => number;
+      }
+    ).requestIdleCallback;
+    if (typeof idle === "function") {
+      idle(flush, { timeout: 2000 });
+    } else {
+      flush();
+    }
+  }, PERSIST_DEBOUNCE_MS);
 }
 
 type TranslationResult = {
@@ -127,6 +221,59 @@ async function translateTextValue(
   }
 }
 
+/**
+ * Translate several strings in ONE request by repeating the `q` parameter.
+ * The endpoint returns one result block per `q`, so a page that needed 200
+ * round trips now needs ~200/TRANSLATE_BATCH_SIZE. The response shape of this
+ * unofficial endpoint is not contractual, so if the number of parsed results
+ * does not match the number of inputs we discard the batch and let the caller
+ * fall back to per-string requests rather than mis-assigning translations.
+ */
+async function translateChunk(
+  language: SiteLanguageCode,
+  texts: string[]
+): Promise<Map<string, string> | null> {
+  if (texts.length === 0) return new Map();
+
+  const url = new URL("https://translate.googleapis.com/translate_a/single");
+  url.searchParams.set("client", "gtx");
+  url.searchParams.set("sl", "auto");
+  url.searchParams.set("tl", language);
+  url.searchParams.set("dt", "t");
+  texts.forEach(text => url.searchParams.append("q", text));
+
+  try {
+    const res = await fetch(url.toString(), { method: "GET" });
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as unknown;
+    if (!Array.isArray(data)) return null;
+
+    // Single `q` -> data[0] is the segment list. Multiple `q` -> data is a list
+    // of such blocks, one per input, in request order.
+    const blocks: unknown[] =
+      texts.length === 1 ? [data[0]] : (data as unknown[]);
+    if (blocks.length < texts.length) return null;
+
+    const out = new Map<string, string>();
+    for (let i = 0; i < texts.length; i += 1) {
+      const block = blocks[i];
+      if (!Array.isArray(block)) return null;
+      const joined = block
+        .map(segment =>
+          Array.isArray(segment) ? String(segment[0] ?? "") : ""
+        )
+        .join("")
+        .trim();
+      if (!joined) return null;
+      out.set(texts[i], joined);
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 async function translateBatch(
   language: SiteLanguageCode,
   values: string[]
@@ -135,20 +282,65 @@ async function translateBatch(
   const out = new Map<string, string>();
   let hasError = false;
 
+  if (language === "en" || !ENABLE_RUNTIME_TRANSLATION) {
+    uniq.forEach(value => out.set(value, value));
+    return { map: out, hasError };
+  }
+
+  ensurePersistedCacheLoaded();
+  seedStaticTranslations(language);
+
+  // Serve everything already cached - or already localised by the build-time
+  // dictionary - without touching the network.
+  const missing: string[] = [];
+  uniq.forEach(value => {
+    const cached = translationCache.get(`${language}:${value}`);
+    if (cached) {
+      out.set(value, cached);
+      return;
+    }
+    if (isAlreadyTranslated(language, value)) {
+      out.set(value, value);
+      return;
+    }
+    missing.push(value);
+  });
+
+  if (missing.length === 0) return { map: out, hasError };
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < missing.length; i += TRANSLATE_BATCH_SIZE) {
+    chunks.push(missing.slice(i, i + TRANSLATE_BATCH_SIZE));
+  }
+
   let index = 0;
   const workers = Array.from(
-    { length: Math.min(TRANSLATE_CONCURRENCY, uniq.length) },
+    { length: Math.min(TRANSLATE_CONCURRENCY, chunks.length) },
     async () => {
-      while (index < uniq.length) {
-        const value = uniq[index++];
-        const translated = await translateTextValue(language, value);
-        if (!translated.ok) hasError = true;
-        out.set(value, translated.text);
+      while (index < chunks.length) {
+        const chunk = chunks[index++];
+        const batched = await translateChunk(language, chunk);
+
+        if (batched) {
+          batched.forEach((translated, original) => {
+            translationCache.set(`${language}:${original}`, translated);
+            out.set(original, translated);
+          });
+          continue;
+        }
+
+        // Batch failed or came back in an unexpected shape - per string.
+        for (const value of chunk) {
+          const translated = await translateTextValue(language, value);
+          if (!translated.ok) hasError = true;
+          out.set(value, translated.text);
+        }
       }
     }
   );
 
   await Promise.all(workers);
+  persistTranslationCache();
 
   return { map: out, hasError };
 }
@@ -343,14 +535,12 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
         return;
       }
 
-      const translatedTexts = await translateBatch(
-        language,
-        textOriginalValues
-      );
-      const translatedAttrs = await translateBatch(
-        language,
-        attrOriginalValues
-      );
+      // These were awaited one after the other, so attribute strings did not
+      // start translating until every text node had finished. Run them together.
+      const [translatedTexts, translatedAttrs] = await Promise.all([
+        translateBatch(language, textOriginalValues),
+        translateBatch(language, attrOriginalValues),
+      ]);
 
       if (disposed) return;
       if (translatedTexts.hasError || translatedAttrs.hasError) {

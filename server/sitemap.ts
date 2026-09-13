@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import { getAllSupabaseProducts } from "./supabaseProducts";
 import { BLOG_POSTS } from "../shared/blogPosts";
 
 import { logger } from "./_core/logger";
@@ -9,6 +10,27 @@ export async function generateSitemap(
   kind: SitemapKind = "site"
 ): Promise<string> {
   const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
+
+  // The product sitemap is the primary discovery path for product pages, so it
+  // reads the live Supabase table directly. db.ts's Drizzle product schema
+  // targets different column names than the real table (integer ids + `name`
+  // vs uuid ids + `title`), so selecting through it yielded zero rows and the
+  // product sitemap shipped containing nothing but /products itself. See
+  // server/supabaseProducts.ts for the same mismatch documented against the
+  // catalog queries.
+  if (kind === "products") {
+    const supabaseProducts = await getAllSupabaseProducts(50000);
+    if (supabaseProducts.length === 0) {
+      return generateBasicSitemap(normalizedBaseUrl, kind);
+    }
+    let xml = createUrlsetOpen(true);
+    supabaseProducts.forEach((product: any) => {
+      xml += renderProductUrl(normalizedBaseUrl, product);
+    });
+    xml += "</urlset>";
+    return xml;
+  }
+
   const db = await getDb();
   if (!db) {
     return generateBasicSitemap(normalizedBaseUrl, kind);
@@ -16,18 +38,6 @@ export async function generateSitemap(
 
   try {
     const now = new Date().toISOString().split("T")[0];
-
-    const { products } = await import("../drizzle/schema");
-    const allProducts = await db.select().from(products).limit(50000);
-
-    if (kind === "products") {
-      let xml = createUrlsetOpen(true);
-      allProducts.forEach((product: any) => {
-        xml += renderProductUrl(normalizedBaseUrl, product);
-      });
-      xml += "</urlset>";
-      return xml;
-    }
 
     const { categories } = await import("../drizzle/schema");
     const allCategories = await db.select().from(categories).limit(1000);

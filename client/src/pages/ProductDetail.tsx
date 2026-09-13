@@ -488,14 +488,20 @@ export default function ProductDetail() {
   if (error) {
     return (
       <>
+        {/*
+          A missing or invalid product id must not look like a real product
+          page. Without noIndex this renders 200 + "index, follow" carrying
+          product schema for a product that is not there - a soft 404 that
+          lets every bad id become an indexable empty page.
+        */}
         <SEOHead
-          title={seoTitle}
-          description={seoDescription}
+          title="Product Not Available | MotorVault"
+          description="This product is no longer available. Browse our catalogue of European car parts."
           canonical={canonicalUrl}
+          noIndex
           ogType="product"
           ogImage={seoImage}
           keywords={seoKeywords}
-          productData={seoProductData}
         />
         <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
           <div className="text-center">

@@ -56,38 +56,15 @@
       />
     </noscript>
 
-    <!-- JSON-LD Structured Data for WebSite -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "MotorVault",
-        "url": "%VITE_APP_URL%",
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": {
-            "@type": "EntryPoint",
-            "urlTemplate": "%VITE_APP_URL%/products?q={search_term_string}"
-          },
-          "query-input": "required name=search_term_string"
-        }
-      }
-    </script>
-
-    <!-- JSON-LD Structured Data for LocalBusiness -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "LocalBusiness",
-        "name": "MotorVault",
-        "description": "Premium e-commerce marketplace with verified sellers",
-        "url": "%VITE_APP_URL%",
-        "image": "%VITE_APP_URL%/images/hero/premium-european-auto-parts-hero.webp",
-        "priceRange": "$0-$10000",
-        "areaServed": "US",
-        "availableLanguage": "en"
-      }
-    </script>
+    <!--
+      Structured data is emitted at runtime by <SEOHead> as a single
+      schema.org @graph (Organization + WebSite + page entity + Product /
+      BreadcrumbList where applicable). Static WebSite + LocalBusiness blocks
+      previously lived here; they duplicated that WebSite entity, used the
+      wrong type for an online parts retailer, hardcoded a US service area for
+      a European business, and interpolated the app-url env token straight into
+      production schema. Do not reintroduce them.
+    -->
 
     <!-- Sitemap and Robots -->
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />

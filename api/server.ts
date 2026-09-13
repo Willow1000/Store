@@ -36,6 +36,12 @@ const handler = express();
 const require = createRequire(import.meta.url);
 
 const PUBLIC_DIST_DIR = path.resolve(process.cwd(), "dist", "public");
+// The client shell lives outside dist/public so Vercel's static layer cannot
+// answer "/" with the pre-SSR template before the rewrite reaches this handler.
+const TEMPLATE_PATHS = [
+  path.resolve(process.cwd(), "dist", "index.template.html"),
+  path.resolve(PUBLIC_DIST_DIR, "index.html"),
+];
 const SSR_ENTRY_PATH = path.resolve(
   process.cwd(),
   "dist",
@@ -87,8 +93,8 @@ function getSafeAssetPath(urlPath: string): string | null {
 
 function getIndexTemplate(): string | null {
   if (cachedIndexTemplate !== null) return cachedIndexTemplate;
-  const indexPath = path.resolve(PUBLIC_DIST_DIR, "index.html");
-  if (!fs.existsSync(indexPath)) {
+  const indexPath = TEMPLATE_PATHS.find(candidate => fs.existsSync(candidate));
+  if (!indexPath) {
     cachedIndexTemplate = null;
     return null;
   }
