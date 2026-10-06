@@ -140,10 +140,6 @@ vi.mock("@/components/InlineCheckoutAuth", () => ({
   InlineCheckoutAuth: () => <div data-testid="inline-checkout-auth" />,
 }));
 
-vi.mock("@/components/TrustSignals", () => ({
-  TrustSignals: () => <div data-testid="trust-signals" />,
-}));
-
 vi.mock("@/components/SEOHead", () => ({
   SEOHead: () => null,
 }));

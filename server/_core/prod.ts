@@ -76,9 +76,14 @@ function serveStatic(app: Express) {
   };
 
   const ssrEntryPath = path.resolve(__dirname, "server", "entry-server.js");
-  let render:
-    | ((url: string) => Promise<{ html: string; head: string }>)
-    | null = null;
+  type RenderResult = {
+    html: string;
+    head: string;
+    status?: number;
+    redirect?: string;
+    cacheControl?: string;
+  };
+  let render: ((url: string) => Promise<RenderResult>) | null = null;
 
   async function getRender() {
     if (render) return render;
@@ -88,16 +93,16 @@ function serveStatic(app: Express) {
         "SSR render function not found in dist/server/entry-server.js"
       );
     }
-    render = mod.render as (
-      url: string
-    ) => Promise<{ html: string; head: string }>;
+    render = mod.render as (url: string) => Promise<RenderResult>;
     return render;
   }
 
   app.use("*", (_req, res) => {
     const req = _req;
-    const acceptsHtml = (req.headers.accept || "").includes("text/html");
-    if (!acceptsHtml || !template) {
+    // Every page request is server-rendered, whatever its Accept header:
+    // crawlers, link previews and monitors often send */* or nothing, and
+    // used to get the unrendered shell (or, on Vercel, a 404).
+    if (!template || (req.method !== "GET" && req.method !== "HEAD")) {
       return sendShell(res);
     }
 
@@ -109,13 +114,20 @@ function serveStatic(app: Express) {
         return ssrRender(req.originalUrl || req.url || "/");
       })
       .then(renderResult => {
+        if (renderResult.redirect) {
+          res.setHeader("Cache-Control", renderResult.cacheControl || "");
+          return res.redirect(301, renderResult.redirect);
+        }
         const headMarkup = renderResult.head || "";
         const appHtml = renderResult.html || "";
         const html = template
           .replace("<!--SSR_HEAD-->", headMarkup)
           .replace('<div id="root"></div>', `<div id="root">${appHtml}</div>`);
+        if (renderResult.cacheControl) {
+          res.setHeader("Cache-Control", renderResult.cacheControl);
+        }
         res
-          .status(200)
+          .status(renderResult.status || 200)
           .setHeader("Content-Type", "text/html; charset=utf-8")
           .send(html);
       })

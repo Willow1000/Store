@@ -34,27 +34,27 @@
 
     <!--SSR_HEAD-->
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Self-hosted fonts (see the @font-face rules in src/index.css) -->
+    <link
+      rel="preload"
+      href="/fonts/inter-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/archivo-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="preconnect" href="https://img.kleinanzeigen.de" crossorigin />
     <link
       rel="preconnect"
       href="https://dormxdlqbstebbsumdjj.supabase.co"
       crossorigin
     />
-    <link
-      rel="preload"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      as="style"
-      onload="this.onload=null;this.rel='stylesheet'"
-    />
-    <noscript>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-        rel="stylesheet"
-      />
-    </noscript>
 
     <!--
       Structured data is emitted at runtime by <SEOHead> as a single
@@ -68,29 +68,6 @@
 
     <!-- Sitemap and Robots -->
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
-
-    <script>
-      (function () {
-        try {
-          var origin = window.location.origin.replace(/\/$/, "");
-          var path =
-            window.location.pathname +
-            window.location.search +
-            window.location.hash;
-          var canonical = document.querySelector('link[rel="canonical"]');
-          var ogUrl = document.querySelector('meta[property="og:url"]');
-          var twitterUrl = document.querySelector(
-            'meta[property="twitter:url"]'
-          );
-
-          if (canonical) canonical.href = origin + path;
-          if (ogUrl) ogUrl.setAttribute("content", origin + path);
-          if (twitterUrl) twitterUrl.setAttribute("content", origin + path);
-        } catch (e) {
-          // ignore
-        }
-      })();
-    </script>
 
     <!-- Preload Critical Resources -->
 

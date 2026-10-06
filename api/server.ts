@@ -61,7 +61,15 @@ const SERVER_ROUTE_PREFIXES = [
   "/.well-known/apple-developer-merchantid-domain-association",
 ];
 
-type SsrRenderResult = { html: string; head: string };
+type SsrRenderResult = {
+  html: string;
+  head: string;
+  /** 404 for unknown routes, products and categories. */
+  status?: number;
+  /** Send a 301 here instead of the page (path normalisation, category slugs). */
+  redirect?: string;
+  cacheControl?: string;
+};
 
 let cachedIndexTemplate: string | null = null;
 let cachedRender: ((url: string) => Promise<SsrRenderResult>) | null = null;
@@ -134,26 +142,37 @@ handler.use(async (req: Request, res: Response, next: NextFunction) => {
         }
       }
 
-      const isHtmlRequest =
-        req.method === "GET" &&
-        (req.headers.accept || "").includes("text/html");
+      // Every GET/HEAD for a page is server-rendered whatever its Accept
+      // header says. This used to require `Accept: text/html`, so AI
+      // crawlers, link previews, monitors and HEAD requests (which send
+      // */* or nothing) fell through to the API app and got 404 for every
+      // page.
+      const isPageRequest =
+        (req.method === "GET" || req.method === "HEAD") &&
+        !isStaticAssetPath(requestPath);
 
-      if (!shouldDelegateToServer(requestPath) && isHtmlRequest) {
+      if (!shouldDelegateToServer(requestPath) && isPageRequest) {
         const template = getIndexTemplate();
         const ssrRender = await getSsrRender();
         if (template && ssrRender) {
           try {
-            const { html: appHtml, head: headHtml } = await ssrRender(
-              req.originalUrl || req.url || "/"
-            );
+            const result = await ssrRender(req.originalUrl || req.url || "/");
+            if (result.cacheControl) {
+              // Vercel's CDN honours s-maxage, so anonymous pages are served
+              // from the edge instead of running this function every time.
+              res.set("Cache-Control", result.cacheControl);
+            }
+            if (result.redirect) {
+              return res.redirect(301, result.redirect);
+            }
             const html = template
-              .replace("<!--SSR_HEAD-->", headHtml || "")
+              .replace("<!--SSR_HEAD-->", result.head || "")
               .replace(
                 '<div id="root"></div>',
-                `<div id="root">${appHtml || ""}</div>`
+                `<div id="root">${result.html || ""}</div>`
               );
             return res
-              .status(200)
+              .status(result.status || 200)
               .set({ "Content-Type": "text/html; charset=utf-8" })
               .send(html);
           } catch (ssrError: any) {

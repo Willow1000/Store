@@ -1,63 +1,12 @@
+import { SHIPPING_COUNTRIES } from "@shared/storePolicy";
+import { BLOG_POSTS } from "@shared/blogPosts";
+import { VEHICLES } from "@shared/vehicleContent";
 /**
  * SEO-related utilities: robots.txt, llms.txt, and feed configuration
  */
 
 /** Google merchant feeds expect ISO 3166-1 alpha-2 country codes. */
-export const FEED_SHIPPING_COUNTRIES: string[] = [
-  "US",
-  "CA",
-  "AL",
-  "AD",
-  "AM",
-  "AT",
-  "AZ",
-  "BY",
-  "BE",
-  "BA",
-  "BG",
-  "HR",
-  "CY",
-  "CZ",
-  "DK",
-  "EE",
-  "FI",
-  "FR",
-  "GE",
-  "DE",
-  "GR",
-  "HU",
-  "IS",
-  "IE",
-  "IT",
-  "KZ",
-  "XK",
-  "LV",
-  "LI",
-  "LT",
-  "LU",
-  "MT",
-  "MD",
-  "MC",
-  "ME",
-  "NL",
-  "MK",
-  "NO",
-  "PL",
-  "PT",
-  "RO",
-  "RU",
-  "SM",
-  "RS",
-  "SK",
-  "SI",
-  "ES",
-  "SE",
-  "CH",
-  "TR",
-  "UA",
-  "GB",
-  "VA",
-];
+export const FEED_SHIPPING_COUNTRIES: string[] = SHIPPING_COUNTRIES;
 
 const PRIVATE_AREAS = [
   "/api/",
@@ -87,29 +36,28 @@ const AI_CRAWLER_AGENTS = [
   "meta-externalagent",
 ];
 
+/** Search results and tracking/sort parameters: duplicate, crawl-wasting URLs. */
+const LOW_VALUE_URLS = [
+  "/search",
+  "/*?*sort=",
+  "/*?*filter=",
+  "/*?*page=",
+  "/*?*utm_source=",
+  "/*?*utm_medium=",
+  "/*?*utm_campaign=",
+  "/*?*fbclid=",
+  "/*?*gclid=",
+];
+
 export function buildRobotsTxt(origin: string): string {
   const normalizedOrigin = origin.replace(/\/$/, "");
+  const disallows = [...PRIVATE_AREAS, ...LOW_VALUE_URLS].map(
+    area => `Disallow: ${area}`
+  );
   return [
     "User-agent: *",
     "Allow: /",
-    "Disallow: /api/",
-    "Disallow: /admin/",
-    "Disallow: /account",
-    "Disallow: /orders",
-    "Disallow: /checkout",
-    "Disallow: /cart",
-    "Disallow: /tickets",
-    "Disallow: /payment/",
-    "Disallow: /auth/",
-    "Disallow: /search",
-    "Disallow: /*?*sort=",
-    "Disallow: /*?*filter=",
-    "Disallow: /*?*page=",
-    "Disallow: /*?*utm_source=",
-    "Disallow: /*?*utm_medium=",
-    "Disallow: /*?*utm_campaign=",
-    "Disallow: /*?*fbclid=",
-    "Disallow: /*?*gclid=",
+    ...disallows,
     "",
     // Assistant/answer-engine crawlers are listed explicitly. They already
     // fall under "User-agent: *", but naming them documents the intent and
@@ -119,7 +67,7 @@ export function buildRobotsTxt(origin: string): string {
     ...AI_CRAWLER_AGENTS.flatMap(agent => [
       `User-agent: ${agent}`,
       "Allow: /",
-      ...PRIVATE_AREAS.map(area => `Disallow: ${area}`),
+      ...disallows,
       "",
     ]),
     `LLM-Content: ${normalizedOrigin}/llms.txt`,
@@ -129,7 +77,10 @@ export function buildRobotsTxt(origin: string): string {
   ].join("\n");
 }
 
-export function buildLlmsTxt(origin: string): string {
+export function buildLlmsTxt(
+  origin: string,
+  categories: Array<{ name: string | null; slug: string | null }> = []
+): string {
   const normalizedOrigin = origin.replace(/\/$/, "");
   return [
     "# MotorVault",
@@ -142,6 +93,31 @@ export function buildLlmsTxt(origin: string): string {
     `- [Homepage](${normalizedOrigin}/): Brand and catalog overview.`,
     `- [Products](${normalizedOrigin}/products): Primary product discovery and filtering page.`,
     `- [About](${normalizedOrigin}/about): Company background and sourcing standards.`,
+    `- [VIN Decoder](${normalizedOrigin}/vin-decoder): Free tool that decodes a 17-character VIN into make, model, year and engine details.`,
+    "",
+    ...(categories.length
+      ? [
+          "## Categories",
+          ...categories
+            .filter(category => category.slug && category.name)
+            .map(
+              category =>
+                `- [${category.name}](${normalizedOrigin}/products?category=${encodeURIComponent(String(category.slug))})`
+            ),
+          "",
+        ]
+      : []),
+    "## Shop by vehicle",
+    ...VEHICLES.map(
+      vehicle =>
+        `- [${vehicle.name} accessories and parts](${normalizedOrigin}/vehicle/${vehicle.slug})`
+    ),
+    "",
+    "## Guides",
+    ...BLOG_POSTS.map(
+      post =>
+        `- [${post.title}](${normalizedOrigin}/blog/${post.slug}): ${post.description}`
+    ),
     "",
     "## Policies And Support",
     `- [Shipping](${normalizedOrigin}/shipping): Shipping expectations, timeframes, and coverage guidance.`,

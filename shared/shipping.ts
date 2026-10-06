@@ -4,11 +4,14 @@
  * - Orders under 1500: 5% of subtotal
  * - Orders 1500 and above: free
  */
+/** Shipping as a percentage of the subtotal (shown on /shipping). */
+export const SHIPPING_RATE_PERCENT = 5;
+
 export function calculateShipping(subtotal: number): number {
   const amount = Number(subtotal);
   if (!Number.isFinite(amount) || amount <= 0) return 0;
   if (amount >= 1500) return 0;
-  const shipping = amount * 0.05;
+  const shipping = amount * (SHIPPING_RATE_PERCENT / 100);
   return Math.round(shipping * 100) / 100;
 }
 

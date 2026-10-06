@@ -39,7 +39,7 @@ import {
 import { CheckoutAddressFields } from "@/components/checkout/CheckoutAddressFields";
 import {
   isMetaCheckoutRequest,
-  parseMetaCouponPercent,
+  META_PRODUCT_ID_PATTERN,
   parseMetaCheckoutParams,
   parseMetaProductsParam,
 } from "@/lib/metaCheckout";
@@ -55,7 +55,8 @@ import {
 } from "@shared/sanitize";
 import { InlineCheckoutAuth } from "@/components/InlineCheckoutAuth";
 import { trackInitiateCheckout, trackPurchase } from "@/hooks/useMetaPixel";
-import { TrustSignals } from "@/components/TrustSignals";
+import { formatLocalMoney } from "@/lib/pricing";
+import { StripeWordmark } from "@/components/StripeWordmark";
 import { getSiteLanguage, translateText } from "@/lib/language";
 import { useSiteLanguage } from "@/hooks/useSiteLanguage";
 import { redirectToStripeCheckout } from "@/lib/stripeCheckout";
@@ -382,6 +383,26 @@ const usesManualCityField = (country: string, state: string): boolean => {
   return getCityOptions(country, state).length === 0;
 };
 
+/**
+ * A message a shopper can act on. tRPC reports a reply that is not a tRPC
+ * response (a gateway timeout page, a proxy error, another program answering
+ * the API port in development) as "Unable to transform response from
+ * server", and network failures as "Failed to fetch" - neither means anything
+ * to a customer. Messages the server wrote for people are passed through.
+ */
+function describePaymentError(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  if (
+    !message ||
+    /unable to transform response|failed to fetch|networkerror|load failed|unexpected token|json/i.test(
+      message
+    )
+  ) {
+    return "We couldn't reach our payment server. Please check your connection and try again in a moment - you have not been charged.";
+  }
+  return message;
+}
+
 export default function Checkout() {
   // Subscribed rather than read once, so switching language (or region
   // detection resolving after mount) re-renders the checkout instead of
@@ -392,12 +413,7 @@ export default function Checkout() {
   // Get geo data from currencyClient
   const geo = currencyClient.getGeoData();
   const [, navigate] = useLocation();
-  const {
-    user,
-    isAuthenticated,
-    loading: authLoading,
-    sessionRestored,
-  } = useAuth();
+  const { user, isAuthenticated, sessionRestored } = useAuth();
   const {
     items: supabaseCartItems,
     isLoading: supabaseCartLoading,
@@ -651,11 +667,19 @@ export default function Checkout() {
     }
 
     const hydrateMetaCart = async () => {
-      const ids = parsedProducts.map(item => item.productId);
-      const { data, error } = await supabase
-        .from("products")
-        .select("id, title, price, cover_image_url, stock")
-        .in("id", ids);
+      // Catalog content ids are the products' uuids (the feed's g:id). Any
+      // other id cannot match, and passing it to Postgres would fail the whole
+      // query with "invalid input syntax for type uuid" - so it is reported as
+      // unavailable instead of emptying the cart.
+      const ids = parsedProducts
+        .map(item => item.productId)
+        .filter(id => META_PRODUCT_ID_PATTERN.test(id));
+      const { data, error } = ids.length
+        ? await supabase
+            .from("products")
+            .select("id, title, price, cover_image_url, stock")
+            .in("id", ids)
+        : { data: [], error: null };
 
       if (error) {
         toast.error("Unable to load checkout products from your Meta cart.");
@@ -741,8 +765,21 @@ export default function Checkout() {
       clearPaymentParams();
       (async () => {
         try {
-          // The webhook should have already created the order
-          // Just clear cart and redirect to orders
+          // Have the server check the session with Stripe and record the
+          // order, so it exists when the Orders page loads even if the webhook
+          // has not been delivered yet. Recording is idempotent.
+          const confirmation =
+            await trpcClient.stripe.payments.confirmSession.mutate({
+              sessionId,
+            });
+          if (!confirmation.paid) {
+            toast.error(
+              "Your payment has not completed yet. If you were charged, your order will appear on the Orders page shortly."
+            );
+            setStep("review");
+            return;
+          }
+
           if (isAuthenticated) {
             try {
               await clearSupabaseCart();
@@ -1127,33 +1164,29 @@ export default function Checkout() {
     () => appliedOfferData || resolvedOffer.data || null,
     [appliedOfferData, resolvedOffer.data]
   );
-  const legacyCouponPercent = useMemo(
-    () =>
-      isMetaCheckout && !resolvedOffer.data
-        ? parseMetaCouponPercent(metaCoupon)
-        : 0,
-    [isMetaCheckout, resolvedOffer.data, metaCoupon]
-  );
 
   const orderSummary = useMemo(() => {
     const roundedSubtotal = Math.round(cartSubtotalAmount * 100) / 100;
     const shippingValue = calculateShipping(roundedSubtotal);
 
+    // A coupon only discounts when it is a real offer - the server prices the
+    // discount itself from the code, so this must use the same rule to show
+    // the amount that will actually be charged.
     const derivedOfferDiscountAmount = finalAppliedOffer
       ? Number(finalAppliedOffer.discountAmount || 0)
-      : Math.round(roundedSubtotal * (legacyCouponPercent / 100) * 100) / 100;
-    const discountAmountValue =
-      appliedOfferDiscount ??
-      appliedOfferData?.discountAmount ??
-      derivedOfferDiscountAmount;
+      : 0;
+    // appliedOfferDiscount starts at 0, not null, so it only counts once a
+    // code has been applied by hand; otherwise its 0 hid a coupon that came
+    // in on a Meta checkout URL.
+    const discountAmountValue = appliedOfferData
+      ? appliedOfferDiscount || Number(appliedOfferData.discountAmount || 0)
+      : derivedOfferDiscountAmount;
 
     const couponLabelValue =
       appliedCouponLabel ??
       (finalAppliedOffer
         ? `${finalAppliedOffer.name} (${finalAppliedOffer.code})`
-        : legacyCouponPercent > 0 && metaCoupon
-          ? `Coupon (${metaCoupon})`
-          : null);
+        : null);
 
     // Tax is not charged as a separate line - listed prices are tax
     // inclusive, communicated to the shopper instead of itemized.
@@ -1178,8 +1211,6 @@ export default function Checkout() {
     appliedOfferDiscount,
     appliedCouponLabel,
     finalAppliedOffer,
-    legacyCouponPercent,
-    metaCoupon,
   ]);
 
   const subtotal = orderSummary.subtotal;
@@ -1194,9 +1225,7 @@ export default function Checkout() {
   // calculation rather than a loading state. Gate the numeric order-summary
   // display on this instead of showing bare numbers throughout.
   const orderSummaryReady =
-    !authLoading &&
-    sessionRestored &&
-    (!isAuthenticated || supabaseCartHasLoadedOnce);
+    sessionRestored && (!isAuthenticated || supabaseCartHasLoadedOnce);
 
   useEffect(() => {
     if (cartItems.length === 0 || cartGrandTotal <= 0) return;
@@ -1277,13 +1306,7 @@ export default function Checkout() {
     {
       id: "stripe",
       name: "Stripe",
-      icon: (
-        <img
-          src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%23635BFF width=%2248%22 height=%2248%22/%3E%3Ctext x=%2724%22 y=%2726%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2216%22 font-weight=%22bold%22%3ES%3C/text%3E%3C/svg%3E"
-          alt="Stripe logo"
-          className="w-8 h-8 object-contain"
-        />
-      ),
+      icon: <StripeWordmark className="h-6" />,
       description:
         "Pay securely with Visa, Mastercard, or other cards via Stripe",
     },
@@ -1655,11 +1678,8 @@ export default function Checkout() {
           offerId: finalAppliedOffer?.id ?? undefined,
           offerCode: finalAppliedOffer?.code ?? metaCoupon ?? undefined,
           offerType: finalAppliedOffer?.type ?? undefined,
-          offerValue:
-            finalAppliedOffer?.value ??
-            (legacyCouponPercent > 0 ? String(legacyCouponPercent) : undefined),
+          offerValue: finalAppliedOffer?.value ?? undefined,
           offerName: finalAppliedOffer?.name ?? undefined,
-          couponPercent: legacyCouponPercent || undefined,
           cartOrigin: metaParams.cart_origin,
           fbclid: metaParams.fbclid,
           utmSource: metaParams.utm_source,
@@ -1685,11 +1705,7 @@ export default function Checkout() {
       return;
     } catch (error) {
       setIsProcessing(false);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Payment failed. Please try again.";
-      toast.error(errorMessage);
+      toast.error(describePaymentError(error));
     }
   };
 
@@ -1698,16 +1714,21 @@ export default function Checkout() {
     try {
       writeCheckoutSnapshot(cartItems);
 
-      // Validate cart items before sending to Stripe
+      // Validate cart items before sending to Stripe. Product ids are uuids:
+      // parsing them as integers rejected every id starting with a letter and
+      // turned the rest into a meaningless number.
+      const uuidPattern =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const validItems = cartItems
         .map(item => {
-          const productId = parseInt(String(item.product_id), 10);
-          if (!Number.isFinite(productId) || productId <= 0) {
+          const productId = String(item.product_id || "").trim();
+          const quantity = Math.trunc(Number(item.quantity));
+          if (!uuidPattern.test(productId) || !(quantity > 0)) {
             return null;
           }
           return {
             productId,
-            quantity: item.quantity,
+            quantity,
             price: parseCheckoutPrice(item.price).toString(),
           };
         })
@@ -1720,7 +1741,9 @@ export default function Checkout() {
       }
 
       await redirectToStripeCheckout({
-        userId: typeof user?.id === "number" ? user.id : undefined,
+        userId: uuidPattern.test(String(user?.id || ""))
+          ? String(user?.id)
+          : undefined,
         email: sanitizeEmail(formData.email, 255),
         userName:
           sanitizeName(formData.firstName, 60) +
@@ -1749,11 +1772,7 @@ export default function Checkout() {
       // User will be redirected to Stripe Checkout
     } catch (error) {
       setIsProcessing(false);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Payment failed. Please try again.";
-      toast.error(errorMessage);
+      toast.error(describePaymentError(error));
     }
   };
 
@@ -1820,15 +1839,38 @@ export default function Checkout() {
     return null;
   }
 
-  if (!isMetaCheckout && !isAuthenticated && sessionRestored && !authLoading) {
+  // Until the browser has restored (or ruled out) a saved login, show neither
+  // the sign-in prompt nor the shipping form - showing the form first and
+  // then swapping it for the prompt is what made Quick Purchase flicker
+  // between the two.
+  if (!isMetaCheckout && !sessionRestored) {
     return (
-      <div className="min-h-screen bg-white py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-screen-xl mx-auto">
+      <div className="min-h-screen bg-white">
+        <div className="container py-8 sm:py-12" aria-busy="true">
+          <div className="mb-8 sm:mb-10">
+            <h1 className="mb-2 text-ink">Checkout</h1>
+            <p className="text-gray-600">Complete your purchase securely</p>
+          </div>
+          <div className="mx-auto w-full max-w-2xl space-y-4 rounded-xl border border-gray-200 bg-white p-5 sm:p-8">
+            <div className="h-6 w-1/2 animate-pulse rounded bg-gray-100" />
+            <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" />
+            <div className="h-12 w-full animate-pulse rounded-lg bg-gray-100" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Signed out is known as soon as the saved login has been ruled out; this
+  // no longer waits for the server-side profile check (auth.me), which only
+  // matters for visitors who are signed in.
+  if (!isMetaCheckout && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-white">
+        <div className="container py-8 sm:py-12">
           {/* Header */}
-          <div className="mb-12">
-            <h1 className="text-3xl sm:text-4xl font-bold text-black mb-2">
-              Checkout
-            </h1>
+          <div className="mb-8 sm:mb-10">
+            <h1 className="mb-2 text-ink">Checkout</h1>
             <p className="text-gray-600">Complete your purchase securely</p>
           </div>
 
@@ -1840,11 +1882,11 @@ export default function Checkout() {
   }
 
   return (
-    <div className="min-h-screen bg-white w-full overflow-x-hidden">
-      <div className="max-w-screen-xl mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-12 lg:py-16">
+    <div className="min-h-screen w-full overflow-x-clip bg-white">
+      <div className="container py-8 sm:py-12">
         {/* Header */}
-        <div className="mb-6 sm:mb-8 md:mb-12 px-0">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 sm:mb-3 text-black">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="mb-2 text-ink">
             {t("checkout.secureCheckout", "Secure Checkout")}
           </h1>
           <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
@@ -1853,16 +1895,37 @@ export default function Checkout() {
               "Complete your purchase safely and quickly"
             )}
           </p>
-          <div className="mt-5">
-            <TrustSignals compact />
-          </div>
         </div>
 
-        <div className="grid gap-6 sm:gap-8 grid-cols-1 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-3 lg:items-start">
           {/* Main Content */}
           <div className="lg:col-span-2 w-full min-w-0">
+            {/* Phones: the full summary sits below the form, so show what is
+                being bought and the total before the form, with a jump to the
+                details. */}
+            {cartItems.length > 0 && (
+              <a
+                href="#order-summary"
+                className="mb-4 flex min-h-12 items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm lg:hidden"
+              >
+                <span className="min-w-0 truncate text-gray-700">
+                  {t("checkout.orderSummary", "Order Summary")} ·{" "}
+                  {cartItems.reduce((sum, item) => sum + item.quantity, 0)}{" "}
+                  {cartItems.reduce((sum, item) => sum + item.quantity, 0) === 1
+                    ? "item"
+                    : "items"}
+                </span>
+                <span className="price flex-none font-bold text-ink">
+                  {orderSummaryReady
+                    ? formatLocalMoney(
+                        currencyClient.convertUSD(cartGrandTotal)
+                      )
+                    : "…"}
+                </span>
+              </a>
+            )}
             {/* Steps - Refined Indicator */}
-            <div className="mb-6 sm:mb-8 md:mb-12 px-0 py-6 sm:py-8 bg-white border border-gray-200 rounded overflow-x-auto">
+            <div className="mb-6 overflow-x-auto rounded-xl border border-gray-200 bg-white px-0 py-5 sm:mb-8">
               <div className="flex items-center justify-between px-4 sm:px-6 md:px-8 min-w-max sm:min-w-0">
                 {[
                   { label: t("checkout.shipping", "Shipping"), id: "shipping" },
@@ -1878,18 +1941,18 @@ export default function Checkout() {
                     <div key={item.id} className="flex-1 flex items-center">
                       <div className="flex flex-col items-center flex-1">
                         <div
-                          className={`h-12 w-12 rounded-full flex items-center justify-center font-semibold transition-all ${
+                          className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-all ${
                             isCompleted
-                              ? "bg-green-600 text-white"
+                              ? "bg-success text-white"
                               : isCurrent
                                 ? "bg-black text-white"
                                 : "bg-gray-200 text-gray-600"
                           }`}
                         >
-                          {isCompleted ? <Check size={24} /> : idx + 1}
+                          {isCompleted ? <Check size={20} /> : idx + 1}
                         </div>
                         <p
-                          className={`mt-3 text-sm font-semibold ${
+                          className={`mt-2 text-sm font-semibold ${
                             isCurrent ? "text-black" : "text-gray-600"
                           }`}
                         >
@@ -1897,7 +1960,9 @@ export default function Checkout() {
                         </p>
                       </div>
                       {idx < array.length - 1 && (
-                        <div className="h-2 flex-1 mx-1 sm:mx-2 hidden sm:block"></div>
+                        <div
+                          className={`mx-1 hidden h-px flex-1 sm:mx-2 sm:block ${isCompleted ? "bg-success" : "bg-gray-200"}`}
+                        ></div>
                       )}
                     </div>
                   );
@@ -1927,11 +1992,49 @@ export default function Checkout() {
             {/* Payment Step */}
             {step === "payment" && (
               <div className="space-y-6">
+                {/* Payment method (uses the same method data as the review step) */}
+                <div className="w-full rounded-xl border border-gray-200 bg-white p-4 sm:p-6 md:p-8">
+                  <h2 className="mb-5 text-xl font-bold text-ink sm:text-2xl">
+                    {t("checkout.paymentMethod", "Payment Method")}
+                  </h2>
+                  <div className="space-y-3">
+                    {paymentMethods.map(method => (
+                      <div
+                        key={method.id}
+                        className={`flex items-center gap-4 rounded-lg border p-4 ${
+                          method.id === selectedPayment
+                            ? "border-ink bg-gray-50"
+                            : "border-gray-200"
+                        }`}
+                      >
+                        <span className="flex h-11 w-[4.5rem] flex-none items-center justify-center rounded-md border border-gray-200 bg-white px-2">
+                          {method.icon}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[15px] font-semibold text-ink">
+                            {method.name}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {method.description}
+                          </p>
+                        </div>
+                        {method.id === selectedPayment && (
+                          <Check
+                            size={18}
+                            className="flex-none text-success"
+                            aria-hidden="true"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <button
                     onClick={() => setStep("shipping")}
-                    className="flex-1 bg-white border border-gray-300 hover:border-gray-400 text-black font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 text-sm sm:text-base"
+                    className="btn-secondary btn-lg flex-1"
                   >
                     {t("common.back", "Back")}
                   </button>
@@ -1939,7 +2042,7 @@ export default function Checkout() {
                     <button
                       onClick={handlePayment}
                       disabled={isProcessing || !orderSummaryReady}
-                      className="flex-1 bg-black hover:bg-gray-900 disabled:bg-gray-400 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+                      className="btn-accent btn-lg flex-1"
                     >
                       {isProcessing
                         ? "Redirecting..."
@@ -1955,7 +2058,7 @@ export default function Checkout() {
                           setStep("review");
                         }
                       }}
-                      className="flex-1 bg-black hover:bg-gray-900 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+                      className="btn-primary btn-lg flex-1"
                     >
                       {t("checkout.reviewOrder", "Review Order")}
                       <ChevronRight size={20} />
@@ -1969,8 +2072,8 @@ export default function Checkout() {
             {step === "review" && (
               <div className="space-y-4 sm:space-y-6 w-full">
                 {/* Order Summary */}
-                <div className="bg-white border border-gray-200 rounded p-4 sm:p-6 md:p-8 w-full">
-                  <h2 className="text-xl sm:text-2xl font-bold mb-6 sm:mb-8 text-black">
+                <div className="w-full rounded-xl border border-gray-200 bg-white p-4 sm:p-6 md:p-8">
+                  <h2 className="mb-6 text-xl font-bold text-ink sm:text-2xl">
                     {t("checkout.reviewYourOrder", "Review Your Order")}
                   </h2>
 
@@ -1983,7 +2086,7 @@ export default function Checkout() {
                       <button
                         type="button"
                         onClick={() => setStep("shipping")}
-                        className="text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors"
+                        className="text-sm font-semibold text-ink underline underline-offset-4 transition-colors hover:text-gray-600"
                       >
                         {t("common.edit", "Edit")}
                       </button>
@@ -2004,9 +2107,20 @@ export default function Checkout() {
                     <h3 className="font-bold text-black mb-3">
                       {t("checkout.paymentMethod", "Payment Method")}
                     </h3>
-                    <p className="text-gray-700">
-                      {paymentMethods.find(m => m.id === selectedPayment)?.name}
-                    </p>
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <span className="flex h-9 flex-none items-center rounded-md border border-gray-200 bg-white px-2.5">
+                        {
+                          paymentMethods.find(m => m.id === selectedPayment)
+                            ?.icon
+                        }
+                      </span>
+                      <span>
+                        {
+                          paymentMethods.find(m => m.id === selectedPayment)
+                            ?.name
+                        }
+                      </span>
+                    </div>
                   </div>
 
                   {/* Items Summary */}
@@ -2029,7 +2143,11 @@ export default function Checkout() {
                             </p>
                           </div>
                           <p className="font-semibold text-gray-900">
-                            {`${currencyClient.getCurrencySymbolLocal()}${(currencyClient.convertUSD(parseCheckoutPrice(item.price)) * item.quantity).toFixed(2)}`}
+                            {formatLocalMoney(
+                              currencyClient.convertUSD(
+                                parseCheckoutPrice(item.price)
+                              ) * item.quantity
+                            )}
                           </p>
                         </div>
                       ))}
@@ -2041,20 +2159,20 @@ export default function Checkout() {
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <button
                     onClick={() => setStep("payment")}
-                    className="flex-1 bg-white border border-gray-300 hover:border-gray-400 text-black font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 text-sm sm:text-base"
+                    className="btn-secondary btn-lg flex-1"
                   >
                     {t("common.back", "Back")}
                   </button>
                   <button
                     onClick={handlePayment}
                     disabled={isProcessing || !orderSummaryReady}
-                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 text-sm sm:text-base"
+                    className="btn-accent btn-lg flex-1 whitespace-normal"
                   >
                     {isProcessing
                       ? t("checkout.processing", "Processing...")
                       : !orderSummaryReady
                         ? t("checkout.loadingCart", "Loading cart...")
-                        : `${selectedPayment === "stripe" ? "Continue to Stripe" : t("checkout.payNow", "Pay Now")} ${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(cartGrandTotal).toFixed(2)}`}
+                        : `${selectedPayment === "stripe" ? "Continue to Stripe" : t("checkout.payNow", "Pay Now")} ${formatLocalMoney(currencyClient.convertUSD(cartGrandTotal))}`}
                   </button>
                 </div>
               </div>
@@ -2062,14 +2180,17 @@ export default function Checkout() {
           </div>
 
           {/* Sidebar - Order Summary */}
-          <div className="lg:col-span-1 w-full min-w-0">
-            <div className="bg-white border border-gray-200 rounded p-4 sm:p-6 md:p-8">
-              <h3 className="text-base sm:text-lg font-bold mb-6 sm:mb-8 text-black">
+          <div
+            id="order-summary"
+            className="w-full min-w-0 scroll-mt-20 lg:sticky lg:top-24 lg:col-span-1"
+          >
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 sm:p-6">
+              <h3 className="mb-5 text-lg font-bold text-ink">
                 {t("checkout.orderSummary", "Order Summary")}
               </h3>
 
               {/* Items */}
-              <div className="space-y-4 mb-8 pb-8 border-b border-gray-200 max-h-64 overflow-y-auto">
+              <div className="mb-6 max-h-64 space-y-4 overflow-y-auto border-b border-gray-200 pb-6">
                 {cartItems.length === 0 ? (
                   <p className="text-gray-600 text-sm">No items in cart</p>
                 ) : (
@@ -2079,15 +2200,15 @@ export default function Checkout() {
                         <img
                           src={getHighResImageUrl(item.image)}
                           alt={item.title}
-                          className="h-16 w-16 rounded object-contain bg-gray-100 flex-shrink-0"
-                          crossOrigin="anonymous"
+                          className="h-16 w-16 flex-shrink-0 rounded-md border border-gray-200 bg-white object-contain p-1"
+                          referrerPolicy="no-referrer"
                           onError={e => {
                             e.currentTarget.src =
                               "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-size=%2220%22%3ENo image%3C/text%3E%3C/svg%3E";
                           }}
                         />
                       ) : (
-                        <div className="h-16 w-16 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white">
                           <svg
                             className="w-8 h-8 text-gray-400"
                             fill="none"
@@ -2112,7 +2233,11 @@ export default function Checkout() {
                           ×{item.quantity}
                         </p>
                         <p className="text-sm font-semibold text-gray-900 mt-1">
-                          {`${currencyClient.getCurrencySymbolLocal()}${(currencyClient.convertUSD(parseCheckoutPrice(item.price)) * item.quantity).toFixed(2)}`}
+                          {formatLocalMoney(
+                            currencyClient.convertUSD(
+                              parseCheckoutPrice(item.price)
+                            ) * item.quantity
+                          )}
                         </p>
                       </div>
                     </div>
@@ -2121,7 +2246,7 @@ export default function Checkout() {
               </div>
 
               {/* Pricing Breakdown */}
-              <div className="space-y-4 mb-8 pb-8 border-b border-gray-200">
+              <div className="mb-6 space-y-4 border-b border-gray-200 pb-6">
                 {/* Coupon Entry */}
                 <div className="mb-4">
                   <label className="text-sm font-medium text-gray-700">
@@ -2135,7 +2260,7 @@ export default function Checkout() {
                         setCouponError(null);
                       }}
                       placeholder="Enter coupon code"
-                      className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="field !min-h-10 flex-1"
                     />
                     <button
                       onClick={async () => {
@@ -2261,7 +2386,7 @@ export default function Checkout() {
                         }
                       }}
                       disabled={couponLoading}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-60"
+                      className="btn-primary btn-sm !min-h-10 px-4"
                     >
                       {couponLoading ? "Checking..." : "Apply"}
                     </button>
@@ -2270,7 +2395,7 @@ export default function Checkout() {
                     <p className="text-xs text-red-600 mt-1">{couponError}</p>
                   )}
                   {appliedOfferData && (
-                    <div className="mt-2 text-sm text-green-700 flex items-center justify-between">
+                    <div className="mt-2 flex items-center justify-between text-sm text-success">
                       <span>{`${appliedOfferData.name} (${appliedOfferData.code}) applied`}</span>
                       <button
                         onClick={() => {
@@ -2280,7 +2405,7 @@ export default function Checkout() {
                           setCouponCodeInput("");
                           toast.success("Coupon removed");
                         }}
-                        className="text-xs text-blue-600 hover:underline"
+                        className="text-xs font-medium text-ink underline underline-offset-2"
                       >
                         Remove
                       </button>
@@ -2292,7 +2417,9 @@ export default function Checkout() {
                     {t("checkout.subtotal", "Subtotal")}
                   </span>
                   {orderSummaryReady ? (
-                    <span className="font-medium text-gray-900">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(subtotal).toFixed(2)}`}</span>
+                    <span className="font-medium text-gray-900">
+                      {formatLocalMoney(currencyClient.convertUSD(subtotal))}
+                    </span>
                   ) : (
                     <span className="inline-block h-4 w-16 rounded bg-gray-200 animate-pulse" />
                   )}
@@ -2302,11 +2429,11 @@ export default function Checkout() {
                     <span className="text-gray-600">
                       {couponLabel || "Discount"}
                     </span>
-                    <span className="font-medium text-green-700">
-                      -{currencyClient.getCurrencySymbolLocal()}
-                      {currencyClient
-                        .convertUSD(offerDiscountAmount)
-                        .toFixed(2)}
+                    <span className="font-medium text-success">
+                      -
+                      {formatLocalMoney(
+                        currencyClient.convertUSD(offerDiscountAmount)
+                      )}
                     </span>
                   </div>
                 )}
@@ -2318,13 +2445,13 @@ export default function Checkout() {
                     <span
                       className={
                         shipping === 0
-                          ? "text-green-600 font-semibold"
+                          ? "font-semibold text-success"
                           : "font-medium text-gray-900"
                       }
                     >
                       {shipping === 0
                         ? t("checkout.free", "FREE")
-                        : `${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(shipping).toFixed(2)}`}
+                        : formatLocalMoney(currencyClient.convertUSD(shipping))}
                     </span>
                   ) : (
                     <span className="inline-block h-4 w-14 rounded bg-gray-200 animate-pulse" />
@@ -2339,13 +2466,17 @@ export default function Checkout() {
               </div>
 
               {/* Total */}
-              <div className="mb-8">
+              <div className="mb-6">
                 <div className="flex justify-between items-baseline">
                   <span className="text-gray-600">
                     {t("checkout.total", "Total")}
                   </span>
                   {orderSummaryReady ? (
-                    <span className="text-3xl font-bold text-black">{`${currencyClient.getCurrencySymbolLocal()}${currencyClient.convertUSD(cartGrandTotal).toFixed(2)}`}</span>
+                    <span className="price text-2xl font-bold text-ink sm:text-3xl">
+                      {formatLocalMoney(
+                        currencyClient.convertUSD(cartGrandTotal)
+                      )}
+                    </span>
                   ) : (
                     <span className="inline-block h-8 w-24 rounded bg-gray-200 animate-pulse" />
                   )}
@@ -2356,11 +2487,11 @@ export default function Checkout() {
               </div>
 
               {/* Benefits */}
-              <div className="space-y-3 text-sm text-gray-700">
+              <div className="space-y-2.5 text-[13px] text-gray-700">
                 <div className="flex gap-3 items-start">
                   <Check
                     size={18}
-                    className="text-green-600 flex-shrink-0 mt-0.5"
+                    className="mt-0.5 flex-shrink-0 text-success"
                   />
                   <span>
                     {t(
@@ -2372,7 +2503,7 @@ export default function Checkout() {
                 <div className="flex gap-3 items-start">
                   <Check
                     size={18}
-                    className="text-green-600 flex-shrink-0 mt-0.5"
+                    className="mt-0.5 flex-shrink-0 text-success"
                   />
                   <span>
                     {t("checkout.returnPolicy", "30-day return policy")}
@@ -2381,7 +2512,7 @@ export default function Checkout() {
                 <div className="flex gap-3 items-start">
                   <Check
                     size={18}
-                    className="text-green-600 flex-shrink-0 mt-0.5"
+                    className="mt-0.5 flex-shrink-0 text-success"
                   />
                   <span>
                     {t("checkout.securePayments", "Secure encrypted payments")}

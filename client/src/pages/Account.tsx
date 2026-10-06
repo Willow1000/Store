@@ -1,7 +1,10 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect, useRef } from "react";
 import { SEOHead } from "@/components/SEOHead";
-import { User, Mail, Phone, MapPin, LogOut } from "lucide-react";
+import { User, Mail, LogOut, ChevronRight } from "lucide-react";
+import { Link } from "wouter";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
 import { requestAuthenticationForPath } from "@/lib/authRequired";
 
@@ -27,14 +30,12 @@ export default function Account() {
 
   if (!sessionRestored) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
-          <div className="space-y-4">
-            <div className="h-10 w-48 bg-muted rounded animate-pulse" />
-            <div className="grid gap-8 md:grid-cols-3">
-              <div className="h-80 rounded-lg bg-muted animate-pulse" />
-              <div className="md:col-span-2 h-80 rounded-lg bg-muted animate-pulse" />
-            </div>
+      <div className="min-h-screen bg-white">
+        <PageHeader title="My Account" />
+        <div className="container py-8 sm:py-12">
+          <div className="grid gap-6 md:grid-cols-3" aria-hidden="true">
+            <div className="h-72 animate-pulse rounded-xl bg-muted" />
+            <div className="h-72 animate-pulse rounded-xl bg-muted md:col-span-2" />
           </div>
         </div>
       </div>
@@ -42,103 +43,120 @@ export default function Account() {
   }
 
   if (!isAuthenticated || !user) {
-    // Show a blank account area for guests (per requirements)
+    // Guests get no account data; the sign-in prompt is opened by the effect
+    // above, and this gives them a way to reopen it.
     return (
-      <div className="min-h-screen bg-background w-full overflow-x-hidden">
-        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
-          <h1 className="mb-8 text-4xl font-bold">My Account</h1>
-          <div className="rounded-lg border border-border bg-white p-6">
-            {/* intentionally blank for unauthenticated users */}
-          </div>
+      <div className="min-h-screen w-full overflow-x-clip bg-white">
+        <PageHeader title="My Account" />
+        <div className="container py-10 sm:py-16">
+          <EmptyState icon={<User />} title="Sign in to view your account">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => requestAuthenticationForPath()}
+            >
+              Sign in
+            </button>
+          </EmptyState>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background w-full overflow-x-hidden">
-      <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
-        <h1 className="mb-8 text-4xl font-bold">My Account</h1>
-
-        <div className="grid gap-8 md:grid-cols-3">
+    <div className="min-h-screen w-full overflow-x-clip bg-white">
+      <PageHeader title="My Account" />
+      <div className="container py-8 sm:py-12">
+        <div className="grid gap-6 md:grid-cols-3 md:items-start">
           {/* Profile Card */}
-          <div className="rounded-lg border border-border bg-white p-6">
-            <div className="mb-6 flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black text-2xl font-bold text-white">
+          <div className="panel">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 flex-none items-center justify-center rounded-full bg-ink font-display text-xl font-bold text-white">
                 {user.name?.charAt(0).toUpperCase() || "U"}
               </div>
-              <div>
-                <h2 className="text-xl font-bold">{user.name || "User"}</h2>
-                <p className="text-sm text-gray-600">{user.email}</p>
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-bold text-ink">
+                  {user.name || "User"}
+                </h2>
+                <p className="truncate text-sm text-gray-600">{user.email}</p>
               </div>
             </div>
 
-            <div className="space-y-3 border-t border-border pt-6">
+            <div className="mt-5 space-y-3 border-t border-gray-200 pt-5">
               <div className="flex items-center gap-3">
-                <Mail size={18} className="text-gray-600" />
-                <span className="text-sm">{user.email}</span>
+                <Mail size={16} className="flex-none text-gray-500" />
+                <span className="min-w-0 break-all text-sm">{user.email}</span>
               </div>
               <div className="flex items-center gap-3">
-                <User size={18} className="text-gray-600" />
+                <User size={16} className="flex-none text-gray-500" />
                 <span className="text-sm capitalize">{user.role}</span>
               </div>
             </div>
 
-            <button
-              onClick={handleLogout}
-              className="mt-6 w-full flex items-center justify-center gap-2 rounded-md bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-700"
-            >
-              <LogOut size={18} />
-              Logout
-            </button>
+            <div className="mt-5 grid gap-2 border-t border-gray-200 pt-5">
+              <Link href="/orders" className="btn-secondary btn-block">
+                My Orders
+              </Link>
+              <Link href="/tickets" className="btn-secondary btn-block">
+                My Tickets
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="btn-ghost btn-block text-brand hover:bg-brand-soft"
+              >
+                <LogOut size={16} />
+                Logout
+              </button>
+            </div>
           </div>
 
           {/* Account Info */}
-          <div className="md:col-span-2 space-y-6">
+          <div className="space-y-6 md:col-span-2">
             {/* Personal Information */}
-            <div className="rounded-lg border border-border bg-white p-6">
-              <h2 className="mb-6 text-2xl font-bold">Personal Information</h2>
-              <div className="space-y-4">
+            <div className="panel">
+              <h2 className="mb-5 text-xl font-bold text-ink">
+                Personal Information
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Full Name
-                  </label>
+                  <label className="label">Full Name</label>
                   <input
                     type="text"
                     value={user.name || ""}
                     disabled
-                    className="mt-1 w-full rounded-md border border-input bg-gray-50 px-4 py-2 text-sm"
+                    className="field disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Email Address
-                  </label>
+                  <label className="label">Email Address</label>
                   <input
                     type="email"
                     value={user.email || ""}
                     disabled
-                    className="mt-1 w-full rounded-md border border-input bg-gray-50 px-4 py-2 text-sm"
+                    className="field disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
-                <button className="rounded-md border border-border bg-background py-2 text-sm font-semibold hover:bg-secondary">
-                  Edit Profile
-                </button>
               </div>
+              <button className="btn-secondary mt-5">Edit Profile</button>
             </div>
 
             {/* Account Settings */}
-            <div className="rounded-lg border border-border bg-white p-6">
-              <h2 className="mb-6 text-2xl font-bold">Account Settings</h2>
-              <div className="space-y-4">
-                <button className="w-full rounded-md border border-border bg-background py-3 text-left text-sm font-semibold hover:bg-secondary">
+            <div className="panel">
+              <h2 className="mb-3 text-xl font-bold text-ink">
+                Account Settings
+              </h2>
+              <div className="divide-y divide-gray-200 border-y border-gray-200">
+                <button className="flex min-h-12 w-full items-center justify-between gap-3 text-left text-sm font-medium text-ink hover:text-gray-600">
                   Change Password
+                  <ChevronRight size={16} className="text-gray-400" />
                 </button>
-                <button className="w-full rounded-md border border-border bg-background py-3 text-left text-sm font-semibold hover:bg-secondary">
+                <button className="flex min-h-12 w-full items-center justify-between gap-3 text-left text-sm font-medium text-ink hover:text-gray-600">
                   Privacy Settings
+                  <ChevronRight size={16} className="text-gray-400" />
                 </button>
-                <button className="w-full rounded-md border border-border bg-background py-3 text-left text-sm font-semibold hover:bg-secondary">
+                <button className="flex min-h-12 w-full items-center justify-between gap-3 text-left text-sm font-medium text-ink hover:text-gray-600">
                   Notification Preferences
+                  <ChevronRight size={16} className="text-gray-400" />
                 </button>
               </div>
             </div>

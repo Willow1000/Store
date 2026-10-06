@@ -1,4 +1,3 @@
-import { cn } from "@/lib/utils";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import { Component, ReactNode } from "react";
 
@@ -24,28 +23,28 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center min-h-screen p-8 bg-background">
-          <div className="flex flex-col items-center w-full max-w-2xl p-8">
-            <AlertTriangle
-              size={48}
-              className="text-destructive mb-6 flex-shrink-0"
-            />
-
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
-
-            <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
-              <pre className="text-sm text-muted-foreground whitespace-break-spaces">
-                {this.state.error?.stack}
-              </pre>
+        <div className="flex min-h-screen items-center justify-center bg-white p-6">
+          <div className="flex w-full max-w-lg flex-col items-center text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft">
+              <AlertTriangle size={26} className="text-brand" />
             </div>
+
+            <h2 className="mt-5 text-xl font-bold text-ink">
+              An unexpected error occurred.
+            </h2>
+
+            {/* The stack trace is for developers; shoppers only get the reload. */}
+            {import.meta.env.DEV && (
+              <div className="mt-5 max-h-64 w-full overflow-auto rounded-lg bg-muted p-4 text-left">
+                <pre className="whitespace-break-spaces text-xs text-muted-foreground">
+                  {this.state.error?.stack}
+                </pre>
+              </div>
+            )}
 
             <button
               onClick={() => window.location.reload()}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg",
-                "bg-primary text-primary-foreground",
-                "hover:opacity-90 cursor-pointer"
-              )}
+              className="btn-primary mt-6"
             >
               <RotateCcw size={16} />
               Reload Page

@@ -1,3 +1,5 @@
+import { calculateShipping } from "@shared/shipping";
+import { RETURN_WINDOW_DAYS, SHIPPING_COUNTRIES } from "@shared/storePolicy";
 import { SEO_CONFIG } from "@/lib/seoConfig";
 
 export type SEOPageType =
@@ -39,8 +41,44 @@ export type ProductSchemaInput = {
   hasMerchantReturnPolicy?: Record<string, unknown>;
 };
 
+/**
+ * Shipping and returns for a product's Offer - required for Google merchant
+ * listings - built from the same facts checkout and the policy pages use:
+ * shipping is calculateShipping() (5% of the order, free from $1,500), and
+ * returns are the 30-day mail-in policy on /returns.
+ */
+export function buildOfferPolicies(priceUsd: number): {
+  shippingDetails: Record<string, unknown>;
+  hasMerchantReturnPolicy: Record<string, unknown>;
+} {
+  const destinations = SHIPPING_COUNTRIES.map(country => ({
+    "@type": "DefinedRegion",
+    addressCountry: country,
+  }));
+  return {
+    shippingDetails: {
+      "@type": "OfferShippingDetails",
+      shippingRate: {
+        "@type": "MonetaryAmount",
+        value: calculateShipping(priceUsd).toFixed(2),
+        currency: "USD",
+      },
+      shippingDestination: destinations,
+    },
+    hasMerchantReturnPolicy: {
+      "@type": "MerchantReturnPolicy",
+      applicableCountry: SHIPPING_COUNTRIES,
+      returnPolicyCategory:
+        "https://schema.org/MerchantReturnFiniteReturnWindow",
+      merchantReturnDays: RETURN_WINDOW_DAYS,
+      returnMethod: "https://schema.org/ReturnByMail",
+    },
+  };
+}
+
 export type ArticleSchemaInput = {
   author?: string;
+  authorType?: "Person" | "Organization";
   publishedDate?: string;
   modifiedDate?: string;
   image?: string;
@@ -176,8 +214,10 @@ function buildOrganization(siteOrigin: string, language: string) {
       "@type": "ContactPoint",
       contactType: "Customer Support",
       email: SEO_CONFIG.contact.email,
-      telephone: SEO_CONFIG.contact.phone,
-      availableLanguage: [language, "en"],
+      ...(SEO_CONFIG.contact.phone
+        ? { telephone: SEO_CONFIG.contact.phone }
+        : {}),
+      availableLanguage: Array.from(new Set([language, "en"])),
     },
   });
 }
@@ -218,11 +258,19 @@ function buildPageEntity(options: BuildSchemaOptions): Record<string, unknown> {
       image: toAbsoluteUrl(articleData.image, pageUrl),
       datePublished: articleData.publishedDate,
       dateModified: articleData.modifiedDate || articleData.publishedDate,
+      // A byline like "MotorVault Editorial Team" is the organisation, not a
+      // person; marking it up as a Person is a false authorship signal.
       author: articleData.author
-        ? {
-            "@type": "Person",
-            name: articleData.author,
-          }
+        ? articleData.authorType === "Organization"
+          ? {
+              "@type": "Organization",
+              name: articleData.author,
+              url: options.siteOrigin,
+            }
+          : {
+              "@type": "Person",
+              name: articleData.author,
+            }
         : undefined,
       publisher: {
         "@id": `${options.siteOrigin}#organization`,
@@ -432,7 +480,12 @@ export function buildStructuredDataGraph(
     graph.push(breadcrumbs);
   }
 
-  const faqPage = buildFaqPage(options.faqData, options.pageUrl);
+  // On the FAQ page itself the page entity already IS the FAQPage (same @id);
+  // adding the generic one as well emitted the same node twice.
+  const faqPage =
+    options.pageType === "faq"
+      ? null
+      : buildFaqPage(options.faqData, options.pageUrl);
   if (faqPage) {
     graph.push(faqPage);
   }

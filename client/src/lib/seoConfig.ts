@@ -18,7 +18,9 @@ export const SEO_CONFIG = {
   // Contact Information
   contact: {
     email: "support@motorvault.shop",
-    phone: "+1-800-MOTORVAULT",
+    // Published in the Organization structured data on every page; it is the
+    // store's WhatsApp number (same as the Contact page's WhatsApp link).
+    phone: "+1-443-554-0384",
     address: {
       street: "Motor Commerce Center",
       city: "Multiple Locations",
@@ -33,12 +35,15 @@ export const SEO_CONFIG = {
       "Finland",
       "United Arab Emirates",
     ],
+    // Only real, owner-confirmed profile URLs belong here: they feed the
+    // Organization `sameAs` structured data and the footer. Empty entries are
+    // skipped everywhere. The Facebook URL is the one the Contact page links.
     social: {
-      facebook: "https://www.facebook.com/motorvault",
-      twitter: "https://www.twitter.com/motorvault",
-      instagram: "https://www.instagram.com/motorvault",
-      linkedin: "https://www.linkedin.com/company/motorvault",
-    },
+      facebook: "https://www.facebook.com/profile.php?id=61590090897198",
+      twitter: "",
+      instagram: "",
+      linkedin: "",
+    } as Record<string, string>,
   },
 
   // SEO Defaults
@@ -244,7 +249,7 @@ export function getOrganizationStructuredData() {
       postalCode: SEO_CONFIG.contact.address.zipCode,
       addressCountry: SEO_CONFIG.contact.address.country,
     },
-    sameAs: Object.values(SEO_CONFIG.contact.social),
+    sameAs: Object.values(SEO_CONFIG.contact.social).filter(Boolean),
   };
 }
 

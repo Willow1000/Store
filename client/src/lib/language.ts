@@ -90,6 +90,9 @@ const ENGLISH_OVERRIDE_COUNTRIES = new Set<string>([
 
 const KEY_TRANSLATIONS: Record<SiteLanguageCode, Record<string, string>> = {
   de: {
+    "header.vinDecoder": "VIN-Decoder",
+    "header.searchPlaceholder": "Teile, Marken, Teilenummern suchen",
+    "cart.addOnsTitle": "Zur Bestellung hinzufügen",
     "checkout.shippingAddress": "Lieferadresse",
     "checkout.firstName": "Vorname",
     "checkout.lastName": "Nachname",
@@ -179,6 +182,9 @@ const KEY_TRANSLATIONS: Record<SiteLanguageCode, Record<string, string>> = {
     "loading.selectedLanguage": "Ausgewaehlte Sprache wird geladen...",
   },
   en: {
+    "header.vinDecoder": "VIN Decoder",
+    "header.searchPlaceholder": "Search parts, brands, part numbers",
+    "cart.addOnsTitle": "Add to your order",
     "checkout.shippingAddress": "Shipping Address",
     "checkout.firstName": "First Name",
     "checkout.lastName": "Last Name",
@@ -255,6 +261,9 @@ const KEY_TRANSLATIONS: Record<SiteLanguageCode, Record<string, string>> = {
     "loading.selectedLanguage": "Loading selected language...",
   },
   it: {
+    "header.vinDecoder": "Decodificatore VIN",
+    "header.searchPlaceholder": "Cerca ricambi, marche, codici",
+    "cart.addOnsTitle": "Aggiungi al tuo ordine",
     "checkout.shippingAddress": "Indirizzo di spedizione",
     "checkout.firstName": "Nome",
     "checkout.lastName": "Cognome",
@@ -344,6 +353,9 @@ const KEY_TRANSLATIONS: Record<SiteLanguageCode, Record<string, string>> = {
     "loading.selectedLanguage": "Caricamento della lingua selezionata...",
   },
   fr: {
+    "header.vinDecoder": "Décodeur VIN",
+    "header.searchPlaceholder": "Rechercher pièces, marques, références",
+    "cart.addOnsTitle": "Ajoutez à votre commande",
     "checkout.shippingAddress": "Adresse de livraison",
     "checkout.firstName": "Prénom",
     "checkout.lastName": "Nom",
@@ -433,6 +445,9 @@ const KEY_TRANSLATIONS: Record<SiteLanguageCode, Record<string, string>> = {
     "loading.selectedLanguage": "Chargement de la langue selectionnee...",
   },
   es: {
+    "header.vinDecoder": "Decodificador VIN",
+    "header.searchPlaceholder": "Buscar piezas, marcas, referencias",
+    "cart.addOnsTitle": "Añade a tu pedido",
     "checkout.shippingAddress": "Dirección de envío",
     "checkout.firstName": "Nombre",
     "checkout.lastName": "Apellidos",
@@ -520,6 +535,9 @@ const KEY_TRANSLATIONS: Record<SiteLanguageCode, Record<string, string>> = {
     "loading.selectedLanguage": "Cargando el idioma seleccionado...",
   },
   nl: {
+    "header.vinDecoder": "VIN-decoder",
+    "header.searchPlaceholder": "Zoek onderdelen, merken, artikelnummers",
+    "cart.addOnsTitle": "Voeg toe aan je bestelling",
     "checkout.shippingAddress": "Verzendadres",
     "checkout.firstName": "Voornaam",
     "checkout.lastName": "Achternaam",

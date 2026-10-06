@@ -1,12 +1,18 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "./BrandLogo";
+import { SEO_CONFIG } from "@/lib/seoConfig";
+import { VEHICLES } from "@shared/vehicleContent";
 import {
   SITE_LANGUAGE_CHANGED_EVENT,
   getSiteLanguage,
   translateText,
   type SiteLanguageCode,
 } from "@/lib/language";
+
+const socialLinks = Object.entries(SEO_CONFIG.contact.social).filter(
+  ([, href]) => Boolean(href)
+);
 
 export default function Footer() {
   const [language, setLanguage] = useState<SiteLanguageCode>(() =>
@@ -52,16 +58,16 @@ export default function Footer() {
   }, [language]);
 
   return (
-    <footer className="border-t border-border bg-black text-white w-full overflow-x-hidden">
-      <div className="w-full px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-16 mx-auto max-w-full lg:max-w-screen-xl lg:mx-auto">
-        <div className="grid gap-6 sm:gap-8 grid-cols-2 md:grid-cols-4">
+    <footer className="w-full overflow-x-hidden bg-gray-950 text-white">
+      <div className="container py-10 sm:py-14">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:gap-x-10">
           {/* About */}
-          <div>
+          <div className="col-span-2 md:col-span-1">
             <BrandLogo
               variant="dark"
-              className="mb-3 sm:mb-4 h-10 sm:h-12 w-auto max-w-[220px]"
+              className="mb-4 h-10 w-auto max-w-[200px]"
             />
-            <p className="text-xs sm:text-sm text-gray-400">
+            <p className="max-w-sm text-sm leading-relaxed text-gray-400">
               {t(
                 "footer.about",
                 "Your ultimate destination for premium automotive and motor parts. Fast shipping, authentic products, and expert support for all your vehicle needs."
@@ -71,14 +77,14 @@ export default function Footer() {
 
           {/* Browse */}
           <div>
-            <h2 className="mb-3 sm:mb-4 font-semibold text-sm sm:text-base">
+            <h2 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-white">
               {t("footer.browse", "Browse")}
             </h2>
-            <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-400">
+            <ul className="text-sm text-gray-400">
               <li>
                 <Link
                   href="/products"
-                  className="hover:text-white inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   {t("footer.allProducts", "All Products")}
                 </Link>
@@ -86,7 +92,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/blog"
-                  className="hover:text-white inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   Blog
                 </Link>
@@ -94,7 +100,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/vin-decoder"
-                  className="hover:text-white inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   VIN Decoder
                 </Link>
@@ -102,7 +108,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/site-map"
-                  className="hover:text-white inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   {t("footer.siteMap", "HTML Sitemap")}
                 </Link>
@@ -112,14 +118,14 @@ export default function Footer() {
 
           {/* Support */}
           <div>
-            <h2 className="mb-3 sm:mb-4 font-semibold text-sm sm:text-base">
+            <h2 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-white">
               {t("footer.support", "Support")}
             </h2>
-            <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-400">
+            <ul className="text-sm text-gray-400">
               <li>
                 <Link
                   href="/help"
-                  className="hover:text-white transition-colors inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   {t("footer.helpCenter", "Help Center")}
                 </Link>
@@ -127,7 +133,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/faq"
-                  className="hover:text-white transition-colors inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   {t("footer.faq", "FAQ")}
                 </Link>
@@ -135,7 +141,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/contact"
-                  className="hover:text-white transition-colors inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   {t("footer.contactUs", "Contact Us")}
                 </Link>
@@ -143,7 +149,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/shipping"
-                  className="hover:text-white transition-colors inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   {t("footer.shippingInfo", "Shipping Info")}
                 </Link>
@@ -151,7 +157,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/returns"
-                  className="hover:text-white transition-colors inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   {t("footer.returns", "Returns")}
                 </Link>
@@ -161,14 +167,14 @@ export default function Footer() {
 
           {/* Legal */}
           <div>
-            <h2 className="mb-3 sm:mb-4 font-semibold text-sm sm:text-base">
+            <h2 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-white">
               {t("footer.legal", "Legal")}
             </h2>
-            <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-400">
+            <ul className="text-sm text-gray-400">
               <li>
                 <Link
                   href="/privacy"
-                  className="hover:text-white transition-colors inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   {t("footer.privacyPolicy", "Privacy Policy")}
                 </Link>
@@ -176,7 +182,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/terms"
-                  className="hover:text-white transition-colors inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   {t("footer.termsOfService", "Terms of Service")}
                 </Link>
@@ -184,7 +190,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/cookies"
-                  className="hover:text-white transition-colors inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   {t("footer.cookiePolicy", "Cookie Policy")}
                 </Link>
@@ -192,7 +198,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/accessibility"
-                  className="hover:text-white transition-colors inline-flex min-h-11 items-center"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
                 >
                   {t("footer.accessibility", "Accessibility")}
                 </Link>
@@ -201,41 +207,50 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* Shop by vehicle */}
+        <nav aria-label="Shop by vehicle" className="mt-10">
+          <h2 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-white">
+            Shop by vehicle
+          </h2>
+          <ul className="flex flex-wrap gap-x-5 text-sm text-gray-400">
+            {VEHICLES.map(vehicle => (
+              <li key={vehicle.slug}>
+                <Link
+                  href={`/vehicle/${vehicle.slug}`}
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white sm:min-h-9"
+                >
+                  {vehicle.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
         {/* Divider */}
-        <div className="my-6 sm:my-8 border-t border-gray-800" />
+        <div className="mb-6 mt-10 border-t border-white/10" />
 
         {/* Bottom */}
-        <div className="flex flex-col items-center justify-between gap-4 text-xs sm:text-sm text-gray-400 md:flex-row">
+        <div className="flex flex-col items-start justify-between gap-4 text-xs text-gray-400 sm:flex-row sm:items-center">
           <p>
             &copy; 2026 MotorVault.{" "}
             {t("footer.allRightsReserved", "All rights reserved.")}{" "}
           </p>
-          <div className="flex gap-4 sm:gap-6">
-            <a
-              href="https://twitter.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-white transition-colors"
-            >
-              Twitter
-            </a>
-            <a
-              href="https://facebook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-white transition-colors"
-            >
-              Facebook
-            </a>
-            <a
-              href="https://instagram.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-white transition-colors"
-            >
-              Instagram
-            </a>
-          </div>
+          {/* Only profiles with a real destination are shown */}
+          {socialLinks.length > 0 && (
+            <div className="flex gap-5">
+              {socialLinks.map(([network, href]) => (
+                <a
+                  key={network}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="capitalize transition-colors hover:text-white"
+                >
+                  {network}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </footer>

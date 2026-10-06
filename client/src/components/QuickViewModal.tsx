@@ -7,7 +7,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Star,
   Heart,
   ShoppingCart,
   ChevronLeft,
@@ -27,6 +26,8 @@ import { getHighResImageUrl } from "@/lib/images";
 import { trackAddToCart } from "@/hooks/useMetaPixel";
 import { buildContactHref, getEnquiryCopy } from "@/lib/enquiry";
 import { getSiteLanguage } from "@/lib/language";
+import { ProductImage } from "@/components/ProductImage";
+import { formatMoney, getPricing } from "@/lib/pricing";
 
 interface QuickViewModalProps {
   productId: string;
@@ -55,8 +56,6 @@ export function QuickViewModal({
   const { product, images, isLoading } = useProductById(productId);
   // Use centralized currency client for symbol, code and rate
   const currencyCode = currencyClient.getCurrencyCode();
-  const currencyRate = currencyClient.getCurrencyRate();
-  const currencySymbol = currencyClient.getCurrencySymbolLocal();
   const { addToCart } = useSupabaseCart(user?.id || null);
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(
     user?.id || null
@@ -256,33 +255,31 @@ export function QuickViewModal({
     }
   };
 
+  const pricing = product ? getPricing(product) : null;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[92vh] max-w-[calc(100%-1.5rem)] overflow-y-auto p-4 sm:max-w-3xl sm:p-6">
         {isLoading ? (
-          <div className="space-y-6">
-            <Skeleton className="h-56 w-full rounded-lg" />
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Skeleton className="aspect-square w-full rounded-lg" />
             <div className="space-y-3">
               <Skeleton className="h-6 w-3/4" />
-              <Skeleton className="h-5 w-1/2" />
+              <Skeleton className="h-8 w-1/2" />
               <Skeleton className="h-20 w-full rounded-lg" />
+              <Skeleton className="h-11 w-full rounded-md" />
             </div>
           </div>
         ) : product ? (
-          <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-xl">{product.title}</DialogTitle>
-            </div>
-
+          <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
             {/* Image Gallery */}
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3">
               {/* Main Image */}
               <div className="relative" ref={imageContainerRef}>
                 {currentImage ? (
                   <>
                     <div
-                      className="relative w-full h-64 flex items-center justify-center overflow-hidden bg-gray-100 rounded-lg"
+                      className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-well"
                       onPointerDown={handlePointerDown}
                       onPointerMove={handlePointerMove}
                       onPointerUp={handlePointerUp}
@@ -302,40 +299,46 @@ export function QuickViewModal({
                       <img
                         src={getHighResImageUrl(currentImage.image_url)}
                         alt={product.title}
-                        className="w-full h-full object-contain select-none pointer-events-none will-change-transform"
+                        className="pointer-events-none h-full w-full select-none object-contain p-3 mix-blend-multiply will-change-transform"
                         style={{
                           transform: `translate3d(${panX}px, ${panY}px, 0) scale(${zoom})`,
                           transformOrigin: "center center",
                         }}
                         fetchPriority="high"
-                        crossOrigin="anonymous"
+                        referrerPolicy="no-referrer"
                         loading="eager"
                         decoding="async"
                       />
                     </div>
 
+                    {pricing?.percentOff ? (
+                      <span className="price pointer-events-none absolute left-2 top-2 rounded bg-brand px-1.5 py-0.5 text-xs font-bold text-white">
+                        -{pricing.percentOff}%
+                      </span>
+                    ) : null}
+
                     {/* Zoom Controls */}
-                    <div className="absolute bottom-2 right-2 flex gap-1 bg-white/75 sm:bg-white/90 backdrop-blur-sm p-1 rounded shadow">
+                    <div className="absolute bottom-2 right-2 flex items-center gap-0.5 rounded-full border border-gray-200 bg-white/95 p-1 shadow-sm backdrop-blur-sm">
                       <button
                         onClick={() => setZoom(Math.max(zoom - 0.2, 1))}
                         disabled={zoom <= 1}
-                        className="p-1.5 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label="Zoom out"
                         title="Zoom out"
                       >
-                        <ZoomOut size={16} className="text-gray-700" />
+                        <ZoomOut size={15} className="text-gray-700" />
                       </button>
-                      <div className="flex items-center px-1.5 text-xs text-gray-700 font-medium min-w-10 justify-center">
+                      <div className="price min-w-9 text-center text-xs font-medium text-gray-700">
                         {Math.round(zoom * 100)}%
                       </div>
                       <button
                         onClick={() => setZoom(Math.min(zoom + 0.2, 3))}
                         disabled={zoom >= 3}
-                        className="p-1.5 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label="Zoom in"
                         title="Zoom in"
                       >
-                        <ZoomIn size={16} className="text-gray-700" />
+                        <ZoomIn size={15} className="text-gray-700" />
                       </button>
                     </div>
                     {selectedImageIdx > 0 && (
@@ -343,10 +346,10 @@ export function QuickViewModal({
                         onClick={() =>
                           setSelectedImageIdx(selectedImageIdx - 1)
                         }
-                        className="absolute left-2 top-1/2 -translate-y-1/2 p-1 bg-white/80 hover:bg-white rounded-full shadow-lg transition-colors"
+                        className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/95 shadow-sm transition-colors hover:bg-white"
                         aria-label="Previous image"
                       >
-                        <ChevronLeft size={20} className="text-gray-700" />
+                        <ChevronLeft size={18} className="text-gray-700" />
                       </button>
                     )}
                     {selectedImageIdx < allImages.length - 1 && (
@@ -354,29 +357,25 @@ export function QuickViewModal({
                         onClick={() =>
                           setSelectedImageIdx(selectedImageIdx + 1)
                         }
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-white/80 hover:bg-white rounded-full shadow-lg transition-colors"
+                        className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white/95 shadow-sm transition-colors hover:bg-white"
                         aria-label="Next image"
                       >
-                        <ChevronRight size={20} className="text-gray-700" />
+                        <ChevronRight size={18} className="text-gray-700" />
                       </button>
                     )}
                   </>
                 ) : (
-                  <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-                    No image available
-                  </div>
+                  <ProductImage
+                    src={null}
+                    alt={product.title}
+                    className="aspect-square w-full rounded-lg"
+                  />
                 )}
               </div>
 
               {/* Thumbnail Row */}
               {allImages.length > 1 && (
-                <div
-                  className="flex flex-col sm:flex-row gap-2 overflow-y-auto sm:overflow-x-auto pb-2"
-                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                >
-                  <style>{`
-                    div::-webkit-scrollbar { display: none; }
-                  `}</style>
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                   {(() => {
                     const isMobile = window.innerWidth < 640; // sm breakpoint
                     const windowSize = isMobile ? 4 : 6; // 4 on mobile, 6 on desktop
@@ -391,24 +390,24 @@ export function QuickViewModal({
 
                     return imagesToShow.map((img, idx) => {
                       const actualImageIndex = startIdx + idx;
+                      const isSelected = selectedImageIdx === actualImageIndex;
                       return (
                         <button
                           key={idx}
                           onClick={() => setSelectedImageIdx(actualImageIndex)}
-                          className={`relative h-16 w-16 rounded-lg overflow-hidden border-2 transition-colors flex-shrink-0 aspect-square ${
-                            selectedImageIdx === actualImageIndex
-                              ? "border-blue-600"
-                              : "border-gray-200"
+                          aria-label={`${product.title} thumbnail ${actualImageIndex}`}
+                          className={`relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-md border transition-colors ${
+                            isSelected
+                              ? "border-ink ring-1 ring-ink"
+                              : "border-gray-200 hover:border-gray-400"
                           }`}
                         >
-                          <img
-                            src={getHighResImageUrl(img.image_url)}
-                            alt={`${product.title} thumbnail ${actualImageIndex}`}
-                            className="w-full h-full object-contain bg-gray-100"
-                            style={{}}
-                            crossOrigin="anonymous"
-                            loading="lazy"
-                            decoding="async"
+                          <ProductImage
+                            src={img.image_url}
+                            alt=""
+                            compactFallback
+                            className="h-full w-full"
+                            imgClassName="p-0.5"
                           />
                         </button>
                       );
@@ -419,57 +418,54 @@ export function QuickViewModal({
             </div>
 
             {/* Product Info */}
-            <div className="space-y-4">
-              {/* Price */}
+            <div className="flex min-w-0 flex-col gap-4">
               <div>
-                {/* Use currency symbol and conversion, hide USD, show discount as plain number */}
-                <p className="text-2xl font-bold text-gray-900">
-                  {currencyClient.isAfricanUser()
-                    ? currencyClient.formatUSD(
-                        parseFloat(String(product.price))
-                      )
-                    : `${currencySymbol}${(parseFloat(String(product.price)) * currencyRate).toFixed(2)}`}
-                </p>
-                {product.discount && (
-                  <p className="text-sm text-gray-500 line-through">
-                    {currencyClient.isAfricanUser()
-                      ? currencyClient.formatUSD(
-                          parseFloat(String(product.discount))
-                        )
-                      : `${currencySymbol}${(parseFloat(String(product.discount)) * currencyRate).toFixed(2)}`}
+                {(product.brand || product.condition) && (
+                  <p className="eyebrow mb-1.5">
+                    {[product.brand, product.condition]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                 )}
-                <p className="text-sm text-gray-600 mt-1">
-                  Condition: {product.condition || "Good"}
-                </p>
+                <DialogTitle className="pr-6 font-display text-lg font-bold leading-snug text-ink sm:text-xl">
+                  {product.title}
+                </DialogTitle>
+              </div>
+
+              {/* Price */}
+              <div>
+                <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                  <p className="price text-2xl font-bold text-ink">
+                    {formatMoney(product.price)}
+                  </p>
+                  {pricing?.compareAt ? (
+                    <p className="price text-sm text-gray-500 line-through">
+                      {formatMoney(pricing.compareAt)}
+                    </p>
+                  ) : null}
+                </div>
+                {pricing?.savings ? (
+                  <p className="mt-1 text-[13px] font-semibold text-brand">
+                    <span>You save</span>{" "}
+                    <span className="price">
+                      {formatMoney(pricing.savings)}
+                    </span>
+                  </p>
+                ) : null}
                 <p
-                  className={`mt-2 inline-block px-3 py-1 rounded text-xs font-semibold ${isOutOfStock ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}
+                  className={`mt-2 flex items-center gap-2 text-[13px] font-medium ${isOutOfStock ? "text-brand" : "text-success"}`}
                 >
+                  <span
+                    className={`h-2 w-2 rounded-full ${isOutOfStock ? "bg-brand" : "bg-success"}`}
+                    aria-hidden="true"
+                  />
                   {isOutOfStock ? "Out of stock" : `${stock} in stock`}
                 </p>
               </div>
 
-              {/* Rating */}
-              <div className="flex items-center gap-2">
-                <div className="flex">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-4 h-4 ${i < 4 ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm text-gray-600">(73 reviews)</span>
-              </div>
-
-              {/* Description */}
-              <p className="text-sm text-gray-700 line-clamp-3">
-                {product.title}
-              </p>
-
               {itemSpecificsPreview.length > 0 && (
-                <div className="rounded-lg border border-gray-200 p-3 bg-gray-50/60">
-                  <p className="text-sm font-semibold text-gray-900 mb-2">
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <p className="mb-2 text-[13px] font-semibold text-ink">
                     Item Specifics
                   </p>
                   <div className="space-y-1.5">
@@ -479,7 +475,7 @@ export function QuickViewModal({
                         className="flex items-center justify-between gap-3"
                       >
                         <span className="text-xs text-gray-600">{label}</span>
-                        <span className="text-xs font-medium text-gray-900 text-right truncate">
+                        <span className="truncate text-right text-xs font-medium text-ink">
                           {value}
                         </span>
                       </div>
@@ -487,7 +483,7 @@ export function QuickViewModal({
                   </div>
                   <Link
                     href={`/product/${product.id}`}
-                    className="mt-3 text-xs font-semibold text-blue-700 hover:text-blue-800 underline"
+                    className="mt-3 inline-block text-xs font-semibold text-ink underline underline-offset-2"
                     onClick={onClose}
                   >
                     View full item specifics
@@ -497,13 +493,14 @@ export function QuickViewModal({
 
               {/* Quantity */}
               <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-gray-900">
+                <label className="text-[13px] font-medium text-ink">
                   Quantity:
                 </label>
-                <div className="flex items-center gap-2 border border-gray-300 rounded-lg">
+                <div className="inline-flex items-center rounded-md border border-gray-300">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="px-3 py-2 text-gray-600 hover:text-gray-900"
+                    aria-label="Decrease quantity"
+                    className="flex h-11 w-11 items-center justify-center sm:h-10 sm:w-10 rounded-l-md text-gray-700 hover:bg-gray-100"
                   >
                     −
                   </button>
@@ -513,12 +510,14 @@ export function QuickViewModal({
                     onChange={e =>
                       setQuantity(Math.max(1, parseInt(e.target.value) || 1))
                     }
-                    className="w-12 text-center border-0 focus:outline-none"
+                    aria-label="Quantity"
+                    className="price h-10 w-12 border-0 bg-transparent text-center text-sm font-semibold focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     min="1"
                   />
                   <button
                     onClick={() => setQuantity(quantity + 1)}
-                    className="px-3 py-2 text-gray-600 hover:text-gray-900"
+                    aria-label="Increase quantity"
+                    className="flex h-11 w-11 items-center justify-center sm:h-10 sm:w-10 rounded-r-md text-gray-700 hover:bg-gray-100"
                   >
                     +
                   </button>
@@ -527,15 +526,15 @@ export function QuickViewModal({
 
               {/* Out of Stock Alert */}
               {isOutOfStock && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-red-700 font-semibold text-sm mb-2">
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3.5">
+                  <p className="mb-1 text-sm font-semibold text-ink">
                     This item is currently out of stock
                   </p>
-                  <p className="text-red-600 text-sm mb-3">
+                  <p className="text-sm text-gray-700">
                     Please{" "}
                     <a
                       href={outOfStockContactHref}
-                      className="underline hover:text-red-700 font-medium"
+                      className="font-medium text-ink underline underline-offset-2"
                     >
                       contact support
                     </a>{" "}
@@ -545,43 +544,48 @@ export function QuickViewModal({
               )}
 
               {/* Buttons */}
-              <div className="flex gap-3">
-                {isOutOfStock ? (
+              <div className="mt-auto flex flex-col gap-2.5">
+                <div className="flex gap-2.5">
+                  {isOutOfStock ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="btn-accent flex-1"
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      Out of Stock
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleAddToCart}
+                      type="button"
+                      className="btn-accent flex-1"
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      Add to Cart
+                    </button>
+                  )}
                   <button
+                    onClick={handleWishlist}
                     type="button"
-                    disabled
-                    className="flex-1 bg-gray-400 text-white py-2 rounded-lg cursor-not-allowed flex items-center justify-center gap-2 font-medium"
+                    disabled={isTogglingWishlist}
+                    aria-label={
+                      isWishlisted ? "Remove from wishlist" : "Add to wishlist"
+                    }
+                    className={`flex h-11 w-11 flex-none items-center justify-center rounded-md border transition-colors ${
+                      isWishlisted
+                        ? "border-brand bg-brand-soft text-brand"
+                        : "border-gray-300 text-gray-600 hover:border-ink hover:text-ink"
+                    } ${isTogglingWishlist ? "cursor-not-allowed opacity-60" : ""}`}
                   >
-                    <ShoppingCart className="w-4 h-4" />
-                    Out of Stock
+                    <Heart
+                      className={`h-4 w-4 ${isWishlisted ? "fill-current" : ""}`}
+                    />
                   </button>
-                ) : (
-                  <button
-                    onClick={handleAddToCart}
-                    type="button"
-                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium"
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    Add to Cart
-                  </button>
-                )}
-                <button
-                  onClick={handleWishlist}
-                  type="button"
-                  disabled={isTogglingWishlist}
-                  className={`px-4 py-2 rounded-lg border-2 transition-colors ${
-                    isWishlisted
-                      ? "border-blue-600 text-blue-600 bg-blue-50"
-                      : "border-gray-300 text-gray-600 hover:border-blue-600 hover:text-blue-600"
-                  } ${isTogglingWishlist ? "opacity-60 cursor-not-allowed" : ""}`}
-                >
-                  <Heart
-                    className={`w-4 h-4 ${isWishlisted ? "fill-current" : ""}`}
-                  />
-                </button>
+                </div>
                 <Link
                   href={`/product/${product.id}`}
-                  className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-center transition-colors"
+                  className="btn-secondary btn-block"
                   onClick={onClose}
                 >
                   View Details
@@ -590,7 +594,7 @@ export function QuickViewModal({
             </div>
           </div>
         ) : (
-          <div className="text-center py-8">
+          <div className="py-8 text-center">
             <p className="text-gray-600">Product not found</p>
           </div>
         )}

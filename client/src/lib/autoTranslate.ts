@@ -376,14 +376,36 @@ function collectTextNodes(root: ParentNode): Text[] {
   return nodes;
 }
 
+/**
+ * What this module last wrote into each element attribute. Lets
+ * getOriginalAttr() tell "still showing our translation" apart from "the app
+ * re-rendered a new source value into this attribute".
+ */
+const lastWrittenAttrs = new WeakMap<
+  Element,
+  Partial<Record<AttrName, string>>
+>();
+
 function getOriginalAttr(el: Element, attr: AttrName): string | null {
   const dataKey = `translateOriginal${attr.replace("-", "").replace(/^[a-z]/, c => c.toUpperCase())}`;
   const datasetValue = (el as HTMLElement).dataset[
     dataKey as keyof DOMStringMap
   ];
-  if (datasetValue && datasetValue.length > 0) return datasetValue;
-
   const current = el.getAttribute(attr);
+
+  if (datasetValue && datasetValue.length > 0) {
+    // The stored original is only stale when the attribute now holds a value
+    // that is neither that original nor the translation we wrote: i.e. the
+    // app re-rendered a new source string in place. Adopt it as the original
+    // instead of translating (or restoring) the old one over it.
+    const written = lastWrittenAttrs.get(el)?.[attr];
+    if (current && current !== datasetValue && current !== written) {
+      (el as HTMLElement).dataset[dataKey as keyof DOMStringMap] = current;
+      return current;
+    }
+    return datasetValue;
+  }
+
   if (!current) return null;
 
   (el as HTMLElement).dataset[dataKey as keyof DOMStringMap] = current;
@@ -391,7 +413,11 @@ function getOriginalAttr(el: Element, attr: AttrName): string | null {
 }
 
 function setTranslatedAttr(el: Element, attr: AttrName, value: string): void {
+  if (el.getAttribute(attr) === value) return;
   el.setAttribute(attr, value);
+  const written = lastWrittenAttrs.get(el) ?? {};
+  written[attr] = value;
+  lastWrittenAttrs.set(el, written);
 }
 
 export function useGlobalAutoTranslation(language: SiteLanguageCode): {
@@ -426,6 +452,10 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
     });
 
     const textOriginals = new WeakMap<Text, string>();
+    // The value this hook last wrote into each text node (a translation, or
+    // the restored original). Used to recognise when the app itself has put
+    // new source text into a node we already know about.
+    const textLastWritten = new WeakMap<Text, string>();
     let disposed = false;
     let inFlight = false;
     let pendingRerun = false;
@@ -504,9 +534,22 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
       const textOriginalValues: string[] = [];
 
       textNodes.forEach(node => {
-        const original = textOriginals.get(node) ?? (node.nodeValue || "");
-        if (!textOriginals.has(node)) textOriginals.set(node, original);
-        textOriginalValues.push(original);
+        const current = node.nodeValue || "";
+        const known = textOriginals.get(node);
+        // React updates text in place (a cart total after a quantity change,
+        // the hero copy on the next slide), reusing the same Text node. If
+        // the node now holds something that is neither the original we
+        // recorded nor what we last wrote, that is new source text: adopt it.
+        // Keeping the first-seen value here used to write stale text back
+        // over every in-place update, in every language including English.
+        const isNewSourceText =
+          known !== undefined &&
+          current !== known &&
+          current !== textLastWritten.get(node);
+        if (known === undefined || isNewSourceText) {
+          textOriginals.set(node, current);
+        }
+        textOriginalValues.push(textOriginals.get(node) ?? current);
       });
 
       const attrOriginalValues: string[] = [];
@@ -526,7 +569,10 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
         writingTranslatedContent = true;
         textNodes.forEach(node => {
           const original = textOriginals.get(node);
-          if (typeof original === "string") node.nodeValue = original;
+          if (typeof original === "string" && node.nodeValue !== original) {
+            node.nodeValue = original;
+            textLastWritten.set(node, original);
+          }
         });
         attrMap.forEach(({ el, attr, original }) =>
           setTranslatedAttr(el, attr, original)
@@ -551,8 +597,17 @@ export function useGlobalAutoTranslation(language: SiteLanguageCode): {
       textNodes.forEach(node => {
         const original = textOriginals.get(node);
         if (!original) return;
+        // The app may have re-rendered this node while the request was in
+        // flight; that newer text is handled by the pass its mutation queued.
+        const current = node.nodeValue || "";
+        if (current !== original && current !== textLastWritten.get(node)) {
+          return;
+        }
         const translated = translatedTexts.map.get(original);
-        if (translated) node.nodeValue = translated;
+        if (translated && current !== translated) {
+          node.nodeValue = translated;
+          textLastWritten.set(node, translated);
+        }
       });
 
       attrMap.forEach(({ el, attr, original }) => {

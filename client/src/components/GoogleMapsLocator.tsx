@@ -160,7 +160,7 @@ export function GoogleMapsLocator() {
           href={GOOGLE_MAPS_PLACE_LINK}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-flex w-fit items-center rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+          className="mt-3 inline-flex w-fit items-center rounded-md bg-ink px-3 py-2 text-xs font-semibold text-white hover:bg-gray-800"
         >
           Open in Google Maps
         </a>

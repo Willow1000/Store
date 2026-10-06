@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { SEOHead } from "@/components/SEOHead";
+import { PageHeader } from "@/components/PageHeader";
+import { RelatedLinks } from "@/components/RelatedLinks";
 
 interface FAQItem {
   id: string;
@@ -16,6 +18,79 @@ interface FAQItem {
 }
 
 const faqItems: FAQItem[] = [
+  // Buying with confidence: the questions shoppers check before trusting an
+  // online parts store ("is ... legit", "is it safe to pay", warranty,
+  // returns). Answers state only what the store's own policies say.
+  {
+    id: "trust-1",
+    category: "Buying with confidence",
+    question: "Is MotorVault a legitimate store?",
+    answer:
+      "Yes. MotorVault is an online auto parts store with a published business address (Nijverheidsweg 27, Heinenoord, Netherlands), a support team you can reach by email at support@motorvault.shop or on WhatsApp at +1 443-554-0384, and published shipping, returns, privacy and terms pages. Payments are processed by Stripe, and every order gets a confirmation email.",
+  },
+  {
+    id: "trust-2",
+    category: "Buying with confidence",
+    question: "Is it safe to pay on MotorVault?",
+    answer:
+      "Yes. Checkout uses Stripe's secure payment page: you enter your card details on Stripe, not on our site, so we never see or store your card number. You see the full total, including shipping and any discount, before you pay.",
+  },
+  {
+    id: "trust-3",
+    category: "Buying with confidence",
+    question: "How can I be sure a part fits before I order?",
+    answer:
+      "Each listing states the vehicles, model years and part numbers it fits. Decode your VIN with our free VIN decoder to confirm your exact model, engine and trim, or send us your VIN on WhatsApp or by email before ordering and we will check the part against it.",
+  },
+  {
+    id: "trust-4",
+    category: "Buying with confidence",
+    question: "What if the part doesn't fit or I change my mind?",
+    answer:
+      "You can request a return within 30 days of delivery for items that are unused, uninstalled and in their original condition and packaging, with proof of purchase. Approved refunds are processed within about 5-7 business days of us receiving the item. Items marked final sale, and used or installed items, are excluded; see the Returns page for the full policy.",
+  },
+  {
+    id: "trust-5",
+    category: "Buying with confidence",
+    question: "What if my order arrives damaged or I receive the wrong item?",
+    answer:
+      "Contact us as soon as possible with photos of the item and the packaging and a short description. Once verified, we will offer a replacement, repair, partial credit or full refund depending on the situation and stock.",
+  },
+  {
+    id: "trust-6",
+    category: "Buying with confidence",
+    question: "How much does shipping cost?",
+    answer:
+      "Shipping is 5% of your order subtotal, and free on orders of $1,500 or more. The exact amount is shown in your order summary before you pay, and you receive tracking details once your order ships.",
+  },
+  {
+    id: "trust-7",
+    category: "Buying with confidence",
+    question: "Do you ship to the United States?",
+    answer:
+      "Yes, we ship to the United States and Canada as well as across Europe. Delivery time depends on the item and its destination; if you need a part by a certain date, contact us before ordering for an estimate.",
+  },
+  {
+    id: "trust-8",
+    category: "Buying with confidence",
+    question: "Which currency will I be charged in?",
+    answer:
+      "Prices are listed in US dollars. Where available, checkout shows and charges your local currency, converted at the rate quoted on the page, so the amount you approve on the payment page is the amount you are charged.",
+  },
+  {
+    id: "trust-9",
+    category: "Buying with confidence",
+    question: "What do New, Used, Like new and Remanufactured mean?",
+    answer:
+      "New parts are unused and in original packaging. Used parts were removed from a vehicle and are sold in the condition described in the listing. Like new means used with minimal signs of use. Remanufactured parts have been rebuilt to working specification. If a listing doesn't answer a question about condition, ask us before you buy.",
+  },
+  {
+    id: "trust-10",
+    category: "Buying with confidence",
+    question: "How do I contact you, and how quickly do you reply?",
+    answer:
+      "Email support@motorvault.shop, message us on WhatsApp at +1 443-554-0384, or use the contact form or a support ticket. Our support hours are Monday to Friday, 9 AM to 6 PM, and Saturday, 10 AM to 4 PM.",
+  },
   {
     id: "fitment-1",
     category: "Fitment and part identification",
@@ -114,7 +189,7 @@ const faqItems: FAQItem[] = [
     category: "Pricing, returns, and warranty",
     question: "How long will shipping take and will I get tracking?",
     answer:
-      "Delivery time depends on stock status, destination, and carrier service. We provide shipping estimates and send tracking details once the parcel is dispatched.",
+      "Delivery time depends on the item and its destination. Shipping costs 5% of the order subtotal (free on orders of $1,500 or more), and we send tracking details once your order ships. Contact us before ordering if you need a delivery estimate.",
   },
   {
     id: "shipping-1",
@@ -223,142 +298,150 @@ export default function FAQ() {
         }))}
       />
 
-      <div className="min-h-screen bg-background pt-6">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-700 mb-4">
-                Help center
-              </p>
-              <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-gray-950">
-                Frequently asked questions
-              </h1>
-              <p className="mt-5 max-w-3xl text-lg text-gray-700 leading-relaxed">
-                We focus on the questions auto-parts buyers ask most: fitment,
-                VIN checks, OEM vs aftermarket differences, return eligibility,
-                pricing confidence, and when to DIY versus use a mechanic.
-              </p>
-            </div>
+      <div className="min-h-screen bg-white">
+        <PageHeader
+          eyebrow="Help center"
+          title="Frequently asked questions"
+          description="We focus on the questions auto-parts buyers ask most: fitment, VIN checks, OEM vs aftermarket differences, return eligibility, pricing confidence, and when to DIY versus use a mechanic."
+          breadcrumb={[{ label: "FAQ", href: "/faq" }]}
+        />
 
-            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-              <div className="flex items-start gap-3">
-                <ShieldCheck className="mt-1 h-6 w-6 text-blue-700" />
-                <div>
-                  <h2 className="text-lg font-bold text-gray-950">
-                    Need help confirming fitment first?
-                  </h2>
-                  <p className="mt-2 text-gray-700">
-                    Send VIN plus part details and we will help you validate
-                    compatibility before checkout.
-                  </p>
+        <div className="container py-8 sm:py-12">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-12">
+            {/* Help cards: above the questions on phones, beside them on desktop */}
+            <aside className="space-y-4 lg:sticky lg:top-24 lg:order-last">
+              <div className="rounded-xl border border-gray-200 bg-white p-5">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck
+                    className="mt-0.5 h-5 w-5 flex-none text-ink"
+                    aria-hidden="true"
+                  />
+                  <div>
+                    <h2 className="font-sans text-[15px] font-semibold tracking-normal text-ink">
+                      Need help confirming fitment first?
+                    </h2>
+                    <p className="mt-1.5 text-sm text-gray-700">
+                      Send VIN plus part details and we will help you validate
+                      compatibility before checkout.
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <Link href={fitmentCheckHref}>
-                <a className="mt-5 inline-flex items-center gap-2 rounded-full bg-blue-700 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-800">
+                <Link
+                  href={fitmentCheckHref}
+                  className="btn-primary btn-block mt-4 whitespace-normal py-2"
+                >
                   Request VIN fitment check
-                  <MessageSquarePlus className="h-4 w-4" />
-                </a>
-              </Link>
-            </div>
-          </div>
+                  <MessageSquarePlus
+                    className="h-4 w-4 flex-none"
+                    aria-hidden="true"
+                  />
+                </Link>
+                <Link
+                  href="/vin-decoder"
+                  className="mt-3 inline-block text-[13px] font-medium text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
+                >
+                  Not sure it fits? Decode your VIN
+                </Link>
+              </div>
 
-          <div className="mt-12 rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 p-8 text-white shadow-lg">
-            <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/55">
-                  Need more context?
-                </p>
-                <h2 className="mt-3 text-2xl sm:text-3xl font-black">
+              <div className="rounded-xl bg-gray-950 p-5 text-white">
+                <p className="eyebrow !text-white/60">Need more context?</p>
+                <h2 className="mt-2 text-lg font-bold leading-snug">
                   Not sure between OEM, aftermarket, or used?
                 </h2>
-                <p className="mt-3 max-w-3xl text-white/80 leading-relaxed">
+                <p className="mt-2 text-sm leading-relaxed text-white/80">
                   Tell us your budget, vehicle details, and repair goal. We will
                   help you choose the most suitable option before you buy.
                 </p>
-              </div>
-              <Link href={fitmentCheckHref}>
-                <a className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 font-semibold text-slate-950 transition-colors hover:bg-slate-100">
+                <Link
+                  href={fitmentCheckHref}
+                  className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-white px-4 text-sm font-semibold text-ink transition-colors hover:bg-gray-200"
+                >
                   Get buying guidance
-                </a>
-              </Link>
+                </Link>
+              </div>
+            </aside>
+
+            <div className="min-w-0 space-y-10">
+              {categories.map(category => (
+                <div key={category}>
+                  <div className="mb-4 flex items-center gap-2.5">
+                    <Truck
+                      className="h-5 w-5 flex-none text-gray-500"
+                      aria-hidden="true"
+                    />
+                    <h2 className="text-xl font-bold text-ink">{category}</h2>
+                  </div>
+                  <div className="divide-y divide-gray-200 overflow-hidden rounded-xl border border-gray-200 bg-white">
+                    {faqItems
+                      .filter(item => item.category === category)
+                      .map(item => (
+                        <div key={item.id}>
+                          <button
+                            onClick={() =>
+                              setExpandedId(
+                                expandedId === item.id ? null : item.id
+                              )
+                            }
+                            aria-expanded={expandedId === item.id}
+                            className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition-colors hover:bg-gray-50 sm:px-5"
+                          >
+                            <h3 className="font-sans text-[15px] font-semibold leading-snug tracking-normal text-ink sm:text-base">
+                              {item.question}
+                            </h3>
+                            <ChevronDown
+                              size={20}
+                              className={`flex-none text-gray-500 transition-transform duration-300 ${
+                                expandedId === item.id ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+
+                          {expandedId === item.id && (
+                            <div className="bg-gray-50 px-4 pb-5 pt-1 sm:px-5">
+                              <p className="max-w-3xl text-[15px] leading-relaxed text-gray-700">
+                                {item.answer}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
 
-          <div className="mt-14 space-y-12">
-            {categories.map(category => (
-              <div key={category}>
-                <div className="mb-6 flex items-center gap-3">
-                  <Truck className="h-5 w-5 text-blue-700" />
-                  <h2 className="text-2xl font-bold text-gray-950">
-                    {category}
-                  </h2>
-                </div>
-                <div className="space-y-4">
-                  {faqItems
-                    .filter(item => item.category === category)
-                    .map(item => (
-                      <div
-                        key={item.id}
-                        className="overflow-hidden rounded-2xl border border-gray-200 bg-white transition-colors hover:border-blue-300"
-                      >
-                        <button
-                          onClick={() =>
-                            setExpandedId(
-                              expandedId === item.id ? null : item.id
-                            )
-                          }
-                          className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
-                        >
-                          <h3 className="text-lg font-semibold text-gray-950">
-                            {item.question}
-                          </h3>
-                          <ChevronDown
-                            size={22}
-                            className={`flex-none text-blue-700 transition-transform duration-300 ${
-                              expandedId === item.id ? "rotate-180" : ""
-                            }`}
-                          />
-                        </button>
-
-                        {expandedId === item.id && (
-                          <div className="border-t border-gray-200 bg-gray-50 px-6 py-5">
-                            <p className="text-gray-700 leading-relaxed">
-                              {item.answer}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-16 grid gap-6 rounded-3xl border border-gray-200 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-8 lg:grid-cols-[1fr_auto] lg:items-center">
+        <section className="border-t border-gray-200 bg-gray-50">
+          <div className="container grid gap-6 py-10 sm:py-12 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
-              <h2 className="text-2xl font-bold text-gray-950">
-                Still have a question?
-              </h2>
-              <p className="mt-3 max-w-3xl text-gray-700 leading-relaxed">
+              <h2 className="text-ink">Still have a question?</h2>
+              <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-gray-700 sm:text-base">
                 If your question is about a specific order, a custom sourcing
                 request, or something not covered here, the fastest route is to
                 contact us directly.
               </p>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-              <Link href="/contact">
-                <a className="inline-flex items-center justify-center rounded-full bg-gray-950 px-6 py-3 font-semibold text-white transition-colors hover:bg-gray-800">
-                  Contact support
-                </a>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link href="/contact" className="btn-primary">
+                Contact support
               </Link>
-              <Link href={listingRequestHref}>
-                <a className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-900 transition-colors hover:border-gray-900 hover:bg-gray-50">
-                  Request a part
-                </a>
+              <Link href={listingRequestHref} className="btn-secondary">
+                Request a part
               </Link>
             </div>
+            <RelatedLinks
+              className="lg:col-span-2"
+              links={[
+                { href: "/help", label: "Help Center" },
+                { href: "/shipping", label: "Shipping Info" },
+                { href: "/returns", label: "Returns" },
+                { href: "/blog", label: "Blog" },
+              ]}
+            />
           </div>
-        </div>
+        </section>
       </div>
     </>
   );

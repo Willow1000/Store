@@ -59,6 +59,66 @@ export async function getAllSupabaseProducts(
   return Array.isArray(data) ? (data as SupabaseProduct[]) : [];
 }
 
+/** Every category in the live `categories` table, or [] if it is unreachable. */
+export async function getSupabaseCategories(): Promise<
+  Array<{ name: string | null; slug: string | null }>
+> {
+  if (!ENV.supabaseUrl) return [];
+
+  const supabase = createClient(
+    ENV.supabaseUrl,
+    ENV.supabaseServiceKey || ENV.supabaseAnonKey || ""
+  );
+
+  const { data, error } = await supabase
+    .from("categories")
+    .select("name, slug")
+    .order("name", { ascending: true })
+    .limit(1000);
+
+  if (error) {
+    logger.warn(
+      { data: [error.message] },
+      "[SupabaseProducts] Category lookup failed:"
+    );
+    return [];
+  }
+
+  return Array.isArray(data) ? data : [];
+}
+
+/**
+ * Looks up specific products by id, keyed by id. Used where the server needs
+ * the catalogue's own price and title for a product - checkout, for one -
+ * instead of whatever the client sent.
+ */
+export async function getSupabaseProductsByIds(
+  ids: string[]
+): Promise<Map<string, SupabaseProduct>> {
+  const uniqueIds = Array.from(new Set(ids));
+  if (!ENV.supabaseUrl || uniqueIds.length === 0) return new Map();
+
+  const supabase = createClient(
+    ENV.supabaseUrl,
+    ENV.supabaseServiceKey || ENV.supabaseAnonKey || ""
+  );
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(
+      "id, title, category_name, price, condition, cover_image_url, brand, model, item_specifics, discount, stock, part_number, created_at"
+    )
+    .in("id", uniqueIds);
+
+  if (error) {
+    throw new Error(`Product lookup failed: ${error.message}`);
+  }
+
+  return new Map(
+    ((data || []) as SupabaseProduct[]).map(product => [product.id, product])
+  );
+}
+
 const SEARCHABLE_COLUMNS = [
   "title",
   "item_specifics",

@@ -181,6 +181,12 @@ const plugins = [
       ]),
 ];
 
+// Where `pnpm dev` runs the API (see the dev script in package.json). Set
+// API_PORT to move both together if 3001 is taken by another program.
+const API_PROXY_TARGET =
+  process.env.VITE_API_PROXY_TARGET ||
+  `http://127.0.0.1:${process.env.API_PORT || "3001"}`;
+
 export default defineConfig({
   envPrefix: ["VITE_", "GOOGLE_MAPS_"],
   plugins,
@@ -220,35 +226,38 @@ export default defineConfig({
     host: "127.0.0.1",
     proxy: {
       "/api": {
-        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
+        target: API_PROXY_TARGET,
         changeOrigin: true,
       },
       "/feed.xml": {
-        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
+        target: API_PROXY_TARGET,
         changeOrigin: true,
       },
       "/robots.txt": {
-        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
+        target: API_PROXY_TARGET,
         changeOrigin: true,
       },
       "/llms.txt": {
-        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
+        target: API_PROXY_TARGET,
         changeOrigin: true,
       },
       "/sitemap.xml": {
-        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
+        target: API_PROXY_TARGET,
         changeOrigin: true,
       },
       "/sitemap-products.xml": {
-        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
+        target: API_PROXY_TARGET,
         changeOrigin: true,
       },
       "/initialize-payment": {
-        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
+        target: API_PROXY_TARGET,
         changeOrigin: true,
       },
-      "/payment": {
-        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
+      // Only the gateway callback is served by the API. /payment/success and
+      // /payment/failed are pages of the app; proxying the whole prefix sent
+      // them to the API, which has no such route, and they hung in dev.
+      "/payment/callback": {
+        target: API_PROXY_TARGET,
         changeOrigin: true,
       },
     },

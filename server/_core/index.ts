@@ -37,10 +37,24 @@ async function startServer() {
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
 
-  if (port !== preferredPort) {
+  // `pnpm dev` runs this API on an explicit PORT (3001) and Vite proxies
+  // /api, /feed.xml, /payment/callback etc. to that exact port. Quietly moving
+  // to the next free port left the proxy talking to whatever else held it -
+  // another app then answered every API call (with the visitor's session
+  // token attached). Refuse to start instead, and say how to fix it.
+  if (process.env.PORT && !(await isPortAvailable(preferredPort))) {
+    const message =
+      `[Server] Port ${preferredPort} is already in use by another program. ` +
+      `Close that program, or use \`pnpm dev\`, which picks a free port automatically.`;
+    logger.error(message);
+    console.error(message);
+    process.exit(1);
   }
+
+  const port = process.env.PORT
+    ? preferredPort
+    : await findAvailablePort(preferredPort);
 
   server.listen(port, () => {});
 }

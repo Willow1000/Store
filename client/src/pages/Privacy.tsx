@@ -1,4 +1,5 @@
 import { SEOHead } from "@/components/SEOHead";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function Privacy() {
   return (
@@ -15,15 +16,18 @@ export default function Privacy() {
         ]}
         canonical="https://motorvault.shop/privacy"
       />
-      <div className="min-h-screen bg-background pt-6">
-        <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">
-          <h1 className="text-4xl font-bold mb-8">Privacy Policy</h1>
-          <p className="text-gray-600 mb-8">Last updated: April 30, 2026</p>
-
-          <div className="space-y-8">
+      <div className="min-h-screen bg-white">
+        <PageHeader
+          narrow
+          title="Privacy Policy"
+          description="Last updated: April 30, 2026"
+          breadcrumb={[{ label: "Privacy Policy", href: "/privacy" }]}
+        />
+        <div className="container py-8 sm:py-12">
+          <div className="prose-page mx-auto max-w-3xl">
             <section>
-              <h2 className="text-2xl font-semibold mb-4">1. Overview</h2>
-              <p className="text-gray-600 mb-4">
+              <h2>1. Overview</h2>
+              <p>
                 This Privacy Policy explains how MotorVault collects, uses,
                 discloses, stores, and safeguards personal information when you
                 access our website, create an account, complete a transaction,
@@ -32,7 +36,7 @@ export default function Privacy() {
                 and strive to process information only to the extent necessary
                 for legitimate business and operational purposes.
               </p>
-              <p className="text-gray-600">
+              <p>
                 By using our services, you acknowledge that your information may
                 be processed in accordance with this Policy and any
                 jurisdiction-specific privacy obligations applicable to our
@@ -41,8 +45,8 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
-              <p className="text-gray-600">
+              <h2>1. Introduction</h2>
+              <p>
                 MotorVault ("we," "us," or "our") operates the motorvault.shop
                 website. This Policy outlines the categories of personal data we
                 may collect, the purposes for which it is processed, the
@@ -52,20 +56,16 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                2. Categories of Information We Collect
-              </h2>
-              <p className="text-gray-600 mb-4">
+              <h2>2. Categories of Information We Collect</h2>
+              <p>
                 We may collect information directly from you, automatically
                 through your use of the website, or from third-party service
                 providers where permitted by law. The exact categories may vary
                 depending on how you interact with us.
               </p>
 
-              <h3 className="text-lg font-semibold mb-2">
-                Types of Data Collected:
-              </h3>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
+              <h3>Types of Data Collected:</h3>
+              <ul>
                 <li>
                   Identity and contact information such as name, email address,
                   telephone number, and account credentials.
@@ -92,17 +92,15 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                3. How We Use Information
-              </h2>
-              <p className="text-gray-600 mb-4">
+              <h2>3. How We Use Information</h2>
+              <p>
                 We use personal data to operate, maintain, secure, and improve
                 the services, and to fulfill our contractual and legal
                 obligations. Where required, we rely on your consent,
                 contractual necessity, legitimate interests, or compliance
                 obligations as the legal basis for processing.
               </p>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
+              <ul>
                 <li>
                   Processing orders, payments, returns, and shipping
                   arrangements.
@@ -131,16 +129,14 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                4. Disclosure and Sharing
-              </h2>
-              <p className="text-gray-600 mb-4">
+              <h2>4. Disclosure and Sharing</h2>
+              <p>
                 We do not sell personal information in the ordinary sense of
                 that term. We may disclose limited information where necessary
                 to operate the business or where otherwise permitted or required
                 by law.
               </p>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
+              <ul>
                 <li>
                   Service providers that assist with hosting, analytics, payment
                   processing, fulfillment, communications, or support
@@ -158,10 +154,8 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                5. Security of Data
-              </h2>
-              <p className="text-gray-600 mb-4">
+              <h2>5. Security of Data</h2>
+              <p>
                 The protection of personal information is important to us. We
                 implement administrative, technical, and organizational
                 safeguards designed to reduce the risk of unauthorized access,
@@ -169,7 +163,7 @@ export default function Privacy() {
                 include access controls, encryption in transit where applicable,
                 and operational monitoring.
               </p>
-              <p className="text-gray-600">
+              <p>
                 No internet-based system can be guaranteed to be completely
                 secure, and you acknowledge that any transmission of information
                 over the internet carries inherent risk.
@@ -177,8 +171,8 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">6. Data Retention</h2>
-              <p className="text-gray-600 mb-4">
+              <h2>6. Data Retention</h2>
+              <p>
                 We retain personal information for as long as reasonably
                 necessary to fulfill the purposes for which it was collected, to
                 resolve disputes, to enforce agreements, and to comply with
@@ -186,7 +180,7 @@ export default function Privacy() {
                 depending on the nature of the data, the sensitivity of the
                 information, and the applicable legal requirements.
               </p>
-              <p className="text-gray-600">
+              <p>
                 Where data is no longer required, we take commercially
                 reasonable steps to delete, de-identify, or securely archive it
                 in accordance with our internal retention practices.
@@ -194,10 +188,8 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                7. International Transfers
-              </h2>
-              <p className="text-gray-600">
+              <h2>7. International Transfers</h2>
+              <p>
                 Because we operate across multiple regions and may rely on
                 service providers in different jurisdictions, your data may be
                 transferred to and processed in countries other than your own.
@@ -207,10 +199,8 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                8. Your Rights and Choices
-              </h2>
-              <p className="text-gray-600 mb-4">
+              <h2>8. Your Rights and Choices</h2>
+              <p>
                 Depending on your location, you may have rights to access,
                 correct, delete, restrict, or object to certain processing
                 activities, as well as the right to withdraw consent where
@@ -218,7 +208,7 @@ export default function Privacy() {
                 request a copy of your data in a portable format where required
                 by law.
               </p>
-              <p className="text-gray-600">
+              <p>
                 You can also manage certain preferences directly through your
                 browser, device settings, account controls, or by contacting us
                 using the information below.
@@ -226,10 +216,8 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                9. Children's Privacy
-              </h2>
-              <p className="text-gray-600">
+              <h2>9. Children's Privacy</h2>
+              <p>
                 Our services are not directed to children, and we do not
                 knowingly collect personal information from individuals below
                 the age required by applicable law to consent to data
@@ -240,10 +228,8 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                10. Changes to This Privacy Policy
-              </h2>
-              <p className="text-gray-600">
+              <h2>10. Changes to This Privacy Policy</h2>
+              <p>
                 We may update this Privacy Policy from time to time to reflect
                 operational, legal, or regulatory developments. The revised
                 version will be posted on this page with an updated effective
@@ -253,10 +239,8 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                11. Cookies and Similar Technologies
-              </h2>
-              <p className="text-gray-600 mb-4">
+              <h2>11. Cookies and Similar Technologies</h2>
+              <p>
                 We and our service providers may use cookies, pixels, local
                 storage, and comparable technologies to preserve login state,
                 remember preferences, measure website performance, support
@@ -264,7 +248,7 @@ export default function Privacy() {
                 technologies are strictly necessary, while others are optional
                 and subject to consent controls where required.
               </p>
-              <p className="text-gray-600">
+              <p>
                 You may control cookies through your browser or device settings,
                 though disabling certain technologies may affect the
                 functionality of account, cart, or checkout features.
@@ -272,17 +256,15 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                12. Legal Bases for Processing
-              </h2>
-              <p className="text-gray-600 mb-4">
+              <h2>12. Legal Bases for Processing</h2>
+              <p>
                 Where a legal basis is required for processing, we may rely on
                 contract necessity, legitimate interests, consent, compliance
                 with legal obligations, or the establishment, exercise, or
                 defense of legal claims. The applicable basis depends on the
                 specific processing activity and the relevant jurisdiction.
               </p>
-              <p className="text-gray-600">
+              <p>
                 Where we rely on legitimate interests, we seek to balance our
                 operational needs against your privacy rights and implement
                 safeguards designed to minimize unnecessary intrusion.
@@ -290,10 +272,8 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                13. Data Subject Requests
-              </h2>
-              <p className="text-gray-600 mb-4">
+              <h2>13. Data Subject Requests</h2>
+              <p>
                 Subject to applicable law, you may have the right to access,
                 correct, delete, restrict, or object to certain processing of
                 your personal information, and in some cases request portability
@@ -301,17 +281,15 @@ export default function Privacy() {
                 fulfilling a request and may refuse or limit requests where an
                 exemption applies.
               </p>
-              <p className="text-gray-600">
+              <p>
                 Requests involving complex records, cross-border processing, or
                 legal retention obligations may require additional review time.
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                14. Data Retention and Deletion
-              </h2>
-              <p className="text-gray-600">
+              <h2>14. Data Retention and Deletion</h2>
+              <p>
                 We retain personal information for only as long as reasonably
                 necessary to fulfill the purposes described in this Policy,
                 comply with legal obligations, resolve disputes, prevent fraud,
@@ -322,14 +300,10 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">15. Contact Us</h2>
-              <p className="text-gray-600">
+              <h2>15. Contact Us</h2>
+              <p>
                 If you have any questions about this Privacy Policy or our data
-                practices, please{" "}
-                <a href="/contact" className="text-blue-600 hover:underline">
-                  contact us
-                </a>
-                .
+                practices, please <a href="/contact">contact us</a>.
               </p>
             </section>
           </div>

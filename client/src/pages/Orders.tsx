@@ -10,9 +10,12 @@ import {
   ChevronDown,
   ChevronUp,
   Calendar,
-  DollarSign,
   MapPin,
 } from "lucide-react";
+import { Link } from "wouter";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { StatusBadge, statusTone } from "@/components/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSupabaseOrders } from "@/hooks/useSupabaseOrders";
 import { requestAuthenticationForPath } from "@/lib/authRequired";
@@ -38,41 +41,23 @@ export default function Orders() {
     setExpandedOrders(newExpanded);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-50 border-yellow-200";
-      case "confirmed":
-        return "bg-blue-50 border-blue-200";
-      case "packaged":
-        return "bg-amber-50 border-amber-200";
-      case "shipped":
-        return "bg-purple-50 border-purple-200";
-      case "delivered":
-        return "bg-green-50 border-green-200";
-      case "failed":
-        return "bg-red-50 border-red-200";
-      default:
-        return "bg-gray-50 border-gray-200";
-    }
-  };
-
   const getStatusIcon = (status: string) => {
+    const className = "text-gray-500";
     switch (status) {
       case "pending":
-        return <Clock size={20} className="text-yellow-600" />;
+        return <Clock size={20} className={className} />;
       case "confirmed":
-        return <CheckCircle size={20} className="text-blue-600" />;
+        return <CheckCircle size={20} className={className} />;
       case "packaged":
-        return <Package size={20} className="text-amber-600" />;
+        return <Package size={20} className={className} />;
       case "shipped":
-        return <Truck size={20} className="text-purple-600" />;
+        return <Truck size={20} className={className} />;
       case "delivered":
-        return <CheckCircle size={20} className="text-green-600" />;
+        return <CheckCircle size={20} className="text-success" />;
       case "failed":
-        return <XCircle size={20} className="text-red-600" />;
+        return <XCircle size={20} className="text-brand" />;
       default:
-        return <Package size={20} className="text-gray-600" />;
+        return <Package size={20} className={className} />;
     }
   };
 
@@ -125,99 +110,73 @@ export default function Orders() {
     requestAuthenticationForPath();
   }, [isAuthenticated, sessionRestored, loading]);
 
-  if (!sessionRestored || loading) {
-    return (
-      <div className="min-h-screen bg-background w-full overflow-x-hidden">
-        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12 space-y-6">
-          <Skeleton className="h-10 w-48" />
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="rounded-lg border border-border bg-white p-6 space-y-4"
-              >
-                <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-5 w-20" />
-                  </div>
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-5 w-28" />
-                  </div>
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-7 w-24" />
-                  </div>
-                  <Skeleton className="h-6 w-24 rounded-full" />
-                </div>
-                <Skeleton className="h-10 w-32 rounded-md" />
+  const ordersSkeleton = (
+    <div className="min-h-screen w-full overflow-x-clip bg-white">
+      <PageHeader title="My Orders" />
+      <div className="container space-y-3 py-8 sm:py-12">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="panel">
+            <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-5 w-28" />
               </div>
-            ))}
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-5 w-24" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-6 w-24" />
+              </div>
+              <Skeleton className="h-6 w-24 rounded-full" />
+            </div>
           </div>
-        </div>
+        ))}
       </div>
-    );
+    </div>
+  );
+
+  if (!sessionRestored || loading) {
+    return ordersSkeleton;
   }
 
   if (!isAuthenticated) {
+    // No order data for guests; the sign-in prompt is opened by the effect
+    // above, and this gives them a way to reopen it.
     return (
-      <div className="min-h-screen bg-background w-full overflow-x-hidden">
-        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
-          <h1 className="mb-8 text-3xl font-bold">My Orders</h1>
-          <div className="rounded-lg border border-border bg-white p-6">
-            {/* blank for unauthenticated users */}
-          </div>
+      <div className="min-h-screen w-full overflow-x-clip bg-white">
+        <PageHeader title="My Orders" />
+        <div className="container py-10 sm:py-16">
+          <EmptyState icon={<Package />} title="Sign in to view your orders">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => requestAuthenticationForPath()}
+            >
+              Sign in
+            </button>
+          </EmptyState>
         </div>
       </div>
     );
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background w-full overflow-x-hidden">
-        <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12 space-y-6">
-          <Skeleton className="h-10 w-48" />
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="rounded-lg border border-border bg-white p-6 space-y-4"
-              >
-                <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-5 w-20" />
-                  </div>
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-5 w-28" />
-                  </div>
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-7 w-24" />
-                  </div>
-                  <Skeleton className="h-6 w-24 rounded-full" />
-                </div>
-                <Skeleton className="h-10 w-32 rounded-md" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return ordersSkeleton;
   }
 
   if (error) {
     return (
-      <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
-        <h1 className="mb-8 text-4xl font-bold">My Orders</h1>
-        <div className="flex flex-col items-center justify-center rounded-lg border border-red-200 bg-red-50 py-12">
-          <XCircle size={48} className="mb-4 text-red-500" />
-          <p className="mb-2 text-lg font-semibold text-red-700">
-            Unable to load orders
-          </p>
-          <p className="text-sm text-red-600">{error}</p>
+      <div className="min-h-screen bg-white">
+        <PageHeader title="My Orders" />
+        <div className="container py-10 sm:py-16">
+          <EmptyState
+            tone="alert"
+            icon={<XCircle />}
+            title="Unable to load orders"
+            description={error}
+          />
         </div>
       </div>
     );
@@ -227,34 +186,35 @@ export default function Orders() {
 
   if (ordersList.length === 0) {
     return (
-      <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
-        <h1 className="mb-8 text-4xl font-bold">My Orders</h1>
-        <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-secondary py-12">
-          <Package size={48} className="mb-4 text-gray-400" />
-          <p className="mb-2 text-lg font-semibold">No orders yet</p>
-          <p className="text-sm text-gray-600">
-            Start shopping to place your first order
-          </p>
+      <div className="min-h-screen bg-white">
+        <PageHeader title="My Orders" />
+        <div className="container py-10 sm:py-16">
+          <EmptyState
+            icon={<Package />}
+            title="No orders yet"
+            description="Start shopping to place your first order"
+          >
+            <Link href="/products" className="btn-primary">
+              All Products
+            </Link>
+          </EmptyState>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background w-full overflow-x-hidden">
-      <div className="max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
-        <div className="mb-8">
-          <h1 className="mb-4 text-4xl font-bold">My Orders</h1>
-          <p className="text-gray-600">Track and manage all your orders</p>
-        </div>
-
+    <div className="min-h-screen w-full overflow-x-clip bg-white">
+      <PageHeader
+        title="My Orders"
+        description="Track and manage all your orders"
+      />
+      <div className="container py-8 sm:py-12">
         {/* Filter and Sort Controls */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-lg border border-border">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <label className="text-sm font-medium text-gray-600">
-              Filter by Status:
-            </label>
-            <div className="flex flex-wrap gap-2">
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p className="sr-only">Filter by Status:</p>
+            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar sm:mx-0 sm:flex-wrap sm:px-0">
               {[
                 "all",
                 "pending",
@@ -266,10 +226,11 @@ export default function Orders() {
                 <button
                   key={status}
                   onClick={() => setFilterStatus(status)}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  aria-pressed={filterStatus === status}
+                  className={`inline-flex min-h-9 flex-none items-center rounded-full border px-3.5 text-[13px] font-medium transition-colors ${
                     filterStatus === status
-                      ? "bg-black text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      ? "border-ink bg-ink text-white"
+                      : "border-gray-300 bg-white text-gray-700 hover:border-ink hover:text-ink"
                   }`}
                 >
                   {status === "all" ? "All Orders" : getStatusLabel(status)}
@@ -278,21 +239,21 @@ export default function Orders() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-600">
+          <label className="flex flex-none items-center gap-2">
+            <span className="whitespace-nowrap text-sm text-gray-600">
               Sort by:
-            </label>
+            </span>
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as any)}
-              className="px-3 py-1 rounded border border-gray-300 text-sm font-medium hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-black"
+              className="field !min-h-10 sm:w-48"
             >
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
               <option value="highest">Highest Amount</option>
               <option value="lowest">Lowest Amount</option>
             </select>
-          </div>
+          </label>
         </div>
 
         {/* Orders List */}
@@ -302,69 +263,56 @@ export default function Orders() {
             return (
               <div
                 key={order.id}
-                className={`rounded-lg border transition-all duration-200 ${getStatusColor(order.status)} hover:shadow-md`}
+                className="overflow-hidden rounded-xl border border-gray-200 bg-white transition-[border-color,box-shadow] duration-200 hover:border-gray-300 hover:shadow-card-hover"
               >
                 <div
-                  className="p-6 cursor-pointer select-none"
+                  className="cursor-pointer select-none p-4 sm:p-5"
                   onClick={() => toggleExpanded(order.id)}
                 >
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-gray-100">
                         {getStatusIcon(order.status)}
-                        <div>
-                          <p className="text-xs text-gray-600 uppercase tracking-wide">
-                            Order Number
-                          </p>
-                          <p className="font-bold text-lg truncate">
-                            #{order.id.slice(0, 8)}
-                          </p>
-                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="eyebrow">Order Number</p>
+                        <p className="price truncate text-base font-bold text-ink">
+                          #{order.id.slice(0, 8)}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-8">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:flex md:items-center md:gap-10">
                       <div>
-                        <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">
-                          Order Date
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Calendar size={16} className="text-gray-500" />
-                          <p className="font-semibold">
+                        <p className="eyebrow mb-1">Order Date</p>
+                        <div className="flex items-center gap-1.5">
+                          <Calendar size={14} className="text-gray-400" />
+                          <p className="price text-sm font-medium text-ink">
                             {new Date(order.created_at).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
 
                       <div>
-                        <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">
-                          Total Amount
+                        <p className="eyebrow mb-1">Total Amount</p>
+                        <p className="price text-base font-bold text-ink">
+                          {order.currency ? `${order.currency} ` : "$"}
+                          {Number(
+                            order.total ?? order.total_amount ?? 0
+                          ).toFixed(2)}
                         </p>
-                        <div className="flex items-center gap-2">
-                          <DollarSign size={16} className="text-gray-500" />
-                          <p className="text-xl font-bold">
-                            {order.currency ? `${order.currency} ` : "$"}
-                            {Number(
-                              order.total ?? order.total_amount ?? 0
-                            ).toFixed(2)}
-                          </p>
-                        </div>
                       </div>
 
-                      <div>
-                        <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">
-                          Status
-                        </p>
-                        <div className="flex items-center gap-2 font-semibold text-sm">
-                          <span className="capitalize">
-                            {getStatusLabel(order.status)}
-                          </span>
-                          {isExpanded ? (
-                            <ChevronUp size={18} />
-                          ) : (
-                            <ChevronDown size={18} />
-                          )}
-                        </div>
+                      <div className="col-span-2 flex items-center justify-between gap-3 md:col-span-1 md:justify-start">
+                        <p className="sr-only">Status</p>
+                        <StatusBadge tone={statusTone(order.status)}>
+                          {getStatusLabel(order.status)}
+                        </StatusBadge>
+                        {isExpanded ? (
+                          <ChevronUp size={18} className="text-gray-500" />
+                        ) : (
+                          <ChevronDown size={18} className="text-gray-500" />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -372,31 +320,29 @@ export default function Orders() {
 
                 {/* Expanded Details */}
                 {isExpanded && (
-                  <div className="border-t px-6 py-4 space-y-4 bg-white bg-opacity-50">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="p-4 rounded bg-white border border-gray-200">
-                        <p className="text-xs text-gray-600 uppercase tracking-wide mb-2 font-semibold">
-                          Order ID
-                        </p>
-                        <p className="font-mono text-sm break-all">
+                  <div className="space-y-4 border-t border-gray-200 bg-gray-50 p-4 sm:p-5">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="rounded-lg border border-gray-200 bg-white p-4">
+                        <p className="eyebrow mb-1.5">Order ID</p>
+                        <p className="break-all font-mono text-sm text-ink">
                           {order.id}
                         </p>
                       </div>
-                      <div className="p-4 rounded bg-white border border-gray-200">
-                        <p className="text-xs text-gray-600 uppercase tracking-wide mb-2 font-semibold">
-                          Currency
+                      <div className="rounded-lg border border-gray-200 bg-white p-4">
+                        <p className="eyebrow mb-1.5">Currency</p>
+                        <p className="text-sm font-semibold text-ink">
+                          {order.currency}
                         </p>
-                        <p className="font-semibold">{order.currency}</p>
                       </div>
                     </div>
 
-                    <div className="p-4 rounded bg-white border border-gray-200">
-                      <p className="text-xs text-gray-600 uppercase tracking-wide mb-3 font-semibold flex items-center gap-2">
+                    <div className="rounded-lg border border-gray-200 bg-white p-4">
+                      <p className="eyebrow mb-3 flex items-center gap-2">
                         <MapPin size={14} /> Order Status Timeline
                       </p>
-                      <div className="space-y-2 text-sm">
+                      <div className="space-y-2.5 text-sm text-ink">
                         <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                          <div className="h-2.5 w-2.5 rounded-full bg-success"></div>
                           <span>Order Placed</span>
                         </div>
                         {[
@@ -406,7 +352,7 @@ export default function Orders() {
                           "delivered",
                         ].includes(order.status) && (
                           <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                            <div className="h-2.5 w-2.5 rounded-full bg-success"></div>
                             <span>Order Confirmed</span>
                           </div>
                         )}
@@ -414,19 +360,19 @@ export default function Orders() {
                           order.status
                         ) && (
                           <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                            <div className="h-2.5 w-2.5 rounded-full bg-success"></div>
                             <span>Order Packaged</span>
                           </div>
                         )}
                         {["shipped", "delivered"].includes(order.status) && (
                           <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                            <div className="h-2.5 w-2.5 rounded-full bg-success"></div>
                             <span>Order Shipped</span>
                           </div>
                         )}
                         {String(order.status) === "delivered" && (
                           <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                            <div className="h-2.5 w-2.5 rounded-full bg-success"></div>
                             <span>Order Delivered</span>
                           </div>
                         )}
@@ -435,7 +381,7 @@ export default function Orders() {
 
                     <button
                       onClick={() => setLocation(`/orders/${order.id}`)}
-                      className="w-full rounded-md bg-black text-white py-3 font-semibold hover:bg-gray-800 transition-colors"
+                      className="btn-primary btn-block sm:w-auto"
                     >
                       View Full Details
                     </button>
@@ -447,11 +393,11 @@ export default function Orders() {
         </div>
 
         {filteredOrders.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-secondary py-12">
-            <Package size={48} className="mb-4 text-gray-400" />
-            <p className="mb-2 text-lg font-semibold">No orders found</p>
-            <p className="text-sm text-gray-600">Try adjusting your filters</p>
-          </div>
+          <EmptyState
+            icon={<Package />}
+            title="No orders found"
+            description="Try adjusting your filters"
+          />
         )}
       </div>
     </div>

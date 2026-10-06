@@ -4,6 +4,9 @@ import { CartItem, WishlistItem, Product } from "@/types/supabase";
 import { toast } from "sonner";
 import { trackRecommendationEvent } from "@/lib/recommendations";
 
+/** Users whose profile row is known to exist (see ensureProfile). */
+const ensuredProfiles = new Set<string>();
+
 export function useSupabaseCart(userId: string | null) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -14,13 +17,21 @@ export function useSupabaseCart(userId: string | null) {
 
   const ensureProfile = useCallback(async () => {
     if (!userId) return false;
+    // Once per user per page load: the row only has to exist (cart_items
+    // references profiles), and this used to cost two network round trips -
+    // an auth-server lookup and an upsert - before every cart read.
+    if (ensuredProfiles.has(userId)) return true;
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData?.user) {
+    // The locally restored session carries the same user record; the
+    // database's RLS checks the token on the upsert itself.
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const authUser = session?.user;
+    if (!authUser || authUser.id !== userId) {
       return false;
     }
 
-    const authUser = userData.user;
     const email = authUser.email || `${userId}@placeholder.local`;
     const fullName =
       authUser.user_metadata?.name || authUser.user_metadata?.full_name || null;
@@ -39,6 +50,7 @@ export function useSupabaseCart(userId: string | null) {
       return false;
     }
 
+    ensuredProfiles.add(userId);
     return true;
   }, [userId]);
 
@@ -82,9 +94,9 @@ export function useSupabaseCart(userId: string | null) {
       setIsLoading(true);
       setError(null);
 
-      const profileReady = await ensureProfile();
-      if (!profileReady) {
-      }
+      // Reading the cart does not need the profile row; make sure it exists
+      // in the background for the writes that do.
+      void ensureProfile();
 
       const { data, error: supabaseError } = await supabase
         .from("cart_items")

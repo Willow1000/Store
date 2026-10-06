@@ -35,69 +35,63 @@ export default function AutoMotorblokkenNederland() {
         ]}
       />
 
-      <main className="min-h-screen bg-white">
-        <section className="max-w-screen-xl mx-auto px-3 sm:px-4 lg:px-6 py-12 sm:py-14">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Nederland
-          </p>
-          <h1 className="mt-3 text-3xl sm:text-4xl font-extrabold text-slate-900">
-            Motorblokken auto en motorparts Nederland
-          </h1>
-          <p className="mt-4 text-base text-slate-700 max-w-3xl">
-            Zoek je auto motorblokken of wil je een auto motorblok kopen met
-            minder risico op verkeerde fitment? MotorVault gebruikt een
-            fitment-first aanpak met voertuigdetails, partnummers en
-            ondersteunende checks voordat je bestelt.
-          </p>
+      <div className="min-h-screen bg-white">
+        <section className="border-b border-gray-200 bg-gray-50">
+          <div className="container py-8 sm:py-12">
+            <p className="eyebrow">Nederland</p>
+            <h1 className="mt-2 text-ink">
+              Motorblokken auto en motorparts Nederland
+            </h1>
+            <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-gray-700 sm:text-base">
+              Zoek je auto motorblokken of wil je een auto motorblok kopen met
+              minder risico op verkeerde fitment? MotorVault gebruikt een
+              fitment-first aanpak met voertuigdetails, partnummers en
+              ondersteunende checks voordat je bestelt.
+            </p>
 
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link
-              href="/products"
-              className="inline-flex items-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition-colors"
-            >
-              Bekijk beschikbare onderdelen
-            </Link>
-            <Link
-              href="/contact"
-              className="inline-flex items-center rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
-            >
-              Vraag een fitment-check aan
-            </Link>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Link href="/products" className="btn-accent btn-lg">
+                Bekijk beschikbare onderdelen
+              </Link>
+              <Link href="/contact" className="btn-secondary btn-lg">
+                Vraag een fitment-check aan
+              </Link>
+            </div>
           </div>
         </section>
 
-        <section className="max-w-screen-xl mx-auto px-3 sm:px-4 lg:px-6 pb-14">
+        <section className="container section">
           <div className="grid gap-4 md:grid-cols-3">
-            <article className="rounded-2xl border border-slate-200 p-5 bg-slate-50">
-              <h2 className="text-lg font-bold text-slate-900">
+            <article className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+              <h2 className="text-lg font-semibold text-ink">
                 1. Voertuigmatching
               </h2>
-              <p className="mt-2 text-sm text-slate-700">
+              <p className="mt-2 text-[15px] leading-relaxed text-gray-700">
                 Deel VIN, model, bouwjaar en motorcode zodat we auto
                 motorblokken kunnen filteren op fitment.
               </p>
             </article>
-            <article className="rounded-2xl border border-slate-200 p-5 bg-slate-50">
-              <h2 className="text-lg font-bold text-slate-900">
+            <article className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+              <h2 className="text-lg font-semibold text-ink">
                 2. OEM of aftermarket
               </h2>
-              <p className="mt-2 text-sm text-slate-700">
+              <p className="mt-2 text-[15px] leading-relaxed text-gray-700">
                 Kies op basis van kwaliteit, levertijd en budget. We laten
                 duidelijke trade-offs zien.
               </p>
             </article>
-            <article className="rounded-2xl border border-slate-200 p-5 bg-slate-50">
-              <h2 className="text-lg font-bold text-slate-900">
+            <article className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+              <h2 className="text-lg font-semibold text-ink">
                 3. Bestellen met zekerheid
               </h2>
-              <p className="mt-2 text-sm text-slate-700">
+              <p className="mt-2 text-[15px] leading-relaxed text-gray-700">
                 Je krijgt heldere informatie over levering, retourbeleid en
                 vervolgstappen na aankoop.
               </p>
             </article>
           </div>
         </section>
-      </main>
+      </div>
     </>
   );
 }

@@ -35,6 +35,7 @@ import { supabase } from "@/lib/supabase";
 
 const Home = lazy(() => import("./pages/Home"));
 const Products = lazy(() => import("./pages/Products"));
+const VehicleParts = lazy(() => import("./pages/VehicleParts"));
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
@@ -66,6 +67,16 @@ const PaymentFailed = lazy(() => import("./pages/PaymentFailed"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Header = lazy(() => import("./components/Header"));
 const Footer = lazy(() => import("./components/Footer"));
+
+const PRIVATE_PATH_PREFIXES = [
+  "/account",
+  "/orders",
+  "/checkout",
+  "/cart",
+  "/tickets",
+  "/payment",
+  "/auth",
+];
 
 const PRELOAD_DONE_KEY_PREFIX = "site-translation-preload-done";
 const ROUTE_TRANSLATION_DONE_KEY_PREFIX = "route-translation-done-v1";
@@ -131,6 +142,7 @@ function AppRoutes() {
       <Route path={"/"} component={Home} />
       <Route path={"/auth/callback"} component={AuthCallback} />
       <Route path={"/products"} component={Products} />
+      <Route path={"/vehicle/:slug"} component={VehicleParts} />
       <Route path={"/product/:id"} component={ProductDetail} />
       <Route path={"/about"} component={About} />
       <Route path={"/cart"} component={Cart} />
@@ -171,10 +183,24 @@ function createStaticRouterHook(pathname: string) {
   return () => [pathname, () => undefined] as [string, (path: string) => void];
 }
 
+// The server passes the full request URL. Routes match on the pathname only,
+// so the query string has to be split off - otherwise every URL with a query
+// (e.g. /products?category=engine, which the XML sitemap lists) matched no
+// route and was server-rendered as the noindex 404 page.
+function splitRequestUrl(url: string): { pathname: string; search: string } {
+  const withoutHash = url.split("#")[0] || "/";
+  const queryIndex = withoutHash.indexOf("?");
+  if (queryIndex === -1) return { pathname: withoutHash || "/", search: "" };
+  return {
+    pathname: withoutHash.slice(0, queryIndex) || "/",
+    search: withoutHash.slice(queryIndex + 1),
+  };
+}
+
 function CenteredStatusSkeleton() {
   return (
-    <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-10">
-      <div className="mx-auto max-w-xl rounded-2xl border border-border bg-white p-6 sm:p-8">
+    <div className="container min-h-screen py-10">
+      <div className="mx-auto max-w-xl rounded-xl border border-border bg-white p-6 sm:p-8">
         <div className="flex flex-col items-center text-center space-y-4">
           <Skeleton className="h-14 w-14 rounded-full" />
           <Skeleton className="h-7 w-56" />
@@ -189,7 +215,7 @@ function CenteredStatusSkeleton() {
 
 function DashboardSkeleton() {
   return (
-    <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+    <div className="container min-h-screen py-8 sm:py-12">
       <Skeleton className="h-10 w-56 mb-6" />
       <div className="grid gap-6 md:grid-cols-3 mb-6">
         <Skeleton className="h-28 w-full rounded-xl" />
@@ -215,7 +241,7 @@ function DashboardSkeleton() {
 
 function OrderDetailPageSkeleton() {
   return (
-    <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+    <div className="container min-h-screen py-8 sm:py-12">
       <Skeleton className="h-8 w-36 mb-4" />
       <Skeleton className="h-10 w-64 mb-6" />
       <div className="grid gap-6 lg:grid-cols-3">
@@ -248,7 +274,7 @@ function OrderDetailPageSkeleton() {
 
 function ContentPageSkeleton() {
   return (
-    <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+    <div className="container min-h-screen py-8 sm:py-12">
       <Skeleton className="h-10 w-64 mb-6" />
       <div className="space-y-4">
         <Skeleton className="h-24 w-full rounded-xl" />
@@ -262,7 +288,7 @@ function ContentPageSkeleton() {
 function HeaderFallback() {
   return (
     <div className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-      <div className="mx-auto flex h-16 max-w-screen-xl items-center gap-4 px-3 sm:px-4 lg:px-6">
+      <div className="container flex h-14 items-center gap-4 sm:h-16">
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-9 flex-1" />
         <Skeleton className="h-8 w-24" />
@@ -273,8 +299,8 @@ function HeaderFallback() {
 
 function FooterFallback() {
   return (
-    <div className="border-t border-border bg-white">
-      <div className="mx-auto max-w-screen-xl px-3 py-8 sm:px-4 lg:px-6">
+    <div className="bg-gray-950">
+      <div className="container py-10 sm:py-14 [&_[data-slot=skeleton]]:bg-white/10">
         <div className="grid gap-4 md:grid-cols-3">
           <Skeleton className="h-4 w-3/4" />
           <Skeleton className="h-4 w-2/3" />
@@ -287,7 +313,7 @@ function FooterFallback() {
 
 function LegalPageSkeleton() {
   return (
-    <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+    <div className="container min-h-screen py-8 sm:py-12">
       <Skeleton className="h-10 w-56 mb-6" />
       <div className="rounded-xl border border-border bg-white p-5 sm:p-6 space-y-4">
         {Array.from({ length: 9 }).map((_, i) => (
@@ -320,14 +346,14 @@ function RouteTranslationSkeleton({ path }: { path: string }) {
 
   if (path === "/cart") {
     return (
-      <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="container min-h-screen py-8 sm:py-12">
         <Skeleton className="h-10 w-56 mb-6" />
         <div className="grid gap-6 md:gap-8 md:grid-cols-3">
           <div className="md:col-span-2 space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <div
                 key={i}
-                className="flex gap-4 rounded-lg border border-border bg-white p-4"
+                className="flex gap-4 rounded-xl border border-border bg-white p-4"
               >
                 <Skeleton className="h-24 w-24 rounded-lg bg-gray-100 flex-shrink-0" />
                 <div className="flex-1 space-y-3">
@@ -338,7 +364,7 @@ function RouteTranslationSkeleton({ path }: { path: string }) {
               </div>
             ))}
           </div>
-          <div className="space-y-4 rounded-lg border border-border bg-white p-5">
+          <div className="space-y-4 rounded-xl border border-border bg-white p-5">
             <Skeleton className="h-6 w-32" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-5/6" />
@@ -351,7 +377,7 @@ function RouteTranslationSkeleton({ path }: { path: string }) {
 
   if (path === "/checkout" || path === "/checkout/meta") {
     return (
-      <div className="min-h-screen bg-white w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+      <div className="container min-h-screen py-8 sm:py-12">
         <Skeleton className="h-10 w-48 mb-6" />
         <div className="grid gap-6 md:grid-cols-3">
           <div className="md:col-span-2 space-y-4">
@@ -404,7 +430,7 @@ function RouteTranslationSkeleton({ path }: { path: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-background w-full overflow-x-hidden px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
+    <div className="container min-h-screen py-8 sm:py-12">
       <Skeleton className="h-10 w-52 mb-6" />
       <div className="space-y-3">
         <Skeleton className="h-5 w-4/5" />
@@ -661,17 +687,27 @@ function AppContent() {
           <TooltipProvider>
             <Toaster />
             <AuthModal />
-            <SEOHead canonical={canonicalPath} fallback />
+            {/* Account, order, cart and checkout pages are private: keep them
+                out of the index (robots.txt already disallows them). */}
+            <SEOHead
+              canonical={canonicalPath}
+              fallback
+              noIndex={PRIVATE_PATH_PREFIXES.some(
+                prefix =>
+                  canonicalPath === prefix ||
+                  canonicalPath.startsWith(`${prefix}/`)
+              )}
+            />
 
             <div
-              className="flex min-h-screen flex-col bg-background w-full overflow-x-hidden"
+              className="flex min-h-screen w-full flex-col overflow-x-clip bg-background"
               style={{ visibility: "visible" }}
             >
               <Suspense fallback={<HeaderFallback />}>
                 <Header />
               </Suspense>
               <main
-                className={`flex-1 w-full overflow-x-hidden ${isHomePage ? "" : "pt-0"}`}
+                className={`flex-1 w-full overflow-x-clip ${isHomePage ? "" : "pt-0"}`}
               >
                 <Suspense
                   fallback={<RouteTranslationSkeleton path={location} />}
@@ -711,8 +747,13 @@ function App({ initialPath = "/", ssr = false }: AppProps) {
     return <AppContent />;
   }
 
+  const { pathname, search } = splitRequestUrl(initialPath);
+
   return (
-    <WouterRouter hook={createStaticRouterHook(initialPath)}>
+    <WouterRouter
+      hook={createStaticRouterHook(pathname)}
+      searchHook={() => search}
+    >
       <AppContent />
     </WouterRouter>
   );

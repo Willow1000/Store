@@ -1,4 +1,5 @@
 import { SEOHead } from "@/components/SEOHead";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function Accessibility() {
   return (
@@ -15,17 +16,20 @@ export default function Accessibility() {
         ]}
         canonical="https://motorvault.shop/accessibility"
       />
-      <div className="min-h-screen bg-background pt-6">
-        <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 py-12">
-          <h1 className="text-4xl font-bold mb-8">Accessibility Statement</h1>
-          <p className="text-gray-600 mb-8">Last updated: April 30, 2026</p>
-
-          <div className="space-y-8">
+      <div className="min-h-screen bg-white">
+        <PageHeader
+          narrow
+          title="Accessibility Statement"
+          description="Last updated: April 30, 2026"
+          breadcrumb={[
+            { label: "Accessibility Statement", href: "/accessibility" },
+          ]}
+        />
+        <div className="container py-8 sm:py-12">
+          <div className="prose-page mx-auto max-w-3xl">
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                Our Commitment to Accessibility
-              </h2>
-              <p className="text-gray-600">
+              <h2>Our Commitment to Accessibility</h2>
+              <p>
                 MotorVault is committed to ensuring that our website is
                 accessible to all people, including those with disabilities. We
                 actively work to increase the accessibility and usability of our
@@ -35,13 +39,9 @@ export default function Accessibility() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                Accessibility Features
-              </h2>
-              <p className="text-gray-600 mb-4">
-                Our website includes the following accessibility features:
-              </p>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
+              <h2>Accessibility Features</h2>
+              <p>Our website includes the following accessibility features:</p>
+              <ul>
                 <li>
                   Semantic HTML markup for improved screen reader compatibility
                 </li>
@@ -69,8 +69,8 @@ export default function Accessibility() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">WCAG Compliance</h2>
-              <p className="text-gray-600">
+              <h2>WCAG Compliance</h2>
+              <p>
                 We aim to comply with the Web Content Accessibility Guidelines
                 (WCAG) 2.1 Level AA standards. While we have made significant
                 efforts to ensure accessibility, we recognize that no website is
@@ -79,14 +79,12 @@ export default function Accessibility() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                Assistive Technologies
-              </h2>
-              <p className="text-gray-600">
+              <h2>Assistive Technologies</h2>
+              <p>
                 Our website has been tested with and is compatible with the
                 following assistive technologies:
               </p>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
+              <ul>
                 <li>Screen readers (NVDA, JAWS, VoiceOver)</li>
                 <li>Voice control software</li>
                 <li>Speech-to-text applications</li>
@@ -95,26 +93,19 @@ export default function Accessibility() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                Accessibility Issues
-              </h2>
-              <p className="text-gray-600">
+              <h2>Accessibility Issues</h2>
+              <p>
                 If you encounter any accessibility issues or barriers while
                 using our website, please let us know. We take these reports
                 seriously and work quickly to resolve them.{" "}
-                <a href="/contact" className="text-blue-600 hover:underline">
-                  Contact us
-                </a>{" "}
-                with details about the issue and how you are accessing our
-                website.
+                <a href="/contact">Contact us</a> with details about the issue
+                and how you are accessing our website.
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                Third-Party Content
-              </h2>
-              <p className="text-gray-600">
+              <h2>Third-Party Content</h2>
+              <p>
                 MotorVault does not control third-party websites that may be
                 linked from our site. We recommend checking the accessibility
                 statement of those websites to understand their accessibility
@@ -123,20 +114,17 @@ export default function Accessibility() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                Accessibility Standards
-              </h2>
-              <p className="text-gray-600">
+              <h2>Accessibility Standards</h2>
+              <p>
                 For more information about web accessibility standards and
                 guidelines, visit:
               </p>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
+              <ul>
                 <li>
                   <a
                     href="https://www.w3.org/WAI/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
                   >
                     Web Accessibility Initiative (WAI)
                   </a>
@@ -146,7 +134,6 @@ export default function Accessibility() {
                     href="https://www.w3.org/WAI/WCAG21/quickref/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
                   >
                     WCAG 2.1 Quick Reference
                   </a>
@@ -155,15 +142,10 @@ export default function Accessibility() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                Contact for Accessibility Support
-              </h2>
-              <p className="text-gray-600">
+              <h2>Contact for Accessibility Support</h2>
+              <p>
                 If you need accessibility assistance or have concerns about
-                website accessibility, please{" "}
-                <a href="/contact" className="text-blue-600 hover:underline">
-                  contact us
-                </a>{" "}
+                website accessibility, please <a href="/contact">contact us</a>{" "}
                 and our team will be happy to help.
               </p>
             </section>

@@ -15,6 +15,13 @@ export type MetaCheckoutParams = {
   raw: Record<string, string>;
 };
 
+/**
+ * The content ids Meta sends are the catalog feed's `g:id`, which is the
+ * product's uuid in the Supabase `products` table.
+ */
+export const META_PRODUCT_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const META_CART_ORIGINS = new Set([
   "facebook",
   "instagram",
@@ -127,17 +134,4 @@ export function isMetaCheckoutRequest(
   if (pathname === "/checkout/meta") return true;
 
   return searchParams.has("products");
-}
-
-export function parseMetaCouponPercent(coupon: string | null): number {
-  if (!coupon) return 0;
-  const normalized = coupon.trim().toUpperCase();
-  if (!/^[A-Z0-9_-]{3,32}$/.test(normalized)) return 0;
-
-  const match = normalized.match(/(\d{1,2})$/);
-  if (!match) return 0;
-
-  const percent = Number.parseInt(match[1], 10);
-  if (!Number.isFinite(percent) || percent <= 0 || percent > 90) return 0;
-  return percent;
 }

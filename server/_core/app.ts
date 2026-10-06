@@ -13,6 +13,11 @@ import {
   buildPaystackCallbackUrl,
 } from "../paystack";
 import { constructWebhookEvent, stripe } from "../stripe";
+import {
+  loadStripeOrderSource,
+  recordStripeOrder,
+  recordStripeOrderForPaymentIntent,
+} from "../stripeOrders";
 import { generateSitemap } from "../sitemap";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
@@ -43,6 +48,7 @@ import {
 } from "@shared/sanitize";
 import { calculateShipping } from "@shared/shipping";
 import { buildRobotsTxt, buildLlmsTxt, FEED_SHIPPING_COUNTRIES } from "./seo";
+import { getSupabaseCategories } from "../supabaseProducts";
 import { createRateLimitMiddleware } from "./rateLimit";
 import {
   getRequestOrigin,
@@ -138,7 +144,9 @@ async function insertProductSearchTrackingEventToSupabase(entry: {
 }
 
 function getFeedOrigin(req: express.Request): string {
-  const preferredFeedOrigin = "https://motorvault.shop";
+  // The canonical host: the apex 308-redirects here, so apex links made every
+  // feed item's landing page a redirect.
+  const preferredFeedOrigin = "https://www.motorvault.shop";
   if (isValidConfiguredOrigin(preferredFeedOrigin)) {
     return preferredFeedOrigin.replace(/\/$/, "");
   }
@@ -221,14 +229,40 @@ function resolveUrl(value: unknown, origin: string): string {
   return raw.startsWith("/") ? `${origin}${raw}` : `${origin}/${raw}`;
 }
 
-function toTitleCase(input: string): string {
-  return String(input || "")
-    .toLowerCase()
-    .split(/\s+/)
-    .map(w => (w.length > 2 ? w[0].toUpperCase() + w.slice(1) : w))
-    .join(" ")
-    .trim();
-}
+/**
+ * The store's categories mapped to Google product taxonomy IDs
+ * (taxonomy-with-ids.en-US.txt). Categories not listed fall back to
+ * "Vehicle Parts & Accessories".
+ */
+const DEFAULT_GOOGLE_CATEGORY_ID = "5613";
+const GOOGLE_CATEGORY_IDS: Record<string, string> = {
+  "Air Intake and Filters": "2820",
+  "Batteries and Charging": "8231",
+  Body: "8227",
+  Brakes: "2977",
+  Bumpers: "8227",
+  "Car Audio": "8526",
+  "Car Care": "913",
+  Electricals: "8231",
+  Electronics: "8526",
+  Engines: "8137",
+  Exhaust: "908",
+  "Exterior Accessories": "5613",
+  Hydraulics: "899",
+  "Interior Accessories": "8233",
+  Lights: "3318",
+  Panels: "8227",
+  Seats: "8238",
+  Steering: "8235",
+  Suspension: "2935",
+  Tires: "911",
+  "Tools and Emergency": "8236",
+  Towing: "8228",
+  Transmission: "2641",
+  "Truck Bed": "8237",
+  Wheels: "2932",
+  Wipers: "2534",
+};
 
 function normalizePrice(value: unknown, currency: string = "USD"): string {
   const amount = Number(value);
@@ -589,12 +623,20 @@ function buildFeedDescription(product: FeedProduct): string {
         .replace(/\s+,/g, ",")
         .trim();
       if (!rendered) return "";
+      // Unlabelled lines are keyed "Detail N" by the parser; publishing that
+      // key put "Detail 1:" scaffolding into 528 feed descriptions.
+      if (/^Detail \d+$/.test(key)) return rendered;
       return `${formatLabel(key)}: ${rendered}`;
     })
     .filter(Boolean);
 
   if (specificsLines.length === 0) {
-    return "Item specifics not provided";
+    // "Item specifics not provided" is not a description; say what it is.
+    const title = String(product.title || product.name || "").trim();
+    const condition = String(product.condition || "").trim();
+    return [title, condition ? `Condition: ${condition}` : ""]
+      .filter(Boolean)
+      .join(". ");
   }
 
   return specificsLines.join("\n").slice(0, 5000);
@@ -735,181 +777,17 @@ export function createApp() {
         );
 
         try {
-          const userId = Number(paymentIntent.metadata?.user_id ?? NaN);
-          const stripePaymentIntentId = paymentIntent.id;
-          // paymentIntent.amount is in the currency the customer was CHARGED,
-          // which is their regional currency, not USD. The orders table has no
-          // currency column and every total in it is USD, so reading the Stripe
-          // amount here would write a euro or yen figure into a USD column.
-          // Prefer the USD total recorded in metadata at session creation and
-          // only fall back to the Stripe amount when the charge really was USD.
-          const metadataUsdTotal = Number(
-            paymentIntent.metadata?.usd_total ?? paymentIntent.metadata?.total
+          // Orders live in the Supabase tables, whose ids are uuids; see
+          // server/stripeOrders.ts. The browser returning from Checkout records
+          // the same order, and whichever arrives second is a no-op.
+          const recorded = await recordStripeOrderForPaymentIntent(
+            paymentIntent.id
           );
-          const chargedInUsd =
-            String(paymentIntent.currency || "usd").toLowerCase() === "usd";
-          const totalAmount =
-            Number.isFinite(metadataUsdTotal) && metadataUsdTotal > 0
-              ? metadataUsdTotal.toFixed(2)
-              : chargedInUsd
-                ? (paymentIntent.amount / 100).toFixed(2)
-                : "0.00";
-
-          if (!Number.isFinite(metadataUsdTotal) && !chargedInUsd) {
-            logger.error(
-              { data: [paymentIntent.id, paymentIntent.currency] },
-              "[Stripe] Non-USD charge with no usd_total metadata; order total cannot be trusted:"
+          if (!recorded) {
+            logger.warn(
+              { data: [paymentIntent.id] },
+              "[Stripe Webhook] Payment did not come from a Checkout Session; no order recorded:"
             );
-          }
-          const subtotalAmount = Number(
-            paymentIntent.metadata?.subtotal ?? totalAmount
-          );
-          const shippingCost = Number(paymentIntent.metadata?.shipping ?? 0);
-          const taxAmount = Number(paymentIntent.metadata?.tax ?? 0);
-          const submittedOfferCode = paymentIntent.metadata?.offerCode
-            ? String(paymentIntent.metadata.offerCode).trim()
-            : "";
-          const resolvedOffer = submittedOfferCode
-            ? await resolveOfferByCode(submittedOfferCode, subtotalAmount)
-            : null;
-          const discountAmount = resolvedOffer?.discountAmount ?? 0;
-          const offerId = resolvedOffer?.id ?? null;
-          const offerCode =
-            resolvedOffer?.code ??
-            (submittedOfferCode ? submittedOfferCode.toUpperCase() : null);
-
-          let customerEmail = String(
-            paymentIntent.metadata?.email || paymentIntent.receipt_email || ""
-          );
-          let customerName = String(paymentIntent.metadata?.name || "");
-
-          if (!userId || userId <= 0) {
-            logger.error(
-              { data: [paymentIntent.metadata?.user_id] },
-              "[Stripe Webhook] Invalid user_id in metadata:"
-            );
-            return res
-              .status(400)
-              .json({ error: "Invalid user_id in payment intent metadata" });
-          }
-
-          if (!customerEmail && userId) {
-            try {
-              const dbUser = await getUserById(userId);
-              customerEmail = String(dbUser?.email || "");
-              if (!customerName) {
-                customerName = String(dbUser?.name || "");
-              }
-            } catch (lookupErr) {
-              logger.warn(
-                { data: [lookupErr] },
-                "[Stripe Webhook] Failed to resolve user email:"
-              );
-            }
-          }
-
-          const orderLineItems = Array.isArray(paymentIntent.metadata?.items)
-            ? JSON.parse(paymentIntent.metadata.items)
-                .map((item: any) => ({
-                  productId: Number(item.productId),
-                  variantId: item.variantId
-                    ? Number(item.variantId)
-                    : undefined,
-                  quantity: Number(item.quantity || 1),
-                  price: item.price,
-                }))
-                .filter(
-                  (item: any) =>
-                    Number.isFinite(item.productId) && item.productId > 0
-                )
-            : [];
-
-          // Create the order first so the payment record can reference its real id
-          let orderId: number | null = null;
-          try {
-            if (orderLineItems.length === 0) {
-              logger.warn(
-                "[Stripe Webhook] No order line items found in payment metadata"
-              );
-            }
-
-            const orderNumber = `STR-${Date.now()}-${randomUUID().slice(0, 8)}`;
-            const createdOrder = await createOrder(
-              userId,
-              {
-                orderNumber,
-                subtotal: subtotalAmount.toString(),
-                shippingCost: shippingCost.toString(),
-                tax: taxAmount.toString(),
-                total: totalAmount,
-                discountAmount: discountAmount.toString(),
-                offerId,
-                offerCode: offerCode || undefined,
-                shippingAddress: paymentIntent.metadata?.shippingAddress
-                  ? JSON.parse(paymentIntent.metadata.shippingAddress)
-                  : {},
-                billingAddress: paymentIntent.metadata?.billingAddress
-                  ? JSON.parse(paymentIntent.metadata.billingAddress)
-                  : {},
-                paymentMethod: "stripe",
-                stripePaymentIntentId,
-                language: paymentIntent.metadata?.language,
-              } as any,
-              customerEmail,
-              customerName,
-              orderLineItems
-            );
-
-            orderId = createdOrder?.id ?? null;
-            logger.info(
-              { data: [orderId] },
-              "[Stripe Webhook] Order created successfully:"
-            );
-          } catch (orderErr: any) {
-            logger.error(
-              { data: [orderErr?.message] },
-              "[Stripe Webhook] Failed to create order:"
-            );
-            // Log but don't fail the webhook - payment was successful
-          }
-
-          try {
-            const paymentRecord = await createPayment(orderId ?? 0, userId, {
-              provider: "stripe",
-              reference: stripePaymentIntentId,
-              amount: Number(totalAmount) as any,
-              currency: paymentIntent.currency?.toUpperCase() || "USD",
-              status: paymentIntent.status,
-              channel: paymentIntent.payment_method_types?.[0] || "card",
-              gatewayResponse: "Stripe API - Payment Succeeded",
-              authorizationCode:
-                (paymentIntent.charges?.data?.[0] as any)?.id || null,
-              cardBin:
-                (paymentIntent.payment_method_details?.card as any)?.first6 ||
-                null,
-              cardLast4:
-                (paymentIntent.payment_method_details?.card as any)?.last4 ||
-                null,
-              cardBrand:
-                (paymentIntent.payment_method_details?.card as any)?.brand ||
-                null,
-              bank: null,
-              ipAddress: null,
-              metadata: JSON.stringify(paymentIntent.metadata || {}),
-              fees: 0 as any,
-              paidAt: new Date(paymentIntent.created * 1000),
-            });
-
-            logger.info(
-              { data: [paymentRecord] },
-              "[Stripe Webhook] Payment recorded:"
-            );
-          } catch (paymentErr: any) {
-            logger.error(
-              { data: [paymentErr?.message] },
-              "[Stripe Webhook] Failed to record payment:"
-            );
-            // Continue even if payment record fails - order was already created
           }
 
           res.status(200).json({ received: true });
@@ -917,6 +795,19 @@ export function createApp() {
           logger.error(
             { data: [err?.message] },
             "[Stripe Webhook] Error processing payment_intent.succeeded:"
+          );
+          res.status(500).json({ error: "Internal server error" });
+        }
+      } else if (event.type === "checkout.session.completed") {
+        const session = event.data.object;
+        try {
+          const source = await loadStripeOrderSource(session);
+          if (source) await recordStripeOrder(source);
+          res.status(200).json({ received: true });
+        } catch (err: any) {
+          logger.error(
+            { data: [err?.message] },
+            "[Stripe Webhook] Error processing checkout.session.completed:"
           );
           res.status(500).json({ error: "Internal server error" });
         }
@@ -1062,9 +953,11 @@ export function createApp() {
     res.type("text/plain").send(buildRobotsTxt(origin));
   });
 
-  app.get("/llms.txt", (req, res) => {
+  app.get("/llms.txt", async (req, res) => {
     const origin = getSiteOrigin(req);
-    res.type("text/plain").send(buildLlmsTxt(origin));
+    res
+      .type("text/plain")
+      .send(buildLlmsTxt(origin, await getSupabaseCategories()));
   });
 
   app.get("/sitemap.xml", async (req, res) => {
@@ -2101,10 +1994,14 @@ export function createApp() {
                 ? `GEN-${Buffer.from(String(p.title)).toString("base64").replace(/=+$/, "").slice(0, 12)}`
                 : null);
             const title = String(p.title || p.name || "").trim();
-            const titleCased = toTitleCase(title || "");
+            // The catalogue titles are already cased as the manufacturer writes
+            // them; forcing title case turned "DV8" into "Dv8", "JK/JL" into
+            // "Jk/jl" and "RECON" into "Recon".
+            const titleCased = title;
             const translatedTitle = feedTranslations.get(title) || title;
-            const brand =
-              String(p.brand || "MotorVault").trim() || "MotorVault";
+            // No brand is better than a wrong one: "MotorVault" is the store,
+            // not the maker of third-party goods.
+            const brand = String(p.brand || "").trim();
             const description = buildFeedDescription(p);
             const translatedDescription =
               feedTranslations.get(description) || description;
@@ -2125,7 +2022,10 @@ export function createApp() {
             let condition = "new";
             if (!rawCondition) {
               condition = "new";
-            } else if (rawCondition.includes("refurb")) {
+            } else if (
+              rawCondition.includes("refurb") ||
+              rawCondition.includes("reman")
+            ) {
               condition = "refurbished";
             } else if (
               rawCondition.includes("used") ||
@@ -2134,7 +2034,17 @@ export function createApp() {
             ) {
               condition = "used";
             } else if (rawCondition.includes("new")) {
-              condition = "new";
+              // Some imported listings are stored as New while their own
+              // specifics say "Condition: Used"; publishing those as new
+              // breaks Merchant Center and Meta condition policies.
+              const statedCondition = /condition\s*:\s*([^\n]+)/i.exec(
+                typeof p.item_specifics === "string" ? p.item_specifics : ""
+              )?.[1];
+              condition =
+                statedCondition &&
+                /used|like new|pre-?owned|second/i.test(statedCondition)
+                  ? "used"
+                  : "new";
             } else {
               condition = "used";
             }
@@ -2152,11 +2062,13 @@ export function createApp() {
                 ? Math.max(1, Math.floor(Number(p.stock)))
                 : 1;
             // Only set googleProductCategory if it's not the default fallback
-            const rawCategory = String(
-              p.google_product_category || p.category_name || p.category || ""
-            ).trim();
-            const googleProductCategory =
-              rawCategory || "Vehicles & Parts > Vehicle Parts & Accessories";
+            // Google product taxonomy IDs; the store's own category names are
+            // not valid values for this field.
+            const googleProductCategory = String(
+              p.google_product_category ||
+                GOOGLE_CATEGORY_IDS[String(p.category_name || "").trim()] ||
+                DEFAULT_GOOGLE_CATEGORY_ID
+            );
             const salePriceAmount = Number(p.sale_price);
             const salePrice = Number.isFinite(salePriceAmount)
               ? normalizePrice(
@@ -2167,7 +2079,7 @@ export function createApp() {
             const itemGroupId = String(p.item_group_id || "").trim();
             const gtin = String(p.gtin || p.upc || p.ean || "").trim();
             const mpn = String(
-              p.mpn || p.manufacturer_part_number || ""
+              p.mpn || p.manufacturer_part_number || p.part_number || ""
             ).trim();
             const status = String(p.status || "active").trim() || "active";
             const color = String(p.color || "").trim();
@@ -2193,11 +2105,10 @@ export function createApp() {
 <g:id>${escapeXml(id)}</g:id>
 <g:title>${escapeXml(targetLanguageCode === "en" ? titleCased || title : translatedTitle)}</g:title>
 <g:description>${escapeXml(targetLanguageCode === "en" ? description : translatedDescription)}</g:description>
-<g:content_language>${escapeXml(lang)}</g:content_language>
+<g:content_language>${escapeXml(targetLanguageCode)}</g:content_language>
 <g:link>${escapeXml(link)}</g:link>
 <g:image_link>${escapeXml(image)}</g:image_link>
-<g:brand>${escapeXml(brand)}</g:brand>
-<g:condition>${escapeXml(condition)}</g:condition>
+${brand ? `<g:brand>${escapeXml(brand)}</g:brand>\n` : ""}<g:condition>${escapeXml(condition)}</g:condition>
 <g:availability>${escapeXml(availability)}</g:availability>
 <g:price>${escapeXml(price)}</g:price>`;
 
@@ -2222,6 +2133,10 @@ export function createApp() {
               itemXml += `\n<g:custom_label_0>${escapeXml(customLabel0)}</g:custom_label_0>`;
             if (gtin) itemXml += `\n<g:gtin>${escapeXml(gtin)}</g:gtin>`;
             if (mpn) itemXml += `\n<g:mpn>${escapeXml(mpn)}</g:mpn>`;
+            // Without a brand plus GTIN or MPN, Google expects this to be "no"
+            // rather than the item being disapproved for missing identifiers.
+            if (!gtin && !(brand && mpn))
+              itemXml += `\n<g:identifier_exists>no</g:identifier_exists>`;
             if (itemGroupId)
               itemXml += `\n<g:item_group_id>${escapeXml(itemGroupId)}</g:item_group_id>`;
             if (color) itemXml += `\n<g:color>${escapeXml(color)}</g:color>`;

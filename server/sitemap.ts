@@ -1,8 +1,10 @@
-import { getDb } from "./db";
-import { getAllSupabaseProducts } from "./supabaseProducts";
+import { VEHICLES } from "@shared/vehicleContent";
+import {
+  getAllSupabaseProducts,
+  getSupabaseCategories,
+} from "./supabaseProducts";
 import { BLOG_POSTS } from "../shared/blogPosts";
 
-import { logger } from "./_core/logger";
 type SitemapKind = "site" | "products";
 
 export async function generateSitemap(
@@ -31,70 +33,40 @@ export async function generateSitemap(
     return xml;
   }
 
-  const db = await getDb();
-  if (!db) {
-    return generateBasicSitemap(normalizedBaseUrl, kind);
-  }
+  // Categories come from the live Supabase table for the same reason as the
+  // products above: the Drizzle schema does not describe it, and without a
+  // Drizzle connection this used to fall back to a sitemap with no category
+  // pages in it at all.
+  const allCategories = await getSupabaseCategories();
+  let xml = generateBasicSitemap(normalizedBaseUrl, kind).replace(
+    /<\/urlset>\s*$/,
+    ""
+  );
+  const now = new Date().toISOString().split("T")[0];
 
-  try {
-    const now = new Date().toISOString().split("T")[0];
-
-    const { categories } = await import("../drizzle/schema");
-    const allCategories = await db.select().from(categories).limit(1000);
-    let xml = createUrlsetOpen(false);
-    const priorityPages = [
-      { loc: "/", changefreq: "daily", priority: "1.0" },
-      { loc: "/products", changefreq: "daily", priority: "0.95" },
-      { loc: "/blog", changefreq: "weekly", priority: "0.9" },
-      { loc: "/site-map", changefreq: "weekly", priority: "0.8" },
-      { loc: "/about", changefreq: "monthly", priority: "0.7" },
-      { loc: "/help", changefreq: "monthly", priority: "0.65" },
-      { loc: "/contact", changefreq: "monthly", priority: "0.65" },
-      { loc: "/shipping", changefreq: "monthly", priority: "0.6" },
-      { loc: "/returns", changefreq: "monthly", priority: "0.6" },
-      { loc: "/faq", changefreq: "monthly", priority: "0.6" },
-      { loc: "/privacy", changefreq: "yearly", priority: "0.3" },
-      { loc: "/terms", changefreq: "yearly", priority: "0.3" },
-      { loc: "/cookies", changefreq: "yearly", priority: "0.3" },
-      { loc: "/accessibility", changefreq: "yearly", priority: "0.3" },
-    ];
-
-    priorityPages.forEach(page => {
-      xml += renderUrl({
-        loc: `${normalizedBaseUrl}${page.loc}`,
-        lastmod: now,
-        changefreq: page.changefreq,
-        priority: page.priority,
-      });
+  VEHICLES.forEach(vehicle => {
+    xml += renderUrl({
+      loc: `${normalizedBaseUrl}/vehicle/${vehicle.slug}`,
+      lastmod: now,
+      changefreq: "weekly",
+      priority: "0.8",
     });
+  });
 
-    BLOG_POSTS.forEach(post => {
-      xml += renderUrl({
-        loc: `${normalizedBaseUrl}/blog/${post.slug}`,
-        lastmod: post.updatedDate || post.publishedDate || now,
-        changefreq: "monthly",
-        priority: "0.75",
-      });
+  allCategories.forEach(category => {
+    const categoryValue = String(category.slug || category.name || "").trim();
+    if (!categoryValue) return;
+
+    xml += renderUrl({
+      loc: `${normalizedBaseUrl}/products?category=${encodeURIComponent(categoryValue)}`,
+      lastmod: now,
+      changefreq: "weekly",
+      priority: "0.8",
     });
+  });
 
-    allCategories.forEach((category: any) => {
-      const categoryValue = String(category.slug || category.name || "").trim();
-      if (!categoryValue) return;
-
-      xml += renderUrl({
-        loc: `${normalizedBaseUrl}/products?category=${encodeURIComponent(categoryValue)}`,
-        lastmod: now,
-        changefreq: "weekly",
-        priority: "0.8",
-      });
-    });
-
-    xml += "</urlset>";
-    return xml;
-  } catch (error) {
-    logger.error({ data: [error] }, "Error generating sitemap:");
-    return generateBasicSitemap(normalizedBaseUrl, kind);
-  }
+  xml += "</urlset>";
+  return xml;
 }
 
 function generateBasicSitemap(baseUrl: string, kind: SitemapKind): string {
@@ -124,6 +96,11 @@ function generateBasicSitemap(baseUrl: string, kind: SitemapKind): string {
     { loc: "/shipping", priority: "0.6", changefreq: "monthly" },
     { loc: "/returns", priority: "0.6", changefreq: "monthly" },
     { loc: "/faq", priority: "0.6", changefreq: "monthly" },
+    { loc: "/vin-decoder", priority: "0.7", changefreq: "monthly" },
+    { loc: "/privacy", priority: "0.3", changefreq: "yearly" },
+    { loc: "/terms", priority: "0.3", changefreq: "yearly" },
+    { loc: "/cookies", priority: "0.3", changefreq: "yearly" },
+    { loc: "/accessibility", priority: "0.3", changefreq: "yearly" },
   ];
 
   pages.forEach(page => {

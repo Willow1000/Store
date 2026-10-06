@@ -1,6 +1,12 @@
 import { Link } from "wouter";
-import { ChevronRight, Heart, Eye } from "lucide-react";
+import { ArrowUpRight, Package, ScanLine } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SectionHeader } from "@/components/SectionHeader";
+import { useQuickAdd } from "@/hooks/useQuickAdd";
+import { useCategoryCounts } from "@/hooks/useCategoryCounts";
+import { useHomeRails } from "@/hooks/useHomeRails";
+import { categoryHref as buildCategoryHref } from "@/lib/categoryLinks";
+import { formatMoneyCeil } from "@/lib/pricing";
 import { QuickViewModal } from "@/components/QuickViewModal";
 import { SEOHead } from "@/components/SEOHead";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
@@ -13,11 +19,98 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useSupabaseWishlist } from "@/hooks/useSupabaseCart";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useState, useEffect, useMemo } from "react";
-import currencyClient from "@/lib/currencyClient";
 import { getHighResImageUrl } from "@/lib/images";
-import { calculateShipping } from "@shared/shipping";
 import { useRecommendations } from "@/hooks/useRecommendations";
+import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { Product } from "@/types/supabase";
+import { VEHICLES } from "@shared/vehicleContent";
+
+/** Products at or below this USD price feed the low-price rail. */
+const BUDGET_PRICE_CEILING_USD = 50;
+/** The rail only appears once there is enough real stock to fill a row. */
+const BUDGET_RAIL_MIN_ITEMS = 4;
+
+const helpLinks = [
+  {
+    href: "/faq",
+    eyebrow: "Fitment",
+    title: "Will this part fit my vehicle?",
+    body: "See VIN and compatibility guidance before you buy.",
+  },
+  {
+    href: "/faq",
+    eyebrow: "Part Quality",
+    title: "OEM vs aftermarket vs used?",
+    body: "Compare options by quality tier, risk, and budget.",
+  },
+  {
+    href: "/faq",
+    eyebrow: "Post-Purchase",
+    title: "Returns, warranty, and shipping timing",
+    body: "Get clarity on what happens after checkout.",
+  },
+  {
+    href: "/blog",
+    eyebrow: "Knowledge Hub",
+    title: "Read fitment and repair guides",
+    body: "Explore VIN, OEM, DPF, ECU, and EV buying playbooks.",
+  },
+];
+
+type HomeCategory = {
+  id: string | number;
+  name: string;
+  slug?: string | null;
+  image_url?: string | null;
+};
+
+function categoryHref(cat: HomeCategory) {
+  return buildCategoryHref(cat.slug || cat.name || "");
+}
+
+/**
+ * Category tile. The photo is a hot-linked product shot, so it can fail; the
+ * fallback is a plain labelled tile. The category `icon` / `description`
+ * columns are deliberately not rendered - several rows hold placeholder text.
+ */
+function CategoryTile({ category }: { category: HomeCategory }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageUrl = getHighResImageUrl(category.image_url);
+  const hasImage = Boolean(imageUrl) && !imageFailed;
+
+  return (
+    <Link
+      href={categoryHref(category)}
+      className="group relative block aspect-[4/3] overflow-hidden rounded-lg bg-gray-900"
+    >
+      {hasImage ? (
+        <img
+          src={imageUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-white/30">
+          <Package className="h-9 w-9" strokeWidth={1.25} aria-hidden="true" />
+        </div>
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3">
+        <span className="line-clamp-2 text-sm font-semibold leading-tight text-white sm:text-[15px]">
+          {category.name}
+        </span>
+        <ArrowUpRight
+          className="h-4 w-4 flex-none text-white/70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-white"
+          aria-hidden="true"
+        />
+      </div>
+    </Link>
+  );
+}
 
 const homeBannerSlides = [
   {
@@ -76,8 +169,10 @@ export default function Home() {
   const { wishedProductIds, toggleWishlist } = useSupabaseWishlist(
     user?.id || null
   );
+  const { addProduct, pendingId } = useQuickAdd(user?.id || null);
   const { categories, isLoading: categoriesLoading } = useCategories();
-  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
+  const categoryCounts = useCategoryCounts();
+  const rails = useHomeRails(BUDGET_PRICE_CEILING_USD, 10);
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(
     null
   );
@@ -117,22 +212,12 @@ export default function Home() {
     };
   }, []);
 
-  // Load recently viewed items from localStorage
-  useEffect(() => {
-    try {
-      const ids = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
-      setRecentlyViewedIds(ids);
-    } catch {}
-  }, []);
-
-  // Get recently viewed products from the products list
   const recentlyViewedVisibleCount = isMobile ? 6 : 5;
   const recommendationVisibleCount = isMobile ? 6 : 12;
 
-  const recentlyViewedProducts = recentlyViewedIds
-    .map(id => products?.find(p => p.id === id))
-    .filter(Boolean)
-    .slice(0, recentlyViewedVisibleCount);
+  const { products: recentlyViewedProducts } = useRecentlyViewed(
+    recentlyViewedVisibleCount
+  );
   const hasRecentlyViewedProducts = recentlyViewedProducts.length > 0;
 
   const recommendedForYouProducts = useMemo(() => {
@@ -142,12 +227,28 @@ export default function Home() {
     );
   }, [products, recommendations, recommendationVisibleCount]);
 
+  // Deals rail: only products that are really discounted, ranked by the
+  // shopper's profile, and not repeating the "Recommended" rail above it.
   const personalizedDealProducts = useMemo(() => {
-    return recommendations.personalizedDeals(
-      products || [],
-      recommendationVisibleCount
-    );
-  }, [products, recommendations, recommendationVisibleCount]);
+    const shownAbove = new Set(recommendedForYouProducts.map(p => p.id));
+    const candidates = rails.deals.filter(p => !shownAbove.has(p.id));
+    return recommendations
+      .personalizedDeals(candidates, candidates.length)
+      .filter(p => Number(p.discount) > Number(p.price))
+      .slice(0, recommendationVisibleCount);
+  }, [
+    rails.deals,
+    recommendations,
+    recommendedForYouProducts,
+    recommendationVisibleCount,
+  ]);
+
+  // Low-price rail: real, in-stock products under the ceiling, cheapest first.
+  const budgetProducts = useMemo(
+    () => rails.budget.slice(0, isMobile ? 6 : 10),
+    [rails.budget, isMobile]
+  );
+  const showBudgetRail = budgetProducts.length >= BUDGET_RAIL_MIN_ITEMS;
 
   const handleRecommendationClick = (source: string, product: Product) => {
     recommendations.track({
@@ -179,26 +280,28 @@ export default function Home() {
     toast.success(isWished ? "Removed from wishlist" : "Added to wishlist!");
   };
 
-  const getDiscountPercentage = (
-    price: number | string,
-    discount: number | null | undefined
-  ) => {
-    if (!discount) return null;
-    const currentPrice =
-      price !== null && price !== undefined ? parseFloat(String(price)) : 0;
-    const discountPrice = parseFloat(String(discount));
-    if (
-      isNaN(currentPrice) ||
-      isNaN(discountPrice) ||
-      discountPrice <= currentPrice
-    )
-      return null;
-    return Math.round(((discountPrice - currentPrice) / discountPrice) * 100);
-  };
-
-  const displayedCategories = useMemo(() => {
-    return categories.slice(0, isMobile ? 6 : 10);
-  }, [categories, isMobile]);
+  // Image tiles for the first categories, compact links for the rest, so the
+  // section keeps its shape whether there are 8 categories or 30.
+  const categoryTileCount = isMobile ? 6 : 12;
+  // Most-stocked categories get the tiles (real counts from the catalogue);
+  // the hook keeps its alphabetical order as the tie-break.
+  const rankedCategories = useMemo(() => {
+    const countFor = (name: string | null | undefined) =>
+      categoryCounts[
+        String(name || "")
+          .trim()
+          .toLowerCase()
+      ] || 0;
+    return [...categories].sort((a, b) => countFor(b.name) - countFor(a.name));
+  }, [categories, categoryCounts]);
+  const tileCategories = useMemo(
+    () => rankedCategories.slice(0, categoryTileCount),
+    [rankedCategories, categoryTileCount]
+  );
+  const overflowCategories = useMemo(
+    () => rankedCategories.slice(categoryTileCount),
+    [rankedCategories, categoryTileCount]
+  );
 
   return (
     <>
@@ -216,234 +319,142 @@ export default function Home() {
         ]}
         canonical="https://motorvault.shop"
       />
-      <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
+      <div className="min-h-screen w-full overflow-x-hidden bg-white">
         {/* Hero Slideshow */}
         <HeroSlideshow />
 
-        <section className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-10 sm:py-12">
-          <div className="rounded-[2rem] bg-white border border-slate-200 shadow-sm p-6 sm:p-8">
-            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
-                  Trusted Reviews
-                </p>
-                <h2 className="mt-2 text-3xl font-extrabold text-slate-900">
-                  Why buyers trust our fitment-first approach
-                </h2>
+        {/* Shop by Category */}
+        <section className="section bg-white">
+          <div className="container">
+            <SectionHeader
+              title="Shop by Category"
+              ctaHref="/products"
+              ctaLabel="View all"
+            />
+
+            {categoriesLoading && categories.length === 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+                {Array.from({ length: categoryTileCount }).map((_, i) => (
+                  <Skeleton
+                    key={i}
+                    className="aspect-[4/3] w-full rounded-lg"
+                  />
+                ))}
               </div>
-            </div>
-            <BlootrueWidget />
-          </div>
-        </section>
+            ) : categories.length > 0 ? (
+              <>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+                  {tileCategories.map(cat => (
+                    <CategoryTile key={cat.id} category={cat} />
+                  ))}
+                </div>
 
-        <section className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 pb-8 sm:pb-10">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Link
-              href="/faq"
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Fitment
-              </p>
-              <h3 className="mt-2 text-lg font-bold text-slate-900">
-                Will this part fit my vehicle?
-              </h3>
-              <p className="mt-2 text-sm text-slate-600">
-                See VIN and compatibility guidance before you buy.
-              </p>
-            </Link>
-            <Link
-              href="/faq"
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Part Quality
-              </p>
-              <h3 className="mt-2 text-lg font-bold text-slate-900">
-                OEM vs aftermarket vs used?
-              </h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Compare options by quality tier, risk, and budget.
-              </p>
-            </Link>
-            <Link
-              href="/faq"
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Post-Purchase
-              </p>
-              <h3 className="mt-2 text-lg font-bold text-slate-900">
-                Returns, warranty, and shipping timing
-              </h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Get clarity on what happens after checkout.
-              </p>
-            </Link>
-            <Link
-              href="/blog"
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Knowledge Hub
-              </p>
-              <h3 className="mt-2 text-lg font-bold text-slate-900">
-                Read fitment and repair guides
-              </h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Explore VIN, OEM, DPF, ECU, and EV buying playbooks.
-              </p>
-            </Link>
-          </div>
-        </section>
-
-        {/* Your Recently Viewed Items Section */}
-        {showBelowFoldContent && hasRecentlyViewedProducts && (
-          <div className="bg-white border-b">
-            <div className="max-w-screen-xl mx-auto px-2 sm:px-3 lg:px-4 py-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-3xl font-extrabold text-gray-900">
-                  Your Recently Viewed
-                </h2>
-                <Link
-                  href="/products"
-                  className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                >
-                  View all <ChevronRight className="w-4 h-4" />
+                {overflowCategories.length > 0 && (
+                  <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar sm:mx-0 sm:flex-wrap sm:px-0">
+                    {overflowCategories.map(cat => (
+                      <Link
+                        key={cat.id}
+                        href={categoryHref(cat)}
+                        className="inline-flex min-h-11 flex-none items-center sm:min-h-10 rounded-full border border-gray-300 bg-white px-4 text-sm font-medium text-ink transition-colors hover:border-ink hover:bg-gray-50"
+                      >
+                        {cat.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="rounded-lg border border-dashed border-gray-300 px-6 py-10 text-center">
+                <p className="text-sm text-gray-600">
+                  Categories are on their way. Browse the full catalogue in the
+                  meantime.
+                </p>
+                <Link href="/products" className="btn-secondary btn-sm mt-4">
+                  All Products
                 </Link>
               </div>
+            )}
+          </div>
+        </section>
 
-              {/* Recently Viewed Grid */}
-              <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5">
-                {recentlyViewedProducts.map((product, idx) => {
-                  if (!product) return null;
-                  const discountPercentage = getDiscountPercentage(
-                    product.price,
-                    product.discount
-                  );
-                  const isWished =
-                    product.id && wishedProductIds.has(product.id);
-                  const stock = Number(product.stock ?? 0);
-                  const price = parseFloat(String(product.price ?? 0));
+        {/* Shop by vehicle: one page per popular truck, Jeep and Tesla */}
+        <section className="section !pt-0">
+          <div className="container">
+            <h2 className="text-lg font-bold text-ink sm:text-xl">
+              Shop by vehicle
+            </h2>
+            <ul className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar sm:mx-0 sm:flex-wrap sm:px-0">
+              {VEHICLES.map(vehicle => (
+                <li key={vehicle.slug} className="flex-none">
+                  <Link
+                    href={`/vehicle/${vehicle.slug}`}
+                    className="inline-flex min-h-11 items-center rounded-full border border-gray-300 bg-white px-4 text-sm font-medium text-ink transition-colors hover:border-ink hover:bg-gray-50 sm:min-h-10"
+                  >
+                    {vehicle.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
 
-                  return (
-                    <Link
-                      key={product.id}
-                      href={`/product/${product.id}`}
-                      className="product-card group relative bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col hover:shadow-md transition-shadow"
-                    >
-                      {/* Image Container */}
-                      <div className="relative w-full pt-[100%] bg-white group-hover:opacity-75 transition-opacity">
-                        <img
-                          src={getHighResImageUrl(product.cover_image_url)}
-                          alt={product.title}
-                          className="absolute inset-0 w-full h-full object-contain p-6"
-                          loading="lazy"
-                          decoding="async"
-                          crossOrigin="anonymous"
-                          onError={e => {
-                            e.currentTarget.style.display = "none";
-                          }}
-                        />
-                        {discountPercentage && (
-                          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-red-600 text-white text-xs sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
-                            -{discountPercentage}%
-                          </div>
-                        )}
-                        <div
-                          className={`absolute bottom-2 sm:bottom-3 left-2 sm:left-3 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-bold ${stock === 0 ? "bg-red-600 text-white" : "bg-white/90 text-gray-800"}`}
-                        >
-                          {stock === 0 ? "Out of stock" : `${stock} in stock`}
-                        </div>
-                        {/* Wishlist Button */}
-                        <button
-                          onClick={e => {
-                            e.preventDefault();
-                            toggleWishlist(product.id);
-                            toast.success(
-                              isWished
-                                ? "Removed from wishlist"
-                                : "Added to wishlist!"
-                            );
-                          }}
-                          className="absolute top-3 right-3 bg-white p-2 rounded-full hover:bg-gray-100 shadow opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Heart
-                            className="w-5 h-5"
-                            fill={isWished ? "currentColor" : "none"}
-                            color={isWished ? "#ef4444" : "#999"}
-                          />
-                        </button>
-                        {/* Quick View Button */}
-                        <button
-                          onClick={e => {
-                            e.preventDefault();
-                            setQuickViewProductId(product.id);
-                          }}
-                          className="absolute top-16 right-3 bg-white p-2 rounded-full hover:bg-gray-100 shadow opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Eye className="w-5 h-5 text-gray-600" />
-                        </button>
-                      </div>
-
-                      {/* Product Info */}
-                      <div className="p-3 sm:p-4 md:p-5 flex flex-col flex-grow">
-                        {/* Title */}
-                        <h3 className="text-xs sm:text-sm md:text-base font-semibold text-gray-900 line-clamp-2 min-h-[30px] sm:min-h-[40px]">
-                          {product.title}
-                        </h3>
-
-                        {/* Price Section */}
-                        <div className="mt-2 sm:mt-4 flex items-baseline space-x-1 sm:space-x-2">
-                          <span className="text-base sm:text-lg md:text-2xl font-bold text-gray-900">
-                            {currencyClient.isAfricanUser()
-                              ? currencyClient.formatUSD(product.price)
-                              : (() => {
-                                  const rate =
-                                    currencyClient.getCurrencyRate() || 1;
-                                  const symbol =
-                                    currencyClient.getCurrencySymbolLocal();
-                                  return `${symbol}${(parseFloat(String(product.price)) * rate).toFixed(2)}`;
-                                })()}
-                          </span>
-                          {product.discount && (
-                            <span className="text-xs sm:text-sm text-gray-500 line-through">
-                              {currencyClient.isAfricanUser()
-                                ? currencyClient.formatUSD(product.discount)
-                                : (() => {
-                                    const rate =
-                                      currencyClient.getCurrencyRate() || 1;
-                                    const symbol =
-                                      currencyClient.getCurrencySymbolLocal();
-                                    return `${symbol}${(parseFloat(String(product.discount)) * rate).toFixed(2)}`;
-                                  })()}
-                            </span>
-                          )}
-                        </div>
-                        {/* Shipping Info */}
-                        {calculateShipping(price) === 0 && (
-                          <p className="mt-1 text-xs sm:text-xs md:text-sm text-green-600 font-medium">
-                            Free shipping
-                          </p>
-                        )}
-
-                        {/* View Deal Button */}
-                        <div className="mt-auto pt-2 sm:pt-4">
-                          <button className="w-full bg-blue-600 text-white py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm hover:bg-blue-700 transition-colors">
-                            View Deal
-                          </button>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
+        {/* VIN decoder entry point */}
+        <section className="bg-white pb-10 sm:pb-12 lg:pb-14">
+          <div className="container">
+            <div className="flex flex-col gap-4 rounded-xl bg-gray-950 p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-7">
+              <div className="flex min-w-0 items-start gap-4">
+                <div className="hidden h-11 w-11 flex-none items-center justify-center rounded-lg bg-white/10 sm:flex">
+                  <ScanLine className="h-5 w-5" aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-lg font-bold leading-snug sm:text-xl">
+                    Not sure it fits? Decode your VIN
+                  </h2>
+                  <p className="mt-1 text-sm text-white/75 sm:text-[15px]">
+                    Check your vehicle's details by VIN before you order.
+                  </p>
+                </div>
               </div>
+              <Link
+                href="/vin-decoder"
+                className="inline-flex min-h-11 flex-none items-center justify-center gap-2 rounded-md bg-white px-5 text-sm font-semibold text-ink transition-colors hover:bg-gray-200"
+              >
+                VIN Decoder
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
             </div>
           </div>
-        )}
+        </section>
 
         {showBelowFoldContent && (
           <>
+            {showBudgetRail && (
+              <ProductRecommendationSection
+                title={
+                  <>
+                    <span>Under</span>{" "}
+                    <span className="price">
+                      {formatMoneyCeil(BUDGET_PRICE_CEILING_USD)}
+                    </span>
+                  </>
+                }
+                eyebrow="Low-price picks"
+                products={budgetProducts}
+                wishedProductIds={wishedProductIds}
+                onWishlistToggle={handleRecommendationWishlistToggle}
+                onQuickView={productId =>
+                  handleRecommendationQuickView("home_under_budget", productId)
+                }
+                onProductClick={product =>
+                  handleRecommendationClick("home_under_budget", product)
+                }
+                onAddToCart={addProduct}
+                addingProductId={pendingId}
+                ctaHref="/products"
+                tone="tint"
+              />
+            )}
+
             <ProductRecommendationSection
               title="Recommended For You"
               products={recommendedForYouProducts}
@@ -458,11 +469,16 @@ export default function Home() {
               onProductClick={product =>
                 handleRecommendationClick("home_recommended_for_you", product)
               }
+              onAddToCart={addProduct}
+              addingProductId={pendingId}
               ctaHref="/products"
+              className={
+                showBudgetRail ? undefined : "border-t border-gray-200"
+              }
               compact
             />
 
-            <section className="bg-gray-50 py-10 sm:py-14 lg:py-16">
+            <section className="section bg-gray-50">
               <BannerCarousel slides={homeBannerSlides} tone="dark" />
             </section>
 
@@ -480,74 +496,68 @@ export default function Home() {
               onProductClick={product =>
                 handleRecommendationClick("home_personalized_deals", product)
               }
+              onAddToCart={addProduct}
+              addingProductId={pendingId}
               ctaHref="/products"
               ctaLabel="Shop deals"
               compact
             />
 
-            <div className="bg-white py-6">
-              <div className="max-w-screen-xl mx-auto px-2 sm:px-3 md:px-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
-                    Shop by Category
-                  </h2>
-                  <Link
-                    href="/products"
-                    className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                  >
-                    View all <ChevronRight className="w-4 h-4" />
-                  </Link>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {categoriesLoading ? (
-                    Array.from({ length: isMobile ? 6 : 10 }).map((_, i) => (
-                      <Skeleton key={i} className="h-40 w-full rounded-lg" />
-                    ))
-                  ) : displayedCategories.length > 0 ? (
-                    displayedCategories.map(cat => (
-                      <Link
-                        key={cat.id}
-                        href={`/products?category=${encodeURIComponent(cat.slug || cat.name || "")}`}
-                      >
-                        <div className="group relative h-40 overflow-hidden rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
-                          <div className="absolute inset-0 flex items-center justify-center text-5xl leading-none text-white/90">
-                            {cat.icon || "📦"}
-                          </div>
-
-                          {cat.image_url && (
-                            <img
-                              src={getHighResImageUrl(cat.image_url)}
-                              alt={cat.name}
-                              className="absolute inset-0 h-full w-full object-cover"
-                              loading="lazy"
-                              decoding="async"
-                              onError={e => {
-                                e.currentTarget.style.display = "none";
-                              }}
-                            />
-                          )}
-
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-                          <p className="absolute bottom-2 left-2 right-2 font-semibold text-white text-sm text-center line-clamp-2">
-                            {cat.name}
-                          </p>
-                        </div>
-                      </Link>
-                    ))
-                  ) : (
-                    <div className="col-span-full py-12 text-center">
-                      <p className="text-gray-500 text-lg">
-                        No categories available ({categories.length} categories
-                        loaded)
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            {/* Your Recently Viewed Items Section */}
+            {hasRecentlyViewedProducts && (
+              <ProductRecommendationSection
+                title="Your Recently Viewed"
+                products={recentlyViewedProducts}
+                wishedProductIds={wishedProductIds}
+                onWishlistToggle={handleRecommendationWishlistToggle}
+                onQuickView={productId => setQuickViewProductId(productId)}
+                onAddToCart={addProduct}
+                addingProductId={pendingId}
+                ctaHref="/products"
+                className="border-t border-gray-200"
+                compact
+              />
+            )}
           </>
         )}
+
+        {/* Reviews */}
+        <section className="section border-t border-gray-200 bg-gray-50">
+          <div className="container">
+            <SectionHeader
+              eyebrow="Trusted Reviews"
+              title="Why buyers trust our fitment-first approach"
+            />
+            <div className="rounded-xl border border-gray-200 bg-white p-2 sm:p-4">
+              <BlootrueWidget />
+            </div>
+          </div>
+        </section>
+
+        {/* Buying help */}
+        <section className="section bg-white">
+          <div className="container">
+            <div className="grid gap-px overflow-hidden rounded-xl border border-gray-200 bg-gray-200 sm:grid-cols-2 xl:grid-cols-4">
+              {helpLinks.map(item => (
+                <Link
+                  key={item.title}
+                  href={item.href}
+                  className="group flex flex-col bg-white p-5 transition-colors hover:bg-gray-50 sm:p-6"
+                >
+                  <p className="eyebrow">{item.eyebrow}</p>
+                  <h3 className="mt-2 text-base font-semibold leading-snug text-ink">
+                    {item.title}
+                  </h3>
+                  <p className="mt-1.5 text-sm text-gray-600">{item.body}</p>
+                  <ArrowUpRight
+                    className="mt-4 h-4 w-4 text-gray-400 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink"
+                    aria-hidden="true"
+                  />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {showBelowFoldContent && quickViewProductId && (
           <QuickViewModal

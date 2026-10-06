@@ -1,12 +1,16 @@
 import { SEOHead } from "@/components/SEOHead";
 import { BLOG_POSTS } from "@shared/blogPosts";
 import { Link } from "wouter";
+import { ArrowRight } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
+// One neutral chip for every category: the label carries the meaning, so
+// the palette stays ink + neutrals.
 const categoryStyle: Record<string, string> = {
-  Fitment: "bg-blue-100 text-blue-800",
-  Quality: "bg-amber-100 text-amber-800",
-  Troubleshooting: "bg-rose-100 text-rose-800",
-  "EV & Hybrid": "bg-emerald-100 text-emerald-800",
+  Fitment: "bg-gray-100 text-ink",
+  Quality: "bg-gray-100 text-ink",
+  Troubleshooting: "bg-gray-100 text-ink",
+  "EV & Hybrid": "bg-gray-100 text-ink",
 };
 
 export default function Blog() {
@@ -22,7 +26,7 @@ export default function Blog() {
     <>
       <SEOHead
         pageType="generic"
-        title="MotorVault Blog | SEO Guides for Fitment, OEM Parts, and Repairs"
+        title="Car Parts Fitment & Repair Guides | MotorVault Blog"
         description="Read MotorVault articles on VIN fitment, OEM vs used part quality, ECU and DPF troubleshooting, and EV repair decisions across Europe."
         canonical="/blog"
         keywords={[
@@ -35,84 +39,84 @@ export default function Blog() {
         ]}
       />
 
-      <div className="min-h-screen bg-gray-50 py-10">
-        <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
-          <header className="rounded-3xl border border-gray-200 bg-white p-6 sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-gray-500">
-              MotorVault Journal
-            </p>
-            <h1 className="mt-3 text-3xl font-black tracking-tight text-gray-950 sm:text-4xl">
-              Fitment-first guides for buyers and workshops
-            </h1>
-            <p className="mt-3 max-w-3xl text-gray-700">
-              These articles are written to help with practical decisions such
-              as checking compatibility, understanding common failure patterns,
-              and comparing repair paths with fewer assumptions.
-            </p>
-            <p className="mt-3 max-w-3xl text-gray-700">
-              The blog focuses on European vehicle fitment, OEM-versus-used part
-              decisions, diesel emissions troubleshooting, EV ownership costs,
-              and seat or interior upgrades where exact compatibility matters.
-            </p>
+      <div className="min-h-screen bg-white">
+        <PageHeader
+          eyebrow="MotorVault Journal"
+          title="Fitment-first guides for buyers and workshops"
+          description="These articles are written to help with practical decisions such as checking compatibility, understanding common failure patterns, and comparing repair paths with fewer assumptions."
+          breadcrumb={[{ label: "Blog", href: "/blog" }]}
+        >
+          <p className="mt-2 max-w-2xl text-sm text-gray-600 sm:text-base">
+            The blog focuses on European vehicle fitment, OEM-versus-used part
+            decisions, diesel emissions troubleshooting, EV ownership costs, and
+            seat or interior upgrades where exact compatibility matters.
+          </p>
 
-            <div className="mt-6 flex flex-wrap gap-3 text-sm text-gray-600">
-              {Object.entries(categoryCounts).map(([category, count]) => (
-                <span
-                  key={category}
-                  className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5"
-                >
-                  {category}: {count} guide{count > 1 ? "s" : ""}
-                </span>
-              ))}
-            </div>
-          </header>
+          <div className="mt-5 flex flex-wrap gap-2 text-[13px] text-gray-700">
+            {Object.entries(categoryCounts).map(([category, count]) => (
+              <span
+                key={category}
+                className="rounded-full border border-gray-300 bg-white px-3 py-1.5"
+              >
+                {category}: {count} guide{count > 1 ? "s" : ""}
+              </span>
+            ))}
+          </div>
+        </PageHeader>
 
-          <section className="mt-8 grid gap-6 lg:grid-cols-2">
+        <div className="container py-8 sm:py-12">
+          <section className="grid gap-5 md:grid-cols-2 lg:gap-6 xl:grid-cols-3">
             {BLOG_POSTS.map(post => (
               <article
                 key={post.slug}
-                className="group overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+                className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-card transition-[box-shadow,border-color] hover:border-gray-300 hover:shadow-card-hover"
               >
-                <Link href={`/blog/${post.slug}`}>
+                <Link
+                  href={`/blog/${post.slug}`}
+                  className="block overflow-hidden bg-well"
+                >
                   <img
                     src={post.coverImage}
                     alt={post.coverImageAlt}
-                    className="h-52 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    className="aspect-[16/9] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                     loading="lazy"
                     decoding="async"
                   />
                 </Link>
-                <div className="p-6">
-                  <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-1 flex-col p-5">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                     <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${categoryStyle[post.category] || "bg-gray-100 text-gray-700"}`}
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${categoryStyle[post.category] || "bg-gray-100 text-gray-700"}`}
                     >
                       {post.category}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-[13px] text-gray-500">
                       {post.readingTime}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span className="price text-[13px] text-gray-500">
                       {new Date(post.publishedDate).toLocaleDateString()}
                     </span>
                   </div>
 
-                  <h2 className="mt-4 text-2xl font-bold text-gray-950">
+                  <h2 className="mt-3 text-lg font-bold leading-snug text-ink sm:text-xl">
                     <Link
                       href={`/blog/${post.slug}`}
-                      className="hover:text-blue-700"
+                      className="hover:underline hover:underline-offset-4"
                     >
                       {post.title}
                     </Link>
                   </h2>
-                  <p className="mt-3 text-gray-700">{post.excerpt}</p>
+                  <p className="mt-2 text-[15px] leading-relaxed text-gray-700">
+                    {post.excerpt}
+                  </p>
 
-                  <div className="mt-6">
+                  <div className="mt-auto pt-5">
                     <Link
                       href={`/blog/${post.slug}`}
-                      className="inline-flex items-center rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-700"
+                      className="inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-ink underline-offset-4 hover:underline"
                     >
                       Read article
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </Link>
                   </div>
                 </div>
@@ -120,25 +124,25 @@ export default function Blog() {
             ))}
           </section>
 
-          <section className="mt-8 rounded-3xl border border-gray-200 bg-white p-6 sm:p-8">
-            <h2 className="text-2xl font-bold text-gray-950">
+          <section className="mt-10 rounded-xl border border-gray-200 bg-gray-50 p-5 sm:p-8">
+            <h2 className="text-xl font-bold text-ink sm:text-2xl">
               Where these topics are discussed
             </h2>
-            <p className="mt-2 text-gray-700">
+            <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-gray-700">
               Many of the issues covered here are actively discussed in owner
               forums and technician communities. They are useful places to
               compare patterns, terminology, and real-world repair outcomes.
             </p>
-            <p className="mt-2 text-gray-700">
+            <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-gray-700">
               The goal is to publish material that is specific enough to be
               genuinely useful before anyone clicks through to a product page.
             </p>
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="mt-5 flex flex-wrap gap-2">
               <a
                 href="https://www.alfaowner.com/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-900 hover:text-gray-900"
+                className="inline-flex min-h-10 items-center rounded-full border border-gray-300 bg-white px-4 text-sm font-medium text-ink transition-colors hover:border-ink"
               >
                 AlfaOwner
               </a>
@@ -146,7 +150,7 @@ export default function Blog() {
                 href="https://www.zafiraowners.co.uk/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-900 hover:text-gray-900"
+                className="inline-flex min-h-10 items-center rounded-full border border-gray-300 bg-white px-4 text-sm font-medium text-ink transition-colors hover:border-ink"
               >
                 Zafira Owners Club
               </a>
@@ -154,7 +158,7 @@ export default function Blog() {
                 href="https://www.reddit.com/r/MechanicAdvice/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-900 hover:text-gray-900"
+                className="inline-flex min-h-10 items-center rounded-full border border-gray-300 bg-white px-4 text-sm font-medium text-ink transition-colors hover:border-ink"
               >
                 r/MechanicAdvice
               </a>
@@ -162,7 +166,7 @@ export default function Blog() {
                 href="https://www.reddit.com/r/CarTalkUK/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-900 hover:text-gray-900"
+                className="inline-flex min-h-10 items-center rounded-full border border-gray-300 bg-white px-4 text-sm font-medium text-ink transition-colors hover:border-ink"
               >
                 r/CarTalkUK
               </a>

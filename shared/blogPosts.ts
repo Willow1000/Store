@@ -54,9 +54,9 @@ export const BLOG_AUTHOR = "MotorVault Editorial Team";
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "vin-fitment-guide-european-auto-parts",
-    title: "Will This Part Fit? A Practical VIN Fitment Guide",
+    title: "VIN Number Lookup for Parts: Check Fitment Before You Buy",
     description:
-      "Use VIN decoding, engine code checks, and platform clues to order compatible European car parts with fewer returns.",
+      "How to use a VIN number lookup to find parts that fit: decode the VIN, match the engine code and part number, and avoid ordering the wrong part.",
     excerpt:
       "Fitment mistakes are expensive. This guide shows a repeatable VIN-first process that helps buyers choose the right part the first time.",
     coverImage: "/images/blog/vin-fitment-guide-cover.avif",
@@ -163,6 +163,11 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     faq: [
       {
+        question: "Can I look up parts by VIN number for free?",
+        answer:
+          "Yes. Free VIN decoders, including the NHTSA's and MotorVault's, identify the exact year, make, model, engine and plant from the VIN. To go from the VIN to a specific part number you need the manufacturer's parts catalogue or a seller who checks it for you; you can send us your VIN for that.",
+      },
+      {
         question: "Can I order a part using only make and model?",
         answer:
           "You can start with make and model, but VIN and part number matching significantly lowers fitment risk for engines, ECUs, and emissions parts.",
@@ -179,6 +184,7 @@ export const BLOG_POSTS: BlogPost[] = [
       },
     ],
     internalLinks: [
+      { label: "VIN decoder tool", href: "/vin-decoder" },
       { label: "VIN fitment enquiry form", href: "/contact?enquiry=1" },
       { label: "Fitment and buyer FAQs", href: "/faq" },
       { label: "Parts catalog overview", href: "/products" },
@@ -192,10 +198,6 @@ export const BLOG_POSTS: BlogPost[] = [
         label: "Auto Care data standards (ACES/PIES)",
         href: "https://www.autocare.org/data-standards",
       },
-      {
-        label: "Google structured data intro",
-        href: "https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data",
-      },
     ],
     backlinkOutreach: [
       {
@@ -208,9 +210,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "used-vs-refurbished-vs-oem-auto-parts",
-    title: "Used vs Refurbished vs OEM: Which Quality Tier Is Right?",
+    title: "Used vs OEM vs Aftermarket Parts: Which Should You Buy?",
     description:
-      "Compare risk, cost, and fitment confidence across used OEM, refurbished, and aftermarket parts for European vehicles.",
+      "OEM vs aftermarket vs used OEM parts compared on cost, quality, fitment and risk, with clear advice on which parts to buy new and which used parts are worth it.",
     excerpt:
       "Not every part category should be purchased the same way. Use this matrix to decide when used OEM is smart and when new is safer.",
     coverImage: "/images/blog/used-vs-refurbished-vs-oem-cover.avif",
@@ -338,6 +340,16 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     faq: [
       {
+        question: "What is the difference between OE and OEM parts?",
+        answer:
+          "OE (original equipment) parts are the ones fitted to the car at the factory. OEM parts are made by the same manufacturer to the same specification but may be sold in the parts maker's own box rather than the carmaker's. Both are built to the original specification.",
+      },
+      {
+        question: "Are OEM parts better than aftermarket parts?",
+        answer:
+          "OEM parts guarantee the original fit and specification. Quality aftermarket parts from reputable brands can match or exceed OEM for wear items such as brakes and filters and often cost less; cheap unbranded parts are where quality problems concentrate.",
+      },
+      {
         question: "Are used OEM parts better than cheap aftermarket?",
         answer:
           "For fitment-critical components, used OEM often provides better compatibility than low-quality aftermarket alternatives when condition is verified.",
@@ -356,19 +368,15 @@ export const BLOG_POSTS: BlogPost[] = [
     internalLinks: [
       {
         label: "Seat and interior category overview",
-        href: "/products?category=Seats",
+        href: "/products?category=seats",
       },
       {
         label: "Body and trim category overview",
-        href: "/products?category=Body",
+        href: "/products?category=body",
       },
       { label: "Returns and condition guidance", href: "/returns" },
     ],
     outboundReferences: [
-      {
-        label: "Google people-first content guidance",
-        href: "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
-      },
       {
         label: "Schema.org Product reference",
         href: "https://schema.org/Product",
@@ -389,9 +397,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "opel-zafira-astra-ecu-and-sensor-failures",
-    title: "Engine Warning Light On? ECU and Sensor Failure Patterns",
+    title: "Opel Astra & Zafira ECU and Sensor Failures: Symptoms and Fixes",
     description:
-      "A troubleshooting playbook for Opel Zafira and Astra electrical faults, including ECU and NOx sensor decision points.",
+      "ECU and sensor failure symptoms on the Opel Astra and Zafira, how to tell a failing ECU from a bad sensor or battery, and what replacing an ECU involves.",
     excerpt:
       "Use this diagnosis-first workflow to reduce parts swapping and identify when a tested replacement ECU or sensor is justified.",
     coverImage: "/images/blog/ecu-sensor-failure-guide-cover.avif",
@@ -487,6 +495,11 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     faq: [
       {
+        question: "How much does ECU replacement cost?",
+        answer:
+          "It varies widely by car and by whether the unit is new, used or repaired. A used ECU costs far less than a new one, but most need coding or programming to the car's immobiliser and VIN, so get quotes that include the programming.",
+      },
+      {
         question: "Can a bad battery trigger ECU-like faults?",
         answer:
           "Yes. Low voltage and charging instability can create wide electronic fault patterns that mimic module failure.",
@@ -504,8 +517,8 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     internalLinks: [
       {
-        label: "ECU and electrical category overview",
-        href: "/products?query=ecu",
+        label: "Shop ECUs and electrical parts",
+        href: "/products?category=electrical",
       },
       { label: "Compatibility question form", href: "/contact?enquiry=1" },
       { label: "Fitment FAQ and diagnostics checklist", href: "/faq" },
@@ -514,10 +527,6 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         label: "CarParts ECU symptom overview",
         href: "https://www.carparts.com/blog/bad-engine-control-module-ecm-symptoms-repair-replacement-cost/",
-      },
-      {
-        label: "Google FAQ structured data",
-        href: "https://developers.google.com/search/docs/appearance/structured-data/faqpage",
       },
       {
         label: "Schema.org BlogPosting reference",
@@ -538,9 +547,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "dpf-and-catalytic-replacement-cost-guide-europe",
-    title: "DPF and Catalytic Replacement: Cost and Sourcing Guide",
+    title: "DPF and Catalytic Converter Replacement Cost Guide",
     description:
-      "Understand DPF failure symptoms, replacement cost ranges, and sourcing choices for European diesel vehicles.",
+      "DPF and catalytic converter replacement cost explained: failure symptoms, cleaning vs replacing, and how to source the right part for your diesel or petrol car.",
     excerpt:
       "This guide explains when cleaning may work, when replacement is required, and how to source a compatible part without guesswork.",
     coverImage: "/images/blog/dpf-catalytic-replacement-cover.avif",
@@ -644,6 +653,16 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     faq: [
       {
+        question: "Is a catalytic converter worth replacing?",
+        answer:
+          "Usually yes: a failed converter causes a check engine light, failed emissions tests and, if it is blocked, power loss. Fix the cause first (misfires or oil burning destroy converters) or the new one will fail too.",
+      },
+      {
+        question: "Can a DPF be cleaned instead of replaced?",
+        answer:
+          "Often. A forced regeneration or off-car cleaning can restore a DPF that is blocked with soot. A DPF that is cracked or blocked with ash beyond its service life needs replacing.",
+      },
+      {
         question: "Can a blocked DPF damage other systems?",
         answer:
           "Yes. Sustained restriction can increase thermal stress and affect turbo and engine operation if left unresolved.",
@@ -661,8 +680,8 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     internalLinks: [
       {
-        label: "DPF and exhaust category overview",
-        href: "/products?query=dpf",
+        label: "Shop DPFs, catalytic converters and exhaust parts",
+        href: "/products?category=exhaust",
       },
       { label: "Shipping and returns guidance", href: "/shipping" },
       { label: "Technical question form", href: "/contact?enquiry=1" },
@@ -671,10 +690,6 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         label: "DPF cost discussion",
         href: "https://skanyx.com/blog/dpf-replacement-cost",
-      },
-      {
-        label: "Google Product structured data",
-        href: "https://developers.google.com/search/docs/appearance/structured-data/product-snippet",
       },
       {
         label: "Auto recycling perspective",
@@ -698,9 +713,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "save-on-ev-and-hybrid-battery-replacements",
-    title: "How To Save On EV and Hybrid Battery Replacements",
+    title: "Hybrid and EV Battery Replacement Cost: How to Save",
     description:
-      "A buyer framework for EV and hybrid battery replacement decisions, including diagnostics, warranties, and sourcing risk.",
+      "Hybrid and EV battery replacement cost explained: how to diagnose a failing pack, compare new, used and refurbished batteries, and check warranties first.",
     excerpt:
       "Battery replacement can be the biggest repair line item on early EV and hybrid models. Use this framework to make a better sourcing decision.",
     coverImage: "/images/blog/ev-hybrid-battery-replacement-cover.avif",
@@ -803,6 +818,11 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     faq: [
       {
+        question: "Is it worth replacing a hybrid battery?",
+        answer:
+          "Often yes, when the rest of the car is in good condition: a replacement battery is usually cheaper than replacing the car. Check whether the battery is still under the manufacturer's hybrid battery warranty before paying for one.",
+      },
+      {
         question: "Are used EV battery packs safe to buy?",
         answer:
           "They can be, provided testing data, traceability, and proper high-voltage installation processes are in place.",
@@ -820,8 +840,12 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     internalLinks: [
       {
-        label: "EV and hybrid category overview",
-        href: "/products?query=hybrid",
+        label: "Tesla Model Y parts and accessories",
+        href: "/vehicle/tesla-model-y",
+      },
+      {
+        label: "Tesla Model 3 parts and accessories",
+        href: "/vehicle/tesla-model-3",
       },
       {
         label: "High-voltage compatibility question form",
@@ -833,10 +857,6 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         label: "Greentec battery cost example",
         href: "https://greentecauto.com/hybrid-battery/fiat/500e/fiat-500e-2013-2017-brand-new-cell-hybrid-battery/",
-      },
-      {
-        label: "Google helpful content principles",
-        href: "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
       },
       {
         label: "Stellantis EV platform updates",
@@ -854,9 +874,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "recaro-seats-buying-and-fitment-guide-europe",
-    title: "Recaro Seats Guide: Fitment, Wiring, Airbags, and OEM Value",
+    title: "Recaro Seats Buying Guide: Fitment, Wiring and Airbags",
     description:
-      "A detailed buyer and installer guide for used Recaro interiors across Audi, Opel, Ford, and Alfa platforms, including fitment, wiring, safety, and sourcing checklists.",
+      "Buying used Recaro seats: which factory Recaro interiors fit which cars, wiring and airbag compatibility, what to check before you buy, and current stock.",
     excerpt:
       "Recaro seats are one of the highest-impact interior upgrades, but only when brackets, airbags, occupancy sensors, and trim compatibility are handled correctly. This deep guide covers inspection, purchase, and installation strategy for real-world European builds.",
     coverImage: "/images/blog/recaro-seats-guide-cover.avif",
@@ -1151,14 +1171,6 @@ export const BLOG_POSTS: BlogPost[] = [
         label: "Stellantis used parts expansion report",
         href: "https://www.automotiveworld.com/news/stellantis-sells-used-parts-via-ebay-in-four-eu-markets/",
       },
-      {
-        label: "Google people-first content guidance",
-        href: "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
-      },
-      {
-        label: "Google FAQ rich results documentation",
-        href: "https://developers.google.com/search/docs/appearance/structured-data/faqpage",
-      },
     ],
     backlinkOutreach: [
       {
@@ -1185,9 +1197,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "home-ev-charging-mobile-charger-guide",
-    title: "Home EV Charging: Mobile Charger Buying Guide",
+    title: "Home EV Charger Guide: Level 1, Level 2 and Mobile Chargers",
     description:
-      "Understand home charging setup basics, charger compatibility, and sourcing tips for Opel and Stellantis mobile chargers.",
+      "Home EV charger guide: Level 1 vs Level 2, mobile chargers, what installation involves, and how to choose a charger and cable that suit your car.",
     excerpt:
       "Choosing the wrong charging setup can reduce charging performance or add safety risk. This guide covers practical selection checks.",
     coverImage: "/images/blog/home-ev-charging-guide-cover.avif",
@@ -1291,6 +1303,11 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     faq: [
       {
+        question: "Is a home EV charger AC or DC?",
+        answer:
+          "AC. Home chargers supply AC power and the car's on-board charger converts it to DC for the battery. DC fast charging needs much larger equipment and is found at public charging stations.",
+      },
+      {
         question: "Can I use any EV cable with my car?",
         answer:
           "No. Connector standard, current rating, and charger-vehicle compatibility must all match your specific model.",
@@ -1308,8 +1325,16 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     internalLinks: [
       {
-        label: "Charging hardware category overview",
-        href: "/products?query=charger",
+        label: "Shop chargers and car electronics",
+        href: "/products?category=electronics",
+      },
+      {
+        label: "Tesla Model Y parts and accessories",
+        href: "/vehicle/tesla-model-y",
+      },
+      {
+        label: "Tesla Model 3 parts and accessories",
+        href: "/vehicle/tesla-model-3",
       },
       {
         label: "Charging compatibility question form",
@@ -1321,10 +1346,6 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         label: "Stellantis technology newsroom",
         href: "https://www.stellantis.com/en/innovation/technology",
-      },
-      {
-        label: "Google Search Central SEO starter",
-        href: "https://developers.google.com/search/docs/fundamentals/seo-starter-guide",
       },
       { label: "Schema.org FAQPage", href: "https://schema.org/FAQPage" },
     ],
@@ -1345,10 +1366,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "vin-decoder-guide-find-right-parts",
-    title:
-      "How to Use a VIN Decoder to Find the Right Parts (and Avoid Costly Returns)",
+    title: "Free VIN Decoder: How to Use a VIN to Find the Right Parts",
     description:
-      "Year/make/model search alone gets fitment wrong more often than most buyers realize. Here's how VIN-based lookup closes that gap and how to use MotorVault's VIN decoder to shop by exact build spec.",
+      "How to use a free VIN decoder to find parts that fit: where to find your VIN, what each part of it means, and why it beats searching by year, make and model.",
     excerpt:
       "Two cars with the same year, make, and model can still need different parts. A VIN decoder resolves the build-level differences that generic fitment search misses.",
     coverImage: "/images/blog/vin-decoder-guide-cover.avif",
@@ -1411,6 +1431,16 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     faq: [
       {
+        question: "Is a VIN decoder free?",
+        answer:
+          "Yes. Basic VIN decoding, which identifies the year, make, model, engine and factory, is free from the NHTSA and from MotorVault's VIN decoder. Paid vehicle history reports are a different service.",
+      },
+      {
+        question: "Is it safe to enter my VIN online?",
+        answer:
+          "Generally yes. A VIN identifies the vehicle, not the owner, and it is visible through your windshield. Decoding it reveals the car's specification, not personal information.",
+      },
+      {
         question: "Where do I find my VIN?",
         answer:
           "Look through the windshield at the driver's side of the dashboard, or check the sticker on the driver's door jamb. It's also printed on your registration and insurance card.",
@@ -1439,10 +1469,6 @@ export const BLOG_POSTS: BlogPost[] = [
         label: "NHTSA VIN decoder (vPIC) API",
         href: "https://vpic.nhtsa.dot.gov/api/",
       },
-      {
-        label: "Google people-first content guidance",
-        href: "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
-      },
     ],
     backlinkOutreach: [
       {
@@ -1458,9 +1484,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "oem-vs-aftermarket-brake-pads-rotors",
-    title: "OEM vs Aftermarket Brake Pads and Rotors: What Actually Matters",
+    title: "OEM vs Aftermarket Brake Pads and Rotors: Which Is Better?",
     description:
-      "Ceramic vs semi-metallic, OEM vs aftermarket, and when each choice actually changes stopping performance, noise, and rotor wear.",
+      "OEM vs aftermarket brake pads and rotors compared: ceramic vs semi-metallic, noise, dust, rotor wear, and when aftermarket brakes are as good as OEM.",
     excerpt:
       "Braking hardware is one category where reputable aftermarket routinely matches or beats OEM - but only once you know which compound and grade you're actually buying.",
     coverImage: "/images/blog/oem-vs-aftermarket-brake-pads-cover.avif",
@@ -1543,6 +1569,11 @@ export const BLOG_POSTS: BlogPost[] = [
     },
     faq: [
       {
+        question: "Should I replace rotors when I replace brake pads?",
+        answer:
+          "Not always. Replace or resurface rotors if they are below the minimum thickness stamped on them, warped (pulsing pedal), or deeply scored. Many shops replace both together because new pads bed in best on a fresh rotor surface.",
+      },
+      {
         question: "Are aftermarket brake pads as safe as OEM?",
         answer:
           "From a reputable brand with published friction and testing data, yes - the compound and manufacturing quality determine safety, not whether the box says OEM. Avoid unbranded, untraceable listings regardless of price.",
@@ -1561,7 +1592,7 @@ export const BLOG_POSTS: BlogPost[] = [
     internalLinks: [
       {
         label: "Shop brake pads and rotors",
-        href: "/products?category=Brakes",
+        href: "/products?category=brakes",
       },
       {
         label: "Decode your VIN to confirm exact caliper/rotor spec",
@@ -1573,10 +1604,6 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         label: "Schema.org Product reference",
         href: "https://schema.org/Product",
-      },
-      {
-        label: "Google people-first content guidance",
-        href: "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
       },
     ],
     backlinkOutreach: [
@@ -1593,10 +1620,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "check-engine-light-diagnostic-guide",
-    title:
-      "Check Engine Light On? A Step-by-Step Diagnostic Guide Before You Buy Parts",
+    title: "Check Engine Light On? What It Means and How to Read the Code",
     description:
-      "How to read an OBD-II trouble code correctly, tell a real failure from a sensor fluke, and avoid replacing the wrong part first.",
+      "What a check engine light means, how to read the OBD-II code yourself, when it is safe to drive, and how to avoid replacing the wrong part.",
     excerpt:
       "A trouble code names a symptom, not always the failed part. Here's how to read it correctly before you order a replacement.",
     coverImage: "/images/blog/check-engine-light-guide-cover.avif",
@@ -1659,6 +1685,11 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     faq: [
       {
+        question: "Is a check engine light serious?",
+        answer:
+          "A steady light means a fault has been stored and should be checked soon. A flashing light usually means a severe misfire that can overheat and damage the catalytic converter, so reduce speed and stop driving as soon as it is safe.",
+      },
+      {
         question: "Can I drive with the check engine light on?",
         answer:
           "A steady light usually means it's safe to drive to get it checked soon, but a flashing check engine light indicates an active misfire that can damage the catalytic converter and should be addressed immediately, not driven on.",
@@ -1677,7 +1708,7 @@ export const BLOG_POSTS: BlogPost[] = [
     internalLinks: [
       {
         label: "Shop sensors and ignition components",
-        href: "/products?category=Engines",
+        href: "/products?category=engine",
       },
       {
         label: "Decode your VIN to confirm sensor/ECU fitment",
@@ -1692,10 +1723,6 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         label: "NHTSA VIN decoder (vPIC) API",
         href: "https://vpic.nhtsa.dot.gov/api/",
-      },
-      {
-        label: "Google people-first content guidance",
-        href: "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
       },
     ],
     backlinkOutreach: [
@@ -1712,9 +1739,9 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "car-seat-replacement-airbags-sensors-fitment",
-    title: "Replacing Car Seats: Airbags, Sensors, and Fitment Explained",
+    title: "Replacing Car Seats with Airbags: Sensors, Wiring and Fitment",
     description:
-      "A practical guide to replacing seats in European cars and vans, covering side airbags, occupancy sensors, belt pretensioners, rails, trim codes, and what to inspect before buying used.",
+      "Replacing car seats with side airbags and occupancy sensors: fitment, wiring, airbag light fixes, and what to check before buying replacement seats.",
     excerpt:
       "Swapping a seat looks like four bolts and a connector. In any car built after the late 1990s it is a safety-system job: side airbags, pyrotechnic pretensioners, and occupancy detection all live inside the seat. This guide covers what carries over between cars, what must never be reused, and how to inspect a used seat before you pay for it.",
     coverImage: "/images/blog/recaro-seats-guide-cover.avif",
@@ -1916,6 +1943,11 @@ export const BLOG_POSTS: BlogPost[] = [
       ],
     },
     faq: [
+      {
+        question: "Can seat airbags be replaced?",
+        answer:
+          "Yes. A deployed side airbag is replaced as a module, or with a complete replacement seat, and the airbag system then needs its crash data cleared and a fault check. Use parts compatible with your car's airbag control unit.",
+      },
       {
         question: "Can I fit a seat from a different model?",
         answer:

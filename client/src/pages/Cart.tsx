@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Trash2, Plus, Minus, ArrowRight } from "lucide-react";
+import {
+  Trash2,
+  Plus,
+  Minus,
+  ArrowRight,
+  ArrowLeft,
+  LockKeyhole,
+  ShoppingCart,
+} from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -9,12 +17,15 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useSupabaseCart } from "@/hooks/useSupabaseCart";
 import { useRecommendations } from "@/hooks/useRecommendations";
 import { useProducts } from "@/hooks/useSupabaseProducts";
-import { getHighResImageUrl } from "@/lib/images";
+import { ProductImage } from "@/components/ProductImage";
+import { ProductCard } from "@/components/ProductCard";
+import { formatMoney } from "@/lib/pricing";
+import { trackAddToCart } from "@/hooks/useMetaPixel";
+import type { Product } from "@/types/supabase";
 import {
   calculateShipping,
   getFreeShippingThresholdUsd,
 } from "@shared/shipping";
-import currencyClient from "@/lib/currencyClient";
 import {
   SITE_LANGUAGE_CHANGED_EVENT,
   getSiteLanguage,
@@ -45,24 +56,21 @@ type ProductLookup = {
 
 export default function Cart() {
   const [, navigate] = useLocation();
-  const {
-    user,
-    isAuthenticated,
-    loading: authLoading,
-    sessionRestored,
-  } = useAuth();
+  const { user, isAuthenticated, sessionRestored } = useAuth();
   const {
     items: supabaseCartItems,
     isLoading: isSupabaseLoading,
     updateQuantity: updateSupabaseQuantity,
     removeFromCart: removeSupabaseItem,
     refetch: refetchSupabaseCart,
+    addToCart,
   } = useSupabaseCart(user?.id || null);
   const recommendations = useRecommendations(user?.id || null);
   const { products: dbProducts } = useProducts(1, 500);
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [addingProductId, setAddingProductId] = useState<string | null>(null);
   const [language, setLanguage] = useState<SiteLanguageCode>(() =>
     getSiteLanguage()
   );
@@ -167,9 +175,12 @@ export default function Cart() {
     refetchSupabaseCart,
   ]);
 
+  // Who the cart belongs to is known once the Supabase session is restored;
+  // the separate server-side profile check (auth.me, part of authLoading)
+  // adds a round trip - or, when the API is unreachable, several retries -
+  // and does not change which cart is shown, so the cart does not wait on it.
   const isWaitingOnCartData =
     !sessionRestored ||
-    authLoading ||
     awaitingCartHydration ||
     (isAuthenticated && isSupabaseLoading);
 
@@ -312,169 +323,185 @@ export default function Cart() {
     };
   });
 
+  // ---- Add-on suggestions --------------------------------------------------
+  // Real, in-stock, low-priced catalogue items that are not already in the
+  // cart. Cheapest first; the block is hidden when there is nothing suitable.
+  const ADD_ON_PRICE_CEILING_USD = 150;
+  const cartProductIds = new Set(
+    enrichedCartItems.map(item => String(item.productId || ""))
+  );
+  const addOnProducts = (dbProducts as Product[])
+    .filter(product => {
+      const price = Number(product.price);
+      return (
+        Number.isFinite(price) &&
+        price > 0 &&
+        price <= ADD_ON_PRICE_CEILING_USD &&
+        Number(product.stock ?? 0) > 0 &&
+        !cartProductIds.has(String(product.id))
+      );
+    })
+    .sort((a, b) => Number(a.price) - Number(b.price))
+    .slice(0, 4);
+
+  const handleAddOn = async (product: Product) => {
+    setAddingProductId(product.id);
+    try {
+      // Same cart hook the product page uses (handles guests, stock checks
+      // and the confirmation toast).
+      const added = await addToCart(product.id, 1);
+      if (!added) return;
+      trackAddToCart(product.id, product.title, Number(product.price) || 0, 1);
+      if (!isAuthenticated) {
+        // Guest carts live in localStorage; re-read so the new line shows up.
+        setCartItems(readCartFromStorage(localStorage.getItem("cart")));
+      }
+    } finally {
+      setAddingProductId(null);
+    }
+  };
+
+  const requestSignIn = () => {
+    try {
+      localStorage.setItem("oauth_return_to", "/cart");
+      savePendingAuthAction({
+        type: "cart",
+        redirectTo: "/cart",
+      });
+    } catch {
+      // ignore storage issues
+    }
+    window.dispatchEvent(
+      new CustomEvent("auth:required", {
+        detail: {
+          actionType: "cart",
+          redirectTo: "/cart",
+        },
+      })
+    );
+  };
+
+  const parseItemPrice = (item: CartItem) =>
+    parseFloat(item.price.replace(/[^\d.]/g, "") || "0");
+
   if (!showCartLoading && effectiveCartItems.length === 0) {
     return (
-      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
-        <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-secondary py-12 sm:py-16">
-          <p className="mb-4 text-lg sm:text-xl font-semibold text-gray-900">
+      <div className="container py-10 sm:py-16">
+        <div className="mx-auto flex max-w-lg flex-col items-center rounded-xl border border-gray-200 bg-gray-50 px-6 py-12 text-center sm:py-16">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-card">
+            <ShoppingCart
+              className="h-6 w-6 text-gray-500"
+              strokeWidth={1.75}
+              aria-hidden="true"
+            />
+          </div>
+          <h1 className="mt-5 text-2xl font-bold text-ink">
             {t("cart.empty", "Your cart is empty")}
-          </p>
-          <p className="mb-8 text-sm sm:text-base text-gray-600 text-center max-w-sm">
+          </h1>
+          <p className="mt-2 max-w-sm text-sm text-gray-600 sm:text-base">
             {t(
               "cart.startShopping",
               "Start shopping to add items to your cart"
             )}
           </p>
 
+          <Link href="/products" className="btn-primary btn-lg mt-7">
+            {t("header.browseProducts", "Browse Products")}
+            <ArrowRight size={18} aria-hidden="true" />
+          </Link>
+
           {!isAuthenticated && (
-            <div className="mb-6 w-full max-w-md flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-              <p className="text-sm text-blue-900 text-center">
+            <div className="mt-8 w-full border-t border-gray-200 pt-6">
+              <p className="text-sm text-gray-600">
                 Sign in to access your account cart and saved items.
               </p>
               <button
-                onClick={() => {
-                  try {
-                    localStorage.setItem("oauth_return_to", "/cart");
-                    savePendingAuthAction({
-                      type: "cart",
-                      redirectTo: "/cart",
-                    });
-                  } catch {
-                    // ignore storage issues
-                  }
-                  window.dispatchEvent(
-                    new CustomEvent("auth:required", {
-                      detail: {
-                        actionType: "cart",
-                        redirectTo: "/cart",
-                      },
-                    })
-                  );
-                }}
-                className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+                onClick={requestSignIn}
+                className="btn-secondary btn-sm mt-3"
               >
                 Login to Access Cart
               </button>
             </div>
           )}
-
-          <Link href="/products">
-            <a className="inline-flex items-center gap-2 px-6 py-3 sm:py-3.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base">
-              {t("header.browseProducts", "Browse Products")}
-              <ArrowRight size={18} />
-            </a>
-          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background w-full overflow-x-hidden">
-      <div className="container px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
-        <h1 className="mb-6 sm:mb-8 text-3xl sm:text-4xl font-bold text-gray-900">
-          {t("common.cart", "Shopping Cart")}
-        </h1>
+    <div className="min-h-screen w-full overflow-x-clip bg-background">
+      <div className="container py-6 sm:py-10">
+        <h1 className="text-ink">{t("common.cart", "Shopping Cart")}</h1>
 
         {!isAuthenticated && (
-          <div className="mb-6 flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-blue-900">
+          <div className="mt-5 flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-gray-700">
               Sign in to access your account cart and saved items.
             </p>
             <button
-              onClick={() => {
-                try {
-                  localStorage.setItem("oauth_return_to", "/cart");
-                  savePendingAuthAction({
-                    type: "cart",
-                    redirectTo: "/cart",
-                  });
-                } catch {
-                  // ignore storage issues
-                }
-                window.dispatchEvent(
-                  new CustomEvent("auth:required", {
-                    detail: {
-                      actionType: "cart",
-                      redirectTo: "/cart",
-                    },
-                  })
-                );
-              }}
-              className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+              onClick={requestSignIn}
+              className="btn-secondary btn-sm flex-none"
             >
               Login to Access Cart
             </button>
           </div>
         )}
 
-        <div className="grid gap-6 md:gap-8 md:grid-cols-3">
+        <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-10">
           {/* Cart Items */}
-          <div className="md:col-span-2">
-            <div className="space-y-4">
+          <div className="min-w-0">
+            <div className="divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white">
               {showCartLoading
                 ? [...Array(3)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="flex gap-4 rounded-lg border border-border bg-white p-4"
-                    >
-                      <Skeleton className="h-24 w-24 rounded-lg bg-gray-100 flex-shrink-0" />
+                    <div key={i} className="flex gap-4 p-4 sm:p-5">
+                      <Skeleton className="h-20 w-20 flex-shrink-0 rounded-lg sm:h-24 sm:w-24" />
                       <div className="flex-1 space-y-3">
                         <Skeleton className="h-5 w-11/12" />
                         <Skeleton className="h-4 w-28" />
-                        <Skeleton className="h-4 w-20" />
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-10 w-10 rounded-md" />
-                          <Skeleton className="h-4 w-8" />
-                          <Skeleton className="h-10 w-10 rounded-md" />
-                        </div>
+                        <Skeleton className="h-10 w-32 rounded-md" />
                       </div>
-                      <div className="flex flex-col items-end justify-between">
-                        <Skeleton className="h-5 w-20" />
-                        <Skeleton className="h-10 w-10 rounded-md" />
-                      </div>
+                      <Skeleton className="h-5 w-16" />
                     </div>
                   ))
                 : enrichedCartItems.map(item => (
                     <div
                       key={item.productId || item.productIndex}
-                      className="flex gap-4 rounded-lg border border-border bg-white p-4"
+                      className="flex gap-3 p-4 sm:gap-5 sm:p-5"
                     >
                       {/* Product Image */}
-                      <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-secondary">
-                        {item.image ? (
-                          <img
-                            src={getHighResImageUrl(item.image)}
-                            alt={item.title}
-                            className="h-full w-full object-contain p-2"
-                            crossOrigin="anonymous"
-                            onError={e => {
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-gray-400 text-xs">
-                            No Image
-                          </div>
-                        )}
-                      </div>
+                      <Link
+                        href={`/product/${item.productId || item.productIndex}`}
+                        className="flex-shrink-0"
+                        tabIndex={-1}
+                        aria-hidden="true"
+                      >
+                        <ProductImage
+                          src={item.image}
+                          alt={item.title}
+                          compactFallback
+                          className="h-20 w-20 rounded-lg sm:h-24 sm:w-24"
+                          imgClassName="p-1.5"
+                        />
+                      </Link>
 
                       {/* Product Info */}
-                      <div className="flex-1">
-                        <Link
-                          href={`/product/${item.productId || item.productIndex}`}
-                        >
-                          <span className="font-semibold hover:text-blue-600 line-clamp-2">
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <div className="flex items-start justify-between gap-3">
+                          <Link
+                            href={`/product/${item.productId || item.productIndex}`}
+                            className="line-clamp-2 text-sm font-semibold leading-snug text-ink hover:underline hover:underline-offset-2 sm:text-[15px]"
+                          >
                             {item.title}
-                          </span>
-                        </Link>
-                        <p className="mb-3 text-sm text-gray-600">
-                          {currencyClient.formatUSD(
-                            parseFloat(item.price.replace(/[^\d.]/g, "") || "0")
-                          )}
+                          </Link>
+                          <p className="price flex-none text-sm font-bold text-ink sm:text-base">
+                            {formatMoney(parseItemPrice(item) * item.quantity)}
+                          </p>
+                        </div>
+                        <p className="price mt-1 text-[13px] text-gray-600">
+                          {formatMoney(parseItemPrice(item))}
                         </p>
                         <p
-                          className={`mb-3 text-xs font-semibold ${item.stock === 0 ? "text-red-600" : "text-gray-500"}`}
+                          className={`mt-0.5 text-xs font-medium ${item.stock === 0 ? "text-brand" : "text-gray-500"}`}
                         >
                           {item.stock === 0
                             ? "Out of stock"
@@ -483,55 +510,46 @@ export default function Cart() {
                               : "Stock information unavailable"}
                         </p>
 
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-2">
+                        {/* Quantity Controls + Remove */}
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <div className="inline-flex items-center rounded-md border border-gray-300">
+                            <button
+                              onClick={() =>
+                                updateCartQuantity(
+                                  item.productIndex,
+                                  item.quantity - 1
+                                )
+                              }
+                              className="flex h-11 w-11 items-center justify-center sm:h-10 sm:w-10 rounded-l-md text-gray-700 transition-colors hover:bg-gray-100"
+                              aria-label="Decrease quantity"
+                            >
+                              <Minus size={15} />
+                            </button>
+                            <span className="price w-9 text-center text-sm font-semibold">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() =>
+                                updateCartQuantity(
+                                  item.productIndex,
+                                  item.quantity + 1
+                                )
+                              }
+                              disabled={item.stock === 0}
+                              className="flex h-11 w-11 items-center justify-center sm:h-10 sm:w-10 rounded-r-md text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                              aria-label="Increase quantity"
+                            >
+                              <Plus size={15} />
+                            </button>
+                          </div>
                           <button
-                            onClick={() =>
-                              updateCartQuantity(
-                                item.productIndex,
-                                item.quantity - 1
-                              )
-                            }
-                            className="rounded-md border border-border px-3 py-2 hover:bg-secondary transition-colors min-h-10 min-w-10 flex items-center justify-center"
-                            aria-label="Decrease quantity"
+                            onClick={() => removeFromCart(item.productIndex)}
+                            className="flex h-11 w-11 items-center justify-center sm:h-10 sm:w-10 rounded-md text-gray-500 transition-colors hover:bg-brand-soft hover:text-brand"
+                            aria-label="Remove from cart"
                           >
-                            <Minus size={16} />
-                          </button>
-                          <span className="w-8 text-center text-sm font-semibold">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() =>
-                              updateCartQuantity(
-                                item.productIndex,
-                                item.quantity + 1
-                              )
-                            }
-                            disabled={item.stock === 0}
-                            className="rounded-md border border-border px-3 py-2 hover:bg-secondary transition-colors min-h-10 min-w-10 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                            aria-label="Increase quantity"
-                          >
-                            <Plus size={16} />
+                            <Trash2 size={17} />
                           </button>
                         </div>
-                      </div>
-
-                      {/* Price & Remove */}
-                      <div className="flex flex-col items-end justify-between">
-                        <p className="font-bold text-sm sm:text-base">
-                          {currencyClient.formatUSD(
-                            parseFloat(
-                              item.price.replace(/[^\d.]/g, "") || "0"
-                            ) * item.quantity
-                          )}
-                        </p>
-                        <button
-                          onClick={() => removeFromCart(item.productIndex)}
-                          className="text-red-600 hover:text-red-700 p-2 rounded hover:bg-red-50 transition-colors min-h-10 min-w-10 flex items-center justify-center"
-                          aria-label="Remove from cart"
-                        >
-                          <Trash2 size={18} />
-                        </button>
                       </div>
                     </div>
                   ))}
@@ -539,99 +557,121 @@ export default function Cart() {
 
             {/* Continue Shopping */}
             {!showCartLoading && (
-              <Link href="/products">
-                <a className="mt-6 inline-flex items-center gap-2 text-sm font-semibold hover:text-gray-600">
-                  ← {t("cart.continueShopping", "Continue Shopping")}
-                </a>
+              <Link
+                href="/products"
+                className="mt-5 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-ink underline-offset-4 hover:underline"
+              >
+                <ArrowLeft size={16} aria-hidden="true" />
+                {t("cart.continueShopping", "Continue Shopping")}
               </Link>
             )}
           </div>
 
           {/* Order Summary */}
-          <div className="rounded-lg border border-border bg-white p-4 sm:p-6 h-fit">
-            <h2 className="mb-4 sm:mb-6 text-lg sm:text-xl font-bold">
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 sm:p-6 lg:sticky lg:top-24 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+            <h2 className="text-lg font-bold text-ink">
               {t("checkout.orderSummary", "Order Summary")}
             </h2>
 
             {showCartLoading ? (
-              <div className="space-y-4">
+              <div className="mt-5 space-y-4">
                 <div className="space-y-3">
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-5/6" />
                   <Skeleton className="h-4 w-2/3" />
                 </div>
-                <Skeleton className="h-12 w-full rounded-lg" />
-                <Skeleton className="h-12 w-full rounded-lg" />
-                <Skeleton className="h-10 w-40 rounded-lg" />
+                <Skeleton className="h-[52px] w-full rounded-md" />
+                <Skeleton className="h-11 w-full rounded-md" />
               </div>
             ) : (
               <>
-                <div className="space-y-3 sm:space-y-4 border-b border-border pb-4">
-                  <div className="flex justify-between text-xs sm:text-sm">
+                <div className="mt-5 space-y-3 border-b border-gray-200 pb-4 text-sm">
+                  <div className="flex justify-between gap-4">
                     <span className="text-gray-600">
                       {t("checkout.subtotal", "Subtotal")}
                     </span>
-                    <span className="font-semibold">
-                      {currencyClient.formatUSD(subtotal)}
+                    <span className="price font-semibold text-ink">
+                      {formatMoney(subtotal)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs sm:text-sm">
+                  <div className="flex justify-between gap-4">
                     <span className="text-gray-600">
                       {t("checkout.estimatedShipping", "Estimated shipping")}
                     </span>
-                    <span className="font-semibold">
+                    <span className="price font-semibold text-ink">
                       {shipping === 0
                         ? t("checkout.free", "FREE")
-                        : currencyClient.formatUSD(shipping)}
+                        : formatMoney(shipping)}
                     </span>
                   </div>
                 </div>
 
-                <div className="my-4 flex justify-between">
-                  <span className="font-bold text-base sm:text-lg">
+                <div className="mt-4 flex items-baseline justify-between gap-4">
+                  <span className="text-base font-bold text-ink">
                     {t("checkout.total", "Total")}
                   </span>
-                  <span className="text-xl sm:text-2xl font-bold">
-                    {currencyClient.formatUSD(total)}
+                  <span className="price text-2xl font-bold text-ink">
+                    {formatMoney(total)}
                   </span>
                 </div>
-                <p className="mb-2 text-xs text-gray-500 text-right">
+                <p className="mt-0.5 text-right text-xs text-gray-500">
                   {t("checkout.taxInclusive", "Tax inclusive")}
                 </p>
-
-                <p className="mb-2 text-xs text-gray-600">
-                  {t(
-                    "checkout.shippingEstimateDisclaimer",
-                    "Shipping shown is an estimate. Final shipping is confirmed at checkout."
-                  )}
-                </p>
-                {shipping > 0 && (
-                  <p className="mb-4 text-xs text-gray-600">
-                    {t(
-                      "checkout.freeShippingNotice",
-                      `Shipping fee is 5% for orders under $${getFreeShippingThresholdUsd().toLocaleString("en-US")}`
-                    )}
-                  </p>
-                )}
 
                 <button
                   onClick={() => {
                     // Always allow navigating to checkout; inline auth will be shown on the checkout page
                     navigate("/checkout");
                   }}
-                  className="w-full py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                  className="btn-accent btn-lg btn-block mt-5"
                 >
+                  <LockKeyhole className="h-4 w-4" aria-hidden="true" />
                   {t("checkout.proceedToCheckout", "Proceed to Checkout")}
                 </button>
 
-                <Link href="/products">
-                  <a className="mt-3 w-full inline-block text-center py-2.5 sm:py-3 rounded-lg border border-border bg-background font-semibold hover:bg-secondary transition-colors text-sm sm:text-base">
-                    {t("cart.continueShopping", "Continue Shopping")}
-                  </a>
+                <Link href="/products" className="btn-secondary btn-block mt-3">
+                  {t("cart.continueShopping", "Continue Shopping")}
                 </Link>
+
+                <div className="mt-5 space-y-1.5 border-t border-gray-200 pt-4 text-xs leading-relaxed text-gray-500">
+                  <p>
+                    {t(
+                      "checkout.shippingEstimateDisclaimer",
+                      "Shipping shown is an estimate. Final shipping is confirmed at checkout."
+                    )}
+                  </p>
+                  {shipping > 0 && (
+                    <p>
+                      {t(
+                        "checkout.freeShippingNotice",
+                        `Shipping fee is 5% for orders under $${getFreeShippingThresholdUsd().toLocaleString("en-US")}`
+                      )}
+                    </p>
+                  )}
+                </div>
               </>
             )}
           </div>
+
+          {/* Add-on suggestions (real catalogue items only) */}
+          {!showCartLoading && addOnProducts.length >= 2 && (
+            <section className="min-w-0 border-t border-gray-200 pt-8 lg:col-start-1">
+              <h2 className="mb-4 text-xl font-bold text-ink">
+                {t("cart.addOnsTitle", "Add to your order")}
+              </h2>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
+                {addOnProducts.map(product => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onAddToCart={handleAddOn}
+                    isAdding={addingProductId === product.id}
+                    className="lg:[&:nth-child(4)]:hidden xl:[&:nth-child(4)]:flex"
+                  />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </div>

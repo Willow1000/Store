@@ -9,11 +9,13 @@ import { trpcClient } from "./trpc";
 import currencyClient from "./currencyClient";
 
 export interface StripeCheckoutInput {
-  userId?: number;
+  /** Supabase user id (uuid); omitted for a guest checkout. */
+  userId?: string;
   email: string;
   userName?: string;
   items: Array<{
-    productId: number;
+    /** Product uuid from the Supabase `products` table. */
+    productId: string;
     quantity: number;
     price: string;
   }>;

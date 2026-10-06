@@ -104,12 +104,16 @@ export function HeroSlideshow() {
   const activeSlide = slides[currentSlide];
 
   return (
-    <div className="relative w-full h-screen max-h-[600px] bg-gray-900 overflow-hidden -mt-0">
+    <section
+      aria-roledescription="carousel"
+      aria-label="Featured"
+      className="relative h-[380px] w-full overflow-hidden bg-gray-950 sm:h-[480px] lg:h-[540px]"
+    >
       {/* Slides Container */}
-      <div className="relative w-full h-full">
+      <div className="relative h-full w-full">
         <div
           key={activeSlide.id}
-          className="absolute inset-0 transition-opacity duration-700 ease-in-out opacity-100"
+          className="absolute inset-0 animate-in fade-in duration-700"
         >
           {/* Background Image */}
           <picture>
@@ -118,89 +122,101 @@ export function HeroSlideshow() {
             <img
               src={activeSlide.imageWebp}
               alt={activeSlide.imageAlt}
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
               loading="eager"
               fetchPriority="high"
               decoding="async"
             />
           </picture>
 
-          {/* Dark Overlay */}
-          <div className="absolute inset-0 bg-black/40 mix-blend-multiply" />
+          {/* Scrim: dark on the text side, clear on the photo side */}
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-950/90 via-gray-950/55 to-gray-950/30 md:bg-gradient-to-r md:from-gray-950/90 md:via-gray-950/60 md:to-transparent" />
         </div>
       </div>
 
       {/* Content Overlay */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="text-center text-white px-4 sm:px-6 lg:px-8 max-w-2xl">
-          {/* Main Title */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 drop-shadow-lg">
-            {activeSlide.title}
+      <div className="absolute inset-0 flex items-end md:items-center">
+        <div className="container pb-16 text-white md:pb-0">
+          {/* The page's single, stable H1. Slide copy below rotates, so it is
+              display text rather than a heading. */}
+          <h1 className="eyebrow !text-white/80">
+            OEM and aftermarket auto parts online
           </h1>
-
-          {/* Subtitle */}
-          <p className="text-lg sm:text-xl md:text-2xl text-gray-100 mb-6 drop-shadow-md">
-            {activeSlide.subtitle}
-          </p>
-
-          {/* Description */}
-          <p className="text-base sm:text-lg text-gray-200 mb-8 drop-shadow-md max-w-xl mx-auto">
-            {activeSlide.description}
-          </p>
-
-          {/* CTA Button */}
-          <Link
-            href={activeSlide.ctaLink}
-            className="inline-block px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl"
+          <div
+            key={activeSlide.id}
+            className="max-w-xl animate-in fade-in slide-in-from-bottom-2 duration-500"
           >
-            {activeSlide.cta}
-          </Link>
+            {/* Slide title */}
+            <p className="mt-3 font-display text-[2rem] font-extrabold leading-[1.05] tracking-[-0.015em] sm:text-5xl lg:text-[3.5rem]">
+              {activeSlide.title}
+            </p>
+
+            {/* Subtitle */}
+            <p className="mt-4 max-w-lg text-[15px] font-medium leading-snug text-white sm:text-lg">
+              {activeSlide.subtitle}
+            </p>
+
+            {/* Description */}
+            <p className="mt-2 hidden max-w-lg text-[15px] leading-relaxed text-white/80 sm:block">
+              {activeSlide.description}
+            </p>
+
+            {/* CTA Button */}
+            <Link
+              href={activeSlide.ctaLink}
+              className="btn-accent btn-lg mt-6 max-w-full whitespace-normal py-2 text-left"
+            >
+              {activeSlide.cta}
+              <ChevronRight className="h-4 w-4 flex-none" aria-hidden="true" />
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Navigation Arrows */}
-      <button
-        onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/20 hover:bg-white/40 text-white p-3 rounded-full transition-colors duration-200 backdrop-blur-sm"
-        aria-label="Previous slide"
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </button>
+      {/* Controls: slide position + arrows, grouped out of the way of the copy */}
+      <div className="absolute inset-x-0 bottom-0 z-20">
+        <div className="container flex items-center justify-between pb-4">
+          <div className="flex items-center">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                className="flex h-11 w-9 items-center justify-center first:-ml-3"
+                aria-label={`Go to slide ${index + 1}`}
+                aria-current={index === currentSlide ? "true" : undefined}
+              >
+                <span
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    index === currentSlide
+                      ? "w-7 bg-white"
+                      : "w-4 bg-white/40 hover:bg-white/70"
+                  }`}
+                />
+              </button>
+            ))}
+            <span className="price ml-2 hidden text-xs font-medium text-white/70 sm:inline">
+              {currentSlide + 1} / {slides.length}
+            </span>
+          </div>
 
-      <button
-        onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/20 hover:bg-white/40 text-white p-3 rounded-full transition-colors duration-200 backdrop-blur-sm"
-        aria-label="Next slide"
-      >
-        <ChevronRight className="w-6 h-6" />
-      </button>
-
-      {/* Dot Indicators */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-        {slides.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className={`relative p-4 -m-4 min-h-[44px] min-w-[44px] flex items-center justify-center transition-all duration-300 ${
-              index === currentSlide ? "" : ""
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          >
-            <span
-              className={`h-3 w-3 rounded-full transition-all duration-300 ${
-                index === currentSlide
-                  ? "bg-white w-8"
-                  : "bg-white/50 hover:bg-white/75"
-              }`}
-            />
-          </button>
-        ))}
+          <div className="flex gap-2">
+            <button
+              onClick={prevSlide}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white backdrop-blur-sm transition-colors hover:bg-white hover:text-ink"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={nextSlide}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white backdrop-blur-sm transition-colors hover:bg-white hover:text-ink"
+              aria-label="Next slide"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
       </div>
-
-      {/* Mobile Hint */}
-      <div className="absolute top-4 right-4 text-white text-xs bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm hidden sm:block">
-        {currentSlide + 1} / {slides.length}
-      </div>
-    </div>
+    </section>
   );
 }

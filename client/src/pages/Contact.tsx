@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useSearch } from "wouter";
 import { RecaptchaCheckbox } from "@/components/RecaptchaCheckbox";
 import { SEOHead } from "@/components/SEOHead";
+import { PageHeader } from "@/components/PageHeader";
 import { GoogleMapsLocator } from "@/components/GoogleMapsLocator";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getSiteLanguage, type SiteLanguageCode } from "@/lib/language";
@@ -27,7 +28,7 @@ const MAX_NAME_LENGTH = 100;
 const MAX_EMAIL_LENGTH = 255;
 const MAX_MESSAGE_LENGTH = 5000;
 const SUPPORT_EMAIL = "support@motorvault.shop";
-const WHATSAPP_NUMBER_E164 = "31687659021";
+const WHATSAPP_NUMBER_E164 = "14435540384";
 const WHATSAPP_DEFAULT_MESSAGE =
   "Hello, I'm from your website, can I get more information.";
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER_E164}?text=${encodeURIComponent(WHATSAPP_DEFAULT_MESSAGE)}`;
@@ -485,20 +486,22 @@ export default function Contact() {
         ]}
         canonical="https://motorvault.shop/contact"
       />
-      <div className="min-h-screen bg-background pt-6">
-        <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">
-          <h1 className="text-4xl font-bold mb-8">Contact Us</h1>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            <div>
-              <h2 className="text-2xl font-semibold mb-6">Get in Touch</h2>
-              <div className="space-y-6">
+      <div className="min-h-screen bg-white">
+        <PageHeader
+          title="Contact Us"
+          breadcrumb={[{ label: "Contact Us", href: "/contact" }]}
+        />
+        <div className="container py-8 sm:py-12">
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-14">
+            <div className="order-last lg:order-first">
+              <h2 className="mb-5 text-xl font-bold text-ink">Get in Touch</h2>
+              <div className="space-y-5 [&_h3]:mb-1 [&_h3]:font-sans [&_h3]:text-[13px] [&_h3]:font-semibold [&_h3]:tracking-normal [&_h3]:text-gray-500">
                 <div>
-                  <h3 className="font-semibold mb-2">Email</h3>
-                  <p className="text-gray-600">
+                  <h3>Email</h3>
+                  <p className="text-[15px] text-ink">
                     <a
                       href="mailto:support.motorvault@gmail.com"
-                      className="text-blue-600 hover:underline"
+                      className="font-medium text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                     >
                       {SUPPORT_EMAIL}
                     </a>
@@ -506,13 +509,8 @@ export default function Contact() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-2">Phone</h3>
-                  <p className="text-gray-600">1-800-MOTORVAULT</p>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold mb-2">Hours</h3>
-                  <p className="text-gray-600">
+                  <h3>Hours</h3>
+                  <p className="text-[15px] text-ink">
                     Monday - Friday: 9 AM - 6 PM
                     <br />
                     Saturday: 10 AM - 4 PM
@@ -522,12 +520,22 @@ export default function Contact() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-2">WhatsApp</h3>
+                  <h3>WhatsApp</h3>
+                  <p className="text-[15px] text-ink">
+                    <a
+                      href={WHATSAPP_LINK}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
+                    >
+                      +1 443-554-0384
+                    </a>
+                  </p>
                   <a
                     href={WHATSAPP_LINK}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors mt-2"
+                    className="btn-secondary mt-1 [&_svg]:text-success"
                     title="Chat with us on WhatsApp"
                   >
                     <svg
@@ -536,7 +544,7 @@ export default function Contact() {
                       viewBox="0 0 24 24"
                       strokeWidth={1.5}
                       stroke="currentColor"
-                      className="w-5 h-5 mr-2"
+                      className="h-5 w-5"
                     >
                       <path
                         strokeLinecap="round"
@@ -549,19 +557,19 @@ export default function Contact() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-2">Facebook</h3>
+                  <h3>Facebook</h3>
                   <a
                     href="https://www.facebook.com/profile.php?id=61590090897198"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors mt-2"
+                    className="btn-secondary mt-1"
                     title="Visit our Facebook page"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       fill="currentColor"
                       viewBox="0 0 24 24"
-                      className="w-5 h-5 mr-2"
+                      className="h-5 w-5"
                     >
                       <path d="M22.675 0h-21.35C.595 0 0 .592 0 1.326v21.348C0 23.406.595 24 1.325 24h11.495v-9.294H9.691v-3.622h3.129V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.797.143v3.24l-1.918.001c-1.504 0-1.797.715-1.797 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116C23.406 24 24 23.406 24 22.674V1.326C24 .592 23.406 0 22.675 0" />
                     </svg>
@@ -570,8 +578,8 @@ export default function Contact() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-2">Find Us on Google Maps</h3>
-                  <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                  <h3>Find Us on Google Maps</h3>
+                  <div className="mt-2 overflow-hidden rounded-xl border border-gray-200">
                     <div className="h-[260px] sm:h-[320px] lg:h-[360px]">
                       <GoogleMapsLocator />
                     </div>
@@ -580,12 +588,12 @@ export default function Contact() {
               </div>
             </div>
 
-            <div>
-              <h2 className="text-2xl font-semibold mb-6">Contact Form</h2>
+            <div className="panel self-start shadow-card">
+              <h2 className="mb-5 text-xl font-bold text-ink">Contact Form</h2>
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Name <span className="text-red-500">*</span>
+                  <label className="label">
+                    Name <span className="text-brand">*</span>
                   </label>
                   <input
                     type="text"
@@ -594,16 +602,16 @@ export default function Contact() {
                     placeholder="Your full name"
                     maxLength={MAX_NAME_LENGTH}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    className="field"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="price mt-1 text-right text-xs text-gray-500">
                     {formData.name.length}/{MAX_NAME_LENGTH}
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Email <span className="text-red-500">*</span>
+                  <label className="label">
+                    Email <span className="text-brand">*</span>
                   </label>
                   <input
                     type="email"
@@ -612,16 +620,16 @@ export default function Contact() {
                     placeholder="your@email.com"
                     maxLength={MAX_EMAIL_LENGTH}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    className="field"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="price mt-1 text-right text-xs text-gray-500">
                     {formData.email.length}/{MAX_EMAIL_LENGTH}
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Subject <span className="text-red-500">*</span>
+                  <label className="label">
+                    Subject <span className="text-brand">*</span>
                   </label>
                   <input
                     type="text"
@@ -630,21 +638,19 @@ export default function Contact() {
                     placeholder="What is this about?"
                     maxLength={200}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    className="field"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="price mt-1 text-right text-xs text-gray-500">
                     {formData.subject.length}/200
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Location
-                  </label>
+                  <label className="label">Location</label>
                   <select
                     value={formData.location}
                     onChange={e => handleInputChange(e, "location")}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    className="field"
                   >
                     <option value="">Select your location</option>
                     {LOCATION_OPTIONS.map(location => (
@@ -656,8 +662,8 @@ export default function Contact() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Message <span className="text-red-500">*</span>
+                  <label className="label">
+                    Message <span className="text-brand">*</span>
                   </label>
                   <textarea
                     rows={5}
@@ -666,15 +672,15 @@ export default function Contact() {
                     placeholder="Your message here..."
                     maxLength={MAX_MESSAGE_LENGTH}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    className="field"
                   />
-                  <div className="flex justify-between items-center mt-1">
-                    <p className="text-xs text-gray-500">
+                  <div className="mt-1 flex flex-row-reverse items-center justify-between gap-3">
+                    <p className="price text-xs text-gray-500">
                       {formData.message.length}/{MAX_MESSAGE_LENGTH}
                     </p>
                     {formData.message.length < 10 &&
                       formData.message.length > 0 && (
-                        <p className="text-xs text-red-500">
+                        <p className="text-xs font-medium text-brand">
                           Message must be at least 10 characters
                         </p>
                       )}
@@ -695,7 +701,7 @@ export default function Contact() {
 
                 <RecaptchaCheckbox
                   onChange={setCaptchaToken}
-                  className="rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 sm:px-4 py-3 sm:py-4 mt-4 sm:mt-6"
+                  className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 sm:px-4 sm:py-4"
                   helperText={
                     !captchaToken
                       ? "Please complete this security check before sending your message"
@@ -706,7 +712,7 @@ export default function Contact() {
                 <button
                   type="submit"
                   disabled={isLoading || !captchaToken}
-                  className="w-full bg-black text-white py-2 rounded-lg font-medium hover:bg-gray-900 disabled:bg-gray-400 transition-colors"
+                  className="btn-primary btn-lg btn-block whitespace-normal"
                   title={
                     !captchaToken
                       ? "Please complete the security check first"

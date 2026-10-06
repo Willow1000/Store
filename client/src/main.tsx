@@ -15,6 +15,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import { hydrateRoot } from "react-dom/client";
+import {
+  SsrPageDataProvider,
+  readEmbeddedSsrPageData,
+} from "./lib/ssrPageData";
 import { initializeSiteLanguage } from "./lib/language";
 import superjson from "superjson";
 import App from "./App";
@@ -109,13 +113,17 @@ async function bootstrapApp() {
     }
 
     const headCollector = createHeadCollector();
+    // Start from the data the server rendered with, so hydration matches.
+    const ssrPageData = readEmbeddedSsrPageData();
     const appTree = (
       <HeadProvider collector={headCollector}>
-        <trpc.Provider client={trpcClient} queryClient={queryClient}>
-          <QueryClientProvider client={queryClient}>
-            <App />
-          </QueryClientProvider>
-        </trpc.Provider>
+        <SsrPageDataProvider data={ssrPageData}>
+          <trpc.Provider client={trpcClient} queryClient={queryClient}>
+            <QueryClientProvider client={queryClient}>
+              <App />
+            </QueryClientProvider>
+          </trpc.Provider>
+        </SsrPageDataProvider>
       </HeadProvider>
     );
 

@@ -1,7 +1,9 @@
 import { SEOHead } from "@/components/SEOHead";
+import { ShareButton } from "@/components/ShareButton";
 import { getSocialImageUrl } from "@shared/socialImage";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { BLOG_AUTHOR, BLOG_POSTS, getBlogPostBySlug } from "@shared/blogPosts";
+import { fitSeoTitle } from "@/lib/productSeo";
 import { useState } from "react";
 import { Link, useRoute } from "wouter";
 
@@ -49,7 +51,7 @@ function ReferenceImageCard({
           href={sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-1 inline-block text-blue-700 hover:text-blue-800 hover:underline"
+          className="mt-1 inline-block text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
         >
           View original source
         </a>
@@ -65,18 +67,13 @@ export default function BlogPost() {
 
   if (!post) {
     return (
-      <div className="min-h-screen bg-gray-50 py-14">
-        <div className="mx-auto max-w-screen-md rounded-3xl border border-gray-200 bg-white p-8 text-center">
-          <h1 className="text-3xl font-black text-gray-950">
-            Article not found
-          </h1>
-          <p className="mt-3 text-gray-700">
+      <div className="container py-16 sm:py-24">
+        <div className="mx-auto max-w-lg rounded-xl border border-dashed border-gray-300 px-6 py-12 text-center">
+          <h1 className="text-2xl font-bold text-ink">Article not found</h1>
+          <p className="mt-2 text-sm text-gray-600">
             The requested article could not be located.
           </p>
-          <Link
-            href="/blog"
-            className="mt-6 inline-flex rounded-full bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-700"
-          >
+          <Link href="/blog" className="btn-primary mt-6">
             Back to blog
           </Link>
         </div>
@@ -97,7 +94,7 @@ export default function BlogPost() {
     <>
       <SEOHead
         pageType="article"
-        title={`${post.title} | MotorVault Blog`}
+        title={fitSeoTitle(post.title, " | MotorVault Blog")}
         description={post.description}
         canonical={`/blog/${post.slug}`}
         ogType="article"
@@ -105,6 +102,7 @@ export default function BlogPost() {
         keywords={post.keywords}
         articleData={{
           author: BLOG_AUTHOR,
+          authorType: "Organization",
           publishedDate: post.publishedDate,
           modifiedDate: post.updatedDate,
           image: getSocialImageUrl(post.coverImage),
@@ -117,40 +115,30 @@ export default function BlogPost() {
         ]}
       />
 
-      <article className="min-h-screen bg-gray-50 pb-14 pt-8">
-        <div className="mx-auto grid max-w-screen-xl gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-8">
-          <main className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
-            <img
-              src={post.coverImage}
-              alt={post.coverImageAlt}
-              className="h-64 w-full object-cover sm:h-80"
+      <article className="min-h-screen bg-white pb-14">
+        <div className="border-b border-gray-200 bg-gray-50">
+          <div className="container py-6 sm:py-8">
+            <Breadcrumb
+              items={[
+                { label: "Blog", href: "/blog" },
+                { label: post.title, href: `/blog/${post.slug}` },
+              ]}
+              className="mb-4"
+              // BreadcrumbList JSON-LD is already emitted by SEOHead above.
+              includeStructuredData={false}
             />
-
-            <div className="p-6 sm:p-8">
-              <Breadcrumb
-                items={[
-                  { label: "Blog", href: "/blog" },
-                  { label: post.title, href: `/blog/${post.slug}` },
-                ]}
-                className="mb-4"
-              />
+            <div className="max-w-3xl">
               <Link
                 href="/blog"
-                className="text-sm font-semibold text-blue-700 hover:text-blue-800"
+                className="text-[13px] font-semibold text-ink underline-offset-4 hover:underline"
               >
                 Back to blog
               </Link>
-              <h1 className="mt-3 text-3xl font-black tracking-tight text-gray-950 sm:text-4xl">
-                {post.title}
-              </h1>
-              <p className="mt-4 text-lg text-gray-700">{post.excerpt}</p>
-              <p className="mt-4 text-base text-gray-700">
-                {post.description} It is written for buyers, DIYers, and
-                workshops who want clearer technical context, more reliable
-                fitment checks, and fewer avoidable mistakes.
+              <h1 className="mt-2 text-ink">{post.title}</h1>
+              <p className="mt-3 text-base text-gray-700 sm:text-lg">
+                {post.excerpt}
               </p>
-
-              <div className="mt-4 flex flex-wrap gap-3 text-sm text-gray-500">
+              <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-gray-500">
                 <span>By {BLOG_AUTHOR}</span>
                 <span>{post.readingTime}</span>
                 <span>
@@ -160,9 +148,31 @@ export default function BlogPost() {
                   Updated {new Date(post.updatedDate).toLocaleDateString()}
                 </span>
               </div>
+              <ShareButton
+                title={post.title}
+                url={`/blog/${post.slug}`}
+                className="-ml-2 mt-2"
+              />
+            </div>
+          </div>
+        </div>
 
-              <section className="mt-8 rounded-2xl border border-gray-200 bg-gray-50 p-5">
-                <h2 className="text-xl font-bold text-gray-950">
+        <div className="container grid gap-10 pt-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
+          <div className="min-w-0">
+            <img
+              src={post.coverImage}
+              alt={post.coverImageAlt}
+              className="aspect-[16/9] w-full rounded-xl bg-well object-cover"
+            />
+            <div className="mt-6 max-w-3xl">
+              <p className="text-[15px] leading-relaxed text-gray-700 sm:text-base">
+                {post.description} It is written for buyers, DIYers, and
+                workshops who want clearer technical context, more reliable
+                fitment checks, and fewer avoidable mistakes.
+              </p>
+
+              <section className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-5">
+                <h2 className="font-sans text-base font-semibold tracking-normal text-ink">
                   In this guide
                 </h2>
                 <ul className="mt-3 space-y-2 text-sm text-gray-700">
@@ -170,7 +180,7 @@ export default function BlogPost() {
                     <li key={item.id}>
                       <a
                         href={`#${item.id}`}
-                        className="text-blue-700 hover:text-blue-800 hover:underline"
+                        className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                       >
                         {item.heading}
                       </a>
@@ -185,7 +195,7 @@ export default function BlogPost() {
                   id={slugifyHeading(section.heading)}
                   className="mt-10 scroll-mt-24"
                 >
-                  <h2 className="text-2xl font-bold text-gray-950">
+                  <h2 className="text-xl font-bold text-ink sm:text-2xl">
                     {section.heading}
                   </h2>
                   <p className="mt-3 text-gray-700">{section.summary}</p>
@@ -206,7 +216,7 @@ export default function BlogPost() {
 
               {post.comparisonTable && (
                 <section className="mt-10">
-                  <h2 className="text-2xl font-bold text-gray-950">
+                  <h2 className="text-xl font-bold text-ink sm:text-2xl">
                     Comparison table
                   </h2>
                   <p className="mt-2 text-gray-700">
@@ -247,7 +257,7 @@ export default function BlogPost() {
 
               {post.referenceImages && post.referenceImages.length > 0 && (
                 <section className="mt-10">
-                  <h2 className="text-2xl font-bold text-gray-950">
+                  <h2 className="text-xl font-bold text-ink sm:text-2xl">
                     External reference images
                   </h2>
                   <p className="mt-2 text-gray-700">
@@ -269,8 +279,8 @@ export default function BlogPost() {
                 </section>
               )}
 
-              <section className="mt-10 rounded-2xl border border-gray-200 bg-gray-50 p-5">
-                <h2 className="text-xl font-bold text-gray-950">
+              <section className="mt-10 rounded-xl border border-gray-200 bg-gray-50 p-5">
+                <h2 className="font-sans text-base font-semibold tracking-normal text-ink">
                   Related site resources
                 </h2>
                 <p className="mt-2 text-sm text-gray-700">
@@ -283,7 +293,7 @@ export default function BlogPost() {
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        className="text-blue-700 hover:text-blue-800 hover:underline"
+                        className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                       >
                         {item.label}
                       </Link>
@@ -293,14 +303,14 @@ export default function BlogPost() {
               </section>
 
               <section className="mt-10">
-                <h2 className="text-2xl font-bold text-gray-950">FAQ</h2>
-                <div className="mt-4 space-y-4">
+                <h2 className="text-xl font-bold text-ink sm:text-2xl">FAQ</h2>
+                <div className="mt-4 space-y-3">
                   {post.faq.map(item => (
                     <details
                       key={item.question}
                       className="rounded-xl border border-gray-200 bg-white p-4"
                     >
-                      <summary className="cursor-pointer font-semibold text-gray-900">
+                      <summary className="cursor-pointer text-[15px] font-semibold text-ink">
                         {item.question}
                       </summary>
                       <p className="mt-3 text-gray-700">{item.answer}</p>
@@ -309,12 +319,12 @@ export default function BlogPost() {
                 </div>
               </section>
             </div>
-          </main>
+          </div>
 
-          <aside className="space-y-6">
-            <section className="rounded-3xl border border-gray-200 bg-white p-5">
-              <h2 className="text-lg font-bold text-gray-950">
-                Authority references
+          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+            <section className="rounded-xl border border-gray-200 bg-white p-5">
+              <h2 className="font-sans text-sm font-semibold tracking-normal text-ink">
+                Sources and further reading
               </h2>
               <ul className="mt-3 space-y-2 text-sm text-gray-700">
                 {post.outboundReferences.map(ref => (
@@ -323,7 +333,7 @@ export default function BlogPost() {
                       href={ref.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-700 hover:text-blue-800 hover:underline"
+                      className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                     >
                       {ref.label}
                     </a>
@@ -332,8 +342,8 @@ export default function BlogPost() {
               </ul>
             </section>
 
-            <section className="rounded-3xl border border-gray-200 bg-white p-5">
-              <h2 className="text-lg font-bold text-gray-950">
+            <section className="rounded-xl border border-gray-200 bg-white p-5">
+              <h2 className="font-sans text-sm font-semibold tracking-normal text-ink">
                 Relevant owner and technician communities
               </h2>
               <p className="mt-2 text-sm text-gray-700">
@@ -347,7 +357,7 @@ export default function BlogPost() {
                       href={target.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-700 hover:text-blue-800 hover:underline"
+                      className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                     >
                       {target.label}
                     </a>
@@ -357,8 +367,8 @@ export default function BlogPost() {
             </section>
 
             {relatedPosts.length > 0 && (
-              <section className="rounded-3xl border border-gray-200 bg-white p-5">
-                <h2 className="text-lg font-bold text-gray-950">
+              <section className="rounded-xl border border-gray-200 bg-white p-5">
+                <h2 className="font-sans text-sm font-semibold tracking-normal text-ink">
                   Related articles
                 </h2>
                 <ul className="mt-3 space-y-2 text-sm text-gray-700">
@@ -366,7 +376,7 @@ export default function BlogPost() {
                     <li key={related.slug}>
                       <Link
                         href={`/blog/${related.slug}`}
-                        className="text-blue-700 hover:text-blue-800 hover:underline"
+                        className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                       >
                         {related.title}
                       </Link>

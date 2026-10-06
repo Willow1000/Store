@@ -5,6 +5,9 @@ import { ArrowLeft, Clock, CheckCircle, Truck, Package } from "lucide-react";
 import { useSupabaseOrders } from "@/hooks/useSupabaseOrders";
 import { supabase } from "@/lib/supabase";
 import { requestAuthenticationForPath } from "@/lib/authRequired";
+import { EmptyState } from "@/components/EmptyState";
+import { StatusBadge, statusTone } from "@/components/StatusBadge";
+import { ProductImage } from "@/components/ProductImage";
 
 export default function OrderDetail({ params }: { params: { id: string } }) {
   const { user, isAuthenticated, sessionRestored, loading } = useAuth();
@@ -137,53 +140,61 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
     };
   }, [order, user?.id, user?.name]);
 
-  if (!sessionRestored || loading) {
-    return (
-      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
-        <div className="animate-pulse space-y-4">
-          <div className="h-10 w-32 bg-muted rounded"></div>
-          <div className="h-64 w-full bg-muted rounded"></div>
+  const backToOrders = (
+    <button
+      onClick={() => setLocation("/orders")}
+      className="mb-5 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-ink underline-offset-4 hover:underline"
+    >
+      <ArrowLeft size={16} />
+      Back to Orders
+    </button>
+  );
+
+  const loadingState = (
+    <div className="container py-8 sm:py-12">
+      <div className="animate-pulse space-y-4" aria-hidden="true">
+        <div className="h-8 w-40 rounded bg-muted"></div>
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="h-72 rounded-xl bg-muted md:col-span-2"></div>
+          <div className="h-56 rounded-xl bg-muted"></div>
         </div>
       </div>
-    );
+    </div>
+  );
+
+  if (!sessionRestored || loading) {
+    return loadingState;
   }
 
   if (!isAuthenticated) {
+    // No order data for guests; the sign-in prompt is opened by the effect
+    // above, and this gives them a way to reopen it.
     return (
-      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
-        <h1 className="mb-6 text-2xl font-bold">Order</h1>
-        <div className="rounded-lg border border-border bg-white p-6">
-          {/* blank for guests */}
-        </div>
+      <div className="container py-10 sm:py-16">
+        <h1 className="sr-only">Order</h1>
+        <EmptyState icon={<Package />} title="Sign in to view your orders">
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => requestAuthenticationForPath()}
+          >
+            Sign in
+          </button>
+        </EmptyState>
       </div>
     );
   }
 
   if (isLoading) {
-    return (
-      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
-        <div className="animate-pulse space-y-4">
-          <div className="h-10 w-32 bg-muted rounded"></div>
-          <div className="h-64 w-full bg-muted rounded"></div>
-        </div>
-      </div>
-    );
+    return loadingState;
   }
 
   if (!order) {
     return (
-      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
-        <button
-          onClick={() => setLocation("/orders")}
-          className="mb-6 flex items-center gap-2 text-sm font-semibold hover:text-gray-600"
-        >
-          <ArrowLeft size={18} />
-          Back to Orders
-        </button>
-        <div className="flex flex-col items-center justify-center rounded-lg border border-gray-200 bg-white py-12">
-          <Package size={48} className="mb-4 text-gray-400" />
-          <p className="text-lg font-semibold">Order not found</p>
-        </div>
+      <div className="container py-8 sm:py-12">
+        {backToOrders}
+        <h1 className="sr-only">Order</h1>
+        <EmptyState icon={<Package />} title="Order not found" />
       </div>
     );
   }
@@ -206,91 +217,55 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
       order.total_amount ??
       Math.max(0, subtotal + shipping + tax - discount)
   );
+  // Same convention as the orders list: amounts are shown in the currency the
+  // order was placed in.
+  const money = (amount: number) =>
+    `${order.currency ? `${order.currency} ` : "$"}${amount.toFixed(2)}`;
+  const statusIcon =
+    order.status === "pending" ? (
+      <Clock size={14} />
+    ) : String(order.status) === "shipped" ? (
+      <Truck size={14} />
+    ) : String(order.status) === "confirmed" ? (
+      <CheckCircle size={14} />
+    ) : undefined;
 
   return (
-    <div className="min-h-screen bg-background w-full overflow-x-hidden">
-      <div className="max-w-full mx-auto px-2 sm:px-3 md:px-4 py-6 sm:py-8 md:py-12">
-        <button
-          onClick={() => setLocation("/orders")}
-          className="mb-6 flex items-center gap-2 text-sm font-semibold hover:text-gray-600"
-        >
-          <ArrowLeft size={18} />
-          Back to Orders
-        </button>
+    <div className="min-h-screen w-full overflow-x-clip bg-white">
+      <div className="border-b border-gray-200 bg-gray-50">
+        <div className="container py-5 sm:py-7">
+          {backToOrders}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <h1 className="price text-ink">
+              Order #{String(order.id).slice(0, 8)}
+            </h1>
+            <StatusBadge tone={statusTone(order.status)} icon={statusIcon}>
+              {String(order.status)}
+            </StatusBadge>
+          </div>
+          <p className="mt-2 text-sm text-gray-600">
+            <span>Order Date</span>:{" "}
+            <span className="font-medium text-ink">
+              {new Date(order.created_at).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </span>
+          </p>
+        </div>
+      </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
+      <div className="container py-8 sm:py-10">
+        <div className="grid gap-6 md:grid-cols-3 md:items-start lg:gap-8">
           {/* Order Info */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Order Header */}
-            <div className="rounded-lg border border-border bg-white p-6">
-              <h1 className="text-3xl font-bold mb-6">
-                Order #{String(order.id).slice(0, 8)}
-              </h1>
-
-              <div className="grid gap-6 md:grid-cols-2">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Order Date</p>
-                  <p className="font-semibold">
-                    {new Date(order.created_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Order Status</p>
-                  <div className="flex items-center gap-2">
-                    {order.status === "pending" && (
-                      <>
-                        <Clock size={18} className="text-yellow-600" />
-                        <span className="font-semibold text-yellow-600">
-                          Pending
-                        </span>
-                      </>
-                    )}
-                    {String(order.status) === "confirmed" && (
-                      <>
-                        <CheckCircle size={18} className="text-green-600" />
-                        <span className="font-semibold text-green-600">
-                          Confirmed
-                        </span>
-                      </>
-                    )}
-                    {String(order.status) === "shipped" && (
-                      <>
-                        <Truck size={18} className="text-blue-600" />
-                        <span className="font-semibold text-blue-600">
-                          Shipped
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Shipping Address */}
-            <div className="rounded-lg border border-border bg-white p-6">
-              <h2 className="text-xl font-bold mb-4">Shipping Address</h2>
-              <div className="text-gray-700 space-y-2">
-                <p className="font-semibold">
-                  {shippingInfo.firstName} {shippingInfo.lastName}
-                </p>
-                <p className="text-sm">{shippingInfo.address}</p>
-                <p className="text-sm">
-                  {shippingInfo.city}, {shippingInfo.state} {shippingInfo.zip}
-                </p>
-                <p className="text-sm">{shippingInfo.country}</p>
-              </div>
-            </div>
-
+          <div className="space-y-6 md:col-span-2">
             {/* Order Items */}
-            <div className="rounded-lg border border-border bg-white p-6">
-              <h2 className="text-xl font-bold mb-4">Order Items</h2>
-              <div className="space-y-4">
+            <div className="panel">
+              <h2 className="mb-2 text-lg font-bold text-ink">Order Items</h2>
+              <div className="divide-y divide-gray-200">
                 {orderItems.length === 0 ? (
-                  <p className="text-gray-600 text-sm">
+                  <p className="py-3 text-sm text-gray-600">
                     No order items found for this order.
                   </p>
                 ) : (
@@ -301,20 +276,27 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
                     return (
                       <div
                         key={item.id || `${item.product_id}-${quantity}`}
-                        className="flex items-start justify-between border-b border-gray-100 pb-3 last:border-b-0"
+                        className="flex items-start gap-3 py-3.5"
                       >
-                        <div>
-                          <p className="font-semibold text-sm">
+                        <ProductImage
+                          src={item?.product?.cover_image_url}
+                          alt=""
+                          compactFallback
+                          className="h-14 w-14 flex-none rounded-md"
+                          imgClassName="p-1"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-2 text-sm font-semibold text-ink">
                             {item?.product?.title ||
                               item?.product?.name ||
                               "Product"}
                           </p>
-                          <p className="text-xs text-gray-600">
+                          <p className="price mt-0.5 text-xs text-gray-600">
                             Qty: {quantity}
                           </p>
                         </div>
-                        <p className="font-semibold text-sm">
-                          ${lineTotal.toFixed(2)}
+                        <p className="price flex-none text-sm font-semibold text-ink">
+                          {money(lineTotal)}
                         </p>
                       </div>
                     );
@@ -322,48 +304,69 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
                 )}
               </div>
             </div>
+
+            {/* Shipping Address */}
+            <div className="panel">
+              <h2 className="mb-3 text-lg font-bold text-ink">
+                Shipping Address
+              </h2>
+              <div className="space-y-1 text-sm text-gray-700">
+                <p className="font-semibold text-ink">
+                  {shippingInfo.firstName} {shippingInfo.lastName}
+                </p>
+                <p>{shippingInfo.address}</p>
+                <p>
+                  {shippingInfo.city}, {shippingInfo.state} {shippingInfo.zip}
+                </p>
+                <p>{shippingInfo.country}</p>
+              </div>
+            </div>
           </div>
 
           {/* Order Summary */}
-          <div className="md:col-span-1">
-            <div className="rounded-lg border border-border bg-white p-6 sticky top-4">
-              <h2 className="text-xl font-bold mb-6">Order Summary</h2>
+          <div className="md:col-span-1 md:sticky md:top-24">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 sm:p-6">
+              <h2 className="mb-5 text-lg font-bold text-ink">Order Summary</h2>
 
-              <div className="space-y-3 mb-6 pb-6 border-b border-border">
-                <div className="flex justify-between text-sm">
+              <div className="mb-4 space-y-3 border-b border-gray-200 pb-4 text-sm">
+                <div className="flex justify-between gap-4">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold">${subtotal.toFixed(2)}</span>
+                  <span className="price font-semibold text-ink">
+                    {money(subtotal)}
+                  </span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between gap-4">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-semibold">
-                    {shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
+                  <span className="price font-semibold text-ink">
+                    {shipping === 0 ? "FREE" : money(shipping)}
                   </span>
                 </div>
                 {tax > 0 && (
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between gap-4">
                     <span className="text-gray-600">Tax</span>
-                    <span className="font-semibold">${tax.toFixed(2)}</span>
+                    <span className="price font-semibold text-ink">
+                      {money(tax)}
+                    </span>
                   </div>
                 )}
                 {discount > 0 && (
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between gap-4">
                     <span className="text-gray-600">Discount</span>
-                    <span className="font-semibold text-green-700">
-                      -${discount.toFixed(2)}
+                    <span className="price font-semibold text-success">
+                      -{money(discount)}
                     </span>
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-lg font-bold">Total</span>
-                <span className="text-2xl font-bold text-black">
-                  ${total.toFixed(2)}
+              <div className="mb-5 flex items-baseline justify-between gap-4">
+                <span className="text-base font-bold text-ink">Total</span>
+                <span className="price text-2xl font-bold text-ink">
+                  {money(total)}
                 </span>
               </div>
 
-              <div className="space-y-2 text-xs text-gray-600">
+              <div className="space-y-1.5 text-xs text-gray-600">
                 <p>✓ Secure checkout</p>
                 <p>✓ Fast shipping</p>
                 <p>✓ Easy returns</p>

@@ -38,8 +38,12 @@ import { decodeVin } from "./vinDecoder";
 import { resolveChargeConversion } from "./currency";
 import {
   getAllSupabaseProducts,
+  getSupabaseProductsByIds,
   searchSupabaseProducts,
 } from "./supabaseProducts";
+import { recordStripeOrderForSession } from "./stripeOrders";
+import { resolveOffer } from "./offers";
+import { calculateShipping } from "@shared/shipping";
 import { TRPCError } from "@trpc/server";
 
 import { logger } from "./_core/logger";
@@ -169,7 +173,12 @@ export const appRouter = router({
           subtotal: z.number().nonnegative().default(0),
         })
       )
-      .query(({ input }) => resolveOfferByCode(input.code, input.subtotal)),
+      .query(
+        async ({ input }) =>
+          // The Supabase table first: db.ts's resolver needs DATABASE_URL.
+          (await resolveOffer(input.code, input.subtotal)) ??
+          resolveOfferByCode(input.code, input.subtotal)
+      ),
   }),
 
   // Cart procedures
@@ -288,19 +297,46 @@ export const appRouter = router({
   // Stripe procedures
   stripe: router({
     payments: router({
+      // Called by the browser when Stripe sends the customer back. Recording
+      // the order here as well as in the webhook means it exists by the time
+      // the Orders page loads, and does not depend on the webhook having been
+      // delivered. The session id is checked against Stripe; nothing the
+      // client sends is trusted beyond it.
+      confirmSession: publicProcedure
+        .input(z.object({ sessionId: z.string().min(1).max(255) }))
+        .mutation(async ({ input }) => {
+          try {
+            const result = await recordStripeOrderForSession(input.sessionId);
+            return { paid: result.paid, orderId: result.orderId };
+          } catch (err: any) {
+            logger.error(
+              { data: [err?.message || String(err)] },
+              "[Stripe Checkout] Could not confirm session:"
+            );
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "We could not confirm your payment yet.",
+            });
+          }
+        }),
+
       createCheckoutSession: publicProcedure
         .input(
           z.object({
-            userId: z.number().optional(),
+            // Supabase ids are uuids, for users and products alike.
+            userId: z.string().uuid().optional(),
             email: z.string().email(),
             userName: z.string().optional(),
-            items: z.array(
-              z.object({
-                productId: z.number(),
-                quantity: z.number().int().positive(),
-                price: z.string(),
-              })
-            ),
+            items: z
+              .array(
+                z.object({
+                  productId: z.string().uuid(),
+                  quantity: z.number().int().positive().max(999),
+                  price: z.string(),
+                })
+              )
+              .min(1)
+              .max(90),
             subtotal: z.string(),
             shipping: z.string().optional(),
             tax: z.string().optional(),
@@ -324,24 +360,63 @@ export const appRouter = router({
           try {
             const conversion = await resolveChargeConversion(input.currency);
 
+            // Price and name every line from the catalogue rather than from
+            // the request: the client's figures are only what it displayed.
+            const catalogue = await getSupabaseProductsByIds(
+              input.items.map(item => item.productId)
+            );
+            const items = input.items.map(item => {
+              const product = catalogue.get(item.productId);
+              const price = Number(product?.price);
+              if (!product || !Number.isFinite(price) || price <= 0) {
+                throw new TRPCError({
+                  code: "BAD_REQUEST",
+                  message:
+                    "An item in your cart is no longer available. Please review your cart and try again.",
+                });
+              }
+              return {
+                productId: item.productId,
+                quantity: item.quantity,
+                price: price.toFixed(2),
+                name: product.title || undefined,
+              };
+            });
+            const subtotal =
+              Math.round(
+                items.reduce(
+                  (sum, item) => sum + Number(item.price) * item.quantity,
+                  0
+                ) * 100
+              ) / 100;
+            // Shipping and the discount are derived here with the same rules
+            // the storefront displays, never taken from the request: a coupon
+            // in a Meta checkout URL, or an edited request, must not be able
+            // to set its own discount.
+            const shipping = calculateShipping(subtotal);
+            const offer = await resolveOffer(input.offerCode, subtotal);
+            const discount = offer?.discountAmount ?? 0;
+            const total = Math.max(0, subtotal + shipping - discount).toFixed(
+              2
+            );
+
             // Build metadata for webhook processing. Every figure here stays in
             // USD: the orders table has no currency column and all of its
             // totals are USD, so the webhook must record USD regardless of what
             // the customer was charged in. The charge currency, charged total
             // and rate are recorded alongside for reconciliation.
             const sessionMetadata = {
-              subtotal: input.subtotal,
-              shipping: input.shipping || "0",
-              tax: input.tax || "0",
-              total: input.total,
-              usd_total: input.total,
+              subtotal: subtotal.toFixed(2),
+              shipping: shipping.toFixed(2),
+              tax: "0",
+              total,
+              usd_total: total,
               charge_currency: conversion.currency,
-              charge_total: conversion
-                .convert(Number(input.total) || 0)
-                .toFixed(2),
+              charge_total: conversion.convert(Number(total)).toFixed(2),
               charge_rate: String(conversion.rate),
-              discountAmount: input.discountAmount || "0",
-              offerCode: input.offerCode || "",
+              discountAmount: discount.toFixed(2),
+              offerCode: offer?.code || "",
+              offerId: offer ? String(offer.id) : "",
               shippingAddress: JSON.stringify(input.shippingAddress || {}),
               billingAddress: JSON.stringify(input.billingAddress || {}),
               language: input.language || "en",
@@ -349,17 +424,17 @@ export const appRouter = router({
             };
 
             const session = await createCheckoutSession(
-              input.userId || 0,
+              input.userId || null,
               input.email,
               input.userName || null,
-              input.items,
+              items,
               input.origin,
               sessionMetadata,
               {
-                shipping: Number(input.shipping || 0),
-                tax: Number(input.tax || 0),
-                discountAmount: Number(input.discountAmount || 0),
-                offerCode: input.offerCode,
+                shipping,
+                tax: 0,
+                discountAmount: discount,
+                offerCode: offer?.code,
               },
               conversion
             );

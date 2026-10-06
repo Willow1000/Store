@@ -72,6 +72,28 @@ type UseAuthOptions = {
   redirectPath?: string;
 };
 
+/**
+ * Whether a Supabase session could still be on its way: a stored auth token
+ * (being refreshed) or an OAuth result in the URL. Without either the visitor
+ * is simply signed out, and waiting to double-check only delays every guest -
+ * most visibly checkout, which could not decide between the sign-in prompt
+ * and the shipping form.
+ */
+function mayHaveStoredSession(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const { search, hash } = window.location;
+    if (/[?&]code=/.test(search) || /access_token=/.test(hash)) return true;
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i) || "";
+      if (key.startsWith("sb-") && key.includes("auth-token")) return true;
+    }
+  } catch {
+    return true;
+  }
+  return false;
+}
+
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath = "/" } =
     options ?? {};
@@ -107,7 +129,7 @@ export function useAuth(options?: UseAuthOptions) {
         // user is actually signed out. One short retry avoids treating that
         // transient gap as a real logout and bouncing the user to a
         // sign-in prompt they don't need.
-        if (!session && !error && isMounted) {
+        if (!session && !error && isMounted && mayHaveStoredSession()) {
           await new Promise(resolve => setTimeout(resolve, 400));
           if (!isMounted) return;
           const retry = await supabase.auth.getSession();
@@ -194,7 +216,21 @@ export function useAuth(options?: UseAuthOptions) {
   }, [utils, expireIfNeeded]);
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
-    retry: true,
+    // Retry network blips, but not answers: a 4xx will be the same next time,
+    // and `retry: true` used to repeat a failing check every few seconds for
+    // as long as the page stayed open.
+    retry: (failureCount, error) => {
+      // data.httpStatus for a real tRPC error; meta.response.status when the
+      // reply was not a tRPC response at all (e.g. another program answering
+      // the API port).
+      const err = error as {
+        data?: { httpStatus?: number };
+        meta?: { response?: { status?: number } };
+      } | null;
+      const status = err?.data?.httpStatus ?? err?.meta?.response?.status;
+      if (status && status >= 400 && status < 500) return false;
+      return failureCount < 3;
+    },
     retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
     refetchOnWindowFocus: true,
     // Avoid firing protected auth checks before the initial session restore

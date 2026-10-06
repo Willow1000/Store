@@ -4,7 +4,7 @@
  */
 
 import { Link } from "wouter";
-import { ChevronRight, Home } from "lucide-react";
+import { ChevronLeft, ChevronRight, Home } from "lucide-react";
 import { useEffect } from "react";
 
 interface BreadcrumbItem {
@@ -66,38 +66,63 @@ export function Breadcrumb({
     );
   }, [includeStructuredData, structuredData]);
 
-  return (
-    <nav
-      aria-label="Breadcrumb"
-      className={`flex items-center flex-wrap gap-2 text-sm ${className}`}
-    >
-      {allItems.map((item, index) => (
-        <div key={item.href} className="flex items-center gap-2">
-          {index > 0 && <ChevronRight size={16} className="text-gray-400" />}
+  // Phones get one "back to parent" link with a full-size touch target
+  // instead of a wrapping multi-line trail; larger screens get the trail.
+  const parent = allItems.length > 1 ? allItems[allItems.length - 2] : null;
 
-          {index === allItems.length - 1 ? (
-            // Current page (not a link)
-            <span className="text-gray-900 font-medium" aria-current="page">
-              {item.label}
-            </span>
-          ) : (
-            // Link to previous pages
-            <Link
-              href={item.href}
-              className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-            >
-              {index === 0 ? (
-                <>
-                  <Home size={16} className="inline mr-1" />
-                  {item.label}
-                </>
-              ) : (
-                item.label
-              )}
-            </Link>
-          )}
-        </div>
-      ))}
+  return (
+    <nav aria-label="Breadcrumb" className={`min-w-0 text-[13px] ${className}`}>
+      {parent ? (
+        <Link
+          href={parent.href}
+          className="-my-2.5 inline-flex min-h-11 max-w-full items-center gap-1 font-medium text-gray-600 hover:text-ink sm:hidden"
+        >
+          <ChevronLeft size={16} className="flex-none" aria-hidden="true" />
+          <span className="truncate">{parent.label}</span>
+        </Link>
+      ) : null}
+      <div className="hidden min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 sm:flex">
+        {allItems.map((item, index) => (
+          <div key={item.href} className="flex min-w-0 items-center gap-1.5">
+            {index > 0 && (
+              <ChevronRight
+                size={14}
+                className="flex-none text-gray-400"
+                aria-hidden="true"
+              />
+            )}
+
+            {index === allItems.length - 1 ? (
+              // Current page (not a link)
+              <span
+                className="max-w-[60vw] truncate font-medium text-ink sm:max-w-md"
+                aria-current="page"
+              >
+                {item.label}
+              </span>
+            ) : (
+              // Link to previous pages
+              <Link
+                href={item.href}
+                className="whitespace-nowrap text-gray-500 transition-colors hover:text-ink hover:underline hover:underline-offset-2"
+              >
+                {index === 0 ? (
+                  <>
+                    <Home
+                      size={14}
+                      className="mr-1 inline -translate-y-px"
+                      aria-hidden="true"
+                    />
+                    {item.label}
+                  </>
+                ) : (
+                  item.label
+                )}
+              </Link>
+            )}
+          </div>
+        ))}
+      </div>
     </nav>
   );
 }

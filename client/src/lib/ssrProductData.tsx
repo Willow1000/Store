@@ -26,6 +26,7 @@ export type SsrProductSeoData = {
   category_name?: string | null;
   cover_image_url?: string | null;
   part_number?: string | null;
+  condition?: string | null;
 };
 
 const SsrProductDataContext = createContext<SsrProductSeoData | null>(null);

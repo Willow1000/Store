@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { Link, useSearch } from "wouter";
 import { AlertTriangle, MessageSquare, ArrowRight } from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 
@@ -7,10 +7,10 @@ function getQueryValue(search: string, key: string): string {
 }
 
 export default function PaymentFailed() {
-  const [location] = useLocation();
-  const search = location.includes("?")
-    ? location.slice(location.indexOf("?"))
-    : "";
+  // wouter's useLocation() is the pathname only; the query string (reference,
+  // status, email) has to come from useSearch() or it is always empty.
+  const queryString = useSearch();
+  const search = queryString ? `?${queryString}` : "";
   const reference = getQueryValue(search, "reference");
   const status = getQueryValue(search, "status");
 
@@ -22,49 +22,47 @@ export default function PaymentFailed() {
         canonical="/payment/failed"
         noIndex
       />
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-slate-50 px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl rounded-[2rem] border border-rose-100 bg-white p-8 sm:p-10 shadow-2xl">
-          <AlertTriangle className="h-14 w-14 text-rose-600" />
-          <p className="mt-5 text-sm font-semibold uppercase tracking-[0.35em] text-rose-700">
-            Payment not completed
-          </p>
-          <h1 className="mt-4 text-3xl sm:text-4xl font-black tracking-tight text-slate-950">
-            We could not confirm the payment.
-          </h1>
-          <p className="mt-4 text-base sm:text-lg leading-relaxed text-slate-700">
-            If Paystack returned a failed or abandoned status, you can try the
-            checkout again. If the payment already went through, contact support
-            with the reference so we can verify it.
-          </p>
-          <div className="mt-4 space-y-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
-            {reference ? (
-              <p>
-                Reference:{" "}
-                <span className="font-semibold text-slate-950">
-                  {reference}
-                </span>
-              </p>
+      <div className="min-h-screen bg-gray-50">
+        <div className="container py-10 sm:py-16">
+          <div className="mx-auto max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-card sm:p-10">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft">
+              <AlertTriangle className="h-7 w-7 text-brand" />
+            </div>
+            <p className="eyebrow mt-5 !text-brand">Payment not completed</p>
+            <h1 className="mt-2 text-ink">We could not confirm the payment.</h1>
+            <p className="mt-4 text-[15px] leading-relaxed text-gray-700 sm:text-base">
+              If Paystack returned a failed or abandoned status, you can try the
+              checkout again. If the payment already went through, contact
+              support with the reference so we can verify it.
+            </p>
+            {reference || status ? (
+              <div className="mt-5 space-y-1.5 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                {reference ? (
+                  <p>
+                    Reference:{" "}
+                    <span className="price break-all font-semibold text-ink">
+                      {reference}
+                    </span>
+                  </p>
+                ) : null}
+                {status ? (
+                  <p>
+                    Status:{" "}
+                    <span className="font-semibold text-ink">{status}</span>
+                  </p>
+                ) : null}
+              </div>
             ) : null}
-            {status ? (
-              <p>
-                Status:{" "}
-                <span className="font-semibold text-slate-950">{status}</span>
-              </p>
-            ) : null}
-          </div>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/checkout">
-              <a className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/checkout" className="btn-primary btn-lg">
                 Return to checkout
                 <ArrowRight className="h-4 w-4" />
-              </a>
-            </Link>
-            <Link href="/contact">
-              <a className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-slate-50">
+              </Link>
+              <Link href="/contact" className="btn-secondary btn-lg">
                 Contact support
                 <MessageSquare className="h-4 w-4" />
-              </a>
-            </Link>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

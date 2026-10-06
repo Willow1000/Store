@@ -12,11 +12,23 @@ export interface StripePaymentIntentInput {
   description?: string;
 }
 
+/**
+ * One catalogue product in a checkout. `productId` is the product's uuid in
+ * the Supabase `products` table, and `price` its unit price in USD.
+ */
+export interface StripeCheckoutItem {
+  productId: string;
+  quantity: number;
+  price: string;
+  /** Product title, shown to the customer on Stripe's page and receipt. */
+  name?: string;
+}
+
 export interface StripeCheckoutInput {
-  userId: number;
+  userId: string | null;
   userEmail: string;
   userName?: string | null;
-  items: Array<{ productId: number; quantity: number; price: string }>;
+  items: StripeCheckoutItem[];
   origin: string;
   metadata?: Record<string, string>;
 }
@@ -79,10 +91,11 @@ export interface StripeCheckoutCharges {
  * of what's charged.
  */
 export async function createCheckoutSession(
-  userId: number,
+  /** Supabase user id (uuid), or null for a guest checkout. */
+  userId: string | null,
   userEmail: string,
   userName: string | null | undefined,
-  items: Array<{ productId: number; quantity: number; price: string }>,
+  items: StripeCheckoutItem[],
   origin: string,
   metadata?: Record<string, string>,
   charges: StripeCheckoutCharges = {},
@@ -112,9 +125,12 @@ export async function createCheckoutSession(
     price_data: {
       currency: chargeCurrency,
       product_data: {
-        name: `Product #${item.productId}`,
+        // Stripe caps a product name at 250 characters.
+        name: (item.name || `Product ${item.productId}`).slice(0, 250),
+        // Read back by server/stripeOrders.ts to build the order's line items.
         metadata: {
-          productId: item.productId.toString(),
+          productId: item.productId,
+          usdPrice: parseFloat(item.price).toFixed(2),
         },
       },
       unit_amount: toMinor(parseFloat(item.price)),
@@ -147,18 +163,21 @@ export async function createCheckoutSession(
   }
 
   const sessionMetadata = {
-    user_id: userId.toString(),
+    user_id: userId || "",
     customer_email: userEmail,
     customer_name: userName || "Guest",
     email: userEmail,
-    items: JSON.stringify(items),
+    // The purchased items are NOT copied here: a metadata value is capped at
+    // 500 characters, which a cart of uuid-keyed items overflows. They are read
+    // from the session's line items instead.
     ...metadata,
   };
 
-  // Stripe Checkout Sessions can't combine allow_promotion_codes with an
-  // explicit `discounts` array, and our discounts come from our own `offers`
-  // table (not Stripe's promotion codes), so a discount coupon replaces
-  // allow_promotion_codes rather than sitting alongside it.
+  // Promo codes are the store's own (`offers` table), entered on the site's
+  // checkout page and applied here as a one-off Stripe coupon. Stripe's own
+  // "Add promotion code" box is NOT offered: no codes exist in Stripe, so
+  // every code typed there was rejected (400), and a code Stripe did accept
+  // would bypass the server-side pricing and never reach the order record.
   // The coupon's currency must match the session's, or Stripe rejects it.
   const discountMinor = toMinor(charges.discountAmount || 0);
   let discounts: Array<{ coupon: string }> | undefined;
@@ -177,7 +196,7 @@ export async function createCheckoutSession(
     line_items: lineItems,
     mode: "payment",
     customer_email: userEmail,
-    client_reference_id: userId.toString(),
+    ...(userId ? { client_reference_id: userId } : {}),
     metadata: sessionMetadata,
     // Adaptive Pricing (on by default per the Stripe dashboard setting,
     // independent of anything in this code) converts the charged amount to the
@@ -195,7 +214,7 @@ export async function createCheckoutSession(
     },
     success_url: `${origin}/checkout?payment=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/checkout?payment=cancelled`,
-    ...(discounts ? { discounts } : { allow_promotion_codes: true }),
+    ...(discounts ? { discounts } : {}),
   });
 
   return session;

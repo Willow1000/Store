@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { Link, useSearch } from "wouter";
 import {
   CheckCircle2,
   PackageSearch,
@@ -28,11 +28,11 @@ function isValidEmail(value: string): boolean {
 }
 
 export default function PaymentSuccess() {
-  const [location] = useLocation();
+  // wouter's useLocation() is the pathname only; the query string (reference,
+  // status, email) has to come from useSearch() or it is always empty.
+  const queryString = useSearch();
   const [popupOpen, setPopupOpen] = useState(false);
-  const search = location.includes("?")
-    ? location.slice(location.indexOf("?"))
-    : "";
+  const search = queryString ? `?${queryString}` : "";
   const reference = getReferenceFromSearch(search);
   const rawRecipientEmail = getEmailFromSearch(search);
   const recipientEmail = useMemo(
@@ -56,12 +56,12 @@ export default function PaymentSuccess() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <MailCheck className="h-5 w-5 text-emerald-600" />
+              <MailCheck className="h-5 w-5 text-success" />
               Confirmation Email Sent
             </DialogTitle>
-            <DialogDescription className="pt-2 text-sm leading-relaxed text-slate-700">
+            <DialogDescription className="pt-2 text-sm leading-relaxed text-gray-700">
               A confirmation containing your receipt has been sent to{" "}
-              <span className="font-semibold text-slate-950">
+              <span className="font-semibold text-ink">
                 {recipientEmail || "your email address"}
               </span>
               . If you do not see it in your inbox, please check your spam
@@ -70,45 +70,43 @@ export default function PaymentSuccess() {
           </DialogHeader>
         </DialogContent>
       </Dialog>
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-slate-50 px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl rounded-[2rem] border border-emerald-100 bg-white p-8 sm:p-10 shadow-2xl">
-          <CheckCircle2 className="h-14 w-14 text-emerald-600" />
-          <p className="mt-5 text-sm font-semibold uppercase tracking-[0.35em] text-emerald-700">
-            Payment confirmed
-          </p>
-          <h1 className="mt-4 text-3xl sm:text-4xl font-black tracking-tight text-slate-950">
-            Your payment was successful.
-          </h1>
-          <p className="mt-4 text-base sm:text-lg leading-relaxed text-slate-700">
-            Thanks for your order. We have received the Paystack confirmation
-            and your checkout can now continue from your account history.
-          </p>
-          <p className="mt-3 text-sm text-slate-700">
-            Your confirmation receipt email was sent to{" "}
-            <span className="font-semibold text-slate-950">
-              {recipientEmail || "your email address"}
-            </span>
-            . If it is not in inbox, check spam folder.
-          </p>
-          {reference ? (
-            <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              Reference:{" "}
-              <span className="font-semibold text-slate-950">{reference}</span>
+      <div className="min-h-screen bg-gray-50">
+        <div className="container py-10 sm:py-16">
+          <div className="mx-auto max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-card sm:p-10">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-success/10">
+              <CheckCircle2 className="h-7 w-7 text-success" />
+            </div>
+            <p className="eyebrow mt-5 !text-success">Payment confirmed</p>
+            <h1 className="mt-2 text-ink">Your payment was successful.</h1>
+            <p className="mt-4 text-[15px] leading-relaxed text-gray-700 sm:text-base">
+              Thanks for your order. We have received the Paystack confirmation
+              and your checkout can now continue from your account history.
             </p>
-          ) : null}
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/orders">
-              <a className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
+            <p className="mt-3 text-sm text-gray-700">
+              Your confirmation receipt email was sent to{" "}
+              <span className="font-semibold text-ink">
+                {recipientEmail || "your email address"}
+              </span>
+              . If it is not in inbox, check spam folder.
+            </p>
+            {reference ? (
+              <p className="mt-5 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                Reference:{" "}
+                <span className="price break-all font-semibold text-ink">
+                  {reference}
+                </span>
+              </p>
+            ) : null}
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/orders" className="btn-primary btn-lg">
                 View orders
                 <ArrowRight className="h-4 w-4" />
-              </a>
-            </Link>
-            <Link href="/products">
-              <a className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-slate-50">
+              </Link>
+              <Link href="/products" className="btn-secondary btn-lg">
                 Continue shopping
                 <PackageSearch className="h-4 w-4" />
-              </a>
-            </Link>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

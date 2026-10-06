@@ -59,8 +59,8 @@ function PaginationLink({
           size,
         }),
         isActive &&
-          "border-blue-600 bg-blue-600 text-white hover:bg-blue-700 hover:text-white",
-        !isActive && "hover:bg-blue-50 hover:text-blue-600",
+          "border-ink bg-ink text-white hover:bg-gray-800 hover:text-white",
+        !isActive && "text-gray-700 hover:bg-gray-100 hover:text-ink",
         className
       )}
       {...props}

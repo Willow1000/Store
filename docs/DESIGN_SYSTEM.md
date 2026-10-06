@@ -172,3 +172,32 @@ Using an 8px base unit for consistent spacing:
 - Test all components across browsers and devices
 - Maintain design tokens in CSS variables for easy updates
 - Document all custom components with usage examples
+
+## Implementation notes (storefront refresh)
+
+The values above are the intent; these are the points where the shipped
+system (see `client/src/index.css`) is more specific or deliberately differs.
+
+- **Tokens**: `--ink` (#0C0C0B) replaces pure black for text and primary
+  buttons; `--brand` is the CTA red; `--well` (#F4F4F2) is the backdrop behind
+  product photos. Tailwind's `gray-*` and `slate-*` are both mapped to one
+  neutral ramp so borders and secondary text match everywhere.
+- **CTA red**: #E63946 with white text is 3.9:1, below WCAG AA. Buttons use
+  `--brand` #D42A3A (4.9:1). Red is reserved for the single buying action on a
+  view (Add to Cart / Proceed to Checkout / Pay) and for savings.
+- **`accent` is not red.** In shadcn components `accent` is the subtle hover
+  surface, so it is light gray. Use `bg-brand` / `.btn-accent` for the red.
+- **Type**: Inter for body and UI, Archivo (600-800) for headings via
+  `font-display`. Prices use the `.price` class (tabular figures).
+- **Buttons**: `.btn-accent` (red), `.btn-primary` (ink), `.btn-secondary`
+  (outline), `.btn-ghost`; sizes `.btn-sm` / `.btn-lg`; `.btn-block` for full
+  width. Minimum height 44px.
+- **Form controls**: `.field` for inputs and selects.
+- **Layout**: `.container` (max 1280px, 16/24/32px gutters) and `.section`
+  (one vertical rhythm step) for every storefront band.
+- **Products**: always render through `ProductCard` / `ProductImage`
+  (`client/src/components`). Photos are hot-linked in mixed shapes, so they are
+  contained on the well, never cropped, with a placeholder on load failure.
+  Prices go through `formatMoney` / `getPricing` (`client/src/lib/pricing.ts`);
+  `products.discount` is a compare-at price, not a percentage.
+- **Radius**: 6px controls, 8px cards, 12px panels.

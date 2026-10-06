@@ -53,15 +53,15 @@ export function CheckoutAddressFields({
   isSavingAddress,
 }: CheckoutAddressFieldsProps) {
   return (
-    <div className="bg-white border border-gray-200 rounded p-4 sm:p-6 md:p-8 mb-6 w-full">
-      <h2 className="text-xl sm:text-2xl font-bold mb-6 sm:mb-8 text-black">
+    <div className="mb-6 w-full rounded-xl border border-gray-200 bg-white p-4 sm:p-6 md:p-8">
+      <h2 className="mb-6 text-xl font-bold text-ink sm:text-2xl">
         {t("checkout.shippingAddress", "Shipping Address")}
       </h2>
 
       <form className="space-y-5 sm:space-y-6">
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-semibold text-black mb-3">
+            <label className="mb-1.5 block text-[13px] font-semibold text-ink">
               {t("checkout.firstName", "First Name")} *
             </label>
             <input
@@ -70,7 +70,7 @@ export function CheckoutAddressFields({
               value={formData.firstName}
               onChange={handleShippingChange}
               placeholder="John"
-              className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
+              className={`w-full px-3.5 py-3 border rounded-md focus:outline-none focus:ring-1 transition-colors text-base ${
                 formErrors.firstName
                   ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:border-black focus:ring-black"
@@ -84,7 +84,7 @@ export function CheckoutAddressFields({
             )}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-black mb-3">
+            <label className="mb-1.5 block text-[13px] font-semibold text-ink">
               {t("checkout.lastName", "Last Name")} *
             </label>
             <input
@@ -93,7 +93,7 @@ export function CheckoutAddressFields({
               value={formData.lastName}
               onChange={handleShippingChange}
               placeholder="Doe"
-              className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
+              className={`w-full px-3.5 py-3 border rounded-md focus:outline-none focus:ring-1 transition-colors text-base ${
                 formErrors.lastName
                   ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:border-black focus:ring-black"
@@ -109,7 +109,7 @@ export function CheckoutAddressFields({
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-black mb-3">
+          <label className="mb-1.5 block text-[13px] font-semibold text-ink">
             {t("checkout.email", "Email")} *
           </label>
           <input
@@ -118,7 +118,7 @@ export function CheckoutAddressFields({
             value={formData.email}
             onChange={handleShippingChange}
             placeholder="john@example.com"
-            className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
+            className={`w-full px-3.5 py-3 border rounded-md focus:outline-none focus:ring-1 transition-colors text-base ${
               formErrors.email
                 ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                 : "border-gray-300 focus:border-black focus:ring-black"
@@ -133,7 +133,7 @@ export function CheckoutAddressFields({
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-black mb-3">
+          <label className="mb-1.5 block text-[13px] font-semibold text-ink">
             {t("checkout.phoneNumber", "Phone Number")} *
           </label>
           <div className="grid gap-3 sm:grid-cols-[220px_minmax(0,1fr)]">
@@ -146,7 +146,7 @@ export function CheckoutAddressFields({
                 name="phoneCountry"
                 value={formData.phoneCountry}
                 onChange={handleShippingChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-colors text-base bg-white"
+                className="w-full px-3.5 py-3 border border-gray-300 rounded-md focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-colors text-base bg-white"
                 aria-label={t(
                   "checkout.selectPhoneCountryCode",
                   "Select phone country code"
@@ -166,7 +166,7 @@ export function CheckoutAddressFields({
               onChange={handlePhoneChange}
               onBlur={handlePhoneBlur}
               placeholder="(555)-123-4567"
-              className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
+              className={`w-full px-3.5 py-3 border rounded-md focus:outline-none focus:ring-1 transition-colors text-base ${
                 formErrors.phone
                   ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:border-black focus:ring-black"
@@ -182,7 +182,7 @@ export function CheckoutAddressFields({
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-black mb-3">
+          <label className="mb-1.5 block text-[13px] font-semibold text-ink">
             {t("checkout.streetAddress", "Street Address")} *
           </label>
           <input
@@ -191,7 +191,7 @@ export function CheckoutAddressFields({
             value={formData.address}
             onChange={handleShippingChange}
             placeholder="123 Main St"
-            className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
+            className={`w-full px-3.5 py-3 border rounded-md focus:outline-none focus:ring-1 transition-colors text-base ${
               formErrors.address
                 ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                 : "border-gray-300 focus:border-black focus:ring-black"
@@ -206,14 +206,14 @@ export function CheckoutAddressFields({
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-black mb-3">
+          <label className="mb-1.5 block text-[13px] font-semibold text-ink">
             {t("checkout.country", "Country")} *
           </label>
           <select
             name="country"
             value={formData.country}
             onChange={handleShippingChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-colors text-base bg-white"
+            className="w-full px-3.5 py-3 border border-gray-300 rounded-md focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-colors text-base bg-white"
             required
           >
             <option value="">
@@ -230,7 +230,7 @@ export function CheckoutAddressFields({
 
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
           <div>
-            <label className="block text-sm font-semibold text-black mb-3">
+            <label className="mb-1.5 block text-[13px] font-semibold text-ink">
               {getStateLabel(formData.country)} *
             </label>
             {manualLocationFields ? (
@@ -240,7 +240,7 @@ export function CheckoutAddressFields({
                 value={formData.state}
                 onChange={handleShippingChange}
                 placeholder={getStateLabel(formData.country)}
-                className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
+                className={`w-full px-3.5 py-3 border rounded-md focus:outline-none focus:ring-1 transition-colors text-base ${
                   formErrors.state
                     ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                     : "border-gray-300 focus:border-black focus:ring-black"
@@ -252,7 +252,7 @@ export function CheckoutAddressFields({
                 name="state"
                 value={formData.state}
                 onChange={handleShippingChange}
-                className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white ${
+                className={`w-full px-3.5 py-3 border rounded-md focus:outline-none focus:ring-1 transition-colors text-base bg-white ${
                   formErrors.state
                     ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                     : "border-gray-300 focus:border-black focus:ring-black"
@@ -277,7 +277,7 @@ export function CheckoutAddressFields({
             )}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-black mb-3">
+            <label className="mb-1.5 block text-[13px] font-semibold text-ink">
               {t("checkout.city", "City")} *
             </label>
             {manualCityField ? (
@@ -287,7 +287,7 @@ export function CheckoutAddressFields({
                 value={formData.city}
                 onChange={handleShippingChange}
                 placeholder={t("checkout.city", "City")}
-                className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
+                className={`w-full px-3.5 py-3 border rounded-md focus:outline-none focus:ring-1 transition-colors text-base ${
                   formErrors.city
                     ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                     : "border-gray-300 focus:border-black focus:ring-black"
@@ -300,7 +300,7 @@ export function CheckoutAddressFields({
                 value={formData.city}
                 onChange={handleShippingChange}
                 disabled={!formData.state}
-                className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base bg-white disabled:bg-gray-100 disabled:text-gray-500 ${
+                className={`w-full px-3.5 py-3 border rounded-md focus:outline-none focus:ring-1 transition-colors text-base bg-white disabled:bg-gray-100 disabled:text-gray-500 ${
                   formErrors.city
                     ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                     : "border-gray-300 focus:border-black focus:ring-black"
@@ -324,7 +324,7 @@ export function CheckoutAddressFields({
             )}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-black mb-3">
+            <label className="mb-1.5 block text-[13px] font-semibold text-ink">
               {getPostalCodeLabel(formData.country)} *
             </label>
             <input
@@ -333,7 +333,7 @@ export function CheckoutAddressFields({
               value={formData.zip}
               onChange={handleShippingChange}
               placeholder={t("checkout.zipPlaceholder", "10001")}
-              className={`w-full px-4 py-3 border rounded focus:outline-none focus:ring-1 transition-colors text-base ${
+              className={`w-full px-3.5 py-3 border rounded-md focus:outline-none focus:ring-1 transition-colors text-base ${
                 formErrors.zip
                   ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:border-black focus:ring-black"
@@ -349,7 +349,7 @@ export function CheckoutAddressFields({
         </div>
 
         {isAuthenticated && (
-          <div className="p-4 rounded border border-gray-200 bg-gray-50 text-sm text-gray-700">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
             Shipping addresses are saved automatically for future checkout. If
             you use a different address, you will be asked whether to update
             your saved address.
@@ -360,7 +360,7 @@ export function CheckoutAddressFields({
           type="button"
           onClick={handleContinueToPayment}
           disabled={isSavingAddress}
-          className="w-full bg-black hover:bg-gray-900 disabled:bg-gray-400 text-white font-semibold py-3 sm:py-4 px-4 sm:px-6 rounded transition-colors duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+          className="btn-primary btn-lg btn-block"
         >
           {isSavingAddress ? "Saving Address..." : "Continue to Payment"}
           <ChevronRight size={20} />

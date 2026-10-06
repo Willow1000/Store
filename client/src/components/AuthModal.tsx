@@ -99,42 +99,51 @@ export default function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-[90] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="auth-modal-title"
+    >
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={closeAuthModal}
       />
 
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-visible animate-in fade-in zoom-in-95 duration-300 flex flex-col">
+      <div className="relative flex w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-pop animate-in fade-in zoom-in-95 duration-200">
         <button
           onClick={closeAuthModal}
-          className="absolute right-4 top-4 z-10 rounded-full bg-gray-100 hover:bg-gray-200 p-2 transition-colors"
+          aria-label="Close"
+          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="bg-gradient-to-r from-black to-gray-800 px-6 md:px-8 pt-6 md:pt-8 pb-4 md:pb-6 flex-shrink-0">
-          <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+        <div className="flex-shrink-0 bg-gray-950 px-6 pb-5 pt-6 sm:px-8">
+          <h2
+            id="auth-modal-title"
+            className="mb-1.5 pr-10 text-xl font-bold text-white"
+          >
             Sign In
           </h2>
-          <p className="text-gray-300 text-xs md:text-sm">
+          <p className="pr-10 text-sm text-white/75">
             {actionType
               ? actionMessages[actionType]
               : "Sign in with your Google account"}
           </p>
         </div>
 
-        <div className="px-6 md:px-8 py-6 md:py-8 flex-1">
+        <div className="flex-1 px-6 py-6 sm:px-8">
           <button
             disabled={isLoading || !captchaToken}
             type="button"
-            className="w-full flex items-center justify-center gap-2 md:gap-3 border border-gray-300 hover:border-gray-400 hover:disabled:border-gray-300 rounded-lg py-2.5 md:py-3 font-medium text-xs md:text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-secondary btn-lg btn-block gap-3"
             onClick={handleGoogleSignIn}
             title={
               !captchaToken ? "Please complete the security check first" : ""
             }
           >
-            <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24">
+            <svg className="h-5 w-5" viewBox="0 0 24 24">
               <path
                 fill="#EA4335"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -157,7 +166,7 @@ export default function AuthModal() {
 
           <RecaptchaCheckbox
             onChange={setCaptchaToken}
-            className="rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-3 sm:px-4 py-3 sm:py-4 mt-4"
+            className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 sm:px-4 sm:py-4"
             helperText={
               !captchaToken
                 ? "Please complete this security check to continue"
@@ -165,7 +174,7 @@ export default function AuthModal() {
             }
           />
 
-          <p className="text-center text-xs md:text-sm text-gray-600 mt-4">
+          <p className="mt-4 text-center text-xs text-gray-500">
             Google OAuth is our secure sign-in method.
           </p>
         </div>

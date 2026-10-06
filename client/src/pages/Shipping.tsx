@@ -1,4 +1,11 @@
 import { SEOHead } from "@/components/SEOHead";
+import { PageHeader } from "@/components/PageHeader";
+import { RelatedLinks } from "@/components/RelatedLinks";
+import {
+  SHIPPING_RATE_PERCENT,
+  formatPrice,
+  getFreeShippingThresholdUsd,
+} from "@shared/shipping";
 
 export default function Shipping() {
   return (
@@ -6,59 +13,63 @@ export default function Shipping() {
       <SEOHead
         pageType="policy"
         title="Shipping Information - MotorVault"
-        description="MotorVault shipping information. Learn about shipping rates, delivery times, and our logistics partners."
+        description="How MotorVault charges shipping: 5% of the order subtotal, free on orders of $1,500 or more. Order tracking, international delivery and restrictions."
         keywords={["shipping", "delivery", "shipping costs", "delivery times"]}
         canonical="https://motorvault.shop/shipping"
       />
-      <div className="min-h-screen bg-background pt-20\">
-        <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">
-          <h1 className="text-4xl font-bold mb-8">Shipping Information</h1>
-
-          <div className="space-y-8">
+      <div className="min-h-screen bg-white">
+        <PageHeader
+          narrow
+          title="Shipping Information"
+          breadcrumb={[{ label: "Shipping Information", href: "/shipping" }]}
+        />
+        <div className="container py-8 sm:py-12">
+          <div className="prose-page mx-auto max-w-3xl">
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                Shipping Rates & Delivery Times
-              </h2>
-              <p className="text-gray-600 mb-4">
-                We offer multiple shipping options to meet your needs:
+              <h2>Shipping Rates</h2>
+              {/* Must match calculateShipping() in shared/shipping.ts, which
+                  is what checkout charges and what the product feed and
+                  product structured data publish. */}
+              <p>
+                Shipping is charged at {SHIPPING_RATE_PERCENT}% of your order
+                subtotal, and is free on orders of{" "}
+                {formatPrice(getFreeShippingThresholdUsd())} or more. The exact
+                amount is shown in your order summary before you pay.
               </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Standard Shipping</h3>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <h3 className="!mb-1 !mt-0">
+                    Orders under {formatPrice(getFreeShippingThresholdUsd())}
+                  </h3>
                   <p className="text-sm text-gray-600">
-                    5-7 business days | $5.99 or Free on orders over $50
+                    {SHIPPING_RATE_PERCENT}% of the order subtotal
                   </p>
                 </div>
 
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Express Shipping</h3>
-                  <p className="text-sm text-gray-600">
-                    2-3 business days | $12.99
-                  </p>
-                </div>
-
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Overnight Shipping</h3>
-                  <p className="text-sm text-gray-600">
-                    Next business day | $24.99
-                  </p>
-                </div>
-
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Free Shipping</h3>
-                  <p className="text-sm text-gray-600">
-                    Available on select items
-                  </p>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <h3 className="!mb-1 !mt-0">
+                    Orders of {formatPrice(getFreeShippingThresholdUsd())} or
+                    more
+                  </h3>
+                  <p className="text-sm text-gray-600">Free shipping</p>
                 </div>
               </div>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                International Shipping
-              </h2>
-              <p className="text-gray-600">
+              <h2>Delivery Times</h2>
+              <p>
+                Delivery time depends on the item and where it ships from and
+                to. If you need a part by a certain date,{" "}
+                <a href="/contact">contact us</a> before ordering and we will
+                confirm an estimate.
+              </p>
+            </section>
+
+            <section>
+              <h2>International Shipping</h2>
+              <p>
                 We currently ship to select countries. Delivery times and costs
                 vary by location. Please add items to your cart to see available
                 shipping options for your region.
@@ -66,8 +77,8 @@ export default function Shipping() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">Order Tracking</h2>
-              <p className="text-gray-600">
+              <h2>Order Tracking</h2>
+              <p>
                 Once your order ships, you'll receive a tracking number via
                 email. You can track your package in real-time through your
                 order details page.
@@ -75,10 +86,8 @@ export default function Shipping() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                Shipping Restrictions
-              </h2>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
+              <h2>Shipping Restrictions</h2>
+              <ul>
                 <li>
                   Some items may have shipping restrictions due to weight, size,
                   or regulations
@@ -92,19 +101,21 @@ export default function Shipping() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">Need Help?</h2>
-              <p className="text-gray-600">
-                Visit our{" "}
-                <a href="/help" className="text-blue-600 hover:underline">
-                  Help Center
-                </a>{" "}
-                or{" "}
-                <a href="/contact" className="text-blue-600 hover:underline">
-                  contact us
-                </a>{" "}
-                for shipping questions.
+              <h2>Need Help?</h2>
+              <p>
+                Visit our <a href="/help">Help Center</a> or{" "}
+                <a href="/contact">contact us</a> for shipping questions.
               </p>
             </section>
+            <RelatedLinks
+              className="mt-10 border-t border-gray-200 pt-6"
+              links={[
+                { href: "/returns", label: "Returns" },
+                { href: "/faq", label: "FAQ" },
+                { href: "/help", label: "Help Center" },
+                { href: "/contact", label: "Contact Us" },
+              ]}
+            />
           </div>
         </div>
       </div>

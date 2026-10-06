@@ -1,4 +1,6 @@
 import { SEOHead } from "@/components/SEOHead";
+import { PageHeader } from "@/components/PageHeader";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { Link } from "wouter";
 
 function buildFitmentHelpHref() {
@@ -22,7 +24,7 @@ export default function Help() {
     <>
       <SEOHead
         pageType="policy"
-        title="Help Center - Auto Parts Fitment, Quality, Returns | MotorVault"
+        title="Help Center: Fitment, Quality & Returns | MotorVault"
         description="Get practical help with VIN fitment checks, OEM vs aftermarket decisions, returns, warranty questions, pricing confidence, and DIY vs mechanic choices."
         keywords={[
           "auto parts help",
@@ -34,23 +36,20 @@ export default function Help() {
         ]}
         canonical="https://motorvault.shop/help"
       />
-      <div className="min-h-screen bg-background pt-6">
-        <div className="max-w-screen-lg mx-auto px-3 sm:px-4 lg:px-6 py-12">
-          <h1 className="text-4xl font-bold mb-4">Help Center</h1>
-          <p className="text-gray-700 text-lg mb-8">
-            Built around the most common auto-parts buyer questions so you can
-            choose correctly before you pay.
-          </p>
-
-          <div className="grid gap-4 md:grid-cols-3 mb-10">
+      <div className="min-h-screen bg-white">
+        <PageHeader
+          title="Help Center"
+          description="Built around the most common auto-parts buyer questions so you can choose correctly before you pay."
+          breadcrumb={[{ label: "Help Center", href: "/help" }]}
+        />
+        <div className="container py-8 sm:py-12">
+          <div className="mb-10 grid gap-4 md:grid-cols-3">
             <Link
               href={fitmentHelpHref}
-              className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+              className="group rounded-xl border border-gray-200 bg-white p-5 transition-colors hover:border-gray-400 hover:bg-gray-50"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
-                Fitment First
-              </p>
-              <h2 className="mt-2 text-lg font-bold text-gray-900">
+              <p className="eyebrow">Fitment First</p>
+              <h2 className="mt-2 text-lg font-semibold text-ink">
                 Need VIN-based fitment help?
               </h2>
               <p className="mt-2 text-sm text-gray-600">
@@ -60,12 +59,10 @@ export default function Help() {
             </Link>
             <Link
               href="/faq"
-              className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+              className="group rounded-xl border border-gray-200 bg-white p-5 transition-colors hover:border-gray-400 hover:bg-gray-50"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
-                Part Choice
-              </p>
-              <h2 className="mt-2 text-lg font-bold text-gray-900">
+              <p className="eyebrow">Part Choice</p>
+              <h2 className="mt-2 text-lg font-semibold text-ink">
                 OEM vs aftermarket vs used
               </h2>
               <p className="mt-2 text-sm text-gray-600">
@@ -74,12 +71,10 @@ export default function Help() {
             </Link>
             <Link
               href="/returns"
-              className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+              className="group rounded-xl border border-gray-200 bg-white p-5 transition-colors hover:border-gray-400 hover:bg-gray-50"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
-                After Purchase
-              </p>
-              <h2 className="mt-2 text-lg font-bold text-gray-900">
+              <p className="eyebrow">After Purchase</p>
+              <h2 className="mt-2 text-lg font-semibold text-ink">
                 Returns and warranty clarity
               </h2>
               <p className="mt-2 text-sm text-gray-600">
@@ -89,12 +84,10 @@ export default function Help() {
             </Link>
           </div>
 
-          <div className="space-y-8">
+          <div className="prose-page max-w-3xl">
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                1. Before You Buy: Fitment and Part Identification
-              </h2>
-              <ul className="list-disc list-inside text-gray-700 space-y-2">
+              <h2>1. Before You Buy: Fitment and Part Identification</h2>
+              <ul>
                 <li>
                   Best practice is to provide VIN, make/model/year, and
                   engine/trim for compatibility checks.
@@ -108,13 +101,16 @@ export default function Help() {
                   from your service manual.
                 </li>
               </ul>
+              <p>
+                <Link href="/vin-decoder">
+                  Not sure it fits? Decode your VIN
+                </Link>
+              </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                2. Choosing the Right Part Type
-              </h2>
-              <ul className="list-disc list-inside text-gray-700 space-y-2">
+              <h2>2. Choosing the Right Part Type</h2>
+              <ul>
                 <li>OEM: strongest baseline for exact spec matching.</li>
                 <li>
                   Aftermarket: wider budget range with varying quality tiers.
@@ -124,17 +120,15 @@ export default function Help() {
                   extra caution for safety-critical systems.
                 </li>
               </ul>
-              <p className="text-gray-600 mt-3">
+              <p>
                 Compare by fitment certainty, warranty terms, and long-term
                 reliability, not just lowest price.
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                3. Pricing Confidence and Scam Avoidance
-              </h2>
-              <ul className="list-disc list-inside text-gray-700 space-y-2">
+              <h2>3. Pricing Confidence and Scam Avoidance</h2>
+              <ul>
                 <li>
                   Confirm what is included in the box before ordering (hardware,
                   seals, accessories).
@@ -148,10 +142,8 @@ export default function Help() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                4. Returns, Warranty, and Wrong-Part Handling
-              </h2>
-              <ul className="list-disc list-inside text-gray-700 space-y-2">
+              <h2>4. Returns, Warranty, and Wrong-Part Handling</h2>
+              <ul>
                 <li>
                   Keep original packaging and documentation until fitment is
                   confirmed.
@@ -168,10 +160,8 @@ export default function Help() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                5. DIY vs Professional Installation
-              </h2>
-              <ul className="list-disc list-inside text-gray-700 space-y-2">
+              <h2>5. DIY vs Professional Installation</h2>
+              <ul>
                 <li>
                   DIY works best for low-risk, tool-friendly jobs with clear
                   procedures.
@@ -188,27 +178,30 @@ export default function Help() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">
-                Need Personal Help?
-              </h2>
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <h2>Need Personal Help?</h2>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row [&_a]:no-underline">
                 <Link href={fitmentHelpHref}>
-                  <a className="inline-flex items-center justify-center rounded-full bg-gray-900 px-6 py-3 font-semibold text-white hover:bg-gray-800 transition-colors">
+                  <a className="btn-primary !text-white">
                     Request fitment check
                   </a>
                 </Link>
                 <Link href="/faq">
-                  <a className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-900 hover:border-gray-900 hover:bg-gray-50 transition-colors">
-                    Browse full FAQ
-                  </a>
+                  <a className="btn-secondary">Browse full FAQ</a>
                 </Link>
                 <Link href="/contact">
-                  <a className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-900 hover:border-gray-900 hover:bg-gray-50 transition-colors">
-                    Contact support
-                  </a>
+                  <a className="btn-secondary">Contact support</a>
                 </Link>
               </div>
             </section>
+            <RelatedLinks
+              className="mt-10 border-t border-gray-200 pt-6"
+              links={[
+                { href: "/vin-decoder", label: "VIN Decoder" },
+                { href: "/blog", label: "Blog" },
+                { href: "/shipping", label: "Shipping Info" },
+                { href: "/returns", label: "Returns" },
+              ]}
+            />
           </div>
         </div>
       </div>

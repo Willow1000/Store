@@ -106,14 +106,14 @@ export function InlineCheckoutAuth({ onAuthSuccess }: InlineCheckoutAuthProps) {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      <div className="bg-white rounded-lg border border-gray-200 p-6 sm:p-8">
+      <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-gray-100">
             <Lock className="h-6 w-6 text-gray-600" />
           </div>
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-ink sm:text-2xl">
               Proceed to secure checkout
             </h2>
             <p className="text-sm text-gray-600 mt-1">
@@ -133,7 +133,7 @@ export function InlineCheckoutAuth({ onAuthSuccess }: InlineCheckoutAuthProps) {
           disabled={isLoading || !captchaToken}
           type="button"
           onClick={handleGoogleSignIn}
-          className="w-full flex items-center justify-center gap-3 border-2 border-gray-300 hover:border-gray-400 disabled:border-gray-300 rounded-lg py-3 px-4 font-semibold text-sm sm:text-base transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-white hover:bg-gray-50 disabled:hover:bg-white"
+          className="btn-secondary btn-lg btn-block gap-3"
         >
           <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24">
             <path

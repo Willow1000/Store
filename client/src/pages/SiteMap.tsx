@@ -1,4 +1,5 @@
 import { SEOHead } from "@/components/SEOHead";
+import { PageHeader } from "@/components/PageHeader";
 import { Link } from "wouter";
 import { useCategories } from "@/hooks/useSupabaseProducts";
 import { BLOG_POSTS } from "@shared/blogPosts";
@@ -52,25 +53,22 @@ export default function SiteMap() {
         ]}
       />
 
-      <div className="min-h-screen bg-background py-10">
-        <div className="mx-auto max-w-screen-lg px-4 sm:px-6">
-          <h1 className="text-3xl font-extrabold text-gray-900">
-            HTML Sitemap
-          </h1>
-          <p className="mt-3 text-gray-600">
-            This page lists major sections so both visitors and search crawlers
-            can navigate the site with minimal hops.
-          </p>
-
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
-            <section className="rounded-xl border border-gray-200 bg-white p-5">
-              <h2 className="text-lg font-bold text-gray-900">Core Pages</h2>
+      <div className="min-h-screen bg-white">
+        <PageHeader
+          title="HTML Sitemap"
+          description="This page lists major sections so both visitors and search crawlers can navigate the site with minimal hops."
+          breadcrumb={[{ label: "HTML Sitemap", href: "/site-map" }]}
+        />
+        <div className="container py-8 sm:py-12">
+          <div className="grid gap-4 md:grid-cols-2 lg:gap-6">
+            <section className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+              <h2 className="text-lg font-semibold text-ink">Core Pages</h2>
               <ul className="mt-4 space-y-2">
                 {corePages.map(page => (
                   <li key={page.href}>
                     <Link
                       href={page.href}
-                      className="text-blue-700 hover:text-blue-800 hover:underline"
+                      className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                     >
                       {page.label}
                     </Link>
@@ -79,8 +77,8 @@ export default function SiteMap() {
               </ul>
             </section>
 
-            <section className="rounded-xl border border-gray-200 bg-white p-5">
-              <h2 className="text-lg font-bold text-gray-900">
+            <section className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+              <h2 className="text-lg font-semibold text-ink">
                 Policies And Support
               </h2>
               <ul className="mt-4 space-y-2">
@@ -88,7 +86,7 @@ export default function SiteMap() {
                   <li key={page.href}>
                     <Link
                       href={page.href}
-                      className="text-blue-700 hover:text-blue-800 hover:underline"
+                      className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                     >
                       {page.label}
                     </Link>
@@ -98,10 +96,8 @@ export default function SiteMap() {
             </section>
           </div>
 
-          <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
-            <h2 className="text-lg font-bold text-gray-900">
-              Shop By Category
-            </h2>
+          <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+            <h2 className="text-lg font-semibold text-ink">Shop By Category</h2>
             <p className="mt-2 text-sm text-gray-600">
               Category links below point directly to filtered catalog pages.
             </p>
@@ -111,7 +107,7 @@ export default function SiteMap() {
                   <li key={category.href}>
                     <Link
                       href={category.href}
-                      className="text-blue-700 hover:text-blue-800 hover:underline"
+                      className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                     >
                       {category.label}
                     </Link>
@@ -121,7 +117,7 @@ export default function SiteMap() {
                 <li>
                   <Link
                     href="/products"
-                    className="text-blue-700 hover:text-blue-800 hover:underline"
+                    className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                   >
                     Browse all products
                   </Link>
@@ -130,15 +126,15 @@ export default function SiteMap() {
             </ul>
           </section>
 
-          <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
-            <h2 className="text-lg font-bold text-gray-900">
+          <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+            <h2 className="text-lg font-semibold text-ink">
               Machine Sitemap Files
             </h2>
             <ul className="mt-4 space-y-2 text-sm">
               <li>
                 <a
                   href="/robots.txt"
-                  className="text-blue-700 hover:text-blue-800 hover:underline"
+                  className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                 >
                   robots.txt
                 </a>
@@ -146,7 +142,7 @@ export default function SiteMap() {
               <li>
                 <a
                   href="/sitemap.xml"
-                  className="text-blue-700 hover:text-blue-800 hover:underline"
+                  className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                 >
                   sitemap.xml
                 </a>
@@ -154,7 +150,7 @@ export default function SiteMap() {
               <li>
                 <a
                   href="/sitemap-products.xml"
-                  className="text-blue-700 hover:text-blue-800 hover:underline"
+                  className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                 >
                   sitemap-products.xml
                 </a>
@@ -162,14 +158,14 @@ export default function SiteMap() {
             </ul>
           </section>
 
-          <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
-            <h2 className="text-lg font-bold text-gray-900">Blog Articles</h2>
+          <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+            <h2 className="text-lg font-semibold text-ink">Blog Articles</h2>
             <ul className="mt-4 grid gap-2 sm:grid-cols-2">
               {BLOG_POSTS.map(post => (
                 <li key={post.slug}>
                   <Link
                     href={`/blog/${post.slug}`}
-                    className="text-blue-700 hover:text-blue-800 hover:underline"
+                    className="text-ink underline decoration-gray-300 underline-offset-4 hover:decoration-ink"
                   >
                     {post.title}
                   </Link>

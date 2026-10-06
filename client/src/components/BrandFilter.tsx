@@ -75,11 +75,11 @@ export function BrandFilter({
                 setShowMoreMobile(true);
               }
             }}
-            className="w-full max-w-sm px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full max-w-sm px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-ink focus:ring-2 focus:ring-ink/10"
           />
           <button
             onClick={() => setShowMoreMobile(!showMoreMobile)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-blue-600 transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-ink transition-colors"
             aria-label={showMoreMobile ? "Hide brands" : "Show brands"}
           >
             <ChevronDown
@@ -94,7 +94,7 @@ export function BrandFilter({
             {selectedBrandObjects.map(brand => (
               <div
                 key={brand.id}
-                className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
+                className="flex items-center gap-2 bg-gray-100 text-ink px-3 py-1 rounded-full text-sm"
               >
                 {brand.image_url && (
                   <img
@@ -106,7 +106,7 @@ export function BrandFilter({
                 <span className="font-medium">{brand.name}</span>
                 <button
                   onClick={() => onBrandToggle(brand.name)}
-                  className="text-blue-600 hover:text-blue-800 ml-1"
+                  className="text-gray-500 hover:text-ink ml-1"
                   aria-label={`Remove ${brand.name}`}
                 >
                   <X className="w-3 h-3" />
@@ -168,110 +168,86 @@ export function BrandFilter({
     );
   }
 
-  // Desktop view - show as horizontal logo/name badges above search
+  // Default view - one compact rail of brand chips (scrolls sideways on
+  // mobile, wraps on larger screens) with a small search box.
   return (
     <div>
-      {/* Search box */}
-      <div className="mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        {/* Search box */}
         <input
           type="text"
           placeholder="Search brands..."
+          aria-label="Search brands..."
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          className="w-full max-w-sm px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          // Phones get the swipeable chip row only; the brand search box and
+          // its hint pushed the first products a whole screen down.
+          className="field hidden !min-h-10 sm:block sm:w-44 sm:flex-none"
         />
-      </div>
 
-      {/* Brand grid - desktop view */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-        {isLoading ? (
-          Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-20 bg-gray-200 rounded-lg animate-pulse"
-            />
-          ))
-        ) : error ? (
-          <div className="col-span-full p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-700 font-medium mb-2">
-              Error loading brands
-            </p>
-            <p className="text-xs text-red-600 mb-2">{error}</p>
-            <p className="text-xs text-gray-600">
-              Please check the browser console for more details.
-            </p>
-          </div>
-        ) : displayedBrands.length > 0 ? (
-          displayedBrands.map(brand => {
-            const isSelected = selectedBrands.includes(brand.name);
-            return (
-              <button
-                key={brand.id}
-                onClick={() => onBrandToggle(brand.name)}
-                className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 ${
-                  isSelected
-                    ? "border-blue-500 bg-blue-50 ring-2 ring-blue-300"
-                    : "border-gray-200 bg-white hover:border-gray-300"
-                }`}
-              >
-                {brand.image_url ? (
-                  <img
-                    src={brand.image_url}
-                    alt={brand.name}
-                    className="w-10 h-10 object-contain"
-                  />
-                ) : (
-                  <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-500">
-                    {brand.name.substring(0, 2).toUpperCase()}
-                  </div>
-                )}
-                <span className="text-xs font-medium text-center line-clamp-2">
-                  {brand.name}
-                </span>
-              </button>
-            );
-          })
-        ) : (
-          <p className="col-span-full text-xs text-gray-500 text-center py-4">
-            No brands found
-          </p>
-        )}
+        {/* Brand chips */}
+        <div className="-mx-4 flex min-w-0 flex-1 gap-2 overflow-x-auto px-4 pb-1 no-scrollbar sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+          {isLoading ? (
+            Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-10 w-24 flex-none animate-pulse rounded-full bg-muted"
+              />
+            ))
+          ) : error ? (
+            <div className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-sm font-medium text-ink">
+                Error loading brands
+              </p>
+              <p className="mt-1 text-xs text-gray-600">{error}</p>
+            </div>
+          ) : displayedBrands.length > 0 ? (
+            displayedBrands.map(brand => {
+              const isSelected = selectedBrands.includes(brand.name);
+              return (
+                <button
+                  key={brand.id}
+                  type="button"
+                  onClick={() => onBrandToggle(brand.name)}
+                  aria-pressed={isSelected}
+                  className={`inline-flex h-11 flex-none items-center sm:h-10 gap-2 rounded-full border pl-1.5 pr-3.5 text-[13px] font-medium transition-colors ${
+                    isSelected
+                      ? "border-ink bg-ink text-white"
+                      : "border-gray-300 bg-white text-ink hover:border-ink"
+                  }`}
+                >
+                  {/* Logo when the brand has one; otherwise a plain text chip */}
+                  {brand.image_url ? (
+                    <span className="flex h-7 w-7 flex-none items-center justify-center overflow-hidden rounded-full bg-white">
+                      <img
+                        src={brand.image_url}
+                        alt=""
+                        width={20}
+                        height={20}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-5 w-5 object-contain"
+                      />
+                    </span>
+                  ) : (
+                    <span className="w-1.5" aria-hidden="true" />
+                  )}
+                  <span className="whitespace-nowrap">{brand.name}</span>
+                </button>
+              );
+            })
+          ) : (
+            <p className="py-2.5 text-xs text-gray-500">No brands found</p>
+          )}
+        </div>
       </div>
 
       {/* Info about hidden brands when search is inactive */}
       {hasMoreBrands && !searchQuery && (
-        <p className="mt-3 text-xs text-gray-500">
+        <p className="mt-2 hidden text-xs text-gray-500 sm:block">
           Showing {displayedBrands.length} of {filteredBrands.length} brands.
           Use the search to find {filteredBrands.length - 12} more.
         </p>
-      )}
-
-      {/* Selected brands summary */}
-      {selectedBrands.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {selectedBrandObjects.map(brand => (
-            <div
-              key={brand.id}
-              className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium"
-            >
-              {brand.image_url && (
-                <img
-                  src={brand.image_url}
-                  alt={brand.name}
-                  className="w-4 h-4 object-contain"
-                />
-              )}
-              <span>{brand.name}</span>
-              <button
-                onClick={() => onBrandToggle(brand.name)}
-                className="text-blue-600 hover:text-blue-800 ml-1"
-                aria-label={`Remove ${brand.name}`}
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-        </div>
       )}
     </div>
   );

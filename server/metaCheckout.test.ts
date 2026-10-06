@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  META_PRODUCT_ID_PATTERN,
   isMetaCheckoutRequest,
   parseMetaCheckoutParams,
   parseMetaProductsParam,
@@ -41,5 +42,25 @@ describe("meta checkout query parsing", () => {
     expect(
       isMetaCheckoutRequest(new URLSearchParams("fbclid=12345"), "/checkout")
     ).toBe(false);
+  });
+
+  it("parses the uuid content ids the catalog feed publishes", () => {
+    const a = "c0e4f438-1b2c-4d5e-8f90-0123456789ab";
+    const b = "037ca83e-aaaa-4bbb-8ccc-0123456789ab";
+    const params = parseMetaCheckoutParams(
+      `products=${encodeURIComponent(`${a}:2,${b}:1,${a}:1`)}&coupon=SUMMER20&cart_origin=facebook`
+    );
+    const entries = parseMetaProductsParam(params.products);
+
+    // Duplicates merge; order is preserved.
+    expect(entries).toEqual([
+      { productId: a, quantity: 3 },
+      { productId: b, quantity: 1 },
+    ]);
+    expect(entries.every(e => META_PRODUCT_ID_PATTERN.test(e.productId))).toBe(
+      true
+    );
+    // Ids from another catalog shape are not mistaken for products.
+    expect(META_PRODUCT_ID_PATTERN.test("12345")).toBe(false);
   });
 });

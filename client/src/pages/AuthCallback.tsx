@@ -138,7 +138,7 @@ export default function AuthCallback() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background w-full overflow-x-hidden">
+    <div className="flex min-h-[70vh] w-full items-center justify-center bg-white">
       <SEOHead
         title="Signing In | MotorVault"
         description="Completing secure sign in to MotorVault."
@@ -146,11 +146,13 @@ export default function AuthCallback() {
         noIndex
         noFollow
       />
-      <div className="text-center">
+      <div className="text-center" role="status">
         <div className="mb-4 flex justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-200 border-t-ink"></div>
         </div>
-        <p className="text-gray-600">Completing your sign in...</p>
+        <h1 className="font-sans text-base font-medium tracking-normal text-gray-700">
+          Completing your sign in...
+        </h1>
       </div>
     </div>
   );

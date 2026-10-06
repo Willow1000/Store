@@ -9,6 +9,7 @@ import {
   sortProducts,
 } from "@/lib/productSearch";
 import { isTimeoutError, recoverFromTimeout } from "@/lib/sessionRecovery";
+import { isHydrating, useSsrPageData } from "@/lib/ssrPageData";
 
 const PRODUCTS_CACHE_KEY = "products_cache_v2";
 const CATEGORIES_CACHE_KEY = "categories_cache_v2";
@@ -36,6 +37,20 @@ function writeCachedArray<T>(key: string, value: T[]) {
   }
 }
 
+/**
+ * A list hook's first value. While hydrating it must be exactly what the
+ * server rendered with; afterwards the server's list (if any) is stale and the
+ * local cache is the better head start.
+ */
+function initialListing(
+  ssrProducts: Product[] | undefined,
+  hasSsrData: boolean
+): Product[] {
+  if (hasSsrData && isHydrating()) return ssrProducts ?? [];
+  const cached = readCachedArray<Product>(PRODUCTS_CACHE_KEY);
+  return cached.length ? cached : (ssrProducts ?? []);
+}
+
 export function useProducts(
   page = 1,
   limit = 20,
@@ -43,12 +58,14 @@ export function useProducts(
     enableRealtime?: boolean;
   }
 ) {
+  // The server's listing comes first: it is what the server rendered, so
+  // starting from it keeps hydration consistent (and gives the server render
+  // real products); the cache is only used for client-only renders.
+  const ssrData = useSsrPageData();
   const [products, setProducts] = useState<Product[]>(() =>
-    readCachedArray<Product>(PRODUCTS_CACHE_KEY)
+    initialListing(ssrData?.listing?.products, Boolean(ssrData))
   );
-  const [isLoading, setIsLoading] = useState(
-    () => readCachedArray<Product>(PRODUCTS_CACHE_KEY).length === 0
-  );
+  const [isLoading, setIsLoading] = useState(() => products.length === 0);
   const [error, setError] = useState<string | null>(null);
   const enableRealtime = options?.enableRealtime ?? true;
 
@@ -195,9 +212,18 @@ export function useProducts(
 }
 
 export function useProductById(productId: string) {
-  const [product, setProduct] = useState<Product | null>(null);
-  const [images, setImages] = useState<ProductImage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const ssrProduct = useSsrPageData()?.product;
+  const ssrMatch =
+    ssrProduct && String(ssrProduct.product.id) === productId
+      ? ssrProduct
+      : null;
+  const [product, setProduct] = useState<Product | null>(
+    () => ssrMatch?.product ?? null
+  );
+  const [images, setImages] = useState<ProductImage[]>(
+    () => ssrMatch?.images ?? []
+  );
+  const [isLoading, setIsLoading] = useState(() => !ssrMatch);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -208,7 +234,16 @@ export function useProductById(productId: string) {
       }
 
       try {
-        setIsLoading(true);
+        // The server rendered this product: show its data (again, if the
+        // visitor navigated away and back) and refresh it in the background
+        // instead of flashing the loading skeleton.
+        if (ssrMatch) {
+          setProduct(ssrMatch.product);
+          setImages(ssrMatch.images);
+          setIsLoading(false);
+        } else {
+          setIsLoading(true);
+        }
         setError(null);
 
         // Create a timeout promise that rejects after 15 seconds
@@ -298,7 +333,7 @@ export function useProductById(productId: string) {
           if (productData?.brand) {
             try {
               const { data: brandData, error: brandError } = await supabase
-                .from("Brand")
+                .from("brand")
                 .select("*")
                 .eq("name", productData.brand)
                 .single();
@@ -513,12 +548,13 @@ export interface Category {
 }
 
 export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>(() =>
-    readCachedArray<Category>(CATEGORIES_CACHE_KEY)
-  );
-  const [isLoading, setIsLoading] = useState(
-    () => readCachedArray<Category>(CATEGORIES_CACHE_KEY).length === 0
-  );
+  const ssrData = useSsrPageData();
+  const [categories, setCategories] = useState<Category[]>(() => {
+    if (ssrData?.categories?.length) return ssrData.categories;
+    if (ssrData && isHydrating()) return [];
+    return readCachedArray<Category>(CATEGORIES_CACHE_KEY);
+  });
+  const [isLoading, setIsLoading] = useState(() => categories.length === 0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -575,8 +611,14 @@ export function useCategories() {
 }
 
 export function useProductsBySlug(categorySlug: string) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const ssrListing = useSsrPageData()?.listing;
+  const ssrMatch =
+    ssrListing?.categorySlug &&
+    ssrListing.categorySlug.toLowerCase() === categorySlug.trim().toLowerCase()
+      ? ssrListing.products
+      : null;
+  const [products, setProducts] = useState<Product[]>(() => ssrMatch ?? []);
+  const [isLoading, setIsLoading] = useState(() => !ssrMatch);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -602,14 +644,29 @@ export function useProductsBySlug(categorySlug: string) {
         );
 
         const fetchPromise = (async () => {
-          // First, get the category by slug to get its name
-          const { data: categoryData, error: categoryError } = await supabase
+          // First, get the category by slug to get its name. Links around
+          // the site pass the category NAME as often as the slug (product
+          // breadcrumbs do), and the two differ - "Engines" has the slug
+          // "engine" - so fall back to matching the name.
+          const bySlug = await supabase
             .from("categories")
             .select("name")
             .eq("slug", categorySlug)
-            .single();
+            .maybeSingle();
+          if (bySlug.error) throw bySlug.error;
 
-          if (categoryError) throw categoryError;
+          let categoryData = bySlug.data;
+          if (!categoryData) {
+            const byName = await supabase
+              .from("categories")
+              .select("name")
+              .ilike("name", categorySlug.replace(/[%_\\]/g, "\\$&"))
+              .limit(1)
+              .maybeSingle();
+            if (byName.error) throw byName.error;
+            categoryData = byName.data;
+          }
+          if (!categoryData) throw new Error("Category not found");
 
           // Then fetch products by category_name
           const { data, error: supabaseError } = await supabase
