@@ -364,7 +364,10 @@ export function useProductById(productId: string) {
             .select("*")
             .eq("product_id", productId);
 
-          if (imagesError) throw imagesError;
+          // The product itself has loaded: a failed gallery query must not
+          // replace the whole page with an error. Keep whatever images are
+          // already shown.
+          if (imagesError) return;
 
           // Normalize image URLs
           const normalizedImages = (imagesData || []).map((img: any) => ({
@@ -378,6 +381,11 @@ export function useProductById(productId: string) {
         // Wait for whichever completes first (fetch or timeout)
         await Promise.race([fetchPromise, timeoutPromise]);
       } catch (err) {
+        // The server already rendered this product and this was only the
+        // background refresh. A slow or failed refresh used to swap the
+        // working page for "Product fetch timed out" / "Product Not
+        // Available" (and a noindex tag); keep the server's data instead.
+        if (ssrMatch) return;
         const message =
           err instanceof Error ? err.message : "Failed to fetch product";
         setError(message);

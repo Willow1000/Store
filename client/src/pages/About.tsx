@@ -21,7 +21,7 @@ const aboutBannerSlides = [
     image: "/images/banners/rare-european-auto-parts-about-banner.avif",
     imageWebp: "/images/banners/rare-european-auto-parts-about-banner.webp",
     imageAlt:
-      "Rare European auto parts sourcing support and buyer guidance for hard-to-find components",
+      "Auto parts sourcing support and buyer guidance for hard-to-find components",
     title: "Fitment Confidence Before Checkout",
     subtitle:
       "Start with VIN, part numbers, and compatibility guidance so you avoid wrong-part orders.",
@@ -88,7 +88,7 @@ const trustPoints = [
   "VIN and fitment-minded guidance before purchase",
   "Clear OEM vs aftermarket vs used part positioning",
   "Upfront support on returns, warranty, and delivery timing",
-  "Practical sourcing for hard-to-find European vehicle parts",
+  "Sourcing help for hard-to-find OEM and used parts for European makes",
 ];
 
 function buildFitmentCheckHref() {
@@ -149,7 +149,7 @@ export default function About() {
       <SEOHead
         pageType="about"
         title="About MotorVault | Auto Parts Sourcing & Fitment Checks"
-        description="Learn how MotorVault supports fitment-first automotive parts sourcing across Europe, including guidance for Dutch searches such as motorblokken auto and auto motorblok kopen."
+        description="MotorVault sells accessories and parts for trucks, Jeeps and Teslas, plus OEM and used parts for European makes. Learn how we check fitment and handle shipping and returns."
         keywords={[
           "motorvault",
           "automotive parts sourcing",

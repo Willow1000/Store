@@ -63,3 +63,69 @@ export function getHighResImageUrl(url: string | null | undefined): string {
 
   return normalized;
 }
+
+/**
+ * The same image at (about) `width` pixels wide, on hosts that resize by URL.
+ * Listing cards are ~200-400px wide but catalogue photos are stored at
+ * 1280-2000px, so a page of cards downloaded several megabytes of pixels it
+ * never showed. Hosts that cannot resize get their URL back unchanged.
+ */
+export function getSizedImageUrl(
+  url: string | null | undefined,
+  width: number
+): string {
+  const resolved = getHighResImageUrl(url);
+  if (!resolved) return "";
+
+  try {
+    const parsed = new URL(resolved);
+    if (parsed.hostname === "cdn.shopify.com") {
+      parsed.searchParams.set("width", String(width));
+      return parsed.href;
+    }
+    if (parsed.hostname === "images.finncdn.no") {
+      return width <= 480
+        ? resolved.replace(/\/dynamic\/\d+w\//, "/dynamic/480w/")
+        : resolved;
+    }
+    if (parsed.hostname === "i.ebayimg.com") {
+      return width <= 500
+        ? resolved.replace(/s-l\d+(\.(?:jpe?g|png|webp))/i, "s-l500$1")
+        : resolved;
+    }
+  } catch {
+    // Relative or malformed URL: nothing to resize.
+  }
+  return resolved;
+}
+
+/**
+ * A srcset for a listing-card sized image, or undefined when the host cannot
+ * resize (the plain `src` is then used as before).
+ */
+export function getCardImageSrcSet(
+  url: string | null | undefined,
+  widths: number[] = [240, 360, 480, 720]
+): string | undefined {
+  const resolved = getHighResImageUrl(url);
+  if (!resolved) return undefined;
+
+  let hostname = "";
+  try {
+    hostname = new URL(resolved).hostname;
+  } catch {
+    return undefined;
+  }
+
+  if (hostname === "cdn.shopify.com") {
+    return widths
+      .map(width => `${getSizedImageUrl(resolved, width)} ${width}w`)
+      .join(", ");
+  }
+  if (hostname === "images.finncdn.no" || hostname === "i.ebayimg.com") {
+    const small = getSizedImageUrl(resolved, 480);
+    if (small === resolved) return undefined;
+    return `${small} ${hostname === "i.ebayimg.com" ? 500 : 480}w, ${resolved} 1280w`;
+  }
+  return undefined;
+}

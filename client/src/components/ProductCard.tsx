@@ -84,6 +84,7 @@ export function ProductCard<T extends ProductCardProduct>({
             src={product.cover_image_url}
             alt={title}
             priority={priority}
+            responsive
             sizes="(max-width: 640px) 46vw, (max-width: 1024px) 30vw, 240px"
             className="aspect-square w-full"
             imgClassName={cn(

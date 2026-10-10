@@ -7,7 +7,6 @@ import { useCategoryCounts } from "@/hooks/useCategoryCounts";
 import { useHomeRails } from "@/hooks/useHomeRails";
 import { categoryHref as buildCategoryHref } from "@/lib/categoryLinks";
 import { formatMoneyCeil } from "@/lib/pricing";
-import { QuickViewModal } from "@/components/QuickViewModal";
 import { SEOHead } from "@/components/SEOHead";
 import { HeroSlideshow } from "@/components/HeroSlideshow";
 import { BannerCarousel } from "@/components/BannerCarousel";
@@ -18,12 +17,20 @@ import { useProducts, useCategories } from "@/hooks/useSupabaseProducts";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useSupabaseWishlist } from "@/hooks/useSupabaseCart";
 import { useIsMobile } from "@/hooks/useMobile";
-import { useState, useEffect, useMemo } from "react";
-import { getHighResImageUrl } from "@/lib/images";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { getSizedImageUrl } from "@/lib/images";
 import { useRecommendations } from "@/hooks/useRecommendations";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { Product } from "@/types/supabase";
 import { VEHICLES } from "@shared/vehicleContent";
+
+// Loaded when a quick view is first opened: the modal and its dialog code
+// were downloaded and parsed on every visit but run on almost none.
+const QuickViewModal = lazy(() =>
+  import("@/components/QuickViewModal").then(module => ({
+    default: module.QuickViewModal,
+  }))
+);
 
 /** Products at or below this USD price feed the low-price rail. */
 const BUDGET_PRICE_CEILING_USD = 50;
@@ -75,7 +82,8 @@ function categoryHref(cat: HomeCategory) {
  */
 function CategoryTile({ category }: { category: HomeCategory }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const imageUrl = getHighResImageUrl(category.image_url);
+  // Tiles are ~185-300px wide; ask the image host for a matching size.
+  const imageUrl = getSizedImageUrl(category.image_url, 480);
   const hasImage = Boolean(imageUrl) && !imageFailed;
 
   return (
@@ -117,7 +125,7 @@ const homeBannerSlides = [
     image: "/images/banners/european-car-bumper-parts-banner-home.avif",
     imageWebp: "/images/banners/european-car-bumper-parts-banner-home.webp",
     imageAlt:
-      "European car bumper replacement parts for collision repair and front-end restoration",
+      "Car bumper replacement parts for collision repair and front-end restoration",
     title: "Built to Bring Front Ends Back",
     subtitle:
       "Rugged bumper parts for repairs, refreshes, and the kind of fitment that keeps cars looking sharp.",
@@ -127,8 +135,7 @@ const homeBannerSlides = [
   {
     image: "/images/banners/european-car-seat-parts-banner-home.avif",
     imageWebp: "/images/banners/european-car-seat-parts-banner-home.webp",
-    imageAlt:
-      "European car interior seat components and upholstery replacement parts",
+    imageAlt: "Car interior seat components and upholstery replacement parts",
     title: "Comfort You Can Feel on Every Drive",
     subtitle:
       "Seat components and interior upgrades chosen to restore support, style, and everyday comfort.",
@@ -139,7 +146,7 @@ const homeBannerSlides = [
     image: "/images/banners/european-car-tire-parts-banner-home.avif",
     imageWebp: "/images/banners/european-car-tire-parts-banner-home.webp",
     imageAlt:
-      "European car tire and wheel parts focused on road grip and handling performance",
+      "Tire and wheel parts focused on road grip and handling performance",
     title: "Grip the Road with Confidence",
     subtitle:
       "A tire-focused showcase for drivers who want dependable traction, better handling, and a stronger road presence.",
@@ -151,7 +158,7 @@ const homeBannerSlides = [
     imageWebp:
       "/images/banners/european-car-transmission-parts-banner-home.webp",
     imageAlt:
-      "European transmission and drivetrain replacement parts for smooth shifting reliability",
+      "Transmission and drivetrain replacement parts for smooth shifting reliability",
     title: "Powertrain Parts That Keep Things Moving",
     subtitle:
       "Transmission-focused parts and support for customers who want smooth shifting and reliable performance.",
@@ -308,7 +315,7 @@ export default function Home() {
       <SEOHead
         pageType="homepage"
         title="MotorVault - Buy Automotive Parts Online | OEM & Aftermarket"
-        description="Find premium OEM and aftermarket parts for European cars. MotorVault offers fitment-focused parts for Opel, Fiat, Volvo, Saab, Dacia, Lancia, BMW, Mercedes, Audi, VW, and Porsche."
+        description="Shop accessories and parts for the Ford F-150, Ram 1500, Chevy Silverado, Toyota Tacoma, Jeep Wrangler and Tesla Model 3 and Y, plus OEM and used parts for Opel, BMW, Audi and Fiat."
         keywords={[
           "automobile parts",
           "car parts",
@@ -521,6 +528,29 @@ export default function Home() {
           </>
         )}
 
+        {/* What the store is, in plain words, for visitors and crawlers */}
+        <section className="section !pt-0">
+          <div className="container">
+            <h2 className="text-lg font-bold text-ink sm:text-xl">
+              What MotorVault sells
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-gray-600 sm:text-base">
+              MotorVault is an online auto parts and accessories store. Most of
+              the catalogue is accessories and parts for trucks, Jeeps and
+              Teslas, including the Ford F-150, Ram 1500, Chevy Silverado,
+              Toyota Tacoma, Jeep Wrangler and Tesla Model 3 and Model Y,
+              alongside lighting, towing gear and car care. We also list OEM and
+              used parts for European makes such as Opel, BMW, Audi and Fiat.
+              Every listing states the model years it fits, and you can check
+              your vehicle with the free{" "}
+              <Link href="/vin-decoder" className="underline">
+                VIN decoder
+              </Link>{" "}
+              before you order.
+            </p>
+          </div>
+        </section>
+
         {/* Reviews */}
         <section className="section border-t border-gray-200 bg-gray-50">
           <div className="container">
@@ -560,11 +590,13 @@ export default function Home() {
         </section>
 
         {showBelowFoldContent && quickViewProductId && (
-          <QuickViewModal
-            productId={quickViewProductId}
-            isOpen={!!quickViewProductId}
-            onClose={() => setQuickViewProductId(null)}
-          />
+          <Suspense fallback={null}>
+            <QuickViewModal
+              productId={quickViewProductId}
+              isOpen={!!quickViewProductId}
+              onClose={() => setQuickViewProductId(null)}
+            />
+          </Suspense>
         )}
       </div>
     </>

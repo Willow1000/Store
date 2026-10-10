@@ -36,12 +36,15 @@ const AI_CRAWLER_AGENTS = [
   "meta-externalagent",
 ];
 
-/** Search results and tracking/sort parameters: duplicate, crawl-wasting URLs. */
+/**
+ * Search results and tracking/sort parameters: duplicate, crawl-wasting URLs.
+ * "?page=" is deliberately not here: paginated listing pages are how crawlers
+ * reach products beyond the first page of a category.
+ */
 const LOW_VALUE_URLS = [
   "/search",
   "/*?*sort=",
   "/*?*filter=",
-  "/*?*page=",
   "/*?*utm_source=",
   "/*?*utm_medium=",
   "/*?*utm_campaign=",
@@ -85,7 +88,7 @@ export function buildLlmsTxt(
   return [
     "# MotorVault",
     "",
-    "> MotorVault is an e-commerce platform for automotive parts and accessories, focused on clear product details, shipping/returns guidance, and secure checkout.",
+    "> MotorVault is an online auto parts and accessories store. Most of the catalogue is accessories and parts for trucks, Jeeps and Teslas (Ford F-150, Ram 1500, Chevy Silverado, Toyota Tacoma, Jeep Wrangler, Tesla Model 3 and Model Y), with lighting, towing gear and car care, plus OEM and used parts for European makes such as Opel, BMW, Audi and Fiat.",
     "",
     "Use this file as a curated entrypoint for LLMs and agents. Prefer policy and support pages for factual answers, then use product pages for item-level details.",
     "",
@@ -110,7 +113,7 @@ export function buildLlmsTxt(
     "## Shop by vehicle",
     ...VEHICLES.map(
       vehicle =>
-        `- [${vehicle.name} accessories and parts](${normalizedOrigin}/vehicle/${vehicle.slug})`
+        `- [${vehicle.heading ?? `${vehicle.name} accessories and parts`}](${normalizedOrigin}/vehicle/${vehicle.slug})`
     ),
     "",
     "## Guides",

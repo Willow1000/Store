@@ -37,6 +37,8 @@ interface SEOHeadProps {
   articleData?: ArticleSchemaInput;
   // For FAQ pages
   faqData?: FAQSchemaInput[];
+  /** Products shown on a listing page, for its ItemList. */
+  itemList?: Array<{ name: string; url: string }>;
   // For breadcrumbs
   breadcrumbs?: Array<{
     name: string;
@@ -335,8 +337,8 @@ function buildHeadMarkup(props: {
 
 export function SEOHead({
   pageType = "generic",
-  title = "Rare European Car Parts | OEM and Aftermarket Auto Parts Europe | MotorVault",
-  description = "Shop rare and hard-to-find European car parts for BMW, Mercedes, Volkswagen, Audi, Porsche, Opel, Fiat, Peugeot, Renault, and Volvo with fast shipping across Europe.",
+  title = "Auto Parts & Accessories for Trucks, Jeeps, Teslas & European Cars | MotorVault",
+  description = "Shop accessories and parts for the Ford F-150, Ram 1500, Chevy Silverado, Toyota Tacoma, Jeep Wrangler and Tesla Model 3 and Y, plus OEM and used parts for Opel, BMW, Audi and Fiat.",
   canonical,
   noIndex = false,
   noFollow = false,
@@ -344,20 +346,19 @@ export function SEOHead({
   ogImage = `${CANONICAL_SITE_ORIGIN}/images/hero/premium-european-auto-parts-hero.webp`,
   ogType = "website",
   keywords = [
-    "European car parts",
-    "rare car parts Europe",
-    "hard-to-find auto parts",
-    "OEM car parts Europe",
+    "auto parts online",
+    "truck accessories",
+    "Jeep accessories",
+    "Tesla accessories",
+    "OEM car parts",
     "aftermarket car parts",
-    "DPF diesel particulate filter",
-    "catalytic converter",
-    "ECU engine control unit",
-    "turbocharger replacement",
-    "international car parts shipping",
+    "used car parts",
+    "VIN decoder",
   ],
   productData,
   articleData,
   faqData,
+  itemList,
   breadcrumbs,
   localizedUrls,
   fallback = false,
@@ -375,8 +376,13 @@ export function SEOHead({
   >(() => JSON.parse(localizedUrlsKey) ?? undefined, [localizedUrlsKey]);
   const currentLanguage = getDocumentLanguage();
   const ogLocale = getOgLocaleForLanguage(currentLanguage);
+  // Only languages this page really has a URL for. Listing every language
+  // the switcher offers advertised translations that do not exist as pages.
   const ogLocaleAlternates = Object.entries(LANGUAGE_TO_LOCALE)
-    .filter(([language]) => language !== currentLanguage)
+    .filter(
+      ([language]) =>
+        language !== currentLanguage && Boolean(stableLocalizedUrls?.[language])
+    )
     .map(([, locale]) => locale);
   const normalizedOgImage = toAbsoluteUrl(ogImage, pageUrl) || ogImage;
   const robotsContent = getRobotsContent(noIndex, noFollow, robots);
@@ -405,6 +411,7 @@ export function SEOHead({
     articleData,
     breadcrumbs,
     faqData,
+    itemList,
   });
   const structuredDataJson = JSON.stringify(structuredData);
   const keywordsContent = keywords.join(", ");

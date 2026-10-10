@@ -47,6 +47,12 @@ export type BlogPost = {
   internalLinks: BlogLink[];
   outboundReferences: BlogLink[];
   backlinkOutreach: BlogLink[];
+  /**
+   * A site tool that does what the article explains, offered straight after
+   * the introduction for readers who came to do the task rather than read
+   * about it.
+   */
+  toolCta?: { text: string; label: string; href: string };
 };
 
 export const BLOG_AUTHOR = "MotorVault Editorial Team";
@@ -54,6 +60,11 @@ export const BLOG_AUTHOR = "MotorVault Editorial Team";
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "vin-fitment-guide-european-auto-parts",
+    toolCta: {
+      text: "Have your VIN to hand? Decode it now to see the make, model, year and engine before you compare part numbers.",
+      label: "Open the free VIN decoder",
+      href: "/vin-decoder",
+    },
     title: "VIN Number Lookup for Parts: Check Fitment Before You Buy",
     description:
       "How to use a VIN number lookup to find parts that fit: decode the VIN, match the engine code and part number, and avoid ordering the wrong part.",
@@ -1366,6 +1377,11 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "vin-decoder-guide-find-right-parts",
+    toolCta: {
+      text: "Have your VIN to hand? Decode it now to see the make, model, year and engine before you compare part numbers.",
+      label: "Open the free VIN decoder",
+      href: "/vin-decoder",
+    },
     title: "Free VIN Decoder: How to Use a VIN to Find the Right Parts",
     description:
       "How to use a free VIN decoder to find parts that fit: where to find your VIN, what each part of it means, and why it beats searching by year, make and model.",

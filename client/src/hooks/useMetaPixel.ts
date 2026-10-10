@@ -19,6 +19,17 @@ function canTrack(): boolean {
   );
 }
 
+/**
+ * fbevents.js is downloaded lazily (see client/index.html); until then events
+ * sit in the fbq queue. Call this for events that must not be lost if the
+ * visitor leaves before the lazy download starts.
+ */
+function loadPixelNow(): void {
+  if (typeof window === "undefined") return;
+  const load = (window as any).__loadMetaPixel;
+  if (typeof load === "function") load();
+}
+
 function roundMoney(value: number): number | null {
   if (!Number.isFinite(value) || value <= 0) return null;
   return Math.round(value * 100) / 100;
@@ -100,6 +111,7 @@ export function trackInitiateCheckout(
     safeValue !== null &&
     safeCurrency
   ) {
+    loadPixelNow();
     (window as any).fbq("track", "InitiateCheckout", {
       content_ids: contentIds,
       content_names: contentNames,
@@ -132,6 +144,7 @@ export function trackPurchase(
     safeCurrency &&
     numItems > 0
   ) {
+    loadPixelNow();
     (window as any).fbq("track", "Purchase", {
       content_ids: contentIds,
       content_names: contentNames,

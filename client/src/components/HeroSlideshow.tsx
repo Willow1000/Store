@@ -16,13 +16,30 @@ interface Slide {
   description: string;
 }
 
+/**
+ * Hero photos are 2752px wide; phones were downloading all of it to fill a
+ * 400px-wide banner. Each has 828, 1280 and 1920px versions beside it
+ * ("name-828.avif"), offered through srcset.
+ */
+const HERO_WIDTHS = [828, 1280, 1920];
+
+function heroVariant(path: string, width: number): string {
+  return path.replace(/\.(avif|webp)$/, `-${width}.$1`);
+}
+
+function heroSrcSet(path: string): string {
+  return [
+    ...HERO_WIDTHS.map(width => `${heroVariant(path, width)} ${width}w`),
+    `${path} 2752w`,
+  ].join(", ");
+}
+
 const slides: Slide[] = [
   {
     id: 1,
     image: "/images/hero/premium-european-auto-parts-hero.avif",
     imageWebp: "/images/hero/premium-european-auto-parts-hero.webp",
-    imageAlt:
-      "Premium European car parts including OEM and aftermarket components",
+    imageAlt: "Car parts including OEM and aftermarket components",
     title: "Find The Right Part First Time",
     subtitle: "VIN-aware sourcing, fitment support, and clear options",
     cta: "Start with fitment-safe parts",
@@ -34,8 +51,7 @@ const slides: Slide[] = [
     id: 2,
     image: "/images/hero/certified-auto-parts-inspection-hero.avif",
     imageWebp: "/images/hero/certified-auto-parts-inspection-hero.webp",
-    imageAlt:
-      "Certified technicians inspecting rare European auto parts for quality assurance",
+    imageAlt: "Technicians inspecting auto parts for quality assurance",
     title: "OEM, Aftermarket, or Used?",
     subtitle: "Choose by quality tier, budget, and repair priority",
     cta: "Compare part options",
@@ -47,8 +63,7 @@ const slides: Slide[] = [
     id: 3,
     image: "/images/hero/professional-auto-parts-installation-hero.avif",
     imageWebp: "/images/hero/professional-auto-parts-installation-hero.webp",
-    imageAlt:
-      "Professional mechanic installing European automotive replacement parts",
+    imageAlt: "Professional mechanic installing automotive replacement parts",
     title: "DIY Or Mechanic?",
     subtitle: "Know when to install yourself and when to get pro help",
     cta: "See practical guidance",
@@ -60,8 +75,7 @@ const slides: Slide[] = [
     id: 4,
     image: "/images/hero/home-hero-section-last-image.avif",
     imageWebp: "/images/hero/home-hero-section-last-image.avif",
-    imageAlt:
-      "Featured European automotive parts displayed in a premium showroom setting",
+    imageAlt: "Featured automotive parts displayed in a showroom setting",
     title: "Know Returns, Warranty, and Delivery Upfront",
     subtitle: "Transparent policies before you commit",
     cta: "Review key FAQs",
@@ -116,12 +130,38 @@ export function HeroSlideshow() {
           className="absolute inset-0 animate-in fade-in duration-700"
         >
           {/* Background Image */}
+          {/* The first slide is the page's largest paint. Its image sits
+              inside <picture>, which React does not preload on its own. */}
+          {currentSlide === 0 && (
+            <link
+              rel="preload"
+              as="image"
+              type="image/avif"
+              imageSrcSet={heroSrcSet(activeSlide.image)}
+              imageSizes="100vw"
+              fetchPriority="high"
+            />
+          )}
           <picture>
-            <source srcSet={activeSlide.image} type="image/avif" />
-            <source srcSet={activeSlide.imageWebp} type="image/webp" />
+            <source
+              srcSet={heroSrcSet(activeSlide.image)}
+              sizes="100vw"
+              type="image/avif"
+            />
+            <source
+              srcSet={heroSrcSet(activeSlide.imageWebp)}
+              sizes="100vw"
+              type={
+                activeSlide.imageWebp.endsWith(".avif")
+                  ? "image/avif"
+                  : "image/webp"
+              }
+            />
             <img
-              src={activeSlide.imageWebp}
+              src={heroVariant(activeSlide.imageWebp, 1280)}
               alt={activeSlide.imageAlt}
+              width={2752}
+              height={1536}
               className="h-full w-full object-cover"
               loading="eager"
               fetchPriority="high"

@@ -80,6 +80,10 @@ const VEHICLE_GUIDES: Record<string, string[]> = {
   "jeep-gladiator": TRUCK_GUIDES,
   "tesla-model-y": EV_GUIDES,
   "tesla-model-3": EV_GUIDES,
+  opel: [ECU_FAILURES, USED_VS_OEM, VIN_FITMENT],
+  bmw: [USED_VS_OEM, VIN_FITMENT],
+  audi: [RECARO, USED_VS_OEM, VIN_FITMENT],
+  fiat: [USED_VS_OEM, VIN_FITMENT],
 };
 
 export function guideLinks(slugs: string[] | undefined): GuideLink[] {

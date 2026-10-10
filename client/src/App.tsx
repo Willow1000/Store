@@ -31,6 +31,8 @@ import { ProductsPageSkeleton } from "@/components/skeletons/ProductsPageSkeleto
 import { ProductDetailSkeleton } from "@/components/skeletons/ProductDetailSkeleton";
 import { AboutPageSkeleton } from "@/components/skeletons/AboutPageSkeleton";
 import { SEOHead } from "@/components/SEOHead";
+import Header from "@/components/Header";
+import CookieConsent from "@/components/CookieConsent";
 import { supabase } from "@/lib/supabase";
 
 const Home = lazy(() => import("./pages/Home"));
@@ -65,7 +67,6 @@ const VinDecoder = lazy(() => import("./pages/VinDecoder"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const PaymentFailed = lazy(() => import("./pages/PaymentFailed"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const Header = lazy(() => import("./components/Header"));
 const Footer = lazy(() => import("./components/Footer"));
 
 const PRIVATE_PATH_PREFIXES = [
@@ -280,18 +281,6 @@ function ContentPageSkeleton() {
         <Skeleton className="h-24 w-full rounded-xl" />
         <Skeleton className="h-24 w-full rounded-xl" />
         <Skeleton className="h-24 w-full rounded-xl" />
-      </div>
-    </div>
-  );
-}
-
-function HeaderFallback() {
-  return (
-    <div className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-      <div className="container flex h-14 items-center gap-4 sm:h-16">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="h-9 flex-1" />
-        <Skeleton className="h-8 w-24" />
       </div>
     </div>
   );
@@ -703,9 +692,11 @@ function AppContent() {
               className="flex min-h-screen w-full flex-col overflow-x-clip bg-background"
               style={{ visibility: "visible" }}
             >
-              <Suspense fallback={<HeaderFallback />}>
-                <Header />
-              </Suspense>
+              {/* Not lazy: the header is on every page and above the fold.
+                  Loaded lazily, a state update before its chunk arrived made
+                  React swap the server-rendered header for the shorter
+                  placeholder and back, moving the whole page 65px twice. */}
+              <Header />
               <main
                 className={`flex-1 w-full overflow-x-clip ${isHomePage ? "" : "pt-0"}`}
               >
@@ -719,6 +710,8 @@ function AppContent() {
                 <Footer />
               </Suspense>
             </div>
+
+            <CookieConsent />
 
             {showTranslationOverlay && (
               <div className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-[1px] overflow-auto">

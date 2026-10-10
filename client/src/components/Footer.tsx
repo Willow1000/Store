@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "./BrandLogo";
 import { SEO_CONFIG } from "@/lib/seoConfig";
+import { openConsentSettings } from "@/lib/cookieConsent";
 import { VEHICLES } from "@shared/vehicleContent";
 import {
   SITE_LANGUAGE_CHANGED_EVENT,
@@ -70,7 +71,7 @@ export default function Footer() {
             <p className="max-w-sm text-sm leading-relaxed text-gray-400">
               {t(
                 "footer.about",
-                "Your ultimate destination for premium automotive and motor parts. Fast shipping, authentic products, and expert support for all your vehicle needs."
+                "Auto parts and accessories for trucks, Jeeps, Teslas and European cars. Every listing states the model years it fits, with support before and after you order."
               )}
             </p>
           </div>
@@ -234,6 +235,13 @@ export default function Footer() {
           <p>
             &copy; 2026 MotorVault.{" "}
             {t("footer.allRightsReserved", "All rights reserved.")}{" "}
+            <button
+              type="button"
+              onClick={openConsentSettings}
+              className="ml-2 underline underline-offset-2 transition-colors hover:text-white"
+            >
+              {t("footer.cookieSettings", "Cookie settings")}
+            </button>
           </p>
           {/* Only profiles with a real destination are shown */}
           {socialLinks.length > 0 && (

@@ -1,7 +1,7 @@
 // ...existing code...
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, lazy, Suspense } from "react";
 import currencyClient from "@/lib/currencyClient";
 import { useLocation, useSearch } from "wouter";
 import { Link } from "wouter";
@@ -14,7 +14,6 @@ import {
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QuickViewModal } from "@/components/QuickViewModal";
 import { getCategoryContent } from "@shared/categoryContent";
 import { getGuidesForCategory } from "@shared/guideLinks";
 import { VEHICLES, vehiclesMatchingTitle } from "@shared/vehicleContent";
@@ -76,7 +75,22 @@ interface SearchSnapshot {
   metadata: Record<string, unknown>;
 }
 
-const PRODUCTS_PER_PAGE = 32;
+import {
+  PRODUCTS_PER_PAGE,
+  buildListingPageUrl,
+  countListingPages,
+  getPageFromSearch,
+} from "@/lib/listingPagination";
+import { isHydrating, useSsrPageData } from "@/lib/ssrPageData";
+import { cn } from "@/lib/utils";
+
+// Loaded when a quick view is first opened: the modal and its dialog code
+// were downloaded and parsed on every visit but run on almost none.
+const QuickViewModal = lazy(() =>
+  import("@/components/QuickViewModal").then(module => ({
+    default: module.QuickViewModal,
+  }))
+);
 
 const normalizeCategoryValue = (value: string) => value.trim().toLowerCase();
 
@@ -128,7 +142,10 @@ export default function Products() {
   );
   const [dealsOnly, setDealsOnly] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  // The page number lives in the URL (?page=N) so every page of a listing is
+  // a real, linkable, server-rendered URL rather than client-only state.
+  const requestedPage = getPageFromSearch(searchString);
+  const ssrListing = useSsrPageData()?.listing;
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
   const [fallbackResult, setFallbackResult] = useState<FallbackResult | null>(
     null
@@ -503,9 +520,15 @@ export default function Products() {
   );
   const canonicalCategoryParam =
     selectedCategory?.slug || categoryFilter || categoryQueryValue;
-  const canonicalPath = canonicalCategoryParam
+  const canonicalFirstPagePath = canonicalCategoryParam
     ? `/products?category=${encodeURIComponent(canonicalCategoryParam)}`
     : "/products";
+  // Each page of a listing is its own canonical URL: pointing page 2 at
+  // page 1 tells crawlers to ignore the products that only page 2 links.
+  const canonicalPath =
+    requestedPage > 1
+      ? `${canonicalFirstPagePath}${canonicalCategoryParam ? "&" : "?"}page=${requestedPage}`
+      : canonicalFirstPagePath;
   const canonicalUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}${canonicalPath}`
@@ -549,6 +572,7 @@ export default function Products() {
     } else {
       params.delete("category");
     }
+    params.delete("page");
 
     const nextQuery = params.toString();
     const nextUrl = nextQuery ? `${path}?${nextQuery}` : path;
@@ -1025,35 +1049,78 @@ export default function Products() {
     return VEHICLES.filter(vehicle => slugs.has(vehicle.slug));
   }, [selectedCategory, filteredProducts]);
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE)
-  );
-  const paginationPages = useMemo<(number | string)[]>(() => {
-    if (totalPages <= 8) {
-      return Array.from({ length: totalPages }, (_, index) => index + 1);
-    }
-
-    return [1, 2, 3, 4, 5, 6, 7, "ellipsis", totalPages];
-  }, [totalPages]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
+  // Changing a filter returns to page 1. The price range only counts once
+  // the visitor narrows it: its upper bound also moves on its own when the
+  // catalogue's highest price loads.
+  const pageResetKey = [
     searchQuery,
     categoryFilter,
     sortBy,
-    priceRange,
-    dealsOnly,
-    inStockOnly,
-    brandFilter,
-    modelFilter,
-    conditionFilter,
-  ]);
+    priceRange[0] > 0 || priceRange[1] < computedMaxPrice
+      ? `${priceRange[0]}-${priceRange[1]}`
+      : "",
+    dealsOnly ? "1" : "0",
+    inStockOnly ? "1" : "0",
+    brandFilter.join(","),
+    modelFilter.join(","),
+    conditionFilter.join(","),
+  ].join("|");
+  const hasNarrowedListing =
+    pageResetKey !==
+    ["", categoryFilter, "recommended", "", "0", "0", "", "", ""].join("|");
 
+  // On /products the server embeds one page of the catalogue, not all of it.
+  // Until the full list has loaded, that page is shown as it is and the page
+  // count comes from the server's total.
+  const serverPageTotal =
+    (typeof window === "undefined" || isHydrating()) &&
+    !categoryFilter &&
+    !hasNarrowedListing &&
+    ssrListing?.categorySlug === "" &&
+    typeof ssrListing.total === "number" &&
+    ssrListing.page === requestedPage &&
+    allProducts.length < ssrListing.total
+      ? ssrListing.total
+      : null;
+  const listingCount = serverPageTotal ?? filteredProducts.length;
+  const totalPages = countListingPages(listingCount);
+  const currentPage = Math.min(requestedPage, totalPages);
+
+  const pageHref = (page: number) =>
+    buildListingPageUrl("/products", searchString, page);
+  const goToPage = (page: number, options?: { replace?: boolean }) => {
+    const nextPage = Math.min(Math.max(1, page), totalPages);
+    navigate(pageHref(nextPage), options);
+    if (!options?.replace && typeof window !== "undefined") {
+      window.scrollTo({ top: 0 });
+    }
+  };
+  // First, last and the pages around the current one. The previous list was
+  // always 1-7 plus the last page, so the current page vanished past page 7.
+  const paginationPages = useMemo<(number | string)[]>(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    const start = Math.max(2, Math.min(currentPage - 1, totalPages - 3));
+    const end = Math.min(totalPages - 1, Math.max(currentPage + 1, 4));
+    const pages: (number | string)[] = [1];
+    if (start > 2) pages.push("ellipsis");
+    for (let page = start; page <= end; page += 1) pages.push(page);
+    if (end < totalPages - 1) pages.push("ellipsis");
+    pages.push(totalPages);
+    return pages;
+  }, [totalPages, currentPage]);
+
+  const lastPageResetKeyRef = useRef(pageResetKey);
   useEffect(() => {
-    setCurrentPage(page => Math.min(page, totalPages));
-  }, [totalPages]);
+    if (lastPageResetKeyRef.current === pageResetKey) return;
+    lastPageResetKeyRef.current = pageResetKey;
+    if (requestedPage > 1) {
+      navigate(pageHref(1), { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageResetKey]);
 
   const allDisplayedProducts = useMemo(() => {
     // When search is active and results fit on one page (specific/limited results),
@@ -1061,10 +1128,14 @@ export default function Products() {
     if (hasSearchTermActive() && filteredProducts.length <= PRODUCTS_PER_PAGE) {
       return filteredProducts;
     }
+    // The server's embedded page of /products is already the right slice.
+    if (serverPageTotal !== null) {
+      return filteredProducts;
+    }
     // Standard pagination for browsing or when results exceed one page
     const start = (currentPage - 1) * PRODUCTS_PER_PAGE;
     return filteredProducts.slice(start, start + PRODUCTS_PER_PAGE);
-  }, [filteredProducts, currentPage]);
+  }, [filteredProducts, currentPage, serverPageTotal]);
 
   // ---- Presentation helpers (no filtering logic lives below this line) ----
 
@@ -1194,7 +1265,9 @@ export default function Products() {
     <>
       <SEOHead
         pageType="category"
-        title={seoTitle}
+        title={
+          requestedPage > 1 ? `${seoTitle} - Page ${requestedPage}` : seoTitle
+        }
         description={seoDescription}
         keywords={[
           "automotive parts",
@@ -1205,13 +1278,27 @@ export default function Products() {
         ]}
         canonical={canonicalUrl}
         // A category that does not exist must not become an indexable empty
-        // page (the server also answers it with 404).
+        // page (the server also answers it with 404). Same for a page number
+        // past the end of the listing.
         noIndex={Boolean(
-          categoryFilter &&
+          (categoryFilter &&
             !categoriesLoading &&
             categories.length > 0 &&
-            !selectedCategory
+            !selectedCategory) ||
+            // A page number past the end (the server answers it with 404).
+            requestedPage > totalPages
         )}
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Products", url: "/products" },
+          ...(activeCategoryLabel
+            ? [{ name: activeCategoryLabel, url: canonicalFirstPagePath }]
+            : []),
+        ]}
+        itemList={allDisplayedProducts.map(product => ({
+          name: product.title,
+          url: `/product/${product.id}`,
+        }))}
       />
       <div className="min-h-screen w-full overflow-x-hidden bg-white">
         {/* Header */}
@@ -1221,7 +1308,12 @@ export default function Products() {
               items={[
                 { label: "Products", href: "/products" },
                 ...(activeCategoryLabel
-                  ? [{ label: activeCategoryLabel, href: canonicalPath }]
+                  ? [
+                      {
+                        label: activeCategoryLabel,
+                        href: canonicalFirstPagePath,
+                      },
+                    ]
                   : []),
               ]}
               className="mb-3"
@@ -1568,7 +1660,7 @@ export default function Products() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowFilters(true)}
-                    className="btn-secondary flex-1 px-4 lg:hidden"
+                    className="btn-secondary flex-none px-4 lg:hidden"
                   >
                     <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                     <span>Filters</span>
@@ -1578,7 +1670,7 @@ export default function Products() {
                       </span>
                     )}
                   </button>
-                  <label className="flex flex-1 items-center gap-2 sm:flex-none">
+                  <label className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
                     <span className="hidden whitespace-nowrap text-sm text-gray-600 xl:inline">
                       Sort By
                     </span>
@@ -1589,7 +1681,9 @@ export default function Products() {
                       }}
                       aria-label="Sort By"
                       // Tighter padding on phones so "Recommended" fits at the
-                      // 16px size that stops iOS zooming into the field.
+                      // 16px size that stops iOS zooming into the field. The
+                      // Filters button beside it keeps its natural width so
+                      // the menu gets the rest of the row.
                       className="field !pl-3 !pr-8 sm:w-52 sm:!pl-3.5 sm:!pr-9"
                     >
                       <option value="recommended">Recommended</option>
@@ -1622,7 +1716,7 @@ export default function Products() {
                       key={chip.key}
                       type="button"
                       onClick={chip.onRemove}
-                      className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-gray-100 pl-3 pr-2 text-[13px] font-medium text-ink transition-colors hover:bg-gray-200"
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-gray-100 pl-3 pr-2 text-[13px] font-medium text-ink transition-colors hover:bg-gray-200 sm:min-h-8"
                     >
                       <span className="max-w-[12rem] truncate">
                         {chip.label}
@@ -1636,7 +1730,7 @@ export default function Products() {
                   <button
                     type="button"
                     onClick={clearAllFilters}
-                    className="px-1 text-[13px] font-semibold text-ink underline underline-offset-4 hover:text-gray-600"
+                    className="inline-flex min-h-11 items-center px-2 text-[13px] font-semibold text-ink underline underline-offset-4 hover:text-gray-600 sm:min-h-8"
                   >
                     Clear all
                   </button>
@@ -1747,10 +1841,10 @@ export default function Products() {
               {/* Products Count */}
               <div className="mb-4 mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600">
                 <span>
-                  Showing {filteredProducts.length} product
-                  {filteredProducts.length !== 1 ? "s" : ""}
+                  Showing {listingCount} product
+                  {listingCount !== 1 ? "s" : ""}
                 </span>
-                {filteredProducts.length > PRODUCTS_PER_PAGE && (
+                {totalPages > 1 && (
                   <span>
                     Page {currentPage} of {totalPages}
                   </span>
@@ -1771,7 +1865,7 @@ export default function Products() {
                     <ProductCard
                       key={product.id}
                       product={product}
-                      priority={idx < 4}
+                      priority={idx < 2}
                       isWished={wishedProductIds.has(product.id)}
                       onNavigate={item => trackProductClick(item.id)}
                       onWishlistToggle={async item => {
@@ -1833,38 +1927,50 @@ export default function Products() {
                 </div>
               )}
 
-              {filteredProducts.length > PRODUCTS_PER_PAGE && (
+              {totalPages > 1 && (
                 <div className="mt-10 flex justify-center">
                   <Pagination>
-                    <PaginationContent>
+                    {/* Phones get Previous / "Page X of Y" / Next with
+                        full-size tap targets: the row of page numbers is
+                        wider than a phone screen and pushed Next off it. */}
+                    <PaginationContent className="w-full justify-between gap-2 sm:w-auto sm:justify-center sm:gap-1">
                       <PaginationItem>
                         <PaginationPrevious
-                          href="#"
+                          href={pageHref(Math.max(1, currentPage - 1))}
+                          aria-disabled={currentPage === 1}
+                          tabIndex={currentPage === 1 ? -1 : undefined}
                           onClick={e => {
                             e.preventDefault();
-                            setCurrentPage(page => Math.max(1, page - 1));
+                            goToPage(currentPage - 1);
                           }}
-                          className={
-                            currentPage === 1
-                              ? "pointer-events-none opacity-50"
-                              : ""
-                          }
+                          className={cn(
+                            "h-11 min-w-11 border border-gray-300 sm:h-9 sm:min-w-0 sm:border-0",
+                            currentPage === 1 &&
+                              "pointer-events-none opacity-50"
+                          )}
                         />
                       </PaginationItem>
 
+                      <PaginationItem className="text-sm font-medium text-gray-700 sm:hidden">
+                        Page {currentPage} of {totalPages}
+                      </PaginationItem>
+
                       {paginationPages.map((page, index) => (
-                        <PaginationItem key={`${page}-${index}`}>
+                        <PaginationItem
+                          key={`${page}-${index}`}
+                          className="hidden sm:list-item"
+                        >
                           {page === "ellipsis" ? (
                             <span className="flex h-9 w-9 items-center justify-center text-sm text-gray-500">
                               ...
                             </span>
                           ) : (
                             <PaginationLink
-                              href="#"
+                              href={pageHref(page as number)}
                               isActive={page === currentPage}
                               onClick={e => {
                                 e.preventDefault();
-                                setCurrentPage(page as number);
+                                goToPage(page as number);
                               }}
                             >
                               {page}
@@ -1875,18 +1981,18 @@ export default function Products() {
 
                       <PaginationItem>
                         <PaginationNext
-                          href="#"
+                          href={pageHref(Math.min(totalPages, currentPage + 1))}
+                          aria-disabled={currentPage === totalPages}
+                          tabIndex={currentPage === totalPages ? -1 : undefined}
                           onClick={e => {
                             e.preventDefault();
-                            setCurrentPage(page =>
-                              Math.min(totalPages, page + 1)
-                            );
+                            goToPage(currentPage + 1);
                           }}
-                          className={
-                            currentPage === totalPages
-                              ? "pointer-events-none opacity-50"
-                              : ""
-                          }
+                          className={cn(
+                            "h-11 min-w-11 border border-gray-300 sm:h-9 sm:min-w-0 sm:border-0",
+                            currentPage === totalPages &&
+                              "pointer-events-none opacity-50"
+                          )}
                         />
                       </PaginationItem>
                     </PaginationContent>
@@ -1996,11 +2102,13 @@ export default function Products() {
 
         {/* Quick View Modal */}
         {quickViewProductId && (
-          <QuickViewModal
-            productId={quickViewProductId}
-            isOpen={!!quickViewProductId}
-            onClose={() => setQuickViewProductId(null)}
-          />
+          <Suspense fallback={null}>
+            <QuickViewModal
+              productId={quickViewProductId}
+              isOpen={!!quickViewProductId}
+              onClose={() => setQuickViewProductId(null)}
+            />
+          </Suspense>
         )}
       </div>
     </>

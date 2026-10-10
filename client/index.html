@@ -78,78 +78,94 @@
       src="%VITE_ANALYTICS_ENDPOINT%/umami"
       data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script> -->
 
-    <!-- Meta Pixel Code (deferred until first user interaction to reduce render impact) -->
+    <!-- Meta Pixel Code. The fbq queue is created immediately so events fired
+         during page load (ViewContent on a product landing, Purchase on the
+         return from payment) are queued instead of dropped. fbevents.js itself
+         is only downloaded once marketing cookies are allowed (see
+         src/lib/cookieConsent.ts), and then not before first interaction or
+         shortly after load, to reduce render impact. -->
     <script>
       (function () {
-        var initialized = false;
+        var loaded = false;
+        var wanted = false;
+        var interactionEvents = [
+          "pointerdown",
+          "keydown",
+          "scroll",
+          "touchstart",
+        ];
 
-        function initPixel() {
-          if (initialized) return;
-          initialized = true;
-
-          !(function (f, b, e, v, n, t, s) {
-            if (f.fbq) return;
-            n = f.fbq = function () {
-              n.callMethod
-                ? n.callMethod.apply(n, arguments)
-                : n.queue.push(arguments);
-            };
-            if (!f._fbq) f._fbq = n;
-            n.push = n;
-            n.loaded = !0;
-            n.version = "2.0";
-            n.queue = [];
-            t = b.createElement(e);
-            t.async = !0;
-            t.src = v;
-            s = b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t, s);
-          })(
-            window,
-            document,
-            "script",
-            "https://connect.facebook.net/en_US/fbevents.js"
+        // A choice the visitor already made. Without one the flag stays unset
+        // until the consent banner code applies their choice or the default
+        // for their region.
+        try {
+          var stored = JSON.parse(
+            window.localStorage.getItem("mv_cookie_consent") || "null"
           );
+          if (stored && typeof stored.marketing === "boolean") {
+            window.__mvMarketingConsent = stored.marketing;
+          }
+        } catch (e) {}
 
-          fbq("init", "2056673991610593");
-          fbq("track", "PageView");
-
-          window.removeEventListener("pointerdown", initPixel, {
-            passive: true,
+        if (!window.fbq) {
+          var n = (window.fbq = function () {
+            n.callMethod
+              ? n.callMethod.apply(n, arguments)
+              : n.queue.push(arguments);
           });
-          window.removeEventListener("keydown", initPixel);
-          window.removeEventListener("scroll", initPixel, { passive: true });
-          window.removeEventListener("touchstart", initPixel, {
-            passive: true,
+          if (!window._fbq) window._fbq = n;
+          n.push = n;
+          n.loaded = !0;
+          n.version = "2.0";
+          n.queue = [];
+        }
+
+        fbq("init", "2056673991610593");
+        fbq("track", "PageView");
+
+        function loadPixel() {
+          // Remembered so that consent given later starts the download at once.
+          wanted = true;
+          if (loaded || window.__mvMarketingConsent !== true) return;
+          loaded = true;
+
+          var t = document.createElement("script");
+          t.async = !0;
+          t.src = "https://connect.facebook.net/en_US/fbevents.js";
+          var s = document.getElementsByTagName("script")[0];
+          s.parentNode.insertBefore(t, s);
+
+          interactionEvents.forEach(function (name) {
+            window.removeEventListener(name, loadPixel);
           });
         }
 
-        window.addEventListener("pointerdown", initPixel, {
-          once: true,
-          passive: true,
+        // Called by conversion events that must not be lost (Purchase).
+        window.__loadMetaPixel = loadPixel;
+        // Called when marketing cookies become allowed: starts the download
+        // only if a visitor interaction or the timer has already asked for it.
+        window.__resumeMetaPixel = function () {
+          if (wanted) loadPixel();
+        };
+
+        interactionEvents.forEach(function (name) {
+          window.addEventListener(name, loadPixel, { passive: true });
         });
-        window.addEventListener("keydown", initPixel, { once: true });
-        window.addEventListener("scroll", initPixel, {
-          once: true,
-          passive: true,
-        });
-        window.addEventListener("touchstart", initPixel, {
-          once: true,
-          passive: true,
-        });
+
+        function loadSoon() {
+          setTimeout(loadPixel, 3000);
+        }
+        if (document.readyState === "complete") {
+          loadSoon();
+        } else {
+          window.addEventListener("load", loadSoon, { once: true });
+        }
       })();
     </script>
     <!-- End Meta Pixel Code -->
   </head>
 
   <body>
-    <noscript
-      ><img
-        height="1"
-        width="1"
-        style="display: none"
-        src="https://www.facebook.com/tr?id=2056673991610593&ev=PageView&noscript=1"
-    /></noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

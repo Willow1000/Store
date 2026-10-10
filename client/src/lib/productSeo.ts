@@ -34,8 +34,17 @@ export function fitSeoTitle(rawTitle: string, suffix = BRAND_SUFFIX): string {
   return clip(title, TITLE_LIMIT);
 }
 
+/**
+ * Product titles are never clipped. Fitment sits at the end of most of them
+ * ("... Leveling Kit for 2004-2014 Ford F-150"), so cutting at 60 characters
+ * removed the vehicle - the part of the title buyers search for. A long title
+ * only loses the brand suffix; the search engine shortens what it displays.
+ */
 export function buildProductSeoTitle(productTitle: string): string {
-  return fitSeoTitle(productTitle);
+  const title = productTitle.replace(/\s+/g, " ").trim();
+  return title.length + BRAND_SUFFIX.length <= TITLE_LIMIT
+    ? `${title}${BRAND_SUFFIX}`
+    : title;
 }
 
 /** Labels whose values describe the item well enough for a snippet. */
@@ -60,10 +69,16 @@ export function buildProductMetaDescription({
   title,
   condition,
   itemSpecifics,
+  brand,
+  partNumber,
+  category,
 }: {
   title: string;
   condition?: string | null;
   itemSpecifics?: unknown;
+  brand?: string | null;
+  partNumber?: string | null;
+  category?: string | null;
 }): string {
   const cleanTitle = title.replace(/\s+/g, " ").trim();
   const conditionLabel = String(condition || "").trim();
@@ -72,9 +87,24 @@ export function buildProductMetaDescription({
     !cleanTitle.toLowerCase().includes(conditionLabel.toLowerCase())
       ? `${conditionLabel} ${cleanTitle}`
       : cleanTitle;
-  const facts = extractFacts(itemSpecifics);
-  const text = facts.length
-    ? `${lead}. ${facts.join(". ")}.`
-    : `${lead}. Buy online at MotorVault.`;
+  let facts = extractFacts(itemSpecifics);
+  if (facts.length === 0) {
+    // No usable spec lines (most used parts): describe the item from its own
+    // record rather than a sentence that is identical on every such page.
+    facts = [
+      brand?.trim() ? `Brand: ${brand.trim()}` : "",
+      partNumber?.trim() ? `Part number: ${partNumber.trim()}` : "",
+      category?.trim() ? `Category: ${category.trim()}` : "",
+    ].filter(Boolean);
+  }
+  if (facts.length === 0) return clip(`${lead}.`, DESCRIPTION_LIMIT);
+
+  // Whole facts only: stop before the one that would not fit, instead of
+  // cutting a spec off mid-word.
+  let text = `${lead}.`;
+  for (const fact of facts) {
+    if (text.length + fact.length + 2 > DESCRIPTION_LIMIT) break;
+    text += ` ${fact}.`;
+  }
   return clip(text, DESCRIPTION_LIMIT);
 }

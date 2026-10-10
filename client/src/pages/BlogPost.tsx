@@ -4,6 +4,7 @@ import { getSocialImageUrl } from "@shared/socialImage";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { BLOG_AUTHOR, BLOG_POSTS, getBlogPostBySlug } from "@shared/blogPosts";
 import { fitSeoTitle } from "@/lib/productSeo";
+import { useMarkNotFound } from "@/lib/ssrStatus";
 import { useState } from "react";
 import { Link, useRoute } from "wouter";
 
@@ -68,6 +69,8 @@ export default function BlogPost() {
   if (!post) {
     return (
       <div className="container py-16 sm:py-24">
+        {/* An unknown slug used to answer 200 + "index, follow": a soft 404. */}
+        <MarkBlogPostNotFound />
         <div className="mx-auto max-w-lg rounded-xl border border-dashed border-gray-300 px-6 py-12 text-center">
           <h1 className="text-2xl font-bold text-ink">Article not found</h1>
           <p className="mt-2 text-sm text-gray-600">
@@ -170,6 +173,20 @@ export default function BlogPost() {
                 workshops who want clearer technical context, more reliable
                 fitment checks, and fewer avoidable mistakes.
               </p>
+
+              {post.toolCta && (
+                <div className="mt-6 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm leading-relaxed text-gray-700">
+                    {post.toolCta.text}
+                  </p>
+                  <Link
+                    href={post.toolCta.href}
+                    className="btn-primary flex-none"
+                  >
+                    {post.toolCta.label}
+                  </Link>
+                </div>
+              )}
 
               <section className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-5">
                 <h2 className="font-sans text-base font-semibold tracking-normal text-ink">
@@ -389,5 +406,16 @@ export default function BlogPost() {
         </div>
       </article>
     </>
+  );
+}
+
+function MarkBlogPostNotFound() {
+  useMarkNotFound();
+  return (
+    <SEOHead
+      title="Article Not Found | MotorVault Blog"
+      description="The requested article could not be located."
+      noIndex
+    />
   );
 }

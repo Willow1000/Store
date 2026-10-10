@@ -283,7 +283,7 @@ export const CATEGORY_CONTENT: Record<string, CategoryContent> = {
   wipers: {
     seoTitle: "Wiper Blades for Cars & Trucks | MotorVault",
     metaDescription:
-      "Wiper blades from Bosch, Clix and more for cars, trucks and SUVs. Find the right sizes for your vehicle and replace them every 6 to 12 months.",
+      "Wiper blades from Clix, Scrubblade and more for cars, trucks and SUVs. Find the right sizes for your vehicle and replace them every 6 to 12 months.",
     intro:
       "Beam and conventional wiper blades from established brands. Driver and passenger sides are often different lengths, so check both sizes.",
     faqs: [
@@ -362,6 +362,165 @@ export const CATEGORY_CONTENT: Record<string, CategoryContent> = {
         question: "Do I need an amplifier for new speakers?",
         answer:
           "Not always: efficient speakers can run from a factory head unit. An amplifier is worth it for component speakers, subwoofers and higher volume without distortion.",
+      },
+    ],
+  },
+  body: {
+    seoTitle: "Car Doors, Grilles & Body Parts | MotorVault",
+    metaDescription:
+      "Used OEM doors and body parts plus new grilles and trim for trucks, Jeeps, Teslas and European cars. Check the model years and body style before ordering.",
+    intro:
+      "Used OEM doors and body parts from identified donor vehicles, alongside new grilles and exterior trim. Body parts are specific to the body style and model years.",
+    faqs: [
+      {
+        question: "Will a used door from another car fit mine?",
+        answer: `Only from the same model generation and body style: a 3-door, 5-door, sedan and wagon of the same model usually use different doors, and a mid-cycle facelift can change mounting points. Left and right, front and rear are not interchangeable. ${FITMENT_HELP}`,
+      },
+      {
+        question: "Do used body panels come in my car's colour?",
+        answer:
+          "They come in the donor vehicle's colour, shown in the listing photos. Even with the same paint code, age and sun change the shade, so expect to repaint a panel for an exact match.",
+      },
+    ],
+  },
+  brakes: {
+    seoTitle: "Brake Pads, Calipers & Brake Kits | MotorVault",
+    metaDescription:
+      "Brake pads, calipers, disc brake conversion kits and brake bleeders for trucks, Teslas and classic pickups. Check axle, rotor size and model years first.",
+    intro:
+      "Brake pads, calipers, disc conversion kits and bleeding tools. Brakes are specific to the axle and rotor size as well as the model, so check all three.",
+    faqs: [
+      {
+        question: "How do I know which brake pads fit my vehicle?",
+        answer: `Pads are specific to the axle (front or rear), the caliper and the rotor size, and performance trims often use larger brakes than the base model. Compare the listing's fitment with your trim and model year. ${FITMENT_HELP}`,
+      },
+      {
+        question: "Do I need to bleed the brakes after changing calipers?",
+        answer:
+          "Yes. Opening the hydraulic circuit lets air in, and air in the lines gives a soft pedal and longer stopping distances. Bleed the system with the fluid type stated in your owner's manual, and have a professional do it if you are unsure: brakes are safety-critical.",
+      },
+    ],
+  },
+  bumpers: {
+    seoTitle: "Truck Bumpers & Brush Guards | MotorVault",
+    metaDescription:
+      "Front and rear bumpers, step bumpers and brush guards for pickups, Jeeps and heavy trucks. Check sensor, tow hook and fog light cut-outs before ordering.",
+    intro:
+      "Steel and chrome bumpers, step bumpers and brush guards for pickups, Jeeps and heavy trucks. Check sensor and light cut-outs against your trim.",
+    faqs: [
+      {
+        question: "Will an aftermarket bumper work with parking sensors?",
+        answer:
+          "Only if it has cut-outs for them. Listings state whether a bumper is drilled for parking sensors, fog lights and tow hooks; a bumper without sensor holes will not accept the factory sensors.",
+      },
+      {
+        question: "Can I fit a bumper myself?",
+        answer:
+          "Most direct-fit bumpers bolt to the factory mounting points with hand tools, but steel bumpers are heavy and need two people or a jack to position. Disconnect any wiring for sensors and lights first, and torque the mounting bolts to the vehicle manufacturer's specification.",
+      },
+    ],
+  },
+  electrical: {
+    seoTitle: "ECUs, Alternators & Car Electrical Parts | MotorVault",
+    metaDescription:
+      "Engine control units, alternators, batteries and wiring harnesses, new and used. Match the part number exactly: electrical parts are coded to the vehicle.",
+    intro:
+      "Engine control units, alternators, batteries and wiring. For control units, match the part number on your original unit exactly.",
+    faqs: [
+      {
+        question: "Can I swap in a used ECU from another car?",
+        answer: `The hardware part number must match, and on most modern vehicles the unit is also paired to the immobiliser and keys, so a used ECU normally has to be coded or cloned to the car by a specialist before the engine will start. ${FITMENT_HELP}`,
+      },
+      {
+        question: "How do I choose the right alternator?",
+        answer:
+          "Match the amperage rating, the mounting points and the electrical connector to the original. The same engine can be fitted with alternators of different output depending on the vehicle's equipment, so compare the part number on your old unit.",
+      },
+    ],
+  },
+  exhaust: {
+    seoTitle: "Exhaust Systems, DPFs & Catalytic Converters | MotorVault",
+    metaDescription:
+      "Exhaust systems, mufflers, diesel particulate filters and catalytic converters, new and used. Check the engine code and emissions rules for your state.",
+    intro:
+      "Exhaust systems, mufflers, catalytic converters and diesel particulate filters. Emissions parts are specific to the engine and to local regulations.",
+    faqs: [
+      {
+        question: "Is a replacement catalytic converter legal in my state?",
+        answer:
+          'It depends on the state. California and the states that follow its rules require CARB-approved converters with an Executive Order number for the specific vehicle; elsewhere a federal (EPA-compliant) converter is accepted. Listings marked "Federal (Exc. CA)" cannot be used in California.',
+      },
+      {
+        question: "How do I match a used DPF to my car?",
+        answer: `Use the part number stamped on the filter and the engine code: the same model is sold with several diesel engines that use different filters. A used DPF may need cleaning or a forced regeneration after fitting. ${FITMENT_HELP}`,
+      },
+    ],
+  },
+  hydraulics: {
+    seoTitle: "ABS Pumps & Hydraulic Units | MotorVault",
+    metaDescription:
+      "Used ABS pumps, hydraulic blocks, convertible-top pumps and drive motors, listed with OEM part numbers. Match the part number before you order.",
+    intro:
+      "ABS pumps, hydraulic blocks and hydraulic pumps from identified donor vehicles. These units are matched by OEM part number, not by model alone.",
+    faqs: [
+      {
+        question: "Can I fit a used ABS pump from another vehicle?",
+        answer: `Match the part number on the pump and on its control module: vehicles of the same model use different units depending on year, drivetrain and options. Many ABS modules also need coding to the car after fitting, and the brake system must be bled. ${FITMENT_HELP}`,
+      },
+      {
+        question: "What should I check before buying a used hydraulic pump?",
+        answer:
+          "Look for the OEM part number, clear photos of the connectors and ports, and whether the listing says the unit was tested. Ask before ordering if any of that is missing.",
+      },
+    ],
+  },
+  panels: {
+    seoTitle: "Used Car Body Panels | MotorVault",
+    metaDescription:
+      "Used OEM body panels and interior side panels from identified donor vehicles. Check the body style, side and model years before ordering.",
+    intro:
+      "Used OEM body and trim panels. Panels are specific to the body style and side of the vehicle, so compare the listing with your car carefully.",
+    faqs: [
+      {
+        question: "How do I check a used panel will fit?",
+        answer: `Confirm the model generation, the body style (coupe, sedan, hatchback, convertible) and the side. Panels from the same model but a different body style rarely interchange. ${FITMENT_HELP}`,
+      },
+    ],
+  },
+  steering: {
+    seoTitle: "Steering Wheels & Steering Parts | MotorVault",
+    metaDescription:
+      "OEM and custom steering wheels and steering parts. Check the airbag type, hub spline and steering-wheel controls match your vehicle before ordering.",
+    intro:
+      "OEM and custom steering wheels. A replacement wheel must match your car's airbag, hub and steering-wheel controls.",
+    faqs: [
+      {
+        question: "Will a steering wheel from another model fit my car?",
+        answer: `It needs the same hub spline, the same airbag module and connector, and compatible wiring for paddles, heating and buttons. Wheels are usually sold without the airbag unless the listing says otherwise. ${FITMENT_HELP}`,
+      },
+      {
+        question: "Is it safe to change a steering wheel myself?",
+        answer:
+          "The airbag is an explosive device. Disconnect the battery and wait the time the vehicle manufacturer specifies before unplugging it, and have a qualified technician do the job if you are not experienced with airbag systems.",
+      },
+    ],
+  },
+  tires: {
+    seoTitle: "Wheel & Tire Sets, Rims & Lug Nuts | MotorVault",
+    metaDescription:
+      "Used wheel and tire sets, alloy rims and lug nuts. Check the bolt pattern, center bore, offset and tire size against your vehicle before you order.",
+    intro:
+      "Wheel and tire sets, alloy rims and lug nuts. Bolt pattern, center bore and offset all have to match your vehicle, not just the diameter.",
+    faqs: [
+      {
+        question: "How do I know if a set of wheels fits my car?",
+        answer:
+          "Four things must match: the bolt pattern (for example 5x130), the center bore, the offset (ET) and enough clearance for your brakes. The diameter and width then decide which tire sizes you can run. Your owner's manual or the placard in the door jamb lists the approved sizes.",
+      },
+      {
+        question: "What should I check on used tires?",
+        answer:
+          "Check the tread depth, the manufacture date in the DOT code on the sidewall (the last four digits are week and year), and look for cracks, bulges or repairs. Many tire makers recommend replacing tires around ten years after manufacture regardless of tread.",
       },
     ],
   },

@@ -1,4 +1,4 @@
-import { Country } from "country-state-city";
+import { COUNTRY_LIST } from "@/lib/countryList";
 
 export type CountryPhoneOption = {
   value: string;
@@ -13,16 +13,16 @@ const formatDialCode = (phonecode: string | undefined) => {
   return cleaned.startsWith("+") ? cleaned : `+${cleaned}`;
 };
 
-export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] =
-  Country.getAllCountries()
-    .map(country => ({
-      value: country.isoCode,
-      label: country.name,
-      dialCode: formatDialCode(country.phonecode),
-      flag: country.flag || "",
-    }))
-    .filter(option => option.value && option.label && option.dialCode)
-    .sort((a, b) => a.label.localeCompare(b.label));
+export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = COUNTRY_LIST.map(
+  country => ({
+    value: country.isoCode,
+    label: country.name,
+    dialCode: formatDialCode(country.phonecode),
+    flag: country.flag || "",
+  })
+)
+  .filter(option => option.value && option.label && option.dialCode)
+  .sort((a, b) => a.label.localeCompare(b.label));
 
 export const DEFAULT_PHONE_COUNTRY = "US";
 

@@ -18,16 +18,33 @@ export type VehicleContent = {
   name: string;
   /** Case-insensitive substrings of product titles that mean "fits this". */
   matchTerms: string[];
+  /** Page heading; defaults to "<name> Accessories & Parts". */
+  heading?: string;
   seoTitle: string;
   metaDescription: string;
   intro: string;
   faqs: CategoryFaq[];
 };
 
-const FITMENT_FAQ = (name: string): CategoryFaq => ({
+const FITMENT_FAQ = (
+  name: string,
+  variesBy = "cab or bed size and trims"
+): CategoryFaq => ({
   question: `How do I know a part fits my ${name}?`,
-  answer: `Each listing states the model years, cab or bed size and trims it fits. Model generations change mounting points, so compare your year carefully. If you are unsure, decode your VIN with our free VIN decoder or send it to us on WhatsApp or by email before ordering.`,
+  answer: `Each listing states the model years, ${variesBy} it fits. Model generations change mounting points, so compare your year carefully. If you are unsure, decode your VIN with our free VIN decoder or send it to us on WhatsApp or by email before ordering.`,
 });
+
+/** For the used-OEM make pages, where parts are matched by code, not trim. */
+const USED_OEM_FAQ = (make: string): CategoryFaq => ({
+  question: `How do I know a used ${make} part fits my car?`,
+  answer: `Match the OEM part number or engine/gearbox code on your original part, and the model generation: the same ${make} model is built with several engines, gearboxes and body styles that do not interchange. Each listing names the donor model. If you are unsure, decode your VIN with our free VIN decoder or send it to us on WhatsApp or by email before ordering.`,
+});
+
+const USED_CONDITION_FAQ: CategoryFaq = {
+  question: "What condition are used parts in?",
+  answer:
+    "Used parts were removed from a vehicle and are sold in the condition shown in the listing photos and description. Check the photos closely and ask before ordering if a detail you need, such as mileage or a part number, is not stated.",
+};
 
 export const VEHICLES: VehicleContent[] = [
   {
@@ -175,7 +192,7 @@ export const VEHICLES: VehicleContent[] = [
     intro:
       "All-weather mats and liners, screen protectors, organizers, charging accessories and protection for the Tesla Model Y.",
     faqs: [
-      FITMENT_FAQ("Model Y"),
+      FITMENT_FAQ("Model Y", "variant and refresh"),
       {
         question: "What accessories does a new Model Y need?",
         answer:
@@ -198,7 +215,81 @@ export const VEHICLES: VehicleContent[] = [
       "Tesla Model 3 accessories: floor mats, trunk liners, screen protectors, organizers and protection, including the Highland refresh.",
     intro:
       "Floor mats, liners, screen protectors, organizers and protection for the Tesla Model 3.",
-    faqs: [FITMENT_FAQ("Model 3")],
+    faqs: [FITMENT_FAQ("Model 3", "variant and refresh")],
+  },
+  // Make pages for the used OEM range. These list parts by make because the
+  // stock per model is small; "Accessories" would misdescribe them.
+  {
+    slug: "opel",
+    name: "Opel",
+    heading: "Used Opel Parts",
+    matchTerms: ["Opel", "Vauxhall"],
+    seoTitle: "Used Opel Parts: Doors, Seats, Gearboxes | MotorVault",
+    metaDescription:
+      "Used OEM Opel and Vauxhall parts: doors, seats, gearboxes, ECUs and exhaust parts for Astra, Zafira, Insignia, Corsa and Mokka. Check fitment by VIN.",
+    intro:
+      "Used OEM Opel and Vauxhall parts from identified donor vehicles: doors and body parts, seat sets, gearboxes, control units and exhaust parts for Astra, Zafira, Insignia, Corsa and Mokka.",
+    faqs: [
+      USED_OEM_FAQ("Opel"),
+      {
+        question: "Do Vauxhall and Opel parts interchange?",
+        answer:
+          "Mechanically they are usually the same car under two badges, so most mechanical and body parts interchange. Parts that differ between left- and right-hand-drive cars do not: dashboards, steering parts, headlights and some wiring.",
+      },
+      USED_CONDITION_FAQ,
+    ],
+  },
+  {
+    slug: "bmw",
+    name: "BMW",
+    heading: "Used BMW Engines & Parts",
+    matchTerms: ["BMW"],
+    seoTitle: "Used BMW Engines, Seats & Parts | MotorVault",
+    metaDescription:
+      "Used BMW engines, seats, wheels and parts from identified donor cars, listed with engine codes such as N47 and M57. Check the code and fitment by VIN.",
+    intro:
+      "Used BMW engines, seat sets, wheels and other OEM parts from identified donor vehicles. Engines are listed by engine code.",
+    faqs: [
+      USED_OEM_FAQ("BMW"),
+      {
+        question: "Where do I find my BMW's engine code?",
+        answer:
+          "It is stamped on the engine block and recorded against your VIN, so a VIN decode will show it. BMW engine codes such as N47 or M57 also have sub-variants with different outputs and ancillaries, so compare the full code and the donor model.",
+      },
+      USED_CONDITION_FAQ,
+    ],
+  },
+  {
+    slug: "audi",
+    name: "Audi",
+    heading: "Used Audi Seats & Parts",
+    matchTerms: ["Audi"],
+    seoTitle: "Used Audi Seats, Body Parts & More | MotorVault",
+    metaDescription:
+      "Used OEM Audi parts: seat sets including Recaro and S line, doors, bumpers and drivetrain parts for A3, A4, A6, S and RS models. Check fitment by VIN.",
+    intro:
+      "Used OEM Audi parts from identified donor vehicles, including seat sets, body parts and drivetrain components for A, S and RS models.",
+    faqs: [
+      USED_OEM_FAQ("Audi"),
+      {
+        question: "Will seats from another Audi fit my car?",
+        answer:
+          "Seats usually bolt into the same model generation and body style, but airbag connectors, occupancy sensors, heating and electric adjustment vary by year and equipment. Compare the connectors and features with your original seats before ordering.",
+      },
+      USED_CONDITION_FAQ,
+    ],
+  },
+  {
+    slug: "fiat",
+    name: "Fiat",
+    heading: "Used Fiat Parts",
+    matchTerms: ["Fiat"],
+    seoTitle: "Used Fiat 500 & Ducato Parts | MotorVault",
+    metaDescription:
+      "Used OEM Fiat parts: seats, wheels, alternators, hybrid batteries and engines for the Fiat 500, 500e, Panda and Ducato. Check part numbers and fitment by VIN.",
+    intro:
+      "Used OEM Fiat parts from identified donor vehicles: seats, wheels, electrical parts and engines for the Fiat 500, Panda and Ducato.",
+    faqs: [USED_OEM_FAQ("Fiat"), USED_CONDITION_FAQ],
   },
 ];
 

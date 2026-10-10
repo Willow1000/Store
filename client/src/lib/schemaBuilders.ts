@@ -100,6 +100,8 @@ type BuildSchemaOptions = {
   articleData?: ArticleSchemaInput;
   breadcrumbs?: BreadcrumbItem[];
   faqData?: FAQSchemaInput[];
+  /** Products shown on a listing page, in display order. */
+  itemList?: BreadcrumbItem[];
 };
 
 function toAbsoluteUrl(value?: string, baseUrl?: string): string | undefined {
@@ -124,11 +126,14 @@ function normalizeCondition(condition?: string): string | undefined {
   if (!condition) return undefined;
   const normalized = condition.trim().toLowerCase();
   if (!normalized) return undefined;
-  if (normalized.includes("new")) return "https://schema.org/NewCondition";
-  if (normalized.includes("refurb"))
-    return "https://schema.org/RefurbishedCondition";
   if (normalized.includes("damaged"))
     return "https://schema.org/DamagedCondition";
+  if (normalized.includes("refurb") || normalized.includes("reman"))
+    return "https://schema.org/RefurbishedCondition";
+  // "Like new" and "as new" describe a used item; only a plain "new" is new.
+  if (/\b(like|as|nearly|almost)[\s-]+new\b/.test(normalized))
+    return "https://schema.org/UsedCondition";
+  if (/\bnew\b/.test(normalized)) return "https://schema.org/NewCondition";
   return "https://schema.org/UsedCondition";
 }
 
@@ -210,6 +215,16 @@ function buildOrganization(siteOrigin: string, language: string) {
     logo: logoUrl,
     description: SEO_CONFIG.site.description,
     sameAs: socialProfiles,
+    address: SEO_CONFIG.contact.address.street
+      ? {
+          "@type": "PostalAddress",
+          streetAddress: SEO_CONFIG.contact.address.street,
+          addressLocality: SEO_CONFIG.contact.address.city,
+          addressRegion: SEO_CONFIG.contact.address.state,
+          postalCode: SEO_CONFIG.contact.address.zipCode,
+          addressCountry: SEO_CONFIG.contact.address.country,
+        }
+      : undefined,
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "Customer Support",
@@ -323,12 +338,27 @@ function buildPageEntity(options: BuildSchemaOptions): Record<string, unknown> {
   }
 
   if (pageType === "category" || pageType === "search") {
+    const items = (options.itemList || []).filter(
+      item => item?.name?.trim() && item?.url?.trim()
+    );
     return stripEmpty({
       "@type": "CollectionPage",
       "@id": `${pageUrl}#collection`,
       name: title,
       description,
       url: pageUrl,
+      mainEntity: items.length
+        ? {
+            "@type": "ItemList",
+            numberOfItems: items.length,
+            itemListElement: items.map((item, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              name: item.name.trim(),
+              url: toAbsoluteUrl(item.url, pageUrl),
+            })),
+          }
+        : undefined,
     });
   }
 
@@ -384,6 +414,16 @@ function buildProduct(
       url: productUrl,
       price,
       priceCurrency: offerCurrency,
+      // The struck-through "was" price shown on the page.
+      priceSpecification:
+        Number(input.originalPrice) > Number(price)
+          ? {
+              "@type": "UnitPriceSpecification",
+              priceType: "https://schema.org/ListPrice",
+              price: Number(input.originalPrice).toFixed(2),
+              priceCurrency: offerCurrency,
+            }
+          : undefined,
       availability: `https://schema.org/${input.availability || "InStock"}`,
       itemCondition: condition,
       shippingDetails: input.shippingDetails,

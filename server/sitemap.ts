@@ -42,14 +42,13 @@ export async function generateSitemap(
     /<\/urlset>\s*$/,
     ""
   );
-  const now = new Date().toISOString().split("T")[0];
 
+  // Vehicle, category and static pages carry no <lastmod>: nothing tracks when
+  // they really changed, and stamping every one with today's date on each
+  // request teaches crawlers to distrust the whole file's dates.
   VEHICLES.forEach(vehicle => {
     xml += renderUrl({
       loc: `${normalizedBaseUrl}/vehicle/${vehicle.slug}`,
-      lastmod: now,
-      changefreq: "weekly",
-      priority: "0.8",
     });
   });
 
@@ -59,9 +58,6 @@ export async function generateSitemap(
 
     xml += renderUrl({
       loc: `${normalizedBaseUrl}/products?category=${encodeURIComponent(categoryValue)}`,
-      lastmod: now,
-      changefreq: "weekly",
-      priority: "0.8",
     });
   });
 
@@ -70,54 +66,42 @@ export async function generateSitemap(
 }
 
 function generateBasicSitemap(baseUrl: string, kind: SitemapKind): string {
-  const now = new Date().toISOString().split("T")[0];
   let xml = createUrlsetOpen(false);
 
   if (kind === "products") {
     // Fallback product sitemap when product data is unavailable.
-    xml += renderUrl({
-      loc: `${baseUrl}/products`,
-      lastmod: now,
-      changefreq: "daily",
-      priority: "0.7",
-    });
+    xml += renderUrl({ loc: `${baseUrl}/products` });
     xml += "</urlset>";
     return xml;
   }
 
   const pages = [
-    { loc: "/", priority: "1.0", changefreq: "daily" },
-    { loc: "/products", priority: "0.95", changefreq: "daily" },
-    { loc: "/blog", priority: "0.9", changefreq: "weekly" },
-    { loc: "/site-map", priority: "0.8", changefreq: "weekly" },
-    { loc: "/about", priority: "0.7", changefreq: "monthly" },
-    { loc: "/help", priority: "0.65", changefreq: "monthly" },
-    { loc: "/contact", priority: "0.65", changefreq: "monthly" },
-    { loc: "/shipping", priority: "0.6", changefreq: "monthly" },
-    { loc: "/returns", priority: "0.6", changefreq: "monthly" },
-    { loc: "/faq", priority: "0.6", changefreq: "monthly" },
-    { loc: "/vin-decoder", priority: "0.7", changefreq: "monthly" },
-    { loc: "/privacy", priority: "0.3", changefreq: "yearly" },
-    { loc: "/terms", priority: "0.3", changefreq: "yearly" },
-    { loc: "/cookies", priority: "0.3", changefreq: "yearly" },
-    { loc: "/accessibility", priority: "0.3", changefreq: "yearly" },
+    "/",
+    "/products",
+    "/blog",
+    "/site-map",
+    "/about",
+    "/help",
+    "/contact",
+    "/shipping",
+    "/returns",
+    "/faq",
+    "/vin-decoder",
+    "/nl/auto-motorblokken",
+    "/privacy",
+    "/terms",
+    "/cookies",
+    "/accessibility",
   ];
 
   pages.forEach(page => {
-    xml += renderUrl({
-      loc: `${baseUrl}${page.loc}`,
-      lastmod: now,
-      changefreq: page.changefreq,
-      priority: page.priority,
-    });
+    xml += renderUrl({ loc: `${baseUrl}${page}` });
   });
 
   BLOG_POSTS.forEach(post => {
     xml += renderUrl({
       loc: `${baseUrl}/blog/${post.slug}`,
-      lastmod: post.updatedDate || post.publishedDate || now,
-      changefreq: "monthly",
-      priority: "0.75",
+      lastmod: post.updatedDate || post.publishedDate,
     });
   });
 
@@ -137,23 +121,18 @@ function createUrlsetOpen(withImages: boolean): string {
   return xml;
 }
 
+// <changefreq> and <priority> are not emitted: Google ignores both.
 function renderUrl({
   loc,
   lastmod,
-  changefreq,
-  priority,
 }: {
   loc: string;
-  lastmod: string;
-  changefreq: string;
-  priority: string;
+  lastmod?: string;
 }): string {
   return [
     "  <url>",
     `    <loc>${escapeXml(loc)}</loc>`,
-    `    <lastmod>${lastmod}</lastmod>`,
-    `    <changefreq>${changefreq}</changefreq>`,
-    `    <priority>${priority}</priority>`,
+    ...(lastmod ? [`    <lastmod>${lastmod}</lastmod>`] : []),
     "  </url>",
     "",
   ].join("\n");
@@ -164,13 +143,11 @@ function renderProductUrl(baseUrl: string, product: any): string {
     product.updatedAt ||
     product.updated_at ||
     product.createdAt ||
-    product.created_at ||
-    new Date();
-  const lastmod = Number.isNaN(new Date(updatedAt).getTime())
-    ? new Date().toISOString().split("T")[0]
-    : new Date(updatedAt).toISOString().split("T")[0];
-  const title = product.name || product.title || "MotorVault product";
-  const description = product.description || product.item_specifics || "";
+    product.created_at;
+  const updatedTime = updatedAt ? new Date(updatedAt).getTime() : NaN;
+  const lastmod = Number.isNaN(updatedTime)
+    ? undefined
+    : new Date(updatedTime).toISOString().split("T")[0];
   const images = normalizeImages(
     product.images ||
       product.image_urls ||
@@ -182,18 +159,15 @@ function renderProductUrl(baseUrl: string, product: any): string {
   let xml = [
     "  <url>",
     `    <loc>${escapeXml(`${baseUrl}/product/${product.id}`)}</loc>`,
-    `    <lastmod>${lastmod}</lastmod>`,
-    "    <changefreq>weekly</changefreq>",
-    "    <priority>0.7</priority>",
+    ...(lastmod ? [`    <lastmod>${lastmod}</lastmod>`] : []),
   ].join("\n");
 
+  // Only <image:loc>: Google dropped <image:title> and <image:caption> from
+  // the image sitemap extension, and the captions (product descriptions up to
+  // 2048 characters) made up most of the file.
   images.slice(0, 1000).forEach(image => {
     xml += "\n    <image:image>";
     xml += `\n      <image:loc>${escapeXml(image)}</image:loc>`;
-    xml += `\n      <image:title>${escapeXml(title)}</image:title>`;
-    if (description) {
-      xml += `\n      <image:caption>${escapeXml(String(description).substring(0, 2048))}</image:caption>`;
-    }
     xml += "\n    </image:image>";
   });
 

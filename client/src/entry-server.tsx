@@ -18,6 +18,11 @@ import {
 import { SsrStatusContext, type SsrStatus } from "./lib/ssrStatus";
 import { getHighResImageUrl } from "./lib/images";
 import { rankProducts } from "./lib/recommendations";
+import {
+  PRODUCTS_PER_PAGE,
+  countListingPages,
+  getPageFromSearch,
+} from "./lib/listingPagination";
 import { getVehicleContent, vehicleTitleFilter } from "@shared/vehicleContent";
 import type { Category } from "./hooks/useSupabaseProducts";
 import type { Product, ProductImage } from "./types/supabase";
@@ -49,8 +54,8 @@ async function fetchSsrProductSeoData(
 /** Product fields that listing cards render; the rest stay client-side. */
 const LISTING_FIELDS =
   "id, title, category_name, price, discount, condition, cover_image_url, brand, model, stock, part_number, created_at";
-/** First page of a listing that is server-rendered and embedded. */
-const LISTING_LIMIT = 32;
+/** Products of a listing that are server-rendered and embedded. */
+const LISTING_LIMIT = PRODUCTS_PER_PAGE;
 /** Category pages are small (largest is ~70) - render them whole. */
 const CATEGORY_LISTING_LIMIT = 120;
 
@@ -125,6 +130,16 @@ async function loadPageData(
   const productMatch = /^\/product\/([^/]+)$/.exec(pathname);
   if (productMatch) {
     const id = decodeURIComponent(productMatch[1]);
+    // Product ids are uuids. Anything else can never be a product, and asking
+    // the database errors rather than answering "no such row", which used to
+    // fall through to an indexable 200.
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        id
+      )
+    ) {
+      return { data, status: 404 };
+    }
     // Categories too, so the breadcrumb links the category's slug URL
     // rather than its name, which only reaches the page through a redirect.
     const [productResult, imagesResult, categories] = await Promise.all([
@@ -192,6 +207,16 @@ async function loadPageData(
   const categories = await fetchCategories();
   if (categories) data.categories = categories;
 
+  // Listing pages are paginated by ?page=N. Page 1 has one URL (no
+  // parameter), so "?page=1" and malformed values redirect to it.
+  const page = pathname === "/products" ? getPageFromSearch(search) : 1;
+  if (pathname === "/products" && search.has("page") && page === 1) {
+    const rest = new URLSearchParams(search);
+    rest.delete("page");
+    const query = rest.toString();
+    return { data, redirect: query ? `/products?${query}` : "/products" };
+  }
+
   const categoryParam =
     pathname === "/products" ? search.get("category") : null;
   if (categoryParam && categoryParam.trim()) {
@@ -218,6 +243,11 @@ async function loadPageData(
       categorySlug: category.slug,
       products: (rows || []).map(asListingProduct),
     };
+    // The whole category is embedded and the page component slices it, so a
+    // page past the end would render an empty, indexable listing.
+    if (rows && page > countListingPages(rows.length)) {
+      return { data, status: 404 };
+    }
     return { data };
   }
 
@@ -231,15 +261,19 @@ async function loadPageData(
     .order("created_at", { ascending: false })
     .limit(pathname === "/products" ? 1000 : LISTING_LIMIT);
   const listingRows = (rows || []).map(asListingProduct);
+  if (pathname !== "/products") {
+    data.listing = { categorySlug: "", products: listingRows };
+    return { data };
+  }
+  const ranked = rankProducts(listingRows, { newestFirst: true });
+  if (rows && page > countListingPages(ranked.length)) {
+    return { data, status: 404 };
+  }
   data.listing = {
     categorySlug: "",
-    products:
-      pathname === "/products"
-        ? rankProducts(listingRows, { newestFirst: true }).slice(
-            0,
-            LISTING_LIMIT
-          )
-        : listingRows,
+    products: ranked.slice((page - 1) * LISTING_LIMIT, page * LISTING_LIMIT),
+    page,
+    total: ranked.length,
   };
   return { data };
 }

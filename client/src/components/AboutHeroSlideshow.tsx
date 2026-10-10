@@ -18,8 +18,7 @@ const slides: Slide[] = [
     id: 1,
     image: "/images/hero/global-auto-parts-sourcing-team-hero.avif",
     imageWebp: "/images/hero/global-auto-parts-sourcing-team-hero.webp",
-    imageAlt:
-      "Automotive sourcing team handling rare European car parts procurement",
+    imageAlt: "Automotive sourcing team handling car parts procurement",
     title: "Fitment Confidence Starts Here",
     subtitle:
       "Use VIN and part identifiers to reduce wrong-part risk before checkout.",
@@ -28,8 +27,7 @@ const slides: Slide[] = [
     id: 2,
     image: "/images/hero/worldwide-auto-parts-shipping-team-hero.avif",
     imageWebp: "/images/hero/worldwide-auto-parts-shipping-team-hero.webp",
-    imageAlt:
-      "Worldwide shipping support team for European auto spare parts delivery",
+    imageAlt: "Shipping support team for auto spare parts delivery",
     title: "Know OEM vs Aftermarket vs Used",
     subtitle:
       "Choose the right quality tier for your budget, labor cost, and reliability target.",
@@ -38,8 +36,7 @@ const slides: Slide[] = [
     id: 3,
     image: "/images/hero/trusted-automotive-parts-network-hero.avif",
     imageWebp: "/images/hero/trusted-automotive-parts-network-hero.webp",
-    imageAlt:
-      "Trusted European automotive parts network supporting garages and drivers",
+    imageAlt: "Automotive parts network supporting garages and drivers",
     title: "Clear Policy Answers Before You Buy",
     subtitle:
       "Understand returns, warranty coverage, and delivery expectations up front.",

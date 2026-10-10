@@ -397,13 +397,17 @@ export default function FAQ() {
                             />
                           </button>
 
-                          {expandedId === item.id && (
-                            <div className="bg-gray-50 px-4 pb-5 pt-1 sm:px-5">
-                              <p className="max-w-3xl text-[15px] leading-relaxed text-gray-700">
-                                {item.answer}
-                              </p>
-                            </div>
-                          )}
+                          {/* Always in the HTML (hidden until opened): rendered
+                              only on click, the answers never reached
+                              crawlers or the no-JavaScript page. */}
+                          <div
+                            hidden={expandedId !== item.id}
+                            className="bg-gray-50 px-4 pb-5 pt-1 sm:px-5"
+                          >
+                            <p className="max-w-3xl text-[15px] leading-relaxed text-gray-700">
+                              {item.answer}
+                            </p>
+                          </div>
                         </div>
                       ))}
                   </div>

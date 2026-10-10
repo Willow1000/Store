@@ -31,6 +31,13 @@ export type SsrPageData = {
     /** The category slug when this is a category page, else "". */
     categorySlug: string;
     products: Product[];
+    /**
+     * Set on /products only, where `products` is a single page of the
+     * catalogue rather than all of it: which page it is, and how many
+     * products the whole listing has.
+     */
+    page?: number;
+    total?: number;
   };
 };
 

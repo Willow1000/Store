@@ -2129,6 +2129,11 @@ ${brand ? `<g:brand>${escapeXml(brand)}</g:brand>\n` : ""}<g:condition>${escapeX
             }
 
             itemXml += `\n<g:google_product_category>${escapeXml(googleProductCategory)}</g:google_product_category>`;
+            // The store's own category, which Google uses alongside its
+            // taxonomy ID to understand and group the item.
+            const productType = String(p.category_name || "").trim();
+            if (productType)
+              itemXml += `\n<g:product_type>${escapeXml(productType)}</g:product_type>`;
             if (customLabel0)
               itemXml += `\n<g:custom_label_0>${escapeXml(customLabel0)}</g:custom_label_0>`;
             if (gtin) itemXml += `\n<g:gtin>${escapeXml(gtin)}</g:gtin>`;

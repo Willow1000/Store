@@ -146,7 +146,7 @@ const KEY_TRANSLATIONS: Record<SiteLanguageCode, Record<string, string>> = {
     "header.contact": "Kontakt",
     "common.cart": "Warenkorb",
     "footer.about":
-      "Ihr Ziel fuer hochwertige Auto- und Motorenteile. Schneller Versand, originale Produkte und kompetenter Support.",
+      "Autoteile und Zubehoer fuer Trucks, Jeeps, Teslas und europaeische Autos. Jedes Angebot nennt die passenden Modelljahre, mit Support vor und nach der Bestellung.",
     "footer.browse": "Entdecken",
     "footer.allProducts": "Alle Produkte",
     "footer.support": "Support",
@@ -234,7 +234,7 @@ const KEY_TRANSLATIONS: Record<SiteLanguageCode, Record<string, string>> = {
     "language.option.es": "Spanish",
     "language.option.nl": "Dutch",
     "footer.about":
-      "Your ultimate destination for premium automotive and motor parts. Fast shipping, authentic products, and expert support for all your vehicle needs.",
+      "Auto parts and accessories for trucks, Jeeps, Teslas and European cars. Every listing states the model years it fits, with support before and after you order.",
     "footer.browse": "Browse",
     "footer.allProducts": "All Products",
     "footer.support": "Support",
@@ -317,7 +317,7 @@ const KEY_TRANSLATIONS: Record<SiteLanguageCode, Record<string, string>> = {
     "header.contact": "Contatti",
     "common.cart": "Carrello",
     "footer.about":
-      "La tua destinazione per ricambi auto e componenti premium. Spedizione veloce, prodotti autentici e supporto esperto.",
+      "Ricambi e accessori per pick-up, Jeep, Tesla e auto europee. Ogni annuncio indica gli anni modello compatibili, con supporto prima e dopo l'ordine.",
     "footer.browse": "Esplora",
     "footer.allProducts": "Tutti i prodotti",
     "footer.support": "Supporto",
@@ -409,7 +409,7 @@ const KEY_TRANSLATIONS: Record<SiteLanguageCode, Record<string, string>> = {
     "header.contact": "Contact",
     "common.cart": "Panier",
     "footer.about":
-      "Votre destination pour des pieces automobiles premium. Livraison rapide, produits authentiques et support expert.",
+      "Pieces et accessoires pour pick-up, Jeep, Tesla et voitures europeennes. Chaque annonce indique les annees-modeles compatibles, avec une assistance avant et apres la commande.",
     "footer.browse": "Parcourir",
     "footer.allProducts": "Tous les produits",
     "footer.support": "Support",
@@ -501,7 +501,7 @@ const KEY_TRANSLATIONS: Record<SiteLanguageCode, Record<string, string>> = {
     "header.contact": "Contacto",
     "common.cart": "Carrito",
     "footer.about":
-      "Tu destino para repuestos automotrices premium. Envio rapido, productos autenticos y soporte experto.",
+      "Repuestos y accesorios para camionetas, Jeep, Tesla y autos europeos. Cada anuncio indica los anos de modelo compatibles, con soporte antes y despues del pedido.",
     "footer.browse": "Explorar",
     "footer.allProducts": "Todos los productos",
     "footer.support": "Soporte",
@@ -590,7 +590,7 @@ const KEY_TRANSLATIONS: Record<SiteLanguageCode, Record<string, string>> = {
     "header.contact": "Contact",
     "common.cart": "Winkelwagen",
     "footer.about":
-      "Jouw bestemming voor premium auto- en motoronderdelen. Snelle levering, authentieke producten en deskundige support.",
+      "Onderdelen en accessoires voor pick-ups, Jeeps, Tesla's en Europese auto's. Elke advertentie vermeldt de passende modeljaren, met support voor en na je bestelling.",
     "footer.browse": "Verkennen",
     "footer.allProducts": "Alle producten",
     "footer.support": "Support",

@@ -12,18 +12,11 @@ Disallow: /auth/
 Disallow: /search
 Disallow: /*?*sort=
 Disallow: /*?*filter=
-Disallow: /*?*page=
 Disallow: /*?*utm_source=
 Disallow: /*?*utm_medium=
 Disallow: /*?*utm_campaign=
 Disallow: /*?*fbclid=
 Disallow: /*?*gclid=
-
-# Answer-engine / AI crawlers.
-# These already match 'User-agent: *', but a named group does NOT inherit the
-# wildcard group's rules, so each one restates the private-area Disallows.
-# Listing them explicitly keeps AI citation traffic working if the wildcard
-# group is ever tightened.
 
 User-agent: GPTBot
 Allow: /
@@ -36,6 +29,14 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: OAI-SearchBot
 Allow: /
@@ -48,6 +49,14 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: ChatGPT-User
 Allow: /
@@ -60,6 +69,14 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: ClaudeBot
 Allow: /
@@ -72,6 +89,14 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: Claude-User
 Allow: /
@@ -84,6 +109,14 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: Claude-SearchBot
 Allow: /
@@ -96,6 +129,14 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: PerplexityBot
 Allow: /
@@ -108,6 +149,14 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: Perplexity-User
 Allow: /
@@ -120,6 +169,14 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: Google-Extended
 Allow: /
@@ -132,6 +189,14 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: Applebot-Extended
 Allow: /
@@ -144,6 +209,14 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: CCBot
 Allow: /
@@ -156,6 +229,14 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: Bytespider
 Allow: /
@@ -168,6 +249,14 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
 User-agent: meta-externalagent
 Allow: /
@@ -180,8 +269,15 @@ Disallow: /cart
 Disallow: /tickets
 Disallow: /payment/
 Disallow: /auth/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*utm_source=
+Disallow: /*?*utm_medium=
+Disallow: /*?*utm_campaign=
+Disallow: /*?*fbclid=
+Disallow: /*?*gclid=
 
-# Curated entrypoint for LLMs and agents.
 LLM-Content: https://www.motorvault.shop/llms.txt
 Sitemap: https://www.motorvault.shop/sitemap.xml
 Sitemap: https://www.motorvault.shop/sitemap-products.xml

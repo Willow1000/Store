@@ -12,9 +12,10 @@ describe("product SEO text", () => {
     const long = buildProductSeoTitle(
       "3W Tape-On Window Rain Guards for 2015-2026 Ford F-150 SuperCrew Cab, 4 Pieces"
     );
-    expect(long.length).toBeLessThanOrEqual(60);
-    expect(long).not.toContain("MotorVault");
-    expect(long.endsWith("…")).toBe(true);
+    // Never clipped: the vehicle at the end is what buyers search for.
+    expect(long).toBe(
+      "3W Tape-On Window Rain Guards for 2015-2026 Ford F-150 SuperCrew Cab, 4 Pieces"
+    );
   });
 
   it("builds a unique description from the product's own facts", () => {
@@ -30,13 +31,37 @@ describe("product SEO text", () => {
     expect(description.length).toBeLessThanOrEqual(155);
   });
 
-  it("falls back to a short line when there are no usable facts", () => {
+  it("describes the item from its record when there are no spec lines", () => {
+    expect(
+      buildProductMetaDescription({
+        title: "M113 V8",
+        condition: "Used",
+        itemSpecifics: null,
+        brand: "Mercedes",
+        partNumber: "A1130100000",
+        category: "Engines",
+      })
+    ).toBe(
+      "Used M113 V8. Brand: Mercedes. Part number: A1130100000. Category: Engines."
+    );
     expect(
       buildProductMetaDescription({
         title: "Floor mats",
         condition: "New",
         itemSpecifics: "Item specifics not provided",
       })
-    ).toBe("New Floor mats. Buy online at MotorVault.");
+    ).toBe("New Floor mats.");
+  });
+
+  it("drops a fact that does not fit instead of cutting it", () => {
+    const description = buildProductMetaDescription({
+      title:
+        "Supreme Suspensions 3 in Front Leveling Kit for 2004-2014 Ford F-150 2WD and 4WD",
+      condition: "New",
+      itemSpecifics:
+        "Brand: Supreme Suspensions\nPart Type: Leveling Kit\nPart Number: FDF104FL3000-EXTRA-LONG-NUMBER\nMaterial: Billet aluminium",
+    });
+    expect(description.endsWith("…")).toBe(false);
+    expect(description.length).toBeLessThanOrEqual(155);
   });
 });

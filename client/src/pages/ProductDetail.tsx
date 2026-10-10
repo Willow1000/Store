@@ -362,32 +362,53 @@ export default function ProductDetail() {
     }
   }, [isLoading, productId, product, navigate]);
 
+  // A part made for one vehicle should not be recommended next to another
+  // vehicle's part: a Model Y mud flap's "Similar Vehicle Parts" listed GMC
+  // and Jeep parts. Products that name no vehicle (universal items, car care)
+  // stay eligible. Applies only when this product names a known vehicle.
+  const railLimit = isMobile ? 6 : 12;
+  const keepSameVehicle = useMemo(() => {
+    const ownVehicles = new Set(
+      vehiclesMatchingTitle(product?.title).map(vehicle => vehicle.slug)
+    );
+    return <T extends { title?: string | null }>(candidates: T[]): T[] => {
+      if (ownVehicles.size === 0) return candidates.slice(0, railLimit);
+      return candidates
+        .filter(candidate => {
+          const vehicles = vehiclesMatchingTitle(candidate.title);
+          return (
+            vehicles.length === 0 ||
+            vehicles.some(vehicle => ownVehicles.has(vehicle.slug))
+          );
+        })
+        .slice(0, railLimit);
+    };
+  }, [product?.title, railLimit]);
+
   const similarVehicleProducts = useMemo(() => {
     if (!product) return [];
-    return recommendations.similarVehicleParts(
-      allProducts || [],
-      product,
-      isMobile ? 6 : 12
+    return keepSameVehicle(
+      recommendations.similarVehicleParts(allProducts || [], product, 48)
     );
-  }, [allProducts, isMobile, product, recommendations]);
+  }, [allProducts, keepSameVehicle, product, recommendations]);
 
   const completeRepairProducts = useMemo(() => {
     if (!product) return [];
-    return recommendations.completeRepairProducts(
-      allProducts || [],
-      product,
-      isMobile ? 6 : 12
+    return keepSameVehicle(
+      recommendations.completeRepairProducts(allProducts || [], product, 48)
     );
-  }, [allProducts, isMobile, product, recommendations]);
+  }, [allProducts, keepSameVehicle, product, recommendations]);
 
   const frequentlyBoughtTogetherProducts = useMemo(() => {
     if (!product) return [];
-    return recommendations.frequentlyBoughtTogetherProducts(
-      allProducts || [],
-      product,
-      isMobile ? 6 : 12
+    return keepSameVehicle(
+      recommendations.frequentlyBoughtTogetherProducts(
+        allProducts || [],
+        product,
+        48
+      )
     );
-  }, [allProducts, isMobile, product, recommendations]);
+  }, [allProducts, keepSameVehicle, product, recommendations]);
 
   if (!productId) return null;
 
@@ -413,6 +434,9 @@ export default function ProductDetail() {
         title: seoProductTitle,
         condition: (product || ssrProduct)?.condition,
         itemSpecifics: (product || ssrProduct)?.item_specifics,
+        brand: seoProduct?.brand,
+        partNumber: seoProduct?.part_number,
+        category: seoProduct?.category_name,
       })
     : "View premium automotive parts and accessories on MotorVault.";
   const seoImage =
@@ -519,7 +543,7 @@ export default function ProductDetail() {
         */}
         <SEOHead
           title="Product Not Available | MotorVault"
-          description="This product is no longer available. Browse our catalogue of European car parts."
+          description="This product is no longer available. Browse our catalogue of auto parts and accessories."
           canonical={canonicalUrl}
           noIndex
           ogType="product"
@@ -643,7 +667,10 @@ export default function ProductDetail() {
       Number.isFinite(Number(product.price))
         ? `${enquiryCopy.priceLabel}: ${Number(product.price).toFixed(2)}`
         : "",
-      `${enquiryCopy.productLinkLabel}: ${window.location.origin}/product/${product.id}`,
+      // canonicalUrl, not window.location: this runs during the server render
+      // for out-of-stock products, where touching window threw and blanked the
+      // whole page.
+      `${enquiryCopy.productLinkLabel}: ${canonicalUrl}`,
       "",
       outOfStockOnly
         ? enquiryCopy.productOutOfStockAsk
@@ -695,16 +722,15 @@ export default function ProductDetail() {
     navigate(getEnquiryContactUrl(false));
   };
 
-  const fallbackSimilarProducts = allProducts
-    .filter(
+  const fallbackSimilarProducts = keepSameVehicle(
+    allProducts.filter(
       p => p.id !== product?.id && p.category_name === product?.category_name
     )
-    .slice(0, isMobile ? 6 : 12);
-  const similarProducts = (
+  );
+  const similarProducts =
     similarVehicleProducts.length > 0
       ? similarVehicleProducts
-      : fallbackSimilarProducts
-  ).slice(0, isMobile ? 6 : 12);
+      : fallbackSimilarProducts;
 
   const handleRecommendationClick = (
     source: string,

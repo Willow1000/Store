@@ -21,7 +21,7 @@ import {
   sanitizeText,
   sanitizeTextInput,
 } from "@shared/sanitize";
-import { Country } from "country-state-city";
+import { COUNTRY_LIST } from "@/lib/countryList";
 
 // Input length constraints
 const MAX_NAME_LENGTH = 100;
@@ -32,8 +32,7 @@ const WHATSAPP_NUMBER_E164 = "14435540384";
 const WHATSAPP_DEFAULT_MESSAGE =
   "Hello, I'm from your website, can I get more information.";
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER_E164}?text=${encodeURIComponent(WHATSAPP_DEFAULT_MESSAGE)}`;
-const LOCATION_OPTIONS = Country.getAllCountries()
-  .map(country => country.name)
+const LOCATION_OPTIONS = COUNTRY_LIST.map(country => country.name)
   .filter((name, index, all) => name && all.indexOf(name) === index)
   .sort((a, b) => a.localeCompare(b));
 

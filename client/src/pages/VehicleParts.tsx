@@ -89,7 +89,7 @@ export default function VehicleParts() {
 
   if (!vehicle) return <NotFoundForVehicle />;
 
-  const heading = `${vehicle.name} Accessories & Parts`;
+  const heading = vehicle.heading ?? `${vehicle.name} Accessories & Parts`;
   const otherVehicles = VEHICLES.filter(v => v.slug !== vehicle.slug);
   const guides = getGuidesForVehicle(vehicle.slug);
 
@@ -101,10 +101,23 @@ export default function VehicleParts() {
         description={vehicle.metaDescription}
         canonical={`/vehicle/${vehicle.slug}`}
         keywords={[
-          `${vehicle.name} accessories`,
           `${vehicle.name} parts`,
-          `best ${vehicle.name} accessories`,
+          ...(vehicle.heading
+            ? [`used ${vehicle.name} parts`]
+            : [
+                `${vehicle.name} accessories`,
+                `best ${vehicle.name} accessories`,
+              ]),
         ]}
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "Products", url: "/products" },
+          { name: heading, url: `/vehicle/${vehicle.slug}` },
+        ]}
+        itemList={(products ?? []).map(product => ({
+          name: product.title,
+          url: `/product/${product.id}`,
+        }))}
       />
       <div className="min-h-screen bg-white">
         <PageHeader
@@ -138,13 +151,13 @@ export default function VehicleParts() {
                 {products.length === 1 ? "product" : "products"} for the{" "}
                 {vehicle.name}
               </p>
-              <h2 className="sr-only">{heading}</h2>
+              <h2 className="sr-only">{vehicle.name} products in stock</h2>
               <div className={PRODUCT_GRID_CLASS}>
                 {products.map((product, idx) => (
                   <ProductCard
                     key={product.id}
                     product={product}
-                    priority={idx < 4}
+                    priority={idx < 2}
                     onAddToCart={addProduct}
                     isAdding={pendingId === product.id}
                   />

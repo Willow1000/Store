@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ImageOff } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getHighResImageUrl } from "@/lib/images";
+import { getCardImageSrcSet, getHighResImageUrl } from "@/lib/images";
 
 type ProductImageProps = {
   src: string | null | undefined;
@@ -13,6 +13,11 @@ type ProductImageProps = {
   /** Above-the-fold images load eagerly; everything else is lazy. */
   priority?: boolean;
   sizes?: string;
+  /**
+   * Offer smaller versions of the photo (needs `sizes`). For listing cards,
+   * where the photo is shown far smaller than it is stored.
+   */
+  responsive?: boolean;
   /** Hide the "no image" caption on tiny thumbnails. */
   compactFallback?: boolean;
 };
@@ -34,13 +39,22 @@ export function ProductImage({
   imgClassName,
   priority = false,
   sizes,
+  responsive = false,
   compactFallback = false,
 }: ProductImageProps) {
   const resolved = getHighResImageUrl(src);
   const [failed, setFailed] = useState(false);
+  // If a resized version fails to load, retry with the original before
+  // giving up on the photo.
+  const [resizedFailed, setResizedFailed] = useState(false);
+  const srcSet =
+    responsive && sizes && !resizedFailed
+      ? getCardImageSrcSet(resolved)
+      : undefined;
 
   useEffect(() => {
     setFailed(false);
+    setResizedFailed(false);
   }, [resolved]);
 
   const showFallback = !resolved || failed;
@@ -71,10 +85,11 @@ export function ProductImage({
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : undefined}
           decoding="async"
+          srcSet={srcSet}
           sizes={sizes}
           referrerPolicy="no-referrer"
           draggable={false}
-          onError={() => setFailed(true)}
+          onError={() => (srcSet ? setResizedFailed(true) : setFailed(true))}
           className={cn(
             // multiply lets white studio backgrounds melt into the well
             "absolute inset-0 h-full w-full object-contain mix-blend-multiply",
