@@ -58,7 +58,7 @@ describe("translation network behaviour", () => {
   beforeEach(() => {
     fetchSpy = vi.fn(async () => ({
       ok: true,
-      json: async () => [[["übersetzt", "", "", ""]]],
+      json: async () => [["übersetzt", "en"]],
     }));
     vi.stubGlobal("fetch", fetchSpy);
   });
@@ -89,6 +89,25 @@ describe("translation network behaviour", () => {
     await preloadTranslations("de", [
       "Bosch 0281002216 diesel injector rail sensor",
     ]);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends many strings in one request and maps the answers back in order", async () => {
+    const texts = Array.from(
+      { length: 30 },
+      (_, i) => `Reconditioned gearbox mount, batch test ${i}`
+    );
+    fetchSpy.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const sent = (init?.body as URLSearchParams).getAll("q");
+      return { ok: true, json: async () => sent.map(q => [`fr:${q}`, "en"]) };
+    });
+
+    await preloadTranslations("fr", texts);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0][1]?.method).toBe("POST");
+
+    // Cached now, each under its own source string.
+    await preloadTranslations("fr", texts);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });
