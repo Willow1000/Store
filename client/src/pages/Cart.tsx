@@ -620,7 +620,7 @@ export default function Cart() {
 
                 <button
                   onClick={() => {
-                    // Always allow navigating to checkout; inline auth will be shown on the checkout page
+                    // Always allow navigating to checkout; guests sign in at its last step
                     navigate("/checkout");
                   }}
                   className="btn-accent btn-lg btn-block mt-5"

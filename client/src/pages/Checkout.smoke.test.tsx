@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 // Checkout.tsx pulls in auth, cart, tRPC, and Supabase directly rather than
 // through props/context, so a render test has to stub each of those at the
@@ -82,10 +82,14 @@ const mockAuthedUser = {
   name: "Smoke Test",
 };
 
+// Flipped by the guest test; the object identity of the user stays stable
+// for the same reason as the hoisted mocks above.
+const mockAuthState = { signedIn: true };
+
 vi.mock("@/_core/hooks/useAuth", () => ({
   useAuth: () => ({
-    user: mockAuthedUser,
-    isAuthenticated: true,
+    user: mockAuthState.signedIn ? mockAuthedUser : null,
+    isAuthenticated: mockAuthState.signedIn,
     loading: false,
     sessionRestored: true,
     session: null,
@@ -152,7 +156,10 @@ vi.mock("@/hooks/useMetaPixel", () => ({
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
+  mockAuthState.signedIn = true;
 });
+
+afterEach(cleanup);
 
 describe("Checkout page (smoke test)", () => {
   it("renders the shipping step and order summary for a logged-in visitor with an empty cart", async () => {
@@ -171,5 +178,61 @@ describe("Checkout page (smoke test)", () => {
     expect(
       screen.getByRole("button", { name: /continue to payment/i })
     ).toBeInTheDocument();
+  });
+
+  it("lets a guest start with shipping and asks them to sign in only when they go to pay", async () => {
+    mockAuthState.signedIn = false;
+    localStorage.setItem(
+      "cart",
+      JSON.stringify([
+        {
+          productId: "4fed20dc-dd60-4600-ac77-6e66dd1088c4",
+          title: "Recaro seats",
+          price: "$ 100.00",
+          image: "",
+          quantity: 1,
+        },
+      ])
+    );
+    localStorage.setItem(
+      "checkout-form-data",
+      JSON.stringify({
+        firstName: "Jo",
+        lastName: "Bloggs",
+        email: "jo@example.com",
+        phone: "612345678",
+        phoneCountry: "ZZ",
+        address: "1 Test Street",
+        city: "Testville",
+        state: "Test State",
+        zip: "1234",
+        country: "ZZ",
+      })
+    );
+    const { trpcClient } = await import("@/lib/trpc");
+    const { default: Checkout } = await import("./Checkout");
+    render(<Checkout />);
+
+    // Shipping first - no sign-in wall.
+    expect(
+      screen.getByRole("heading", { name: /shipping address/i })
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("inline-checkout-auth")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /continue to payment/i })
+    );
+    const payButton = await screen.findByRole("button", {
+      name: /continue to stripe/i,
+    });
+    expect(screen.queryByTestId("inline-checkout-auth")).toBeNull();
+
+    fireEvent.click(payButton);
+    expect(
+      await screen.findByTestId("inline-checkout-auth")
+    ).toBeInTheDocument();
+    expect(
+      trpcClient.stripe.payments.createCheckoutSession.mutate
+    ).not.toHaveBeenCalled();
   });
 });

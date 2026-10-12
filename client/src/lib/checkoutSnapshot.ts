@@ -113,3 +113,80 @@ export function validateCheckoutSnapshot(items: unknown[]): CartItem[] {
   if (!Array.isArray(items)) return [];
   return items.filter(isValidCartItem);
 }
+
+const CHECKOUT_RESUME_KEY = "checkout-resume-after-signin-v1";
+const CHECKOUT_RESUME_TTL_MS = 30 * 60 * 1000;
+
+/**
+ * What a guest had agreed to pay for when they were sent to sign in, the last
+ * step before the payment page.
+ */
+export type CheckoutResume = {
+  signature: string;
+  total: string;
+  coupon?: string;
+};
+
+/**
+ * Order-independent fingerprint of a cart's products and quantities
+ */
+export function cartSignature(
+  items: Array<{ product_id: string; quantity: number }>
+): string {
+  return items
+    .map(item => `${item.product_id}:${item.quantity}`)
+    .sort()
+    .join("|");
+}
+
+/**
+ * Remember the order being paid for across the sign-in redirect.
+ * sessionStorage, so it never outlives the tab the shopper was checking out in.
+ */
+export function writeCheckoutResume(resume: CheckoutResume): void {
+  try {
+    if (typeof window === "undefined") return;
+    sessionStorage.setItem(
+      CHECKOUT_RESUME_KEY,
+      JSON.stringify({ ...resume, createdAt: Date.now() })
+    );
+  } catch {
+    // Without storage the shopper just presses the pay button again.
+  }
+}
+
+export function readCheckoutResume(): CheckoutResume | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = sessionStorage.getItem(CHECKOUT_RESUME_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const isFresh =
+      Number.isFinite(parsed?.createdAt) &&
+      Date.now() - parsed.createdAt <= CHECKOUT_RESUME_TTL_MS;
+    if (
+      !isFresh ||
+      typeof parsed.signature !== "string" ||
+      typeof parsed.total !== "string"
+    ) {
+      sessionStorage.removeItem(CHECKOUT_RESUME_KEY);
+      return null;
+    }
+    return {
+      signature: parsed.signature,
+      total: parsed.total,
+      coupon: typeof parsed.coupon === "string" ? parsed.coupon : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function clearCheckoutResume(): void {
+  try {
+    if (typeof window === "undefined") return;
+    sessionStorage.removeItem(CHECKOUT_RESUME_KEY);
+  } catch {
+    // ignore storage issues
+  }
+}

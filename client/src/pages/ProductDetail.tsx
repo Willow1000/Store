@@ -309,7 +309,7 @@ export default function ProductDetail() {
       return;
     }
 
-    // Allow guest users to add to cart then navigate to checkout (Inline auth appears there)
+    // Allow guest users to add to cart then navigate to checkout (they sign in at its last step)
 
     try {
       if (!product?.id) {

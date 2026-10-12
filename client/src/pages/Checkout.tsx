@@ -66,6 +66,10 @@ import {
   hasTrackedMetaPurchase,
   markTrackedMetaPurchase,
   CHECKOUT_CART_SNAPSHOT_KEY,
+  cartSignature,
+  readCheckoutResume,
+  writeCheckoutResume,
+  clearCheckoutResume,
   type CartItem,
 } from "@/lib/checkoutSnapshot";
 
@@ -441,9 +445,13 @@ export default function Checkout() {
   // never runs during SSR) keeps the initial client render identical to
   // the server's.
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [step, setStep] = useState<"shipping" | "payment" | "review">(
-    "shipping"
-  );
+  // "signin" is the last step for a guest: it is only shown once they ask to
+  // pay, right before the redirect to Stripe.
+  const [step, setStep] = useState<
+    "shipping" | "payment" | "review" | "signin"
+  >("shipping");
+  const [draftRestored, setDraftRestored] = useState(false);
+  const resumeAfterSignInHandledRef = useRef(false);
 
   useEffect(() => {
     const snapshot = readCheckoutSnapshot();
@@ -537,6 +545,8 @@ export default function Checkout() {
       }));
     } catch {
       // Ignore parse errors
+    } finally {
+      setDraftRestored(true);
     }
   }, []);
 
@@ -968,7 +978,12 @@ export default function Checkout() {
   // Persist checkout step to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem("checkout-step", step);
+      // The sign-in step is left by a full-page OAuth redirect; coming back
+      // signed in, the shopper belongs on the payment step.
+      localStorage.setItem(
+        "checkout-step",
+        step === "signin" ? "payment" : step
+      );
     } catch {}
   }, [step]);
 
@@ -1605,16 +1620,14 @@ export default function Checkout() {
       return;
     }
 
-    if (!isAuthenticated || !user?.id) {
-      // Inline auth UI is shown above for unauthenticated users.
-      toast.error("Please sign in using the form above to continue");
-      return;
-    }
-
     if (!validateShipping()) return;
 
-    const saved = await saveCheckoutAddress();
-    if (!saved) return;
+    // Guests sign in at the very end, so there is no account to save the
+    // address to yet; it is saved once they are back from signing in.
+    if (isAuthenticated && user?.id) {
+      const saved = await saveCheckoutAddress();
+      if (!saved) return;
+    }
 
     setStep("payment");
   };
@@ -1814,10 +1827,25 @@ export default function Checkout() {
     }
 
     if (!validateShipping()) {
+      // The errors are shown on the shipping form.
+      setStep("shipping");
       return;
     }
 
     if (!validatePayment()) {
+      return;
+    }
+
+    // Signing in is the last step, right before the redirect to the payment
+    // page. Remember what was being paid for so checkout can carry on by
+    // itself once the shopper is back from Google.
+    if (!isMetaCheckout && (!isAuthenticated || !user?.id)) {
+      writeCheckoutResume({
+        signature: cartSignature(cartItems),
+        total: cartGrandTotal.toFixed(2),
+        coupon: appliedOfferData?.code || undefined,
+      });
+      setStep("signin");
       return;
     }
 
@@ -1832,17 +1860,69 @@ export default function Checkout() {
     }
   };
 
+  // Back from signing in at the last step: carry on to the payment page
+  // without asking for a second click, as long as the order is still the one
+  // the shopper agreed to pay for.
+  useEffect(() => {
+    if (isMetaCheckout || resumeAfterSignInHandledRef.current) return;
+    if (!isAuthenticated || !user?.id) return;
+    if (!draftRestored || !supabaseCartHasLoadedOnce) return;
+
+    const pending = readCheckoutResume();
+    if (!pending) return;
+
+    // cartItems is copied from the account cart by an effect, so it can be
+    // one render behind; wait until both agree.
+    const accountSignature = cartSignature(supabaseCartItems);
+    if (cartSignature(cartItems) !== accountSignature) return;
+
+    resumeAfterSignInHandledRef.current = true;
+    clearCheckoutResume();
+
+    // Signing in merges the guest cart into the account cart, and a coupon
+    // typed in as a guest does not survive the trip to Google. Either can
+    // change the total, and nobody should land on a payment page asking for
+    // an amount they have not seen.
+    if (
+      accountSignature !== pending.signature ||
+      cartGrandTotal.toFixed(2) !== pending.total
+    ) {
+      if (pending.coupon) setCouponCodeInput(pending.coupon);
+      setStep("payment");
+      toast.info(
+        pending.coupon
+          ? "You're signed in. Please re-apply your coupon and check your order before paying."
+          : "You're signed in. Your order changed, so please check it before paying."
+      );
+      return;
+    }
+
+    setStep("payment");
+    (async () => {
+      // Best effort: a problem saving the address must not block the payment.
+      await saveCheckoutAddress();
+      await handlePayment();
+    })();
+  }, [
+    isMetaCheckout,
+    isAuthenticated,
+    user?.id,
+    draftRestored,
+    supabaseCartHasLoadedOnce,
+    supabaseCartItems,
+    cartItems,
+    cartGrandTotal,
+  ]);
+
   // Only skip rendering during SSR; always render in the browser so
-  // the inline auth UI is available even while session restoration
+  // the checkout form is available even while session restoration
   // or network requests are in-flight.
   if (typeof window === "undefined") {
     return null;
   }
 
-  // Until the browser has restored (or ruled out) a saved login, show neither
-  // the sign-in prompt nor the shipping form - showing the form first and
-  // then swapping it for the prompt is what made Quick Purchase flicker
-  // between the two.
+  // Until the browser has restored (or ruled out) a saved login, hold the
+  // form back: a signed-in shopper's cart and saved address are not known yet.
   if (!isMetaCheckout && !sessionRestored) {
     return (
       <div className="min-h-screen bg-white">
@@ -1861,25 +1941,19 @@ export default function Checkout() {
     );
   }
 
-  // Signed out is known as soon as the saved login has been ruled out; this
-  // no longer waits for the server-side profile check (auth.me), which only
-  // matters for visitors who are signed in.
-  if (!isMetaCheckout && !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-white">
-        <div className="container py-8 sm:py-12">
-          {/* Header */}
-          <div className="mb-8 sm:mb-10">
-            <h1 className="mb-2 text-ink">Checkout</h1>
-            <p className="text-gray-600">Complete your purchase securely</p>
-          </div>
-
-          {/* Inline Auth */}
-          <InlineCheckoutAuth />
-        </div>
-      </div>
-    );
-  }
+  // Guests fill in shipping and payment like anyone else and sign in last.
+  const signInIsLastStep =
+    !isMetaCheckout && (!isAuthenticated || step === "signin");
+  const stepItems = [
+    { label: t("checkout.shipping", "Shipping"), id: "shipping" },
+    { label: t("checkout.payment", "Payment"), id: "payment" },
+    ...(!signInIsLastStep || step === "review"
+      ? [{ label: t("checkout.review", "Review"), id: "review" }]
+      : []),
+    ...(signInIsLastStep
+      ? [{ label: t("checkout.signIn", "Sign in"), id: "signin" }]
+      : []),
+  ];
 
   return (
     <div className="min-h-screen w-full overflow-x-clip bg-white">
@@ -1927,13 +2001,10 @@ export default function Checkout() {
             {/* Steps - Refined Indicator */}
             <div className="mb-6 overflow-x-auto rounded-xl border border-gray-200 bg-white px-0 py-5 sm:mb-8">
               <div className="flex items-center justify-between px-4 sm:px-6 md:px-8 min-w-max sm:min-w-0">
-                {[
-                  { label: t("checkout.shipping", "Shipping"), id: "shipping" },
-                  { label: t("checkout.payment", "Payment"), id: "payment" },
-                  { label: t("checkout.review", "Review"), id: "review" },
-                ].map((item, idx, array) => {
-                  const stepOrder = ["shipping", "payment", "review"];
-                  const currentIdx = stepOrder.indexOf(step);
+                {stepItems.map((item, idx, array) => {
+                  const currentIdx = array.findIndex(
+                    entry => entry.id === step
+                  );
                   const isCompleted = idx < currentIdx;
                   const isCurrent = idx === currentIdx;
 
@@ -2173,6 +2244,21 @@ export default function Checkout() {
                       : !orderSummaryReady
                         ? t("checkout.loadingCart", "Loading cart...")
                         : `${selectedPayment === "stripe" ? "Continue to Stripe" : t("checkout.payNow", "Pay Now")} ${formatLocalMoney(currencyClient.convertUSD(cartGrandTotal))}`}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Sign-in Step: the last thing before the payment page */}
+            {step === "signin" && (
+              <div className="space-y-6">
+                <InlineCheckoutAuth />
+                <div className="mx-auto w-full max-w-2xl">
+                  <button
+                    onClick={() => setStep("payment")}
+                    className="btn-secondary btn-lg btn-block"
+                  >
+                    {t("common.back", "Back")}
                   </button>
                 </div>
               </div>

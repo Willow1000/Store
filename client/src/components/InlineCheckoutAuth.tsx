@@ -11,15 +11,13 @@ import { saveAuthRedirect } from "@/lib/authRedirect";
 /**
  * InlineCheckoutAuth: Embedded authentication component for the checkout flow.
  *
- * This component provides a seamless authentication experience by embedding
- * Google OAuth directly into the checkout form, without modal/popup interruptions.
+ * Shown as the last checkout step for a guest, after shipping and payment
+ * and right before the redirect to the payment page.
  *
  * Features:
  * - Google OAuth only (no email/password)
- * - Embedded directly in checkout form
- * - Auto-continues to checkout after successful auth
- * - No page redirects during auth
- * - User data (name, email) auto-filled from Google profile
+ * - Embedded directly in checkout, no modal/popup
+ * - Returns to /checkout afterwards, which carries on to the payment page
  */
 
 interface InlineCheckoutAuthProps {
@@ -114,18 +112,19 @@ export function InlineCheckoutAuth({ onAuthSuccess }: InlineCheckoutAuthProps) {
           </div>
           <div>
             <h2 className="text-xl font-bold text-ink sm:text-2xl">
-              Proceed to secure checkout
+              Sign in to place your order
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Secure your order with a quick sign-in
+              Last step before payment
             </p>
           </div>
         </div>
 
         {/* Message */}
         <p className="text-gray-700 mb-6 text-sm sm:text-base">
-          Using your Google account, you can securely complete your purchase.
-          Your information will be automatically filled in after sign-in.
+          Sign in with your Google account so your order is saved and you can
+          track it. Your details are kept, and you go straight to the payment
+          page afterwards.
         </p>
 
         {/* Google Sign-in Button */}
