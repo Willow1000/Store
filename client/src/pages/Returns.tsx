@@ -89,8 +89,8 @@ export default function Returns() {
                   <span className="font-semibold text-ink">
                     2. Receive Instructions:
                   </span>{" "}
-                  We will provide return instructions and, where applicable, a
-                  prepaid label or shipping authorization number.
+                  We will provide return instructions and a prepaid return
+                  label, so return shipping is free.
                 </li>
                 <li>
                   <span className="font-semibold text-ink">

@@ -38,7 +38,7 @@ export type ProductSchemaInput = {
   url?: string;
   condition?: string;
   shippingDetails?: Record<string, unknown>;
-  hasMerchantReturnPolicy?: Record<string, unknown>;
+  hasMerchantReturnPolicy?: Record<string, unknown> | Record<string, unknown>[];
 };
 
 /**
@@ -49,12 +49,18 @@ export type ProductSchemaInput = {
  */
 export function buildOfferPolicies(priceUsd: number): {
   shippingDetails: Record<string, unknown>;
-  hasMerchantReturnPolicy: Record<string, unknown>;
+  hasMerchantReturnPolicy: Record<string, unknown>[];
 } {
   const destinations = SHIPPING_COUNTRIES.map(country => ({
     "@type": "DefinedRegion",
     addressCountry: country,
   }));
+  // Google accepts at most 50 applicableCountry values per return policy, so
+  // the same policy is repeated for each block of up to 50 countries.
+  const countryBlocks: string[][] = [];
+  for (let i = 0; i < SHIPPING_COUNTRIES.length; i += 50) {
+    countryBlocks.push(SHIPPING_COUNTRIES.slice(i, i + 50));
+  }
   return {
     shippingDetails: {
       "@type": "OfferShippingDetails",
@@ -65,14 +71,16 @@ export function buildOfferPolicies(priceUsd: number): {
       },
       shippingDestination: destinations,
     },
-    hasMerchantReturnPolicy: {
+    hasMerchantReturnPolicy: countryBlocks.map(countries => ({
       "@type": "MerchantReturnPolicy",
-      applicableCountry: SHIPPING_COUNTRIES,
+      applicableCountry: countries,
       returnPolicyCategory:
         "https://schema.org/MerchantReturnFiniteReturnWindow",
       merchantReturnDays: RETURN_WINDOW_DAYS,
       returnMethod: "https://schema.org/ReturnByMail",
-    },
+      // /returns: we send a prepaid label, so return postage is free.
+      returnFees: "https://schema.org/FreeReturn",
+    })),
   };
 }
 

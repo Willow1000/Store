@@ -148,3 +148,8 @@ tools/scraper/node_modules/
 scraper.txt
 .claude
 *graphify*
+
+# Marketing material and SEO audits (local only, do not push)
+marketing/
+motorvault.shop-audit/
+GEO-ANALYSIS.md

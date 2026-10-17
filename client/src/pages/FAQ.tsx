@@ -47,7 +47,7 @@ const faqItems: FAQItem[] = [
     category: "Buying with confidence",
     question: "What if the part doesn't fit or I change my mind?",
     answer:
-      "You can request a return within 30 days of delivery for items that are unused, uninstalled and in their original condition and packaging, with proof of purchase. Approved refunds are processed within about 5-7 business days of us receiving the item. Items marked final sale, and used or installed items, are excluded; see the Returns page for the full policy.",
+      "You can request a return within 30 days of delivery for items that are unused, uninstalled and in their original condition and packaging, with proof of purchase. We send a prepaid return label, so return shipping is free. Approved refunds are processed within about 5-7 business days of us receiving the item. Items marked final sale, and used or installed items, are excluded; see the Returns page for the full policy.",
   },
   {
     id: "trust-5",
